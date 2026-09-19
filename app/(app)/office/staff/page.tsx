@@ -1,6 +1,7 @@
 import { requireTenant } from "@/lib/tenant/require";
 import { listStaffWithFit } from "@/lib/services/staff";
-import { StatusPill } from "@/components/ui";
+import { Card, StatusPill } from "@/components/ui";
+import { AddInstructorForm } from "@/components/office/AddInstructorForm";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,11 @@ export default async function StaffPage() {
         <h1 className="font-display text-2xl font-semibold text-navy">Staff</h1>
         <span className="text-sm text-slate-500">{staff.length} instructors</span>
       </div>
+
+      <Card className="mb-6">
+        <h2 className="mb-3 font-semibold text-navy">Add an instructor</h2>
+        <AddInstructorForm />
+      </Card>
 
       <div className="overflow-hidden rounded-card border border-slate-200 bg-white">
         <table className="w-full text-left text-sm">

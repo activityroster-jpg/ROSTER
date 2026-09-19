@@ -83,12 +83,17 @@ export async function seedFullOrg(
     expiryDate: null,
     verified: true,
   });
-  await t.complianceItem.insert(ctx, {
-    instructorId: instructor.id,
-    complianceTypeId: complianceType.id,
-    expiryDate: "2027-01-01",
-    verified: true,
-  });
+  // Give the instructor every compliance check the org requires, so the fixture
+  // instructor is genuinely fit-to-roster (mandatory checks all current).
+  for (const ct of complianceTypes) {
+    await t.complianceItem.insert(ctx, {
+      instructorId: instructor.id,
+      complianceTypeId: ct.id,
+      expiryDate: ct.expiryTracked ? "2030-01-01" : null,
+      verified: true,
+    });
+  }
+  void complianceType;
 
   // Resources
   const equipment = await t.equipment.insert(ctx, {

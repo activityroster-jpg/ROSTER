@@ -54,6 +54,28 @@ export default async function SettingsPage() {
       <p className="mt-6 text-sm text-slate-400">
         Config is deactivate-never-delete: retiring an item keeps historical records intact.
       </p>
+
+      <Card className="mt-8">
+        <h2 className="mb-3 font-semibold text-navy">Data &amp; billing</h2>
+        <div className="flex flex-wrap gap-3">
+          <a
+            href="/api/office/export"
+            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-navy hover:bg-slate-50"
+          >
+            Export all data (JSON)
+          </a>
+          <a
+            href="/api/billing/portal"
+            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-navy hover:bg-slate-50"
+          >
+            Manage billing
+          </a>
+        </div>
+        <p className="mt-3 text-xs text-slate-400">
+          Your data is stored in the EU. You can export it at any time; erasure is available on request and
+          cascades across every record.
+        </p>
+      </Card>
     </div>
   );
 }

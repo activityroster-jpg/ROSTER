@@ -53,6 +53,12 @@ export class ControlPlaneRepository {
     return rows[0] ?? null;
   }
 
+  /** Permanently delete an organisation. Cascades to all tenant-owned tables
+   *  (ON DELETE CASCADE) — GDPR erasure. */
+  async deleteOrganisation(id: string): Promise<void> {
+    await this.db.delete(organisation).where(eq(organisation.id, id));
+  }
+
   /** Create an auth user shell (owner) during provisioning. Password/magic link
    *  is set later via Better Auth; this just establishes the identity. */
   async createUser(values: { name: string; email: string }): Promise<{ id: string; email: string }> {

@@ -107,6 +107,16 @@ export class TenantRepository<T extends TenantTable> {
     return (removed as unknown[]).length;
   }
 
+  /**
+   * Delete EVERY row this tenant owns in this table. Used only by GDPR erasure,
+   * which calls the tables in dependency order so RESTRICT foreign keys between
+   * tenant tables are satisfied. Still fully org-scoped.
+   */
+  async deleteAllForOrg(ctx: AnyTenantContext): Promise<number> {
+    const removed = await this.db.delete(this.table).where(this.scoped(ctx)).returning();
+    return (removed as unknown[]).length;
+  }
+
   /** Count rows owned by the tenant (optionally further filtered). */
   async count(ctx: AnyTenantContext, where?: SQL): Promise<number> {
     const rows = await this.db
