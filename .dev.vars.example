@@ -1,0 +1,27 @@
+# Copy to `.dev.vars` (gitignored) for local dev, or use these keys with
+# `wrangler secret put <NAME>` for production. See scripts/setup-secrets.sh.
+
+# --- Auth (self-generated) ---------------------------------------------------
+# Generate a strong value: `openssl rand -base64 32`
+BETTER_AUTH_SECRET=
+# The auth base URL. Local: http://localhost:8787 · Prod: https://<apex>
+BETTER_AUTH_URL=
+
+# --- Non-secret vars (also in wrangler.toml [vars] for prod) -----------------
+APP_APEX_DOMAIN=activityroster.com
+APP_ENV=production
+
+# --- Stripe (from your Stripe account — cannot be generated) -----------------
+# Use a RESTRICTED key with only the scopes Checkout/Billing/Portal need.
+STRIPE_SECRET_KEY=sk_live_or_test_...
+# From the webhook endpoint you create for /api/webhooks/stripe.
+STRIPE_WEBHOOK_SECRET=whsec_...
+# Price IDs for each plan (Products → Prices in Stripe).
+STRIPE_PRICE_ROSTERING=price_...
+STRIPE_PRICE_FULL=price_...
+
+# --- Email (Resend) ----------------------------------------------------------
+RESEND_API_KEY=re_...
+
+# --- Errors (Sentry, optional) -----------------------------------------------
+SENTRY_DSN=https://...ingest.sentry.io/...
