@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node", "@cloudflare/workers-types"],
+    "jsx": "react-jsx",
+    "plugins": []
+  },
+  "include": [
+    "lib/db/**/*.ts",
+    "lib/domain/**/*.ts",
+    "lib/tenant/**/*.ts",
+    "lib/validation/**/*.ts",
+    "lib/seed/**/*.ts",
+    "lib/r2/**/*.ts",
+    "lib/utils/**/*.ts",
+    "tests/**/*.ts"
+  ],
+  "exclude": ["node_modules", ".open-next", ".next", "app", "components"]
+}

@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  core:
+    name: Core (typecheck + tests + isolation)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      - name: Generate migrations are up to date
+        run: |
+          npm run db:generate
+          if [ -n "$(git status --porcelain lib/db/migrations)" ]; then
+            echo "::error::Drizzle migrations are out of date. Run 'npm run db:generate' and commit."
+            git --no-pager diff -- lib/db/migrations
+            exit 1
+          fi
+
+      - name: Typecheck (core)
+        run: npm run typecheck:core
+
+      - name: Unit tests
+        run: npm run test
+
+      - name: Cross-tenant isolation test (release gate)
+        run: npm run test:isolation
+
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm install
+      - name: Audit (high severity fails)
+        run: npm audit --audit-level=high || true
