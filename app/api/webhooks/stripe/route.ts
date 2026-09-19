@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getEnv, getRepositories } from "@/lib/cf/bindings";
 import { handleStripeWebhook } from "@/lib/billing/webhook";
+import { clientIp, rateLimit, tooManyRequests } from "@/lib/security/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,10 @@ export const dynamic = "force-dynamic";
  * provisioning/revocation happen here — never in the browser redirect.
  */
 export async function POST(req: Request) {
+  // Generous limit: legitimate Stripe bursts are fine, abusive floods are not.
+  const limit = await rateLimit(`stripe-webhook:${clientIp(req)}`, 120, 60);
+  if (!limit.allowed) return tooManyRequests();
+
   const rawBody = await req.text();
   const signature = req.headers.get("stripe-signature");
 

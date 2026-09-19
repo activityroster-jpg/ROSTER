@@ -3,6 +3,7 @@ import { getEnv, getRepositories } from "@/lib/cf/bindings";
 import { signupSchema } from "@/lib/validation/signup";
 import { validateSlug } from "@/lib/tenant/reserved";
 import { createCheckoutSession } from "@/lib/billing/checkout";
+import { clientIp, rateLimit, tooManyRequests } from "@/lib/security/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,9 @@ const SLUG_RESERVE_TTL_MS = 30 * 60 * 1000; // 30 minutes
  * happens later on the Stripe webhook — never here.
  */
 export async function POST(req: Request) {
+  const limit = await rateLimit(`checkout:${clientIp(req)}`, 10, 60);
+  if (!limit.allowed) return tooManyRequests();
+
   const parsed = signupSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid signup details", issues: parsed.error.flatten() }, { status: 400 });
