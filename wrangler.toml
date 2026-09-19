@@ -1,0 +1,34 @@
+name = "activityroster"
+main = ".open-next/worker.js"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Static assets produced by the OpenNext build.
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
+
+# --- Cloudflare D1 (single multi-tenant DB, EU-pinned) ---------------------
+# Create with: wrangler d1 create activityroster --location=weur
+[[d1_databases]]
+binding = "DB"
+database_name = "activityroster"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+migrations_dir = "lib/db/migrations"
+
+# --- Cloudflare R2 (private certificate/vetting documents, EU) --------------
+# Create with: wrangler r2 bucket create activityroster-docs --location=weur
+[[r2_buckets]]
+binding = "DOCS"
+bucket_name = "activityroster-docs"
+
+# --- KV for tenant/org lookup caching --------------------------------------
+[[kv_namespaces]]
+binding = "TENANT_CACHE"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+# Non-secret vars. Secrets (STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET,
+# BETTER_AUTH_SECRET, SENTRY_DSN, …) are set with `wrangler secret put`.
+[vars]
+APP_APEX_DOMAIN = "activityroster.com"
+APP_ENV = "production"

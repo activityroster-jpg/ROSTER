@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-plex-sans: "IBM Plex Sans", system-ui, sans-serif;
+  --font-spectral: "Spectral", Georgia, serif;
+
+  --navy: #0f2a3f;
+  --canvas: #f4f7fa;
+  --teal: #0c6b74;
+  --starboard: #1e8e5a;
+  --port: #c43d3d;
+  --amber: #b9821a;
+}
+
+html,
+body {
+  padding: 0;
+  margin: 0;
+  background: var(--canvas);
+  color: #0f2233;
+  font-family: var(--font-plex-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+@layer components {
+  .status-covered {
+    color: var(--starboard);
+  }
+  .status-conflict {
+    color: var(--port);
+  }
+  .status-attention {
+    color: var(--amber);
+  }
+}
