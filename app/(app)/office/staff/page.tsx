@@ -2,6 +2,7 @@ import { requireTenant } from "@/lib/tenant/require";
 import { listStaffWithFit } from "@/lib/services/staff";
 import { Card, StatusPill } from "@/components/ui";
 import { AddInstructorForm } from "@/components/office/AddInstructorForm";
+import { InviteInstructorButton } from "@/components/office/InviteInstructorButton";
 
 export const dynamic = "force-dynamic";
 
@@ -29,12 +30,13 @@ export default async function StaffPage() {
               <th className="px-4 py-3">Employment</th>
               <th className="px-4 py-3">Fit to roster</th>
               <th className="px-4 py-3">Notes</th>
+              <th className="px-4 py-3">Portal access</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {staff.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-slate-400">
+                <td colSpan={5} className="px-4 py-8 text-center text-slate-400">
                   No instructors yet. Add your team to start rostering.
                 </td>
               </tr>
@@ -61,6 +63,13 @@ export default async function StaffPage() {
                           .map((b) => (b.kind === "missing" ? `${b.name} missing` : `${b.name} expired`))
                           .join(", ")
                       : "—"}
+                  </td>
+                  <td className="px-4 py-3">
+                    {instructor.email ? (
+                      <InviteInstructorButton instructorId={instructor.id} linked={Boolean(instructor.userId)} />
+                    ) : (
+                      <span className="text-xs text-slate-400">Add email to invite</span>
+                    )}
                   </td>
                 </tr>
               ))

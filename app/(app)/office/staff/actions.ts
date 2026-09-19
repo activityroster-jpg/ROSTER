@@ -1,11 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { requireTenant } from "@/lib/tenant/require";
+import { getAuth } from "@/lib/auth";
 import { instructorSchema, complianceItemSchema, qualificationSchema } from "@/lib/validation/entities";
 import { writeAudit } from "@/lib/services/audit";
+import { linkInstructorUser } from "@/lib/services/invite";
 
-export type ActionState = { ok: boolean; error?: string };
+export type ActionState = { ok: boolean; error?: string; message?: string };
 
 /** Add an instructor. Authed (admin), Zod-validated, audited. */
 export async function createInstructorAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -53,6 +56,31 @@ export async function addComplianceItemAction(_prev: ActionState, formData: Form
   await writeAudit(repos, ctx, { action: "create", entity: "compliance_item", entityId: created.id, after: created });
   revalidatePath("/office/staff");
   return { ok: true };
+}
+
+/** Invite an instructor to the portal: link their user + membership, email a
+ *  magic sign-in link. */
+export async function inviteInstructorAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const instructorId = String(formData.get("instructorId") ?? "");
+  if (!instructorId) return { ok: false, error: "Missing instructor" };
+
+  const linked = await linkInstructorUser(repos, ctx, instructorId);
+  if (!linked.ok) return { ok: false, error: linked.error };
+
+  // Best-effort magic-link email so they can sign in and reach the portal.
+  try {
+    const auth = await getAuth();
+    await auth.api.signInMagicLink({
+      body: { email: linked.email, callbackURL: "/portal" },
+      headers: new Headers(await headers()),
+    });
+  } catch (err) {
+    console.error("[invite] magic link send failed:", (err as Error).message);
+  }
+
+  revalidatePath("/office/staff");
+  return { ok: true, message: `Invite sent to ${linked.email}` };
 }
 
 /** Record a grade/qualification for an instructor. */
