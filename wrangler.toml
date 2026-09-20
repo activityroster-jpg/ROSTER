@@ -25,7 +25,7 @@ bucket_name = "activityroster-docs"
 # --- KV for tenant/org lookup caching --------------------------------------
 [[kv_namespaces]]
 binding = "TENANT_CACHE"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
+id = "34fc102ca9744f0793d3e0adb3bf31e1"
 
 # Non-secret vars. Secrets (STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET,
 # BETTER_AUTH_SECRET, SENTRY_DSN, …) are set with `wrangler secret put`.
