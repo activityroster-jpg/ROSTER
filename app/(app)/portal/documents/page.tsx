@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { requireTenant } from "@/lib/tenant/require";
 import { instructor as instructorTable } from "@/lib/db/schema";
 import { Card, StatusPill } from "@/components/ui";
+import { DocumentUpload } from "@/components/portal/DocumentUpload";
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +51,17 @@ export default async function PortalDocumentsPage() {
               <div>
                 <p className="font-medium text-navy">{ctName.get(c.complianceTypeId) ?? "Check"}</p>
                 <p className="text-xs text-slate-500">Expires {c.expiryDate ?? "—"}</p>
+                <div className="mt-1 flex items-center gap-3">
+                  <DocumentUpload kind="compliance" itemId={c.id} hasDoc={Boolean(c.docKey)} />
+                  {c.docKey ? (
+                    <a
+                      href={`/api/documents/download?key=${encodeURIComponent(c.docKey)}`}
+                      className="text-xs text-slate-500 hover:underline"
+                    >
+                      View
+                    </a>
+                  ) : null}
+                </div>
               </div>
               <StatusPill tone={expiryTone(c.expiryDate ?? null)}>
                 {c.expiryDate && expiryTone(c.expiryDate) === "conflict" ? "Expired" : c.verified ? "Verified" : "Pending"}
@@ -66,7 +78,20 @@ export default async function PortalDocumentsPage() {
         ) : (
           myQuals.map((q) => (
             <Card key={q.id} className="flex items-center justify-between">
-              <p className="font-medium text-navy">{gtName.get(q.qualificationTypeId) ?? "Grade"}</p>
+              <div>
+                <p className="font-medium text-navy">{gtName.get(q.qualificationTypeId) ?? "Grade"}</p>
+                <div className="mt-1 flex items-center gap-3">
+                  <DocumentUpload kind="qualification" itemId={q.id} hasDoc={Boolean(q.docKey)} />
+                  {q.docKey ? (
+                    <a
+                      href={`/api/documents/download?key=${encodeURIComponent(q.docKey)}`}
+                      className="text-xs text-slate-500 hover:underline"
+                    >
+                      View
+                    </a>
+                  ) : null}
+                </div>
+              </div>
               <StatusPill tone={q.verified ? "covered" : "neutral"}>{q.verified ? "Verified" : "Pending"}</StatusPill>
             </Card>
           ))

@@ -4,6 +4,7 @@ import type { CloudflareEnv } from "@/lib/cf/bindings";
 import type { SubscriptionStatus } from "@/lib/db/schema";
 import { createStripe } from "./stripe";
 import { provisionCentre } from "./provision";
+import { captureException } from "@/lib/observability/sentry";
 
 export type WebhookOutcome =
   | { ok: true; handled: boolean; duplicate?: boolean; type: string }
@@ -45,6 +46,7 @@ export async function handleStripeWebhook(
     await routeEvent(env, repos, event);
   } catch (err) {
     // Leave the ledger row so a manual replay can be diagnosed; surface error.
+    await captureException(err, { tags: { area: "stripe-webhook", type: event.type } });
     return { ok: false, error: `Handler error: ${(err as Error).message}` };
   }
 

@@ -74,6 +74,11 @@ export class ControlPlaneRepository {
     return rows[0] ?? null;
   }
 
+  async userById(id: string) {
+    const rows = await this.db.select().from(user).where(eq(user.id, id)).limit(1);
+    return rows[0] ?? null;
+  }
+
   async createMembership(values: {
     userId: string;
     organisationId: string;

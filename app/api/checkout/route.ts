@@ -4,6 +4,7 @@ import { signupSchema } from "@/lib/validation/signup";
 import { validateSlug } from "@/lib/tenant/reserved";
 import { createCheckoutSession } from "@/lib/billing/checkout";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/security/rate-limit";
+import { captureException } from "@/lib/observability/sentry";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +49,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ url });
   } catch (err) {
     await control.releaseSlug(validation.slug);
+    await captureException(err, { tags: { area: "checkout" } });
     return NextResponse.json({ error: `Could not start checkout: ${(err as Error).message}` }, { status: 500 });
   }
 }

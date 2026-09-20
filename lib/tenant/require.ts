@@ -16,7 +16,7 @@ export interface RequiredTenant {
  * authorises the tenant or redirects appropriately. Never returns an
  * unauthorised context.
  */
-export async function requireTenant(opts?: { role?: "admin" }): Promise<RequiredTenant> {
+export async function requireTenant(opts?: { role?: "admin"; skipMfaGate?: boolean }): Promise<RequiredTenant> {
   const h = new Headers(await headers());
   const res = await resolveTenant(h);
 
@@ -41,5 +41,16 @@ export async function requireTenant(opts?: { role?: "admin" }): Promise<Required
   }
 
   const repos = await getRepositories();
+
+  // MFA enforcement for admins (brief §8): an admin without 2FA is sent to the
+  // security setup page (/security, outside the office layout to avoid a redirect
+  // loop) until they enrol. That page passes skipMfaGate.
+  if (res.ctx.role === "admin" && !opts?.skipMfaGate) {
+    const account = await repos.control.userById(res.ctx.userId);
+    if (account && !account.twoFactorEnabled) {
+      redirect("/security");
+    }
+  }
+
   return { ctx: res.ctx, organisation: res.organisation, repos };
 }
