@@ -1,5 +1,6 @@
 import { requireTenant } from "@/lib/tenant/require";
 import { Card } from "@/components/ui";
+import { AddLocationForm } from "@/components/office/AddLocationForm";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,7 @@ export default async function LocationsPage() {
     repos.tenant.locationType.list(ctx),
   ]);
   const typeName = new Map(types.map((t) => [t.id, t.name]));
+  const activeTypes = types.filter((t) => t.active).map((t) => ({ id: t.id, name: t.name }));
 
   const grouped = new Map<string, typeof locations>();
   for (const l of locations) {
@@ -20,6 +22,12 @@ export default async function LocationsPage() {
   return (
     <div>
       <h1 className="mb-6 font-display text-2xl font-semibold text-navy">Locations</h1>
+
+      <Card className="mb-6">
+        <h2 className="mb-3 font-semibold text-navy">Add location</h2>
+        <AddLocationForm types={activeTypes} />
+      </Card>
+
       {locations.length === 0 ? (
         <Card>
           <p className="text-sm text-slate-400">No locations yet.</p>
