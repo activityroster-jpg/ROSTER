@@ -52,13 +52,21 @@ Each phase ends green (tests + isolation test pass):
 
 - **Phase 0 — Foundations** ✅ schema, tenant resolution, TenantContext +
   repository layer, the isolation test, RYA seed catalogue, domain rules, CI.
-- **Phase 1 — Marketing + self-serve signup** (Stripe Checkout, provisioning
-  webhook, RYA-defaults seeding, magic-link onboarding, subscription gating).
-- **Phase 2 — App shell + configuration** (Settings, Course setup).
-- **Phase 3 — People & compliance** (staff, grades, fit-to-roster, expiry).
-- **Phase 4 — Courses, sessions & resources** (assignment, conflict, ratios).
-- **Phase 5 — Instructor portal + hours + comms.**
-- **Phase 6 — Admin, audit & compliance** (dashboard, export/erasure, hardening).
+- **Phase 1 — Marketing + self-serve signup** ✅ Stripe Checkout, provisioning
+  webhook, RYA-defaults seeding, magic-link onboarding, subscription gating,
+  Customer Portal.
+- **Phase 2 — App shell + configuration** ✅ subdomain shell, Settings, Course
+  setup, deactivate-never-delete.
+- **Phase 3 — People & compliance** ✅ staff, grades, compliance per
+  jurisdiction, fit-to-roster, expiry alerts, instructor documents + R2 upload.
+- **Phase 4 — Courses, sessions & resources** ✅ courses as sessions, equipment
+  & locations, fit/conflict-enforced assignment with override, ratio & safety
+  cover, weekly calendar + list.
+- **Phase 5 — Instructor portal + hours + comms** ✅ mobile portal (schedule,
+  availability editor, hours, documents), hours + CSV, magic-link invites.
+- **Phase 6 — Admin, audit & compliance** ✅ dashboard, change log, data export
+  + erasure, admin MFA enforcement, Sentry error reporting (PII-scrubbed),
+  rate limiting.
 
 ## Data residency
 
