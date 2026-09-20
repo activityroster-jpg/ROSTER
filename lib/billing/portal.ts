@@ -12,9 +12,12 @@ export async function createPortalSession(
   returnUrl: string,
 ): Promise<{ url: string }> {
   const stripe = createStripe(env);
-  const session = await stripe.billingPortal.sessions.create({
-    customer: stripeCustomerId,
-    return_url: returnUrl,
-  });
+  // Idempotency key bucketed by the hour: a rapid double-click reuses one
+  // portal session rather than creating duplicates.
+  const bucket = Math.floor(Date.now() / (60 * 60 * 1000));
+  const session = await stripe.billingPortal.sessions.create(
+    { customer: stripeCustomerId, return_url: returnUrl },
+    { idempotencyKey: `portal:${stripeCustomerId}:${bucket}` },
+  );
   return { url: session.url };
 }

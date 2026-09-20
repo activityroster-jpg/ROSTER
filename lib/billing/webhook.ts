@@ -36,6 +36,13 @@ export async function handleStripeWebhook(
     return { ok: false, error: `Signature verification failed: ${(err as Error).message}` };
   }
 
+  // Environment guard: in production only ever act on live events (and never
+  // let a live event be processed by a non-prod deployment).
+  const expectLive = env.APP_ENV === "production";
+  if (event.livemode !== expectLive) {
+    return { ok: true, handled: false, type: event.type };
+  }
+
   // Idempotency layer 1: have we already accepted this event?
   const first = await repos.control.recordWebhookEventOnce(event.id, event.type, undefined);
   if (!first) {
@@ -56,19 +63,22 @@ export async function handleStripeWebhook(
 
 async function routeEvent(env: CloudflareEnv, repos: Repositories, event: Stripe.Event): Promise<void> {
   switch (event.type) {
-    case "checkout.session.completed": {
+    // Synchronous payment methods (cards) confirm here; delayed methods (some
+    // bank debits) arrive later via async_payment_succeeded.
+    case "checkout.session.completed":
+    case "checkout.session.async_payment_succeeded": {
       const session = event.data.object as Stripe.Checkout.Session;
-      const m = session.metadata ?? {};
-      if (m.pending_signup !== "1" || !m.slug) return; // not one of ours
-      await provisionCentre(repos, env, {
-        slug: m.slug,
-        centreName: m.centre_name ?? m.slug,
-        ownerEmail: m.owner_email ?? (session.customer_email ?? ""),
-        jurisdiction: m.jurisdiction ?? "england",
-        plan: m.plan ?? "rostering",
-        stripeCustomerId: typeof session.customer === "string" ? session.customer : null,
-        stripeSubscriptionId: typeof session.subscription === "string" ? session.subscription : null,
-      });
+      const paid = session.payment_status === "paid" || session.payment_status === "no_payment_required";
+      if (!paid) return; // wait for the async success event
+      await provisionFromSession(env, repos, session);
+      return;
+    }
+
+    // A delayed payment failed: free the soft-reserved slug so it can be reclaimed.
+    case "checkout.session.async_payment_failed": {
+      const session = event.data.object as Stripe.Checkout.Session;
+      const slug = session.metadata?.slug;
+      if (slug) await repos.control.releaseSlug(slug);
       return;
     }
 
@@ -91,6 +101,16 @@ async function routeEvent(env: CloudflareEnv, repos: Repositories, event: Stripe
       return;
     }
 
+    // Successful renewal / dunning recovery: (re)activate the centre.
+    case "invoice.paid": {
+      const invoice = event.data.object as Stripe.Invoice;
+      const customerId = typeof invoice.customer === "string" ? invoice.customer : null;
+      if (!customerId) return;
+      const org = await repos.control.organisationByStripeCustomer(customerId);
+      if (org) await repos.control.updateOrganisation(org.id, { subscriptionStatus: "active", status: "active" });
+      return;
+    }
+
     case "invoice.payment_failed": {
       const invoice = event.data.object as Stripe.Invoice;
       const customerId = typeof invoice.customer === "string" ? invoice.customer : null;
@@ -100,9 +120,40 @@ async function routeEvent(env: CloudflareEnv, repos: Repositories, event: Stripe
       return;
     }
 
+    // Nudge the centre before a trial lapses (best-effort in-app notification).
+    case "customer.subscription.trial_will_end": {
+      const sub = event.data.object as Stripe.Subscription;
+      const org = await orgForSubscription(repos, sub);
+      if (org) {
+        await repos.tenant.notification.insert(
+          { organisationId: org.id, slug: org.slug, system: true, reason: "stripe-trial-warning" },
+          { channel: "in_app", title: "Your trial is ending soon", body: "Add a payment method to keep your centre active." },
+        );
+      }
+      return;
+    }
+
     default:
       return; // ignore everything else
   }
+}
+
+async function provisionFromSession(
+  env: CloudflareEnv,
+  repos: Repositories,
+  session: Stripe.Checkout.Session,
+): Promise<void> {
+  const m = session.metadata ?? {};
+  if (m.pending_signup !== "1" || !m.slug) return; // not one of ours
+  await provisionCentre(repos, env, {
+    slug: m.slug,
+    centreName: m.centre_name ?? m.slug,
+    ownerEmail: m.owner_email ?? (session.customer_email ?? ""),
+    jurisdiction: m.jurisdiction ?? "england",
+    plan: m.plan ?? "rostering",
+    stripeCustomerId: typeof session.customer === "string" ? session.customer : null,
+    stripeSubscriptionId: typeof session.subscription === "string" ? session.subscription : null,
+  });
 }
 
 async function orgForSubscription(repos: Repositories, sub: Stripe.Subscription) {
