@@ -1,6 +1,13 @@
 import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
-import { evaluateRatio, type AssignedRole, type RatioResult } from "@/lib/domain";
+import {
+  evaluateRatio,
+  findConflicts,
+  type AssignedRole,
+  type Conflict,
+  type RatioResult,
+  type ResourceBooking,
+} from "@/lib/domain";
 import type { SlotCode } from "@/lib/db/schema";
 
 export interface CourseCoverage {
@@ -35,6 +42,76 @@ export function addDays(isoDate: string, days: number): string {
   const d = new Date(`${isoDate}T00:00:00.000Z`);
   d.setUTCDate(d.getUTCDate() + days);
   return d.toISOString().slice(0, 10);
+}
+
+function toMs(v: Date | number): number {
+  return v instanceof Date ? v.getTime() : Number(v);
+}
+
+export interface ScheduleConflicts {
+  instructor: Conflict[];
+  equipment: Conflict[];
+  /** Set of courseIds involved in any conflict, for per-course flagging. */
+  courseIds: Set<string>;
+}
+
+/**
+ * Detect double-bookings across the whole schedule: the same instructor OR the
+ * same tracked equipment unit on two overlapping sessions (brief §6). Bulk
+ * (untracked) equipment is not unit-conflicted. Pure `findConflicts` does the
+ * work; this just builds the bookings from tenant-scoped reads.
+ */
+export async function getScheduleConflicts(
+  repos: Repositories,
+  ctx: AnyTenantContext,
+): Promise<ScheduleConflicts> {
+  const t = repos.tenant;
+  const [sessions, staff, courseEquip] = await Promise.all([
+    t.courseSession.list(ctx),
+    t.courseStaff.list(ctx),
+    t.courseEquipment.list(ctx),
+  ]);
+
+  const sessionsByCourse = new Map<string, typeof sessions>();
+  for (const s of sessions) {
+    sessionsByCourse.set(s.courseId, [...(sessionsByCourse.get(s.courseId) ?? []), s]);
+  }
+
+  const instructorBookings: ResourceBooking[] = [];
+  for (const a of staff) {
+    for (const s of sessionsByCourse.get(a.courseId) ?? []) {
+      instructorBookings.push({
+        sessionId: s.id,
+        resourceId: a.instructorId,
+        startAt: toMs(s.startAt),
+        endAt: toMs(s.endAt),
+        courseId: a.courseId,
+      });
+    }
+  }
+
+  const equipmentBookings: ResourceBooking[] = [];
+  for (const ce of courseEquip) {
+    if (!ce.equipmentId) continue; // only tracked units conflict
+    for (const s of sessionsByCourse.get(ce.courseId) ?? []) {
+      equipmentBookings.push({
+        sessionId: s.id,
+        resourceId: ce.equipmentId,
+        startAt: toMs(s.startAt),
+        endAt: toMs(s.endAt),
+        courseId: ce.courseId,
+      });
+    }
+  }
+
+  const instructor = findConflicts(instructorBookings);
+  const equipment = findConflicts(equipmentBookings);
+  const courseIds = new Set<string>();
+  for (const c of [...instructor, ...equipment]) {
+    if (c.a.courseId) courseIds.add(c.a.courseId);
+    if (c.b.courseId) courseIds.add(c.b.courseId);
+  }
+  return { instructor, equipment, courseIds };
 }
 
 /**
