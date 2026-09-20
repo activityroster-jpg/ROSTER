@@ -13,7 +13,7 @@ binding = "ASSETS"
 [[d1_databases]]
 binding = "DB"
 database_name = "activityroster"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "40f47084-458a-471e-bd82-27dcc85c55dd"
 migrations_dir = "lib/db/migrations"
 
 # --- Cloudflare R2 (private certificate/vetting documents, EU) --------------
