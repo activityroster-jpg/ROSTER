@@ -48,8 +48,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci || npm install
-      - name: Build
-        run: npm run build
+      - name: Build (Next.js app)
+        run: npm run build:next
         env:
           NEXT_TELEMETRY_DISABLED: "1"
           NEXT_PUBLIC_APEX_DOMAIN: activityroster.com
