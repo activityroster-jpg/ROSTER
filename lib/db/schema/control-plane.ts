@@ -192,10 +192,31 @@ export const slugReservation = sqliteTable("slug_reservation", {
   createdAt: createdAt(),
 }, (t) => [uniqueIndex("slug_reservation_slug_uq").on(t.slug)]);
 
+// --- Marketing leads (email capture from the public site) ------------------
+
+export const LEAD_ORG_TYPES = ["yacht_club", "sailing_school", "activity_centre", "other"] as const;
+export type LeadOrgType = (typeof LEAD_ORG_TYPES)[number];
+
+/**
+ * A prospect who asked for the demo / left their email on the marketing site.
+ * Control-plane (global, not tenant-owned); never linked to org data. Deduped on
+ * email so repeated sign-ups don't pile up.
+ */
+export const lead = sqliteTable("lead", {
+  id: id(),
+  email: text("email").notNull(),
+  centreName: text("centre_name"),
+  orgType: text("org_type", { enum: LEAD_ORG_TYPES }),
+  message: text("message"),
+  source: text("source").notNull().default("marketing"),
+  createdAt: createdAt(),
+}, (t) => [uniqueIndex("lead_email_uq").on(t.email)]);
+
 export type Organisation = typeof organisation.$inferSelect;
 export type NewOrganisation = typeof organisation.$inferInsert;
 export type Membership = typeof membership.$inferSelect;
 export type User = typeof user.$inferSelect;
+export type Lead = typeof lead.$inferSelect;
 
 // A tiny re-export so migrations pick up the raw-sql helper if needed.
 export const _sql = sql;

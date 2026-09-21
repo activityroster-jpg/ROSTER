@@ -8,6 +8,13 @@
       "when": 1789840432215,
       "tag": "0000_petite_deathbird",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1789980278069,
+      "tag": "0001_stale_tombstone",
+      "breakpoints": true
     }
   ]
 }

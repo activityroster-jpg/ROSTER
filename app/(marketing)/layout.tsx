@@ -1,8 +1,6 @@
 import Link from "next/link";
-import { apexDomain } from "@/lib/config";
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
-  const apex = apexDomain();
   return (
     <div className="min-h-screen bg-canvas">
       <header className="border-b border-slate-200 bg-white">
@@ -10,21 +8,18 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
           <Link href="/" className="font-display text-xl font-bold text-navy">
             Activity<span className="text-teal">Roster</span>
           </Link>
-          <nav className="flex items-center gap-6 text-sm font-medium text-slate-600">
-            <Link href="/#features" className="hover:text-navy">
+          <nav className="flex items-center gap-5 text-sm font-medium text-slate-600">
+            <Link href="/#features" className="hidden hover:text-navy sm:inline">
               Features
+            </Link>
+            <Link href="/demo" className="hover:text-navy">
+              Demo
             </Link>
             <Link href="/pricing" className="hover:text-navy">
               Pricing
             </Link>
-            <Link href="/#faq" className="hover:text-navy">
-              FAQ
-            </Link>
-            <a
-              href={`https://${apex}/pricing`}
-              className="rounded-lg bg-navy px-4 py-2 text-white hover:bg-navy-700"
-            >
-              Get started
+            <a href="/#get-demo" className="rounded-lg bg-navy px-4 py-2 text-white hover:bg-navy-700">
+              Get a demo
             </a>
           </nav>
         </div>

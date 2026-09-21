@@ -1,11 +1,13 @@
 import { and, eq, lt } from "drizzle-orm";
 import type { Database } from "@/lib/db/client";
 import {
+  lead,
   membership,
   organisation,
   slugReservation,
   user,
   webhookEvent,
+  type LeadOrgType,
   type MembershipRole,
   type NewOrganisation,
   type Organisation,
@@ -155,6 +157,30 @@ export class ControlPlaneRepository {
       return true;
     } catch {
       return false;
+    }
+  }
+
+  // --- Marketing leads ------------------------------------------------------
+
+  /** Capture a marketing lead, idempotent on email (upsert-ish: ignore dupes). */
+  async captureLead(values: {
+    email: string;
+    centreName?: string | null;
+    orgType?: LeadOrgType | null;
+    message?: string | null;
+    source?: string;
+  }): Promise<{ captured: boolean }> {
+    try {
+      await this.db.insert(lead).values({
+        email: values.email.toLowerCase(),
+        centreName: values.centreName ?? null,
+        orgType: values.orgType ?? null,
+        message: values.message ?? null,
+        source: values.source ?? "marketing",
+      });
+      return { captured: true };
+    } catch {
+      return { captured: false }; // already on the list (unique email)
     }
   }
 
