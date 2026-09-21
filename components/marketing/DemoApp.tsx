@@ -49,7 +49,7 @@ export function DemoApp() {
           <div className="grid md:grid-cols-[200px_1fr]">
             <aside className="hidden bg-navy p-4 text-white md:block">
               <p className="font-display text-lg font-bold">
-                Activity<span className="text-teal">Roster</span>
+                Activity<span className="text-ryablue-bright">Roster</span>
               </p>
               <p className="mb-3 border-b border-white/10 pb-3 text-xs text-white/60">Harbour Sailing Centre</p>
               {["Dashboard", "Courses", "Availability", "Staff", "Equipment", "Finance", "Settings"].map((n) => {
@@ -229,7 +229,7 @@ function DemoPortal() {
     <div className="flex justify-center py-6">
       <div className="w-[340px] max-w-full overflow-hidden rounded-[30px] border-[10px] border-[#0b1620] shadow-2xl">
         <div className="bg-navy px-4 py-4 text-white">
-          <p className="font-display text-lg font-bold">Activity<span className="text-teal">Roster</span></p>
+          <p className="font-display text-lg font-bold">Activity<span className="text-ryablue-bright">Roster</span></p>
           <p className="text-xs text-white/70">Harbour Sailing Centre · Sarah Whitlock</p>
         </div>
         <div className="min-h-[380px] bg-canvas p-4">

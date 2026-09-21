@@ -1,9 +1,9 @@
 import type { Config } from "tailwindcss";
 
 /**
- * Design system (brief §10): chart-plotter feel — navy sidebar, cool light
- * canvas, teal accent, with status colours starboard-green (covered/confirmed),
- * port-red (conflict) and amber (expiring/attention).
+ * Design system aligned to the RYA brand: deep RYA navy, a confident RYA blue
+ * accent, Fira Sans throughout. Functional status colours (starboard-green =
+ * covered/confirmed, port-red = conflict, amber = attention) are kept.
  */
 const config: Config = {
   content: [
@@ -15,28 +15,35 @@ const config: Config = {
     extend: {
       colors: {
         navy: {
-          DEFAULT: "#0F2A3F",
-          50: "#f0f5f9",
-          700: "#12324b",
-          800: "#0F2A3F",
-          900: "#0a1d2c",
+          DEFAULT: "#0A2E52",
+          50: "#eef4fa",
+          700: "#0c3a68",
+          800: "#0A2E52",
+          900: "#071f39",
         },
-        canvas: "#F4F7FA",
+        canvas: "#EEF3F8",
+        // RYA blue — the primary accent (kept under the `teal` key so existing
+        // bg-teal/text-teal usages re-skin to brand blue in one change).
         teal: {
-          DEFAULT: "#0C6B74",
-          600: "#0C6B74",
-          700: "#095860",
+          DEFAULT: "#0072CE",
+          600: "#0072CE",
+          700: "#005CAB",
+        },
+        ryablue: {
+          DEFAULT: "#0072CE",
+          bright: "#009EDB",
+          dark: "#005CAB",
         },
         starboard: "#1E8E5A", // covered / confirmed
         port: "#C43D3D", // conflict
         amber: "#B9821A", // expiring / attention
       },
       fontFamily: {
-        sans: ["var(--font-plex-sans)", "IBM Plex Sans", "system-ui", "sans-serif"],
-        display: ["var(--font-spectral)", "Spectral", "Georgia", "serif"],
+        sans: ["var(--font-sans)", "Fira Sans", "system-ui", "sans-serif"],
+        display: ["var(--font-sans)", "Fira Sans", "system-ui", "sans-serif"],
       },
       borderRadius: {
-        card: "0.75rem",
+        card: "0.85rem",
       },
     },
   },

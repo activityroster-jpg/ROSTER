@@ -49,7 +49,7 @@ export default async function OfficeLayout({ children }: { children: React.React
       <aside className="flex w-60 flex-none flex-col bg-navy text-white">
         <div className="border-b border-white/10 px-5 py-5">
           <p className="font-display text-lg font-bold">
-            Activity<span className="text-teal">Roster</span>
+            Activity<span className="text-ryablue-bright">Roster</span>
           </p>
           <p className="mt-1 truncate text-sm text-white/70">{organisation.name}</p>
         </div>

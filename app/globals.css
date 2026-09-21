@@ -3,12 +3,13 @@
 @tailwind utilities;
 
 :root {
-  --font-plex-sans: "IBM Plex Sans", system-ui, sans-serif;
-  --font-spectral: "Spectral", Georgia, serif;
+  --font-sans: "Fira Sans", system-ui, sans-serif;
 
-  --navy: #0f2a3f;
-  --canvas: #f4f7fa;
-  --teal: #0c6b74;
+  --navy: #0a2e52;
+  --canvas: #eef3f8;
+  --ryablue: #0072ce;
+  --ryablue-bright: #009edb;
+  --teal: #0072ce; /* alias: primary accent */
   --starboard: #1e8e5a;
   --port: #c43d3d;
   --amber: #b9821a;
@@ -19,8 +20,8 @@ body {
   padding: 0;
   margin: 0;
   background: var(--canvas);
-  color: #0f2233;
-  font-family: var(--font-plex-sans);
+  color: #10263f;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
 

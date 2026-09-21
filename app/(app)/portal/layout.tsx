@@ -15,7 +15,7 @@ export default async function PortalLayout({ children }: { children: React.React
     <div className="mx-auto flex min-h-screen max-w-md flex-col bg-canvas">
       <header className="bg-navy px-4 py-4 text-white">
         <p className="font-display text-lg font-bold">
-          Activity<span className="text-teal">Roster</span>
+          Activity<span className="text-ryablue-bright">Roster</span>
         </p>
         <p className="text-sm text-white/70">{organisation.name}</p>
       </header>
