@@ -19,7 +19,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
               Pricing
             </Link>
             <a href="/#get-demo" className="rounded-lg bg-navy px-4 py-2 text-white hover:bg-navy-700">
-              Get a demo
+              Try free for a month
             </a>
           </nav>
         </div>

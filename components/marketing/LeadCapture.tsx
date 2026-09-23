@@ -69,9 +69,9 @@ export function LeadCapture({
     <form onSubmit={submit} className={wrapCls}>
       {variant === "card" ? (
         <>
-          <p className="font-display text-lg font-semibold text-navy">See it on your own courses</p>
+          <p className="font-display text-lg font-semibold text-navy">Try it free for a month</p>
           <p className="mb-4 mt-1 text-sm text-slate-600">
-            Get a free walkthrough and instant access to the interactive demo.
+            No card required. Get instant access to the interactive demo and a free walkthrough on your own courses.
           </p>
         </>
       ) : null}
@@ -112,16 +112,16 @@ export function LeadCapture({
           disabled={status === "busy"}
           className="rounded-lg bg-teal px-5 py-3 font-semibold text-white transition hover:bg-teal-700 disabled:opacity-50"
         >
-          {status === "busy" ? "Sending…" : "Get my free demo"}
+          {status === "busy" ? "Sending…" : "Start my free month"}
         </button>
         <Link
           href="/demo"
           className="rounded-lg border border-slate-300 px-5 py-3 font-semibold text-navy hover:bg-slate-50"
         >
-          Skip — just show me
+          Explore the demo first
         </Link>
       </div>
-      <p className="mt-2 text-xs text-slate-500">No card required. Unsubscribe anytime.</p>
+      <p className="mt-2 text-xs text-slate-500">Free for a month · no card required · cancel anytime.</p>
     </form>
   );
 }

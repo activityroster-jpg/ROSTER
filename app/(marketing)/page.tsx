@@ -1,39 +1,38 @@
 import Link from "next/link";
-import { AlertTriangle, Anchor, CalendarCheck, LifeBuoy, ShieldCheck, Ship, Users, Waves } from "lucide-react";
+import { AlertTriangle, Anchor, CalendarCheck, LifeBuoy, ShieldCheck, Ship, Users, Waves, Wallet, FileCheck } from "lucide-react";
 import { LeadCapture } from "@/components/marketing/LeadCapture";
 import { apexDomain } from "@/lib/config";
 
-const FEATURES = [
-  {
-    icon: ShieldCheck,
-    title: "Won't roster the under-qualified",
-    body: "An instructor whose first aid, DBS/PVG/AccessNI or Garda vetting has lapsed is blocked from assignment automatically — the RYA rule, enforced for you.",
-  },
-  {
-    icon: Users,
-    title: "Ratio-aware in real time",
-    body: "Every course flags the moment there aren't enough ratio-counting instructors for the group size. No more headcount maths on the slipway.",
-  },
-  {
-    icon: LifeBuoy,
-    title: "Safety-boat cover enforced",
-    body: "Craft going afloat without a safety-boat role filled? Flagged before anyone launches — with a recorded override if you decide to proceed.",
-  },
-  {
-    icon: AlertTriangle,
-    title: "Nothing lapses quietly",
-    body: "Every ticket, revalidation and vetting check is tracked with expiry alerts, so certificates never expire unnoticed the week before a course.",
-  },
+const PILLARS = [
   {
     icon: CalendarCheck,
-    title: "Clash detection built in",
-    body: "The same instructor or the same safety boat double-booked across overlapping sessions is caught instantly — reassign or override with a note.",
+    title: "Rostering, simplified",
+    body: "Build the week in minutes. Sessions, staff and boats in one view — the Saturday-morning scramble replaced by a plan that's already checked.",
   },
   {
-    icon: Waves,
-    title: "Sessions, not spreadsheets",
-    body: "A weekend course or a four-evening improver is just its sessions. A weekly calendar and a chronological list, coloured by coverage at a glance.",
+    icon: ShieldCheck,
+    title: "Compliance, automatic",
+    body: "It won't schedule an under-qualified instructor, an over-ratio course, or craft afloat without safety-boat cover. The RYA rules, enforced for you.",
   },
+  {
+    icon: FileCheck,
+    title: "Licence tracking, sorted",
+    body: "Every ticket, revalidation and vetting check tracked with expiry alerts — so nothing lapses the week before a course.",
+  },
+  {
+    icon: Wallet,
+    title: "Staff payments, tidy",
+    body: "Scheduled vs actual hours captured as they happen, with pay rates applied and a one-click CSV for payroll.",
+  },
+];
+
+const FEATURES = [
+  { icon: ShieldCheck, title: "Won't roster the under-qualified", body: "An instructor whose first aid, DBS/PVG/AccessNI or Garda vetting has lapsed is blocked from assignment automatically." },
+  { icon: Users, title: "Ratio-aware in real time", body: "Courses flag the moment there aren't enough ratio-counting instructors for the group size. No headcount maths on the slipway." },
+  { icon: LifeBuoy, title: "Safety-boat cover enforced", body: "Craft going afloat without a safety-boat role filled? Flagged before launch — with a recorded override if you decide to proceed." },
+  { icon: AlertTriangle, title: "Nothing lapses quietly", body: "Tickets and vetting tracked with expiry alerts, so certificates never expire unnoticed." },
+  { icon: CalendarCheck, title: "Clash detection built in", body: "The same instructor or safety boat double-booked across overlapping sessions is caught instantly — reassign or override." },
+  { icon: Wallet, title: "Hours & pay, done", body: "Scheduled vs actual hours with pay rates, ready to export for payroll each month." },
 ];
 
 const AUDIENCES = [
@@ -48,27 +47,33 @@ export default function MarketingHome() {
     <>
       {/* Hero */}
       <section className="relative overflow-hidden bg-navy text-white">
-        <div className="pointer-events-none absolute inset-0 opacity-20" style={{ background: "radial-gradient(60% 60% at 80% 10%, #0C6B74 0%, transparent 60%)" }} />
+        {/* Subtle watersports photo behind a heavy navy wash */}
+        <div
+          className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-20"
+          style={{ backgroundImage: "url('/photos/sailing-hero.jpg')" }}
+          aria-hidden
+        />
+        <div className="pointer-events-none absolute inset-0" style={{ background: "linear-gradient(90deg, #0A2E52 35%, rgba(10,46,82,0.72) 100%)" }} aria-hidden />
         <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-4 py-20 md:grid-cols-2">
           <div>
             <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-[#4fd1c5]">
               For RYA yacht clubs, sailing schools &amp; activity centres
             </p>
             <h1 className="font-display text-4xl font-bold leading-tight md:text-5xl" style={{ textWrap: "balance" }}>
-              Rostering that won&apos;t let a session run unsafe.
+              Rostering, compliance, licences &amp; pay — sorted for your centre.
             </h1>
             <p className="mt-4 max-w-xl text-lg text-white/80">
               ActivityRoster is compliance-aware staff rostering built for the water. It won&apos;t schedule an
-              under-qualified instructor, an over-ratio course, or craft afloat without safety-boat cover — and it
-              tracks every ticket so nothing lapses.
+              under-qualified instructor, an over-ratio course, or craft afloat without safety-boat cover — it tracks
+              every ticket so nothing lapses, and keeps staff hours and pay tidy for payroll.
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
-              <Link href="/demo" className="rounded-lg bg-[#0C6B74] px-6 py-3 font-semibold text-white shadow-lg transition hover:bg-teal-700">
-                Try the live demo →
-              </Link>
-              <a href="#get-demo" className="rounded-lg border border-white/25 px-6 py-3 font-semibold text-white hover:bg-white/10">
-                Get a free walkthrough
+              <a href="#get-demo" className="rounded-lg bg-[#0C6B74] px-6 py-3 font-semibold text-white shadow-lg transition hover:bg-teal-700">
+                Try free for a month →
               </a>
+              <Link href="/demo" className="rounded-lg border border-white/25 px-6 py-3 font-semibold text-white hover:bg-white/10">
+                Explore the demo
+              </Link>
             </div>
             <p className="mt-3 text-sm text-white/50">No card required · your own address at yourclub.{apex}</p>
           </div>
@@ -80,25 +85,61 @@ export default function MarketingHome() {
         </div>
       </section>
 
-      {/* Who it's for */}
-      <section className="mx-auto max-w-6xl px-4 py-16">
-        <h2 className="font-display text-2xl font-semibold text-navy">Built for the way the water works</h2>
-        <p className="mt-2 max-w-2xl text-slate-600">Every centre starts identical and shapes itself to how you run — grades, roles, checks and course types are all yours to set.</p>
-        <div className="mt-8 grid gap-6 md:grid-cols-3">
-          {AUDIENCES.map((a) => (
-            <div key={a.title} className="rounded-card border border-slate-200 bg-white p-6">
-              <a.icon className="h-8 w-8 text-teal" />
-              <h3 className="mt-3 font-display text-lg font-semibold text-navy">{a.title}</h3>
-              <p className="mt-1 text-sm text-slate-600">{a.body}</p>
+      {/* Four pillars — what it does for owners */}
+      <section id="features" className="mx-auto max-w-6xl px-4 py-16">
+        <h2 className="font-display text-2xl font-semibold text-navy">Everything a centre owner juggles — in one place</h2>
+        <p className="mt-2 max-w-2xl text-slate-600">
+          Stop stitching together spreadsheets, WhatsApp groups and a folder of certificates. ActivityRoster handles
+          the four jobs that eat your week.
+        </p>
+        <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {PILLARS.map((p) => (
+            <div key={p.title} className="rounded-card border border-slate-200 bg-white p-5">
+              <p.icon className="h-8 w-8 text-teal" />
+              <h3 className="mt-3 font-semibold text-navy">{p.title}</h3>
+              <p className="mt-1 text-sm text-slate-600">{p.body}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Features */}
-      <section id="features" className="border-y border-slate-200 bg-white">
+      {/* Who it's for */}
+      <section className="border-y border-slate-200 bg-white">
         <div className="mx-auto max-w-6xl px-4 py-16">
-          <h2 className="font-display text-2xl font-semibold text-navy">The compliance safety net</h2>
+          <h2 className="font-display text-2xl font-semibold text-navy">Built for the way RYA centres work</h2>
+          <p className="mt-2 max-w-2xl text-slate-600">Every centre starts identical and shapes itself to how you run — grades, roles, checks and course types are all yours to set.</p>
+          <div className="mt-8 grid gap-6 md:grid-cols-3">
+            {AUDIENCES.map((a) => (
+              <div key={a.title} className="rounded-card border border-slate-200 p-6">
+                <a.icon className="h-8 w-8 text-teal" />
+                <h3 className="mt-3 font-display text-lg font-semibold text-navy">{a.title}</h3>
+                <p className="mt-1 text-sm text-slate-600">{a.body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Subtle photo strip for vibe */}
+      <section aria-hidden className="mx-auto max-w-6xl px-4 py-10">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[
+            ["/photos/dinghies.jpg", "Dinghies"],
+            ["/photos/catamarans.jpg", "Catamarans"],
+            ["/photos/kayaks.jpg", "Kayaks"],
+            ["/photos/marina.jpg", "Marina"],
+          ].map(([src, alt]) => (
+            <div key={src} className="h-24 overflow-hidden rounded-card sm:h-28">
+              <img src={src} alt={alt} className="h-full w-full object-cover opacity-90 transition hover:opacity-100" loading="lazy" />
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Feature detail — the compliance safety net */}
+      <section className="border-y border-slate-200 bg-white">
+        <div className="mx-auto max-w-6xl px-4 py-16">
+          <h2 className="font-display text-2xl font-semibold text-navy">The compliance safety net, in detail</h2>
           <p className="mt-2 max-w-2xl text-slate-600">The rules that keep a centre safe are built in — not a checklist someone has to remember at 07:30 on a Saturday.</p>
           <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map((f) => (
@@ -126,47 +167,29 @@ export default function MarketingHome() {
         </div>
       </section>
 
-      {/* Illustrative quote */}
+      {/* Quote */}
       <section className="border-y border-slate-200 bg-white">
         <div className="mx-auto max-w-3xl px-4 py-16 text-center">
           <p className="font-display text-2xl font-medium leading-snug text-navy" style={{ textWrap: "balance" }}>
             &ldquo;The Saturday morning scramble to check who&apos;s ticketed and who&apos;s on safety boat just… stopped.
             It tells us before we get to the water.&rdquo;
           </p>
-          <p className="mt-4 text-sm text-slate-500">Illustrative — how principals describe the compliance safety net.</p>
         </div>
       </section>
 
-      {/* How it works */}
-      <section className="mx-auto max-w-6xl px-4 py-16">
-        <h2 className="font-display text-2xl font-semibold text-navy">Up and running in an afternoon</h2>
-        <div className="mt-8 grid gap-6 md:grid-cols-3">
-          {[
-            ["1. Claim your address", "Pick a plan and check out securely. You get your own space at yourclub.activityroster.com."],
-            ["2. Provisioned instantly", "Your centre is created with RYA-aware defaults for your jurisdiction — grades, roles, checks and the course catalogue."],
-            ["3. Add your team & go", "Import instructors, record tickets, and start rostering with the safety net on from day one."],
-          ].map(([title, body]) => (
-            <div key={title} className="rounded-card border border-slate-200 bg-white p-6">
-              <h3 className="font-semibold text-navy">{title}</h3>
-              <p className="mt-2 text-sm text-slate-600">{body}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Final CTA / capture */}
+      {/* Final CTA / free month signup */}
       <section id="get-demo" className="bg-navy">
         <div className="mx-auto grid max-w-5xl items-center gap-10 px-4 py-16 md:grid-cols-2">
           <div className="text-white">
-            <h2 className="font-display text-3xl font-bold" style={{ textWrap: "balance" }}>Get a free walkthrough on your own courses</h2>
+            <h2 className="font-display text-3xl font-bold" style={{ textWrap: "balance" }}>Try ActivityRoster free for a month</h2>
             <p className="mt-3 text-white/80">
-              Leave your email and we&apos;ll show you ActivityRoster set up for a centre like yours — and hand you
-              instant access to the interactive demo.
+              No card required. Leave your email and we&apos;ll set you up with your own centre and a free walkthrough —
+              and you can start in the interactive demo right away.
             </p>
             <ul className="mt-5 space-y-2 text-white/80">
+              <li>• Free for a month, then simple monthly pricing</li>
               <li>• EU-hosted, GDPR-ready, data export any time</li>
               <li>• Your data is strictly isolated from every other centre</li>
-              <li>• No card required to look around</li>
             </ul>
           </div>
           <div className="rounded-card bg-white p-6 shadow-xl">
