@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import Link from "next/link";
 import { Card, StatusPill } from "@/components/ui";
 
@@ -244,137 +244,296 @@ function DemoDashboard() {
   );
 }
 
+type Course = {
+  name: string; meta: string; tone: "covered" | "conflict" | "attention"; pill: string;
+  staff: string[]; warn: string | null; assign?: boolean;
+  detail: { students: string; times: string[]; kit: string[]; note: string };
+};
+
+const COURSES: Course[] = [
+  {
+    name: "Powerboat Level 2", meta: "RYA Powerboat · Sat 26 Sep · 1/1 staff", tone: "conflict", pill: "No safety cover",
+    staff: ["Dan Rees · Instructor"], warn: "Safety boat required for this course — no safety-boat driver assigned yet.", assign: true,
+    detail: { students: "6 booked (max 6)", times: ["Sat 26 Sep · 09:00–12:30 — theory & handling", "Sat 26 Sep · 13:30–16:30 — on-water assessment"], kit: ["RIB “Kestrel”", "Fuel & kill-cords checked"], note: "Ratio 1:3. Certificates issued on completion." },
+  },
+  {
+    name: "Youth Stage 2", meta: "RYA Youth Sailing · Wed 24 Sep · 1/2 staff", tone: "attention", pill: "Under-staffed",
+    staff: ["Megan Foyle · Senior Instructor"], warn: "Group of 12 needs 2 ratio-counting instructors — 1 more to assign.",
+    detail: { students: "12 booked (max 12)", times: ["Wed 24 Sep · 09:00–12:00 — rigging & launching", "Wed 24 Sep · 13:00–15:30 — sailing skills"], kit: ["Pico dinghies ×6", "Safety boat on standby"], note: "RYA ratio for under-16s is 1:6 — a second instructor is required." },
+  },
+  {
+    name: "Start Sailing", meta: "RYA National Sailing · Mon 21 Sep · 2/2 staff", tone: "covered", pill: "Covered",
+    staff: ["Sarah Whitlock · Senior Instructor", "Dan Rees · Safety Boat"], warn: null,
+    detail: { students: "8 booked (max 8)", times: ["Mon 21 Sep · 09:00–12:30 — intro & first sail", "Mon 21 Sep · 13:30–16:00 — points of sail"], kit: ["Wayfarer ×4", "RIB “Merlin”"], note: "Two-day course — continues Tue 22 Sep." },
+  },
+  {
+    name: "Improving Skills", meta: "RYA National Sailing · Tue 22 Sep · 2/2 staff", tone: "covered", pill: "Covered",
+    staff: ["Chloe Adeyemi · Senior Instructor", "Liam O'Connor · Instructor"], warn: null,
+    detail: { students: "7 booked (max 8)", times: ["Tue 22 Sep · 13:00–16:30 — sail trim & tacking"], kit: ["ILCA / Laser ×6"], note: "Feeds into Seamanship Skills next month." },
+  },
+  {
+    name: "Adult Improver", meta: "RYA National Sailing · Wed 24 Sep (EV) · 1/1 staff", tone: "covered", pill: "Covered",
+    staff: ["Priya Nair · Instructor"], warn: null,
+    detail: { students: "5 booked (max 6)", times: ["Wed 24 Sep · 17:30–20:00 — evening session"], kit: ["Wayfarer ×3"], note: "Evening twilight sail — buoyancy aids mandatory." },
+  },
+  {
+    name: "Start Windsurfing", meta: "RYA Windsurfing · Sat 26 Sep · 2/2 staff", tone: "covered", pill: "Covered",
+    staff: ["Isla Fraser · Windsurf Instructor", "Hannah Leung · Windsurf Instructor"], warn: null,
+    detail: { students: "10 booked (max 10)", times: ["Sat 26 Sep · 13:00–16:30 — beginner windsurf"], kit: ["Windsurf boards ×10"], note: "Warm-water gear provided; wetsuits sized on arrival." },
+  },
+  {
+    name: "Stage 1 Junior", meta: "RYA Youth Sailing · Sun 27 Sep · 2/2 staff", tone: "covered", pill: "Covered",
+    staff: ["Maya Sørensen · Senior Instructor", "Ella Munro · Assistant"], warn: null,
+    detail: { students: "9 booked (max 12)", times: ["Sun 27 Sep · 10:00–12:30 — games & first sail"], kit: ["Topper ×8"], note: "Parents welcome to watch from the balcony." },
+  },
+];
+
 function DemoCourses() {
-  const courses = [
-    {
-      name: "Powerboat Level 2", meta: "RYA Powerboat · Sat 26 Sep · 1/1 staff", tone: "conflict" as const, pill: "No safety cover",
-      staff: ["Dan Rees · Instructor"], warn: "Safety boat required for this course — no safety-boat driver assigned yet.",
-    },
-    {
-      name: "Youth Stage 2", meta: "RYA Youth Sailing · Wed 24 Sep · 1/2 staff", tone: "attention" as const, pill: "Under-staffed",
-      staff: ["Megan Foyle · Senior Instructor"], warn: "Group of 12 needs 2 ratio-counting instructors — 1 more to assign.",
-    },
-    {
-      name: "Assign to Powerboat L2", meta: "Blocked instructor flagged automatically", tone: "conflict" as const, pill: "Blocked",
-      staff: [], warn: "Aoife Kelly can't be assigned: First Aid expired 30 Aug 2026. Override with a note to record it.", assign: true,
-    },
-    {
-      name: "Start Sailing", meta: "RYA National Sailing · Mon 21 Sep · 2/2 staff", tone: "covered" as const, pill: "Covered",
-      staff: ["Sarah Whitlock · Senior Instructor", "Dan Rees · Safety Boat"], warn: null,
-    },
-    {
-      name: "Improving Skills", meta: "RYA National Sailing · Tue 22 Sep · 2/2 staff", tone: "covered" as const, pill: "Covered",
-      staff: ["Chloe Adeyemi · Senior Instructor", "Liam O'Connor · Instructor"], warn: null,
-    },
-    {
-      name: "Adult Improver", meta: "RYA National Sailing · Wed 24 Sep (EV) · 1/1 staff", tone: "covered" as const, pill: "Covered",
-      staff: ["Priya Nair · Instructor"], warn: null,
-    },
-    {
-      name: "Start Windsurfing", meta: "RYA Windsurfing · Sat 26 Sep · 2/2 staff", tone: "covered" as const, pill: "Covered",
-      staff: ["Isla Fraser · Windsurf Instructor", "Hannah Leung · Windsurf Instructor"], warn: null,
-    },
-    {
-      name: "Stage 1 Junior", meta: "RYA Youth Sailing · Sun 27 Sep · 2/2 staff", tone: "covered" as const, pill: "Covered",
-      staff: ["Maya Sørensen · Senior Instructor", "Ella Munro · Assistant"], warn: null,
-    },
-  ];
+  const [open, setOpen] = useState<string | null>("Powerboat Level 2");
   return (
     <div>
       <div className="flex items-center justify-between">
         <h2 className="font-display text-xl font-semibold text-navy">Courses</h2>
         <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-400">+ New course</span>
       </div>
-      <p className="text-sm text-slate-500">This week&apos;s catalogue and staffing at a glance.</p>
+      <p className="text-sm text-slate-500">This week&apos;s catalogue — click a course to open it.</p>
       <div className="mt-4 space-y-3">
-        {courses.map((c) => (
-          <Card key={c.name}>
-            <div className="flex items-start justify-between gap-3">
-              <div><p className="font-semibold text-navy">{c.name}</p><p className="text-xs text-slate-400">{c.meta}</p></div>
-              <StatusPill tone={c.tone}>{c.pill}</StatusPill>
-            </div>
-            {c.staff.length ? (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {c.staff.map((s) => (
-                  <span key={s} className="rounded-full bg-slate-100 px-3 py-1 text-xs">{s}</span>
-                ))}
-              </div>
-            ) : null}
-            {c.assign ? (
-              <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg bg-canvas p-3">
-                <span className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-500">Aoife Kelly ⚠ blocked ▾</span>
-                <span className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-500">Safety Boat Driver ▾</span>
-                <button className="rounded-lg bg-teal px-3 py-1.5 text-sm font-semibold text-white">Assign</button>
-              </div>
-            ) : null}
-            {c.warn ? (
-              <p className={`mt-2 flex items-center gap-1.5 text-sm ${c.tone === "conflict" ? "text-port" : "text-amber"}`}>● {c.warn}</p>
-            ) : null}
-          </Card>
-        ))}
+        {COURSES.map((c) => {
+          const isOpen = open === c.name;
+          return (
+            <Card key={c.name}>
+              <button className="flex w-full items-start justify-between gap-3 text-left" onClick={() => setOpen(isOpen ? null : c.name)}>
+                <div>
+                  <p className="font-semibold text-navy">{c.name} <span className="ml-1 text-xs font-normal text-slate-400">{isOpen ? "▾" : "▸"}</span></p>
+                  <p className="text-xs text-slate-400">{c.meta}</p>
+                </div>
+                <StatusPill tone={c.tone}>{c.pill}</StatusPill>
+              </button>
+
+              {c.staff.length ? (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {c.staff.map((s) => (
+                    <span key={s} className="rounded-full bg-slate-100 px-3 py-1 text-xs">{s}</span>
+                  ))}
+                </div>
+              ) : null}
+              {c.warn ? (
+                <p className={`mt-2 flex items-center gap-1.5 text-sm ${c.tone === "conflict" ? "text-port" : "text-amber"}`}>● {c.warn}</p>
+              ) : null}
+
+              {isOpen ? (
+                <div className="mt-3 grid gap-4 rounded-lg bg-canvas p-4 sm:grid-cols-2">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Students</p>
+                    <p className="mt-1 text-sm text-navy">{c.detail.students}</p>
+                    <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-slate-400">Sessions</p>
+                    <ul className="mt-1 space-y-1 text-sm text-slate-600">
+                      {c.detail.times.map((t) => <li key={t}>• {t}</li>)}
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Boats &amp; kit</p>
+                    <ul className="mt-1 space-y-1 text-sm text-slate-600">
+                      {c.detail.kit.map((k) => <li key={k}>• {k}</li>)}
+                    </ul>
+                    <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-slate-400">Note</p>
+                    <p className="mt-1 text-sm text-slate-600">{c.detail.note}</p>
+                  </div>
+                  {c.assign ? (
+                    <div className="sm:col-span-2 flex flex-wrap items-center gap-2 border-t border-slate-200 pt-3">
+                      <span className="text-sm text-slate-500">Add safety cover:</span>
+                      <span className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-500">Aoife Kelly ⚠ expired ▾</span>
+                      <span className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-500">Safety Boat Driver ▾</span>
+                      <button className="rounded-lg bg-teal px-3 py-1.5 text-sm font-semibold text-white">Assign</button>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+            </Card>
+          );
+        })}
       </div>
     </div>
   );
 }
 
-const AVAIL_CFG: Record<string, { label: string; cls: string }> = {
-  f: { label: "Free", cls: "bg-starboard/15 text-starboard" },
-  a: { label: "AM", cls: "bg-teal/15 text-teal" },
-  p: { label: "PM", cls: "bg-ryablue-bright/15 text-ryablue-dark" },
-  b: { label: "Busy", cls: "bg-port/15 text-port" },
-  o: { label: "—", cls: "bg-slate-100 text-slate-300" },
+const SHIFTS = ["AM", "PM", "EV"] as const;
+
+// Course roles that need an instructor, keyed by "<dayIdx>|<shiftIdx>" (day 0 = Mon).
+const SHIFT_DEMAND: Record<string, string[]> = {
+  "0|0": ["Start Sailing", "Youth Stage 1", "Safety Boat cover"],
+  "0|1": ["Improving Skills"],
+  "1|1": ["Improving Skills", "Safety Boat cover"],
+  "2|0": ["Youth Stage 2", "Youth Stage 2 (2nd)"],
+  "2|2": ["Adult Improver"],
+  "3|1": ["Youth Stage 2"],
+  "4|0": ["Start Sailing", "Safety Boat cover"],
+  "5|0": ["Powerboat L2", "Powerboat L2 Safety Boat"],
+  "5|1": ["Start Windsurf", "Start Windsurf (2nd)"],
+  "6|1": ["Junior Stage 1", "Junior Stage 1 Assistant"],
 };
 
+// Pre-filled assignments to seed the demo: "<staffIdx>|<dayIdx>|<shiftIdx>": role
+const SEED_ASSIGN: Record<string, string> = {
+  "0|0|0": "Start Sailing",
+  "3|0|0": "Safety Boat cover",
+  "10|0|1": "Improving Skills",
+  "4|2|0": "Youth Stage 2",
+  "6|2|2": "Adult Improver",
+  "14|5|1": "Start Windsurf",
+};
+
+// Base availability for a (staff, day, shift): free | maybe | off
+function baseAvail(si: number, di: number, shi: number): "free" | "maybe" | "off" {
+  const h = (si * 7 + di * 5 + shi * 11 + si * shi) % 10;
+  if (h < 6) return "free";
+  if (h < 8) return "maybe";
+  return "off";
+}
+
+const abbr = (r: string) =>
+  r.split(/[\s()]+/).filter(Boolean).map((w) => w[0]).join("").slice(0, 3).toUpperCase();
+
 function DemoAvailability() {
+  const [assign, setAssign] = useState<Record<string, string>>(SEED_ASSIGN);
+  const [sel, setSel] = useState<string | null>(null); // "si|di|shi"
+  const [pick, setPick] = useState<string>("");
+
+  const rolesTaken = (di: number, shi: number) =>
+    Object.keys(assign)
+      .filter((k) => { const p = k.split("|"); return +p[1]! === di && +p[2]! === shi; })
+      .map((k) => assign[k]!);
+  const demandOf = (di: number, shi: number) => SHIFT_DEMAND[`${di}|${shi}`] ?? [];
+  const openOf = (di: number, shi: number) => demandOf(di, shi).filter((r) => !rolesTaken(di, shi).includes(r));
+
+  let totalOpen = 0;
+  let totalShifts = 0;
+  for (let di = 0; di < 7; di++) for (let shi = 0; shi < 3; shi++) { totalOpen += openOf(di, shi).length; totalShifts += demandOf(di, shi).length; }
+
+  const selectCell = (si: number, di: number, shi: number) => {
+    setSel(`${si}|${di}|${shi}`);
+    setPick(openOf(di, shi)[0] ?? "");
+  };
+  const doAssign = () => { if (sel && pick) { setAssign((a) => ({ ...a, [sel]: pick })); setSel(null); } };
+  const doUnassign = () => { if (sel) { setAssign((a) => { const n = { ...a }; delete n[sel]; return n; }); setSel(null); } };
+
+  const p = sel?.split("|");
+  const sSi = p ? +p[0]! : -1, sDi = p ? +p[1]! : -1, sShi = p ? +p[2]! : -1;
+  const sAssigned = sel ? assign[sel] : undefined;
+  const sBase = sel ? baseAvail(sSi, sDi, sShi) : "off";
+  const sOpen = sel ? openOf(sDi, sShi) : [];
+
+  const cellCls = { free: "bg-starboard/15 text-starboard hover:bg-starboard/25", maybe: "bg-amber/15 text-amber hover:bg-amber/25", off: "bg-slate-100 text-slate-300" };
+
   return (
     <div>
       <h2 className="font-display text-xl font-semibold text-navy">Availability</h2>
       <p className="text-sm text-slate-500">
-        Who&apos;s available this week — submitted by staff in the instructor portal. {STAFF.length} staff shown.
+        {STAFF.length} instructors · AM / PM / EV every day. <span className="font-semibold text-port">{totalOpen}</span> of {totalShifts} shifts still to fill this week.
       </p>
 
       {/* Legend */}
       <div className="mt-3 flex flex-wrap gap-2 text-xs">
-        {(["f", "a", "p", "b", "o"] as const).map((k) => (
-          <span key={k} className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-medium ${AVAIL_CFG[k]!.cls}`}>
-            {AVAIL_CFG[k]!.label}
-          </span>
-        ))}
+        <span className="inline-flex items-center rounded-full bg-starboard/15 px-2.5 py-0.5 font-medium text-starboard">Free</span>
+        <span className="inline-flex items-center rounded-full bg-teal px-2.5 py-0.5 font-medium text-white">Assigned</span>
+        <span className="inline-flex items-center rounded-full bg-amber/15 px-2.5 py-0.5 font-medium text-amber">Maybe</span>
+        <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 font-medium text-slate-400">Off</span>
+        <span className="text-slate-400">· tap any box to assign or view</span>
       </div>
 
       <Card className="mt-4 overflow-x-auto p-0">
-        <table className="w-full min-w-[720px] border-collapse text-xs">
+        <table className="border-collapse text-center text-[10px]">
           <thead>
+            {/* Day row */}
             <tr className="bg-slate-50 text-slate-500">
-              <th className="sticky left-0 z-10 bg-slate-50 px-3 py-2 text-left font-semibold">Instructor</th>
+              <th rowSpan={3} className="sticky left-0 z-10 border-r border-slate-200 bg-slate-50 px-3 text-left text-xs font-semibold">Instructor</th>
               {DAYS.map((d) => (
-                <th key={d} className="px-2 py-2 text-center font-semibold">{d}</th>
+                <th key={d} colSpan={3} className="border-l border-slate-200 px-1 py-1 font-semibold">{d}</th>
               ))}
+            </tr>
+            {/* Shift row */}
+            <tr className="bg-slate-50 text-slate-400">
+              {DAYS.map((_, di) => SHIFTS.map((sh, shi) => (
+                <th key={`${di}-${sh}`} className={`w-9 px-0.5 py-0.5 font-semibold ${shi === 0 ? "border-l border-slate-200" : ""}`}>{sh}</th>
+              )))}
+            </tr>
+            {/* Count row: open / total shifts to fill */}
+            <tr className="bg-slate-50">
+              {DAYS.map((_, di) => SHIFTS.map((sh, shi) => {
+                const open = openOf(di, shi).length, tot = demandOf(di, shi).length;
+                const tone = tot === 0 ? "text-slate-300" : open > 0 ? "text-port" : "text-starboard";
+                return (
+                  <th key={`c${di}-${sh}`} className={`px-0.5 pb-1 font-bold ${tone} ${shi === 0 ? "border-l border-slate-200" : ""}`} title="Shifts to fill / total shifts">
+                    {tot === 0 ? "·" : `${open}/${tot}`}
+                  </th>
+                );
+              }))}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {STAFF.map((s) => (
-              <tr key={s.n} className="hover:bg-slate-50/50">
-                <td className="sticky left-0 z-10 bg-white px-3 py-1.5 font-medium text-navy">
+            {STAFF.map((s, si) => (
+              <tr key={s.n} className="hover:bg-slate-50/40">
+                <td className="sticky left-0 z-10 border-r border-slate-200 bg-white px-3 py-1 text-left text-xs font-medium text-navy">
                   <span className="whitespace-nowrap">{s.n}</span>
-                  {s.lic === "blocked" ? <span className="ml-1 align-middle text-port" title="Blocked from rostering">●</span> : null}
+                  {s.lic === "blocked" ? <span className="ml-1 align-middle text-port" title="Licence expired — blocked from rostering">●</span> : null}
                 </td>
-                {s.pat.split("").map((code, i) => {
-                  const cfg = AVAIL_CFG[code] ?? AVAIL_CFG.o;
+                {DAYS.map((_, di) => SHIFTS.map((_sh, shi) => {
+                  const key = `${si}|${di}|${shi}`;
+                  const role = assign[key];
+                  const base = baseAvail(si, di, shi);
+                  const isSel = sel === key;
+                  const cls = role ? "bg-teal text-white hover:bg-teal-700" : cellCls[base];
                   return (
-                    <td key={i} className="px-1 py-1 text-center">
-                      <span className={`inline-block w-full rounded-md py-1 font-semibold ${cfg!.cls}`}>{cfg!.label}</span>
+                    <td key={key} className={`p-0 ${shi === 0 ? "border-l border-slate-200" : ""}`}>
+                      <button
+                        onClick={() => selectCell(si, di, shi)}
+                        title={role ? `Assigned: ${role}` : base === "off" ? "Unavailable" : "Available"}
+                        className={`h-6 w-9 font-semibold ${cls} ${isSel ? "ring-2 ring-inset ring-navy" : ""}`}
+                      >
+                        {role ? abbr(role) : base === "free" ? "✓" : base === "maybe" ? "~" : ""}
+                      </button>
                     </td>
                   );
-                })}
+                }))}
               </tr>
             ))}
           </tbody>
         </table>
       </Card>
-      <p className="mt-2 text-xs text-slate-400">
-        In the live app, drag across a course to auto-suggest available, fit-to-roster instructors.
-      </p>
+
+      {/* Assign / detail panel */}
+      {sel ? (
+        <Card className="mt-3">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="font-semibold text-navy">{STAFF[sSi]!.n}</p>
+              <p className="text-xs text-slate-500">{DAYS[sDi]} · {SHIFTS[sShi]} shift</p>
+            </div>
+            <button onClick={() => setSel(null)} className="text-xs text-slate-400 hover:text-slate-600">Close ✕</button>
+          </div>
+
+          {sAssigned ? (
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <span className="rounded-lg bg-teal/10 px-3 py-1.5 text-sm font-semibold text-teal">Assigned to {sAssigned}</span>
+              <button onClick={doUnassign} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-navy hover:bg-slate-50">Unassign</button>
+            </div>
+          ) : sBase === "off" ? (
+            <p className="mt-3 text-sm text-slate-500">Marked unavailable for this shift — nothing to assign.</p>
+          ) : sOpen.length ? (
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              {sBase === "maybe" ? <span className="rounded-full bg-amber/15 px-2.5 py-0.5 text-xs font-medium text-amber">Marked “maybe” — confirm first</span> : null}
+              <select value={pick} onChange={(e) => setPick(e.target.value)} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none focus:border-teal">
+                {sOpen.map((r) => <option key={r} value={r}>{r}</option>)}
+              </select>
+              <button onClick={doAssign} className="rounded-lg bg-teal px-4 py-1.5 text-sm font-semibold text-white hover:bg-teal-700">Assign</button>
+            </div>
+          ) : (
+            <p className="mt-3 text-sm text-slate-500">This instructor is free, but every shift in this slot is already covered.</p>
+          )}
+        </Card>
+      ) : (
+        <p className="mt-2 text-xs text-slate-400">Tap a box: assigned shifts show the course; free shifts open a dropdown to roster the instructor.</p>
+      )}
     </div>
   );
 }
@@ -382,7 +541,7 @@ function DemoAvailability() {
 const LIC_PILL: Record<Lic, { tone: "covered" | "conflict" | "attention"; label: string }> = {
   up: { tone: "covered", label: "Up to date" },
   expiring: { tone: "attention", label: "Expiring soon" },
-  blocked: { tone: "conflict", label: "Blocked" },
+  blocked: { tone: "conflict", label: "Expired" },
 };
 
 function DemoStaff() {
@@ -435,26 +594,28 @@ function DemoStaff() {
   );
 }
 
+const KIT = [
+  { item: "RIB safety boat — “Kestrel”", type: "Safety boat", last: "18 Sep 2026", next: "18 Dec 2026", tone: "covered" as const, st: "Serviceable", log: ["Engine service & impeller replaced (18 Sep)", "Kill-cords and fuel checked", "Assigned to: Powerboat L2, Sat"] },
+  { item: "RIB safety boat — “Merlin”", type: "Safety boat", last: "02 Aug 2026", next: "28 Sep 2026", tone: "attention" as const, st: "Service due", log: ["Annual service due 28 Sep — booked with marina", "Nav lights replaced (Aug)", "Assigned to: Start Sailing, Mon"] },
+  { item: "Pico dinghies ×12", type: "Dinghy", last: "10 Sep 2026", next: "10 Mar 2027", tone: "covered" as const, st: "Serviceable", log: ["Hulls & rigging inspected (10 Sep)", "2 new mainsails this season"] },
+  { item: "ILCA / Laser ×6", type: "Dinghy", last: "10 Sep 2026", next: "10 Mar 2027", tone: "covered" as const, st: "Serviceable", log: ["Foils checked, no damage", "Assigned to: Improving Skills, Tue"] },
+  { item: "Wayfarer ×4", type: "Dinghy", last: "05 Sep 2026", next: "05 Mar 2027", tone: "covered" as const, st: "Serviceable", log: ["Buoyancy tanks pressure-tested", "Assigned to: Start Sailing, Mon"] },
+  { item: "Topper ×8", type: "Dinghy", last: "12 Jul 2026", next: "12 Sep 2026", tone: "conflict" as const, st: "Out of action (1)", log: ["Hull #4 cracked — withdrawn from rostering", "Repair quote requested", "7 of 8 still available"] },
+  { item: "Windsurf boards ×10", type: "Windsurf", last: "20 Aug 2026", next: "20 Feb 2027", tone: "covered" as const, st: "Serviceable", log: ["Fins & footstraps checked", "Assigned to: Start Windsurf, Sat"] },
+  { item: "Sea kayaks ×15", type: "Paddlesport", last: "01 Sep 2026", next: "01 Mar 2027", tone: "covered" as const, st: "Serviceable", log: ["Hatches & bulkheads sealed", "Spray decks counted"] },
+  { item: "Buoyancy aids ×80", type: "Safety kit", last: "15 Sep 2026", next: "15 Sep 2027", tone: "covered" as const, st: "Serviceable", log: ["Buckles & stitching inspected", "Sized S–XXL, stock checked"] },
+  { item: "Engine — 40hp outboard", type: "Safety boat", last: "01 Jun 2026", next: "01 Oct 2026", tone: "attention" as const, st: "Service due", log: ["100-hour service due 01 Oct", "Spare prop in store"] },
+];
+
 function DemoEquipment() {
-  const kit = [
-    { item: "RIB safety boat — “Kestrel”", type: "Safety boat", last: "18 Sep 2026", next: "18 Dec 2026", tone: "covered" as const, st: "Serviceable" },
-    { item: "RIB safety boat — “Merlin”", type: "Safety boat", last: "02 Aug 2026", next: "28 Sep 2026", tone: "attention" as const, st: "Service due" },
-    { item: "Pico dinghies ×12", type: "Dinghy", last: "10 Sep 2026", next: "10 Mar 2027", tone: "covered" as const, st: "Serviceable" },
-    { item: "ILCA / Laser ×6", type: "Dinghy", last: "10 Sep 2026", next: "10 Mar 2027", tone: "covered" as const, st: "Serviceable" },
-    { item: "Wayfarer ×4", type: "Dinghy", last: "05 Sep 2026", next: "05 Mar 2027", tone: "covered" as const, st: "Serviceable" },
-    { item: "Topper ×8", type: "Dinghy", last: "12 Jul 2026", next: "12 Sep 2026", tone: "conflict" as const, st: "Out of action (1)" },
-    { item: "Windsurf boards ×10", type: "Windsurf", last: "20 Aug 2026", next: "20 Feb 2027", tone: "covered" as const, st: "Serviceable" },
-    { item: "Sea kayaks ×15", type: "Paddlesport", last: "01 Sep 2026", next: "01 Mar 2027", tone: "covered" as const, st: "Serviceable" },
-    { item: "Buoyancy aids ×80", type: "Safety kit", last: "15 Sep 2026", next: "15 Sep 2027", tone: "covered" as const, st: "Serviceable" },
-    { item: "Engine — 40hp outboard", type: "Safety boat", last: "01 Jun 2026", next: "01 Oct 2026", tone: "attention" as const, st: "Service due" },
-  ];
+  const [open, setOpen] = useState<string | null>("Topper ×8");
   return (
     <div>
       <div className="flex items-center justify-between">
         <h2 className="font-display text-xl font-semibold text-navy">Equipment</h2>
         <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-400">+ Add item</span>
       </div>
-      <p className="text-sm text-slate-500">Boats, engines and safety kit with service and inspection dates.</p>
+      <p className="text-sm text-slate-500">Boats, engines and safety kit — click an item to open its service log.</p>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
         <Card><p className="text-sm font-semibold text-navy">Serviceable</p><p className="mt-1 text-3xl font-semibold text-starboard">7</p><p className="text-xs text-slate-500">Ready to go afloat</p></Card>
@@ -468,15 +629,32 @@ function DemoEquipment() {
             <tr><th className="px-4 py-3">Item</th><th className="px-4 py-3">Type</th><th className="px-4 py-3">Last check</th><th className="px-4 py-3">Next service</th><th className="px-4 py-3">Status</th></tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {kit.map((k) => (
-              <tr key={k.item} className="hover:bg-slate-50/50">
-                <td className="whitespace-nowrap px-4 py-3 font-medium text-navy">{k.item}</td>
-                <td className="px-4 py-3 text-slate-600">{k.type}</td>
-                <td className="px-4 py-3 text-slate-600">{k.last}</td>
-                <td className="px-4 py-3 text-slate-600">{k.next}</td>
-                <td className="px-4 py-3"><StatusPill tone={k.tone}>{k.st}</StatusPill></td>
-              </tr>
-            ))}
+            {KIT.map((k) => {
+              const isOpen = open === k.item;
+              return (
+                <Fragment key={k.item}>
+                  <tr className="cursor-pointer hover:bg-slate-50" onClick={() => setOpen(isOpen ? null : k.item)}>
+                    <td className="whitespace-nowrap px-4 py-3 font-medium text-navy">
+                      <span className="mr-1 text-xs text-slate-400">{isOpen ? "▾" : "▸"}</span>{k.item}
+                    </td>
+                    <td className="px-4 py-3 text-slate-600">{k.type}</td>
+                    <td className="px-4 py-3 text-slate-600">{k.last}</td>
+                    <td className="px-4 py-3 text-slate-600">{k.next}</td>
+                    <td className="px-4 py-3"><StatusPill tone={k.tone}>{k.st}</StatusPill></td>
+                  </tr>
+                  {isOpen ? (
+                    <tr className="bg-canvas">
+                      <td colSpan={5} className="px-4 py-3">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Service log &amp; notes</p>
+                        <ul className="mt-1 space-y-1 text-sm text-slate-600">
+                          {k.log.map((l) => <li key={l}>• {l}</li>)}
+                        </ul>
+                      </td>
+                    </tr>
+                  ) : null}
+                </Fragment>
+              );
+            })}
           </tbody>
         </table>
       </Card>
@@ -485,19 +663,45 @@ function DemoEquipment() {
   );
 }
 
+type PayRow = { n: string; sched: number; actual: number; rate: string };
+
+const PAY: PayRow[] = [
+  { n: "Sarah Whitlock", sched: 24, actual: 24, rate: "£18.00" },
+  { n: "Tom Bergin", sched: 12, actual: 14, rate: "£16.50" },
+  { n: "Liam O'Connor", sched: 16, actual: 16, rate: "£15.00" },
+  { n: "Priya Nair", sched: 18, actual: 17, rate: "£17.00" },
+  { n: "Jack Turnbull", sched: 8, actual: 8, rate: "£16.50" },
+  { n: "Chloe Adeyemi", sched: 20, actual: 22, rate: "£18.00" },
+  { n: "Isla Fraser", sched: 10, actual: 10, rate: "£15.50" },
+  { n: "Noah Pereira", sched: 22, actual: 20, rate: "£17.50" },
+];
+
+const TS_COURSES = ["Start Sailing", "Improving Skills", "Youth Stage 2", "Adult Improver", "Powerboat L2", "Start Windsurf"];
+const payAmount = (h: number, r: string) => h * parseFloat(r.replace("£", ""));
+
+// Build an example timesheet whose actual hours sum to the row's actual total.
+function timesheetFor(row: PayRow) {
+  const rows: { date: string; course: string; sched: number; actual: number }[] = [];
+  let remaining = row.actual;
+  let day = 2;
+  let i = 0;
+  while (remaining > 0 && i < 12) {
+    const planned = i % 2 === 0 ? 3.5 : 4;
+    const actual = Math.min(remaining, planned);
+    rows.push({ date: `${day} Sep`, course: TS_COURSES[(row.n.length + i) % TS_COURSES.length]!, sched: planned, actual });
+    remaining -= actual;
+    day += i % 3 === 2 ? 3 : 2;
+    i++;
+  }
+  return rows;
+}
+
 function DemoFinance() {
-  const pay = [
-    { n: "Sarah Whitlock", sched: 24, actual: 24, rate: "£18.00" },
-    { n: "Tom Bergin", sched: 12, actual: 14, rate: "£16.50" },
-    { n: "Liam O'Connor", sched: 16, actual: 16, rate: "£15.00" },
-    { n: "Priya Nair", sched: 18, actual: 17, rate: "£17.00" },
-    { n: "Jack Turnbull", sched: 8, actual: 8, rate: "£16.50" },
-    { n: "Chloe Adeyemi", sched: 20, actual: 22, rate: "£18.00" },
-    { n: "Isla Fraser", sched: 10, actual: 10, rate: "£15.50" },
-    { n: "Noah Pereira", sched: 22, actual: 20, rate: "£17.50" },
-  ];
-  const total = (h: number, r: string) => h * parseFloat(r.replace("£", ""));
-  const grand = pay.reduce((a, p) => a + total(p.actual, p.rate), 0);
+  const [openName, setOpenName] = useState<string | null>(null);
+  const grand = PAY.reduce((a, p) => a + payAmount(p.actual, p.rate), 0);
+  const openRow = PAY.find((p) => p.n === openName) ?? null;
+  const ts = openRow ? timesheetFor(openRow) : [];
+
   return (
     <div>
       <h2 className="font-display text-xl font-semibold text-navy">Finance</h2>
@@ -506,7 +710,7 @@ function DemoFinance() {
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
         <Card><p className="text-sm font-semibold text-navy">Course revenue</p><p className="mt-1 text-3xl font-semibold text-navy">£14,280</p><p className="text-xs text-slate-500">This month, 38 bookings</p></Card>
         <Card><p className="text-sm font-semibold text-navy">Outstanding invoices</p><p className="mt-1 text-3xl font-semibold text-amber">£1,940</p><p className="text-xs text-slate-500">4 awaiting payment</p></Card>
-        <Card><p className="text-sm font-semibold text-navy">Staff pay to process</p><p className="mt-1 text-3xl font-semibold text-navy">£{Math.round(grand).toLocaleString()}</p><p className="text-xs text-slate-500">{pay.length} instructors, actual hours</p></Card>
+        <Card><p className="text-sm font-semibold text-navy">Staff pay to process</p><p className="mt-1 text-3xl font-semibold text-navy">£{Math.round(grand).toLocaleString()}</p><p className="text-xs text-slate-500">{PAY.length} instructors, actual hours</p></Card>
       </div>
 
       <Card className="mt-4 overflow-x-auto p-0">
@@ -519,13 +723,13 @@ function DemoFinance() {
             <tr><th className="px-4 py-3">Instructor</th><th className="px-4 py-3">Scheduled</th><th className="px-4 py-3">Actual</th><th className="px-4 py-3">Rate</th><th className="px-4 py-3">Pay</th></tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {pay.map((p) => (
-              <tr key={p.n} className="hover:bg-slate-50/50">
-                <td className="whitespace-nowrap px-4 py-3 font-medium text-navy">{p.n}</td>
+            {PAY.map((p) => (
+              <tr key={p.n} className="cursor-pointer hover:bg-slate-50" onClick={() => setOpenName(p.n)}>
+                <td className="whitespace-nowrap px-4 py-3 font-medium text-teal underline decoration-teal/30 underline-offset-2">{p.n}</td>
                 <td className="px-4 py-3 text-slate-600">{p.sched} h</td>
                 <td className={`px-4 py-3 ${p.actual !== p.sched ? "font-semibold text-amber" : "text-slate-600"}`}>{p.actual} h</td>
                 <td className="px-4 py-3 text-slate-600">{p.rate}/h</td>
-                <td className="px-4 py-3 font-medium text-navy">£{total(p.actual, p.rate).toFixed(2)}</td>
+                <td className="px-4 py-3 font-medium text-navy">£{payAmount(p.actual, p.rate).toFixed(2)}</td>
               </tr>
             ))}
           </tbody>
@@ -537,7 +741,43 @@ function DemoFinance() {
           </tfoot>
         </table>
       </Card>
-      <p className="mt-2 text-xs text-slate-400">Actual hours are captured from the session sign-off, so payroll matches what really happened on the water.</p>
+      <p className="mt-2 text-xs text-slate-400">Click any instructor to open their full timesheet. Actual hours are captured from session sign-off, so payroll matches what really happened on the water.</p>
+
+      {/* Timesheet modal */}
+      {openRow ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy/40 p-4" onClick={() => setOpenName(null)}>
+          <div className="w-full max-w-lg rounded-card bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="font-display text-lg font-semibold text-navy">{openRow.n} — timesheet</h3>
+                <p className="text-xs text-slate-500">September · {openRow.rate}/h · {openRow.actual} actual hours</p>
+              </div>
+              <button onClick={() => setOpenName(null)} className="text-sm text-slate-400 hover:text-slate-600">Close ✕</button>
+            </div>
+            <table className="mt-4 w-full text-left text-sm">
+              <thead className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
+                <tr><th className="py-2">Date</th><th className="py-2">Course</th><th className="py-2 text-right">Sched</th><th className="py-2 text-right">Actual</th></tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {ts.map((r, i) => (
+                  <tr key={i}>
+                    <td className="py-2 text-slate-600">{r.date}</td>
+                    <td className="py-2 text-navy">{r.course}</td>
+                    <td className="py-2 text-right text-slate-600">{r.sched} h</td>
+                    <td className={`py-2 text-right ${r.actual !== r.sched ? "font-semibold text-amber" : "text-slate-600"}`}>{r.actual} h</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="border-t border-slate-200">
+                  <td className="py-2 font-semibold text-navy" colSpan={3}>Total pay ({openRow.actual} h)</td>
+                  <td className="py-2 text-right font-semibold text-navy">£{payAmount(openRow.actual, openRow.rate).toFixed(2)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
