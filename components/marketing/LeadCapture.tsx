@@ -32,7 +32,7 @@ export function LeadCapture({
   const [setupMode, setSetupMode] = useState<"basic" | "full">("basic");
   const [status, setStatus] = useState<"idle" | "busy" | "done" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<{ url: string } | null>(null);
+  const [result, setResult] = useState<{ url: string; emailSent: boolean; emailError?: string } | null>(null);
 
   const onCentreName = (v: string) => {
     setCentreName(v);
@@ -51,13 +51,13 @@ export function LeadCapture({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ownerEmail: email, password, centreName, slug, jurisdiction, setupMode, source }),
       });
-      const data = (await res.json()) as { ok?: boolean; error?: string; url?: string };
+      const data = (await res.json()) as { ok?: boolean; error?: string; detail?: string; url?: string; emailSent?: boolean; emailError?: string };
       if (!res.ok || !data.ok) {
-        setError(data.error ?? "Something went wrong. Please try again.");
+        setError([data.error, data.detail].filter(Boolean).join(" — ") || "Something went wrong. Please try again.");
         setStatus("error");
         return;
       }
-      setResult({ url: data.url ?? `https://${slug}.${apex}` });
+      setResult({ url: data.url ?? `https://${slug}.${apex}`, emailSent: data.emailSent ?? false, emailError: data.emailError });
       setStatus("done");
     } catch {
       setError("Network error. Please try again.");
@@ -68,18 +68,23 @@ export function LeadCapture({
   if (status === "done" && result) {
     return (
       <div className={variant === "card" ? "rounded-card bg-white p-6 shadow-lg" : ""}>
-        <p className="font-display text-xl font-semibold text-navy">📩 Confirm your email</p>
+        <p className="font-display text-xl font-semibold text-navy">
+          {result.emailSent ? "📩 Confirm your email" : "✅ Your centre is ready"}
+        </p>
         <p className="mt-2 text-sm text-slate-600">
-          Your centre <span className="font-semibold text-navy">{centreName}</span> is reserved at{" "}
-          <span className="font-semibold text-navy">{slug}.{apex}</span>. We&apos;ve emailed a confirmation link to{" "}
-          <span className="font-semibold">{email}</span> — click it to verify your address and you&apos;ll be taken
-          straight into your new centre.
+          Your centre <span className="font-semibold text-navy">{centreName}</span> is set up at{" "}
+          <span className="font-semibold text-navy">{slug}.{apex}</span>.{" "}
+          {result.emailSent
+            ? <>We&apos;ve emailed a confirmation link to <span className="font-semibold">{email}</span> — click it to verify and you&apos;ll be taken straight in.</>
+            : <>Sign in with <span className="font-semibold">{email}</span> and the password you just set.</>}
         </p>
         <p className="mt-3 rounded-lg bg-canvas p-3 text-xs text-slate-500">
-          Didn&apos;t get it? Check spam, or once confirmed you can always sign in at{" "}
-          <a href={`${result.url}/sign-in`} className="font-semibold text-teal hover:underline">{slug}.{apex}/sign-in</a>
-          {" "}with your email and password.
+          {result.emailSent ? <>Didn&apos;t get it? Check spam, or sign in at </> : <>Go to </>}
+          <a href={`${result.url}/sign-in`} className="font-semibold text-teal hover:underline">{slug}.{apex}/sign-in</a>.
         </p>
+        {result.emailError ? (
+          <p className="mt-2 text-xs text-port">Confirmation email couldn&apos;t send: {result.emailError}</p>
+        ) : null}
         <p className="mt-3 text-xs text-slate-500">
           {setupMode === "basic"
             ? "Set up with RYA defaults — you can start rostering as soon as you're in."

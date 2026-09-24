@@ -48,8 +48,9 @@ export async function POST(req: Request) {
       body: { email: ownerEmail, password, name: centreName, callbackURL: `${centreUrl}/office` },
     });
   } catch (err) {
-    console.error("[signup] account creation failed:", (err as Error).message);
-    return NextResponse.json({ error: "Could not create your account. Try a different email or sign in." }, { status: 400 });
+    const detail = (err as Error).message;
+    console.error("[signup] account creation failed:", detail);
+    return NextResponse.json({ error: "Could not create your account. Try a different email or sign in.", detail }, { status: 400 });
   }
 
   const owner = await control.userByEmail(ownerEmail);
@@ -75,6 +76,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Could not set up your centre. Please try again." }, { status: 500 });
   }
 
+  // Send the confirmation email explicitly, best-effort: a mail failure must not
+  // fail an already-provisioned centre. We report whether it sent so the UI can
+  // guide the owner (and so we can see any Resend error while getting set up).
+  let emailSent = false;
+  let emailError: string | undefined;
+  try {
+    await auth.api.sendVerificationEmail({ body: { email: ownerEmail, callbackURL: `${centreUrl}/office` } });
+    emailSent = true;
+  } catch (err) {
+    emailError = (err as Error).message;
+    console.error("[signup] verification email failed:", emailError);
+  }
+
   // Best-effort lead capture for the marketing funnel.
   try {
     await control.captureLead({ email: ownerEmail, centreName, orgType: null, message: `trial:${setupMode}`, source: "signup" });
@@ -82,5 +96,5 @@ export async function POST(req: Request) {
     /* ignore */
   }
 
-  return NextResponse.json({ ok: true, slug, url: `https://${slug}.${env.APP_APEX_DOMAIN}`, setupMode });
+  return NextResponse.json({ ok: true, slug, url: `https://${slug}.${env.APP_APEX_DOMAIN}`, setupMode, emailSent, emailError });
 }

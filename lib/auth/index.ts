@@ -29,7 +29,9 @@ export function createAuth(db: Database, env: CloudflareEnv) {
     // New owners must confirm their email before they can get into their centre.
     // Better Auth sends the link on sign-up and signs them in once confirmed.
     emailVerification: {
-      sendOnSignUp: true,
+      // We send the confirmation email explicitly after provisioning (see
+      // /api/signup) so a mail hiccup can never fail account creation.
+      sendOnSignUp: false,
       autoSignInAfterVerification: true,
       sendVerificationEmail: async ({ user, url }) => {
         await sendEmail({
