@@ -1,29 +1,48 @@
 import Link from "next/link";
-import { AlertTriangle, Anchor, CalendarCheck, LifeBuoy, ShieldCheck, Ship, Users, Waves, Wallet, FileCheck } from "lucide-react";
+import {
+  AlertTriangle, Anchor, CalendarCheck, LifeBuoy, ShieldCheck, Ship, Users, Waves, Wallet, FileCheck,
+  Clock, CalendarOff, Repeat, BarChart3, FolderLock, UserPlus, Smartphone, ClipboardCheck,
+} from "lucide-react";
 import { LeadCapture } from "@/components/marketing/LeadCapture";
 import { apexDomain } from "@/lib/config";
 
 const PILLARS = [
   {
     icon: CalendarCheck,
-    title: "Rostering, simplified",
-    body: "Build the week in minutes. Sessions, staff and boats in one view — the Saturday-morning scramble replaced by a plan that's already checked.",
+    title: "Schedule & attendance",
+    body: "Build the week in minutes, then let staff clock in at the boat park. Actual hours are captured the moment they step off the water.",
   },
   {
     icon: ShieldCheck,
-    title: "Compliance, automatic",
-    body: "It won't schedule an under-qualified instructor, an over-ratio course, or craft afloat without safety-boat cover. The RYA rules, enforced for you.",
+    title: "Compliance & licences",
+    body: "It won't schedule an under-qualified instructor, an over-ratio course, or craft afloat without safety cover — and it tracks every ticket so nothing lapses.",
   },
   {
-    icon: FileCheck,
-    title: "Licence tracking, sorted",
-    body: "Every ticket, revalidation and vetting check tracked with expiry alerts — so nothing lapses the week before a course.",
+    icon: CalendarOff,
+    title: "Leave, cover & HR",
+    body: "Approve leave, broadcast open shifts for volunteers to claim, and keep every staff record, contract and certificate in one place.",
   },
   {
-    icon: Wallet,
-    title: "Staff payments, tidy",
-    body: "Scheduled vs actual hours captured as they happen, with pay rates applied and a one-click CSV for payroll.",
+    icon: BarChart3,
+    title: "Cost, pay & reporting",
+    body: "See wage cost against course revenue, track instructor and boat utilisation, and export payroll in one click.",
   },
+];
+
+// The full platform — workforce management, built for the water.
+const PLATFORM = [
+  { icon: CalendarCheck, title: "Scheduling & rostering", body: "Drag-and-drop the week across sessions, staff and boats — fit-checked as you build." },
+  { icon: Clock, title: "Time & attendance", body: "Clock in/out with optional photo & GPS; timesheets build themselves from real hours." },
+  { icon: CalendarOff, title: "Availability & leave", body: "Staff set availability and request leave in the app; you approve in a tap." },
+  { icon: Repeat, title: "Open shifts & swaps", body: "Broadcast uncovered sessions; fit, available staff claim or swap them." },
+  { icon: ShieldCheck, title: "Compliance engine", body: "Ratios, safety-boat cover and qualifications enforced before anyone goes afloat." },
+  { icon: FileCheck, title: "Licence & ticket tracking", body: "Every RYA cert and vetting check with expiry alerts, so nothing lapses unnoticed." },
+  { icon: UserPlus, title: "HR & onboarding", body: "Staff records, contracts and an onboarding checklist for every new starter." },
+  { icon: FolderLock, title: "Document vault", body: "Certificates and vetting held privately and encrypted, in the EU." },
+  { icon: Wallet, title: "Payroll export", body: "Scheduled vs actual hours with pay rates, ready as a one-click CSV each month." },
+  { icon: BarChart3, title: "Reporting & analytics", body: "Labour cost vs revenue, utilisation and budgets — drill down to the session." },
+  { icon: Smartphone, title: "Instructor app", body: "Schedule, availability, hours and documents in every instructor's pocket." },
+  { icon: ClipboardCheck, title: "Audit trail", body: "Every roster, override and settings change is logged — nothing happens off the record." },
 ];
 
 const FEATURES = [
@@ -63,9 +82,9 @@ export default function MarketingHome() {
               Rostering, compliance, licences &amp; pay — sorted for your centre.
             </h1>
             <p className="mt-4 max-w-xl text-lg text-white/80">
-              ActivityRoster is compliance-aware staff rostering built for the water. It won&apos;t schedule an
-              under-qualified instructor, an over-ratio course, or craft afloat without safety-boat cover — it tracks
-              every ticket so nothing lapses, and keeps staff hours and pay tidy for payroll.
+              The complete staff platform for RYA centres — scheduling, time &amp; attendance, leave, HR, payroll and
+              reporting in one place. And it&apos;s compliance-aware: it won&apos;t roster an under-qualified instructor,
+              an over-ratio course, or craft afloat without safety cover, and it tracks every ticket so nothing lapses.
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
               <a href="#get-demo" className="rounded-lg bg-[#0C6B74] px-6 py-3 font-semibold text-white shadow-lg transition hover:bg-teal-700">
@@ -87,10 +106,10 @@ export default function MarketingHome() {
 
       {/* Four pillars — what it does for owners */}
       <section id="features" className="mx-auto max-w-6xl px-4 py-16">
-        <h2 className="font-display text-2xl font-semibold text-navy">Everything a centre owner juggles — in one place</h2>
+        <h2 className="font-display text-2xl font-semibold text-navy">The complete staff platform — built for the water</h2>
         <p className="mt-2 max-w-2xl text-slate-600">
-          Stop stitching together spreadsheets, WhatsApp groups and a folder of certificates. ActivityRoster handles
-          the four jobs that eat your week.
+          Scheduling, time &amp; attendance, leave, HR, compliance, payroll and reporting in one place — so you can
+          stop stitching together spreadsheets, WhatsApp groups and a folder of certificates.
         </p>
         <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           {PILLARS.map((p) => (
@@ -100,6 +119,25 @@ export default function MarketingHome() {
               <p className="mt-1 text-sm text-slate-600">{p.body}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* Full platform grid — the breadth */}
+      <section className="border-y border-slate-200 bg-white">
+        <div className="mx-auto max-w-6xl px-4 py-16">
+          <h2 className="font-display text-2xl font-semibold text-navy">Everything you need to run the staff side of a centre</h2>
+          <p className="mt-2 max-w-2xl text-slate-600">A full workforce-management suite — with the RYA rules and the realities of a busy slipway built in.</p>
+          <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {PLATFORM.map((f) => (
+              <div key={f.title} className="flex gap-3 rounded-card border border-slate-200 p-4">
+                <f.icon className="h-6 w-6 flex-none text-teal" />
+                <div>
+                  <h3 className="font-semibold text-navy">{f.title}</h3>
+                  <p className="mt-0.5 text-sm text-slate-600">{f.body}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 

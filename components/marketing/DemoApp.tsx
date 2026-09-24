@@ -6,17 +6,22 @@ import { Card, StatusPill } from "@/components/ui";
 
 type Slot = "AM" | "PM" | "EV";
 type Avail = "free" | "maybe" | "busy" | "none";
-type Panel = "dash" | "courses" | "availability" | "staff" | "equipment" | "finance" | "settings";
+type Panel =
+  | "dash" | "courses" | "availability" | "timeclock" | "leave"
+  | "staff" | "equipment" | "reports" | "finance" | "settings";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-const NAV: { label: string; key: Panel }[] = [
+const NAV: { label: string; key: Panel; group?: string }[] = [
   { label: "Dashboard", key: "dash" },
   { label: "Courses", key: "courses" },
   { label: "Availability", key: "availability" },
-  { label: "Staff", key: "staff" },
+  { label: "Time clock", key: "timeclock" },
+  { label: "Leave & cover", key: "leave" },
+  { label: "Staff (HR)", key: "staff" },
   { label: "Equipment", key: "equipment" },
-  { label: "Finance", key: "finance" },
+  { label: "Reports", key: "reports" },
+  { label: "Payroll", key: "finance" },
   { label: "Settings", key: "settings" },
 ];
 
@@ -155,8 +160,11 @@ export function DemoApp() {
               {panel === "dash" ? <DemoDashboard /> : null}
               {panel === "courses" ? <DemoCourses /> : null}
               {panel === "availability" ? <DemoAvailability /> : null}
+              {panel === "timeclock" ? <DemoTimeClock /> : null}
+              {panel === "leave" ? <DemoLeave /> : null}
               {panel === "staff" ? <DemoStaff /> : null}
               {panel === "equipment" ? <DemoEquipment /> : null}
+              {panel === "reports" ? <DemoReports /> : null}
               {panel === "finance" ? <DemoFinance /> : null}
               {panel === "settings" ? <DemoSettings /> : null}
             </div>
@@ -544,14 +552,46 @@ const LIC_PILL: Record<Lic, { tone: "covered" | "conflict" | "attention"; label:
   blocked: { tone: "conflict", label: "Expired" },
 };
 
+type StaffRow = (typeof STAFF)[number];
+
+const ONBOARDING = ["Contract signed", "Induction & site tour", "Safeguarding training", "First Aid confirmed", "Kit issued", "Added to payroll"];
+const ONBOARDING_IN_PROGRESS = new Set(["Cormac Byrne", "Ella Munro"]);
+
+function docsFor(s: StaffRow) {
+  const docs: { name: string; exp: string; st: Lic }[] = [
+    { name: "First Aid", exp: "14 May 2027", st: "up" },
+    { name: "Safeguarding", exp: "02 Feb 2027", st: "up" },
+    { name: "DBS / vetting", exp: "20 Jun 2027", st: "up" },
+    ...s.badges.map((b) => ({ name: `RYA ${BADGE_MEANING[b]}`, exp: "current", st: "up" as Lic })),
+  ];
+  if (s.lic !== "up") {
+    const note = s.note.toLowerCase();
+    const match = (kw: string) => note.includes(kw);
+    const target =
+      match("first aid") ? "First Aid" :
+      match("safeguard") ? "Safeguarding" :
+      match("dbs") ? "DBS / vetting" :
+      match("safety boat") ? "RYA Safety Boat" :
+      match("powerboat") ? "RYA Powerboat Instructor" : "First Aid";
+    const d = docs.find((x) => x.name === target);
+    if (d) { d.st = s.lic; d.exp = s.note.replace(/^[^0-9]*/, "") || d.exp; }
+  }
+  return docs;
+}
+
 function DemoStaff() {
+  const [open, setOpen] = useState<string | null>(null);
+  const openRow = STAFF.find((s) => s.n === open) ?? null;
+  const docs = openRow ? docsFor(openRow) : [];
+  const inProgress = openRow ? ONBOARDING_IN_PROGRESS.has(openRow.n) : false;
+
   return (
     <div>
       <div className="flex items-center justify-between">
-        <h2 className="font-display text-xl font-semibold text-navy">Staff</h2>
+        <h2 className="font-display text-xl font-semibold text-navy">Staff (HR)</h2>
         <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-400">+ Add staff</span>
       </div>
-      <p className="text-sm text-slate-500">{STAFF.length} instructors · RYA qualifications and licence status.</p>
+      <p className="text-sm text-slate-500">{STAFF.length} instructors · click anyone to open their HR profile, documents &amp; onboarding.</p>
 
       {/* Badge legend */}
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
@@ -573,8 +613,8 @@ function DemoStaff() {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {STAFF.map((s) => (
-              <tr key={s.n} className="hover:bg-slate-50/50">
-                <td className="whitespace-nowrap px-4 py-3 font-medium text-navy">{s.n}</td>
+              <tr key={s.n} className="cursor-pointer hover:bg-slate-50" onClick={() => setOpen(s.n)}>
+                <td className="whitespace-nowrap px-4 py-3 font-medium text-teal underline decoration-teal/30 underline-offset-2">{s.n}</td>
                 <td className="px-4 py-3">
                   <span className="flex flex-wrap gap-1">
                     {s.badges.map((b) => (
@@ -590,6 +630,51 @@ function DemoStaff() {
           </tbody>
         </table>
       </Card>
+
+      {/* HR profile drawer */}
+      {openRow ? (
+        <div className="fixed inset-0 z-50 flex justify-end bg-navy/40" onClick={() => setOpen(null)}>
+          <div className="h-full w-full max-w-md overflow-y-auto bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="font-display text-lg font-semibold text-navy">{openRow.n}</h3>
+                <p className="text-xs text-slate-500">{openRow.e} · {openRow.badges.join(" · ")}</p>
+              </div>
+              <button onClick={() => setOpen(null)} className="text-sm text-slate-400 hover:text-slate-600">Close ✕</button>
+            </div>
+
+            <div className="mt-3"><StatusPill tone={LIC_PILL[openRow.lic].tone}>Licences {LIC_PILL[openRow.lic].label.toLowerCase()}</StatusPill></div>
+
+            <h4 className="mt-5 text-xs font-semibold uppercase tracking-wide text-slate-400">Documents &amp; certificates</h4>
+            <table className="mt-2 w-full text-left text-sm">
+              <tbody className="divide-y divide-slate-100">
+                {docs.map((d) => (
+                  <tr key={d.name}>
+                    <td className="py-2 text-navy">{d.name}</td>
+                    <td className="py-2 text-xs text-slate-500">{d.exp}</td>
+                    <td className="py-2 text-right"><StatusPill tone={LIC_PILL[d.st].tone}>{LIC_PILL[d.st].label}</StatusPill></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <button className="mt-2 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-navy hover:bg-slate-50">+ Upload document</button>
+
+            <h4 className="mt-5 text-xs font-semibold uppercase tracking-wide text-slate-400">Onboarding</h4>
+            <ul className="mt-2 space-y-1.5">
+              {ONBOARDING.map((task, i) => {
+                const done = !inProgress || i < ONBOARDING.length - 2;
+                return (
+                  <li key={task} className="flex items-center gap-2 text-sm">
+                    <span className={`flex h-4 w-4 flex-none items-center justify-center rounded-full text-[10px] text-white ${done ? "bg-starboard" : "bg-slate-300"}`}>{done ? "✓" : ""}</span>
+                    <span className={done ? "text-slate-600" : "text-slate-400"}>{task}</span>
+                  </li>
+                );
+              })}
+            </ul>
+            {inProgress ? <p className="mt-2 text-xs text-amber">Onboarding in progress — 2 steps to go.</p> : <p className="mt-2 text-xs text-starboard">Fully onboarded.</p>}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -816,6 +901,240 @@ function DemoSettings() {
           </Card>
         ))}
       </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Time & attendance
+// ---------------------------------------------------------------------------
+const DEMO_NOW = "13:20";
+const toMin = (t: string) => { const [h, m] = t.split(":").map(Number); return h! * 60 + m!; };
+const hrs = (a: string, b: string) => ((toMin(b) - toMin(a)) / 60);
+
+type Shift = { name: string; role: string; course: string; in: string | null; out: string | null };
+
+function DemoTimeClock() {
+  const [rows, setRows] = useState<Shift[]>([
+    { name: "Sarah Whitlock", role: "Senior Instructor", course: "Start Sailing", in: "08:55", out: null },
+    { name: "Dan Rees", role: "Safety Boat", course: "Start Sailing", in: "08:58", out: null },
+    { name: "Chloe Adeyemi", role: "Senior Instructor", course: "Improving Skills", in: "12:50", out: null },
+    { name: "Priya Nair", role: "Instructor", course: "Adult Improver (EV)", in: null, out: null },
+    { name: "Tom Bergin", role: "Instructor", course: "Youth Stage 2", in: "08:50", out: "12:10" },
+    { name: "Megan Foyle", role: "Senior Instructor", course: "Youth Stage 2", in: "08:52", out: "12:05" },
+  ]);
+
+  const toggle = (i: number) => setRows((rs) => rs.map((r, j) => {
+    if (i !== j) return r;
+    if (!r.in) return { ...r, in: DEMO_NOW };
+    if (!r.out) return { ...r, out: DEMO_NOW };
+    return r;
+  }));
+
+  const onWater = rows.filter((r) => r.in && !r.out).length;
+  const started = rows.filter((r) => r.in).length;
+  const hoursToday = rows.reduce((a, r) => a + (r.in && r.out ? hrs(r.in, r.out) : 0), 0);
+
+  return (
+    <div>
+      <h2 className="font-display text-xl font-semibold text-navy">Time clock</h2>
+      <p className="text-sm text-slate-500">Clock-in at the boat park builds timesheets automatically — demo time is {DEMO_NOW}.</p>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <Card><p className="text-sm font-semibold text-navy">On the water now</p><p className="mt-1 text-3xl font-semibold text-starboard">{onWater}</p><p className="text-xs text-slate-500">Clocked in, not yet out</p></Card>
+        <Card><p className="text-sm font-semibold text-navy">Started today</p><p className="mt-1 text-3xl font-semibold text-navy">{started}<span className="text-lg text-slate-400">/{rows.length}</span></p><p className="text-xs text-slate-500">Rostered instructors</p></Card>
+        <Card><p className="text-sm font-semibold text-navy">Hours logged today</p><p className="mt-1 text-3xl font-semibold text-navy">{hoursToday.toFixed(1)}</p><p className="text-xs text-slate-500">Actual, from clock-outs</p></Card>
+      </div>
+
+      <Card className="mt-4 overflow-x-auto p-0">
+        <table className="w-full min-w-[620px] text-left text-sm">
+          <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+            <tr><th className="px-4 py-3">Instructor</th><th className="px-4 py-3">Session</th><th className="px-4 py-3">Clock in</th><th className="px-4 py-3">Clock out</th><th className="px-4 py-3">Hours</th><th className="px-4 py-3">Status</th></tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {rows.map((r, i) => {
+              const status = !r.in ? "not-started" : !r.out ? "on-water" : "done";
+              return (
+                <tr key={r.name} className="hover:bg-slate-50/50">
+                  <td className="whitespace-nowrap px-4 py-3"><span className="font-medium text-navy">{r.name}</span><span className="block text-xs text-slate-400">{r.role}</span></td>
+                  <td className="px-4 py-3 text-slate-600">{r.course}</td>
+                  <td className="px-4 py-3 text-slate-600">{r.in ?? "—"}</td>
+                  <td className="px-4 py-3 text-slate-600">{r.out ?? "—"}</td>
+                  <td className="px-4 py-3 font-medium text-navy">{r.in && r.out ? hrs(r.in, r.out).toFixed(1) : r.in ? hrs(r.in, DEMO_NOW).toFixed(1) : "—"}</td>
+                  <td className="px-4 py-3">
+                    {status === "done" ? <StatusPill tone="neutral">Signed off</StatusPill> : (
+                      <button onClick={() => toggle(i)} className={`rounded-lg px-3 py-1.5 text-xs font-semibold text-white ${status === "on-water" ? "bg-port hover:opacity-90" : "bg-starboard hover:opacity-90"}`}>
+                        {status === "on-water" ? "Clock out" : "Clock in"}
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </Card>
+      <p className="mt-2 text-xs text-slate-400">Optional photo &amp; GPS check at clock-in confirms the instructor is on site. Actual hours flow straight into Payroll.</p>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Leave & cover (open shifts)
+// ---------------------------------------------------------------------------
+type LeaveStatus = "pending" | "approved" | "declined";
+
+function DemoLeave() {
+  const [leave, setLeave] = useState<{ name: string; type: string; dates: string; days: number; status: LeaveStatus }[]>([
+    { name: "Liam O'Connor", type: "Annual leave", dates: "6–10 Oct", days: 5, status: "pending" },
+    { name: "Isla Fraser", type: "Sick", dates: "24 Sep", days: 1, status: "pending" },
+    { name: "Freya Donnelly", type: "Training (RYA)", dates: "18–19 Oct", days: 2, status: "approved" },
+    { name: "Cormac Byrne", type: "Unpaid", dates: "2 Nov", days: 1, status: "pending" },
+  ]);
+  const setStatus = (i: number, s: LeaveStatus) => setLeave((ls) => ls.map((l, j) => (i === j ? { ...l, status: s } : l)));
+
+  const [shifts, setShifts] = useState<{ course: string; when: string; role: string; state: "open" | "offered" | "filled"; by: string }[]>([
+    { course: "Powerboat Level 2", when: "Sat 26 Sep · AM", role: "Safety Boat Driver", state: "open", by: "Dan Rees" },
+    { course: "Youth Stage 2", when: "Wed 24 Sep · AM", role: "2nd Instructor", state: "offered", by: "Grace Hollis" },
+    { course: "Start Windsurf", when: "Sat 26 Sep · PM", role: "Windsurf Instructor", state: "filled", by: "Hannah Leung" },
+  ]);
+  const advance = (i: number) => setShifts((ss) => ss.map((s, j) => {
+    if (i !== j) return s;
+    if (s.state === "open") return { ...s, state: "offered" };
+    if (s.state === "offered") return { ...s, state: "filled" };
+    return s;
+  }));
+
+  const pill = { pending: "attention", approved: "covered", declined: "conflict" } as const;
+
+  return (
+    <div>
+      <h2 className="font-display text-xl font-semibold text-navy">Leave &amp; cover</h2>
+      <p className="text-sm text-slate-500">Approve leave and fill the gaps it leaves — with open shifts staff can claim.</p>
+
+      <Card className="mt-4 p-0">
+        <h3 className="px-4 pt-4 font-semibold text-navy">Leave requests</h3>
+        <table className="mt-2 w-full text-left text-sm">
+          <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+            <tr><th className="px-4 py-3">Staff</th><th className="px-4 py-3">Type</th><th className="px-4 py-3">Dates</th><th className="px-4 py-3">Status</th><th className="px-4 py-3"></th></tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {leave.map((l, i) => (
+              <tr key={l.name} className="hover:bg-slate-50/50">
+                <td className="whitespace-nowrap px-4 py-3 font-medium text-navy">{l.name}</td>
+                <td className="px-4 py-3 text-slate-600">{l.type}</td>
+                <td className="px-4 py-3 text-slate-600">{l.dates} <span className="text-xs text-slate-400">· {l.days}d</span></td>
+                <td className="px-4 py-3"><StatusPill tone={pill[l.status]}>{l.status[0]!.toUpperCase() + l.status.slice(1)}</StatusPill></td>
+                <td className="px-4 py-3 text-right">
+                  {l.status === "pending" ? (
+                    <span className="flex justify-end gap-2">
+                      <button onClick={() => setStatus(i, "approved")} className="rounded-lg bg-starboard px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90">Approve</button>
+                      <button onClick={() => setStatus(i, "declined")} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-navy hover:bg-slate-50">Decline</button>
+                    </span>
+                  ) : <span className="text-xs text-slate-400">actioned</span>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Card>
+
+      <Card className="mt-4">
+        <h3 className="font-semibold text-navy">Open shifts — cover needed</h3>
+        <p className="text-xs text-slate-500">Broadcast to fit, available staff; they claim it from their app.</p>
+        <div className="mt-3 space-y-2">
+          {shifts.map((s, i) => (
+            <div key={s.course + s.when} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 p-3">
+              <div>
+                <p className="text-sm font-semibold text-navy">{s.role} · {s.course}</p>
+                <p className="text-xs text-slate-400">{s.when}</p>
+              </div>
+              {s.state === "filled" ? (
+                <StatusPill tone="covered">Filled · {s.by}</StatusPill>
+              ) : s.state === "offered" ? (
+                <span className="flex items-center gap-2">
+                  <span className="rounded-full bg-amber/15 px-2.5 py-0.5 text-xs font-medium text-amber">{s.by} offered</span>
+                  <button onClick={() => advance(i)} className="rounded-lg bg-teal px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-700">Confirm</button>
+                </span>
+              ) : (
+                <button onClick={() => advance(i)} className="rounded-lg bg-navy px-3 py-1.5 text-xs font-semibold text-white hover:bg-navy-700">Broadcast to available</button>
+              )}
+            </div>
+          ))}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Reports & analytics
+// ---------------------------------------------------------------------------
+function Bar({ label, value, max, sub, tone = "teal" }: { label: string; value: number; max: number; sub?: string; tone?: "teal" | "amber" | "starboard" | "navy" }) {
+  const pct = Math.max(3, Math.round((value / max) * 100));
+  const bg = { teal: "bg-teal", amber: "bg-amber", starboard: "bg-starboard", navy: "bg-navy" }[tone];
+  return (
+    <div className="mb-2.5">
+      <div className="flex justify-between text-xs"><span className="text-slate-600">{label}</span><span className="font-semibold text-navy">{sub}</span></div>
+      <div className="mt-1 h-2.5 w-full overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full ${bg}`} style={{ width: `${pct}%` }} /></div>
+    </div>
+  );
+}
+
+function DemoReports() {
+  const weeks = [
+    { w: "Wk 1", rev: 3200, cost: 1650 },
+    { w: "Wk 2", rev: 3850, cost: 1820 },
+    { w: "Wk 3", rev: 4100, cost: 2050 },
+    { w: "Wk 4", rev: 3130, cost: 1710 },
+  ];
+  const maxWk = Math.max(...weeks.map((x) => x.rev));
+  const util = [
+    { n: "Sarah Whitlock", pct: 92 }, { n: "Chloe Adeyemi", pct: 88 }, { n: "Maya Sørensen", pct: 81 },
+    { n: "Noah Pereira", pct: 74 }, { n: "Priya Nair", pct: 69 }, { n: "Liam O'Connor", pct: 58 },
+  ];
+  const boats = [
+    { n: "Pico dinghies", pct: 84 }, { n: "RIBs (safety)", pct: 77 }, { n: "Windsurf boards", pct: 61 },
+    { n: "ILCA / Laser", pct: 55 }, { n: "Sea kayaks", pct: 38 },
+  ];
+  const totalRev = weeks.reduce((a, x) => a + x.rev, 0);
+  const totalCost = weeks.reduce((a, x) => a + x.cost, 0);
+  const wagePct = Math.round((totalCost / totalRev) * 100);
+
+  return (
+    <div>
+      <h2 className="font-display text-xl font-semibold text-navy">Reports</h2>
+      <p className="text-sm text-slate-500">Labour cost, revenue and utilisation — September. <span className="text-slate-400">Illustrative figures.</span></p>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-4">
+        <Card><p className="text-xs font-semibold text-navy">Revenue</p><p className="mt-1 text-2xl font-semibold text-navy">£{totalRev.toLocaleString()}</p></Card>
+        <Card><p className="text-xs font-semibold text-navy">Wage cost</p><p className="mt-1 text-2xl font-semibold text-amber">£{totalCost.toLocaleString()}</p></Card>
+        <Card><p className="text-xs font-semibold text-navy">Wage % of revenue</p><p className={`mt-1 text-2xl font-semibold ${wagePct <= 55 ? "text-starboard" : "text-port"}`}>{wagePct}%</p></Card>
+        <Card><p className="text-xs font-semibold text-navy">Avg instructor use</p><p className="mt-1 text-2xl font-semibold text-navy">77%</p></Card>
+      </div>
+
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        <Card>
+          <h3 className="mb-3 font-semibold text-navy">Revenue vs wage cost — by week</h3>
+          {weeks.map((x) => (
+            <div key={x.w} className="mb-3">
+              <Bar label={`${x.w} · revenue`} value={x.rev} max={maxWk} sub={`£${x.rev.toLocaleString()}`} tone="teal" />
+              <Bar label={`${x.w} · wage cost`} value={x.cost} max={maxWk} sub={`£${x.cost.toLocaleString()}`} tone="amber" />
+            </div>
+          ))}
+        </Card>
+        <div className="space-y-4">
+          <Card>
+            <h3 className="mb-3 font-semibold text-navy">Instructor utilisation</h3>
+            {util.map((u) => <Bar key={u.n} label={u.n} value={u.pct} max={100} sub={`${u.pct}%`} tone={u.pct >= 80 ? "starboard" : "navy"} />)}
+          </Card>
+          <Card>
+            <h3 className="mb-3 font-semibold text-navy">Boat &amp; kit utilisation</h3>
+            {boats.map((b) => <Bar key={b.n} label={b.n} value={b.pct} max={100} sub={`${b.pct}%`} tone="teal" />)}
+          </Card>
+        </div>
+      </div>
+      <p className="mt-2 text-xs text-slate-400">Every figure drills down to the sessions behind it, and exports to CSV or your accountant.</p>
     </div>
   );
 }

@@ -14,8 +14,9 @@ export default function DemoPage() {
         <p className="text-sm font-semibold uppercase tracking-wide text-teal">Interactive demo</p>
         <h1 className="mt-1 font-display text-3xl font-bold text-navy">Take the helm — click around</h1>
         <p className="mx-auto mt-2 max-w-2xl text-slate-600">
-          This is the real interface with example data. Switch between the office admin and the instructor portal,
-          and watch how it flags an under-qualified instructor, a course with no safety cover, and a booking clash.
+          The full platform with example data — scheduling, a live time clock, availability &amp; leave, open-shift
+          cover, HR &amp; documents, reports and payroll. Switch between the office admin and the instructor app, and
+          watch the compliance checks flag an under-qualified instructor and a course with no safety cover.
         </p>
       </div>
 
