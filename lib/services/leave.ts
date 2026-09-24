@@ -2,6 +2,7 @@ import type { Repositories } from "@/lib/db/repositories";
 import { actorUserId, type AnyTenantContext } from "@/lib/tenant/context";
 import type { LeaveRequest, LeaveType } from "@/lib/db/schema";
 import { writeAudit } from "./audit";
+import { notifyInstructor } from "./notifications";
 
 export interface LeaveInput {
   type: LeaveType;
@@ -66,6 +67,11 @@ export async function decideLeave(
     entity: "leave_request",
     entityId: leaveId,
     after: { status: decision },
+  });
+  await notifyInstructor(repos, ctx, updated.instructorId, {
+    title: decision === "approved" ? "Leave approved" : "Leave declined",
+    body: `Your ${updated.type} leave for ${updated.startDate}${updated.endDate !== updated.startDate ? `–${updated.endDate}` : ""} was ${decision}.`,
+    email: true,
   });
   return updated;
 }

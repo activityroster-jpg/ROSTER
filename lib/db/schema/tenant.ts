@@ -590,3 +590,4 @@ export type LeaveRequest = typeof leaveRequest.$inferSelect;
 export type OpenShift = typeof openShift.$inferSelect;
 export type OnboardingItem = typeof onboardingItem.$inferSelect;
 export type Booking = typeof booking.$inferSelect;
+export type Notification = typeof notification.$inferSelect;

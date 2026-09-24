@@ -2,6 +2,7 @@ import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
 import type { OpenShift, OpenShiftStatus } from "@/lib/db/schema";
 import { writeAudit } from "./audit";
+import { notifyInstructor } from "./notifications";
 
 export interface OpenShiftRow {
   id: string;
@@ -75,7 +76,15 @@ export async function confirmOpenShift(
     status: "filled",
     filledByInstructorId: shift.claimedByInstructorId,
   });
-  if (updated) await writeAudit(repos, ctx, { action: "open_shift_confirm", entity: "open_shift", entityId: shiftId, after: { filledBy: shift.claimedByInstructorId, courseId: session.courseId } });
+  if (updated) {
+    await writeAudit(repos, ctx, { action: "open_shift_confirm", entity: "open_shift", entityId: shiftId, after: { filledBy: shift.claimedByInstructorId, courseId: session.courseId } });
+    const course = await repos.tenant.course.findById(ctx, session.courseId);
+    await notifyInstructor(repos, ctx, shift.claimedByInstructorId, {
+      title: "Shift confirmed",
+      body: `You're confirmed for ${course?.name ?? "a session"} on ${session.date} (${session.slot}).`,
+      email: true,
+    });
+  }
   return updated;
 }
 
