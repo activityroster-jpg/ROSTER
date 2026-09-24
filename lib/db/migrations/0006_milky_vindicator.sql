@@ -1,0 +1,1 @@
+ALTER TABLE `org_settings` ADD `setup_mode` text DEFAULT 'basic' NOT NULL;

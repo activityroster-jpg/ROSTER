@@ -107,7 +107,7 @@ export default function MarketingHome() {
           </div>
           <div className="flex justify-center md:justify-end">
             <div className="w-full max-w-md">
-              <LeadCapture source="hero" />
+              <LeadCapture source="hero" apex={apex} />
             </div>
           </div>
         </div>
@@ -270,7 +270,7 @@ export default function MarketingHome() {
             </ul>
           </div>
           <div className="rounded-card bg-white p-6 shadow-xl">
-            <LeadCapture source="footer" variant="inline" />
+            <LeadCapture source="footer" variant="inline" apex={apex} />
           </div>
         </div>
       </section>

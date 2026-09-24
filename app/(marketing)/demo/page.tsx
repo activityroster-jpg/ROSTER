@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { DemoApp } from "@/components/marketing/DemoApp";
 import { LeadCapture } from "@/components/marketing/LeadCapture";
+import { apexDomain } from "@/lib/config";
 
 export const metadata = {
   title: "Live demo — ActivityRoster",
@@ -23,7 +24,7 @@ export default function DemoPage() {
       <DemoApp />
 
       <div className="mx-auto mt-12 max-w-md">
-        <LeadCapture source="demo" />
+        <LeadCapture source="demo" apex={apexDomain()} />
         <p className="mt-4 text-center text-sm text-slate-500">
           Prefer to read more first? <Link href="/" className="font-semibold text-teal hover:underline">Back to the overview</Link>
         </p>

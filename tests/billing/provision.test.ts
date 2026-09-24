@@ -66,6 +66,27 @@ describe("provisionCentre", () => {
     expect(slots.length).toBe(3);
   });
 
+  it("provisions a free-month trial with the chosen setup mode", async () => {
+    const repos = createRepositories(db);
+    await provisionCentre(repos, fakeEnv, {
+      ...params,
+      slug: "trial",
+      ownerEmail: "owner@trial.test",
+      stripeCustomerId: null,
+      stripeSubscriptionId: null,
+      subscriptionStatus: "trialing",
+      setupMode: "full",
+    });
+
+    const org = await repos.control.organisationBySlug("trial");
+    expect(org?.subscriptionStatus).toBe("trialing");
+    expect(org?.status).toBe("active");
+
+    const ctx = { organisationId: org!.id, slug: "trial", system: true as const, reason: "test" };
+    const settings = (await repos.tenant.orgSettings.list(ctx))[0];
+    expect(settings?.setupMode).toBe("full");
+  });
+
   it("seeds every tenant config table without leaking across orgs", async () => {
     const repos = createRepositories(db);
     await provisionCentre(repos, fakeEnv, params);

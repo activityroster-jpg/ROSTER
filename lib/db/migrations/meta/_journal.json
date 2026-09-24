@@ -43,6 +43,13 @@
       "when": 1790260631142,
       "tag": "0005_wide_night_nurse",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1790277571630,
+      "tag": "0006_milky_vindicator",
+      "breakpoints": true
     }
   ]
 }

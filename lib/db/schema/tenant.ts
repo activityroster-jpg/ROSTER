@@ -23,6 +23,11 @@ const orgFk = () =>
 export const SCHEDULING_MODES = ["session", "hours", "day"] as const;
 export type SchedulingMode = (typeof SCHEDULING_MODES)[number];
 
+/** How the centre chose to start: "basic" = ready-to-use RYA defaults;
+ * "full" = they'll complete a fuller configuration before going live. */
+export const SETUP_MODES = ["basic", "full"] as const;
+export type SetupMode = (typeof SETUP_MODES)[number];
+
 /** The shared slot vocabulary: availability, calendar and sessions all use it. */
 export const SLOT_CODES = ["AM", "PM", "EV"] as const;
 export type SlotCode = (typeof SLOT_CODES)[number];
@@ -59,6 +64,7 @@ export const orgSettings = sqliteTable("org_settings", {
   id: id(),
   organisationId: orgFk(),
   schedulingMode: text("scheduling_mode", { enum: SCHEDULING_MODES }).notNull().default("session"),
+  setupMode: text("setup_mode", { enum: SETUP_MODES }).notNull().default("basic"),
   alertLeadDays: integer("alert_lead_days").notNull().default(30),
   currency: text("currency").notNull().default("GBP"),
   timezone: text("timezone").notNull().default("Europe/London"),

@@ -1,6 +1,6 @@
 import type { Repositories } from "@/lib/db/repositories";
 import type { CloudflareEnv } from "@/lib/cf/bindings";
-import { JURISDICTIONS, PLANS, type Jurisdiction, type Plan } from "@/lib/db/schema";
+import { JURISDICTIONS, PLANS, SETUP_MODES, type Jurisdiction, type Plan, type SetupMode, type SubscriptionStatus } from "@/lib/db/schema";
 import { seedOrganisationDefaults } from "@/lib/seed/seed";
 import type { SystemTenantContext } from "@/lib/tenant/context";
 import { sendEmail } from "@/lib/mail";
@@ -13,6 +13,14 @@ export interface ProvisionParams {
   plan: string;
   stripeCustomerId: string | null;
   stripeSubscriptionId: string | null;
+  /** Defaults to "active" (paid checkout). Free-month signups pass "trialing". */
+  subscriptionStatus?: SubscriptionStatus;
+  /** "basic" (ready to use) or "full" (they'll finish configuring). */
+  setupMode?: SetupMode;
+}
+
+function coerceSetupMode(v: string | undefined): SetupMode {
+  return v && (SETUP_MODES as readonly string[]).includes(v) ? (v as SetupMode) : "basic";
 }
 
 function coerceJurisdiction(v: string): Jurisdiction {
@@ -51,6 +59,7 @@ export async function provisionCentre(
 
   const jurisdiction = coerceJurisdiction(params.jurisdiction);
   const plan = coercePlan(params.plan);
+  const setupMode = coerceSetupMode(params.setupMode);
 
   const org = await control.createOrganisation({
     name: params.centreName,
@@ -58,7 +67,7 @@ export async function provisionCentre(
     jurisdiction,
     plan,
     status: "active",
-    subscriptionStatus: "active",
+    subscriptionStatus: params.subscriptionStatus ?? "active",
     stripeCustomerId: params.stripeCustomerId,
     stripeSubscriptionId: params.stripeSubscriptionId,
   });
@@ -75,6 +84,10 @@ export async function provisionCentre(
     reason: "stripe-provisioning",
   };
   await seedOrganisationDefaults(tenant, ctx, jurisdiction);
+
+  // Record how the centre chose to start (basic ready-to-use vs full config).
+  const settings = (await tenant.orgSettings.list(ctx))[0];
+  if (settings) await tenant.orgSettings.update(ctx, settings.id, { setupMode });
 
   await control.releaseSlug(slug);
 

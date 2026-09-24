@@ -6,6 +6,7 @@ import { getAttendanceBoard } from "@/lib/services/timeclock";
 import { listLeave } from "@/lib/services/leave";
 import { listOpenShifts } from "@/lib/services/openshifts";
 import { getRevenueSummary } from "@/lib/services/bookings";
+import { getSetupStatus } from "@/lib/services/setup";
 import { Card, StatusPill } from "@/components/ui";
 import type { SlotCode } from "@/lib/db/schema";
 
@@ -35,13 +36,14 @@ export default async function DashboardPage() {
   const monday = weekStart(new Date());
   const today = new Date().toISOString().slice(0, 10);
 
-  const [staff, schedule, attendance, leave, shifts, revenue] = await Promise.all([
+  const [staff, schedule, attendance, leave, shifts, revenue, setup] = await Promise.all([
     listStaffWithFit(repos, ctx),
     getWeekSchedule(repos, ctx, monday),
     getAttendanceBoard(repos, ctx, today),
     listLeave(repos, ctx),
     listOpenShifts(repos, ctx, true),
     getRevenueSummary(repos, ctx),
+    getSetupStatus(repos, ctx),
   ]);
   const { sessions, coverageByCourse } = schedule;
 
@@ -64,6 +66,36 @@ export default async function DashboardPage() {
         <h1 className="font-display text-2xl font-semibold text-navy">Dashboard</h1>
         <p className="text-sm text-slate-500">{organisation.name} · week of {monday}</p>
       </div>
+
+      {/* Getting started — shown until the checklist is complete */}
+      {!setup.complete ? (
+        <Card className="mb-6 border-teal/40 bg-teal/5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="font-display text-lg font-semibold text-navy">Finish setting up your centre</h2>
+              <p className="text-sm text-slate-600">
+                {setup.setupMode === "basic"
+                  ? "You're on the RYA defaults and can start rostering now — these steps unlock the rest."
+                  : "Complete your full setup so everything's ready for the season."}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-28 overflow-hidden rounded-full bg-white"><div className="h-full rounded-full bg-teal" style={{ width: `${setup.completePct}%` }} /></div>
+              <span className="text-sm font-semibold text-navy">{setup.completePct}%</span>
+            </div>
+          </div>
+          <ul className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {setup.steps.map((s) => (
+              <li key={s.label}>
+                <Link href={s.href} className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition ${s.done ? "border-slate-200 bg-white text-slate-500" : "border-teal/30 bg-white text-navy hover:border-teal"}`}>
+                  <span className={`flex h-4 w-4 flex-none items-center justify-center rounded-full text-[10px] text-white ${s.done ? "bg-starboard" : "bg-slate-300"}`}>{s.done ? "✓" : ""}</span>
+                  <span className={s.done ? "line-through" : "font-medium"}>{s.label}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      ) : null}
 
       {/* Today */}
       <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Today</p>
