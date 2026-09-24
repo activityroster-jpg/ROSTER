@@ -715,6 +715,7 @@ function DemoStaff() {
 const KIT = [
   { item: "RIB safety boat — “Kestrel”", type: "Safety boat", last: "18 Sep 2026", next: "18 Dec 2026", tone: "covered" as const, st: "Serviceable", log: ["Engine service & impeller replaced (18 Sep)", "Kill-cords and fuel checked", "Assigned to: Powerboat L2, Sat"] },
   { item: "RIB safety boat — “Merlin”", type: "Safety boat", last: "02 Aug 2026", next: "28 Sep 2026", tone: "attention" as const, st: "Service due", log: ["Annual service due 28 Sep — booked with marina", "Nav lights replaced (Aug)", "Assigned to: Start Sailing, Mon"] },
+  { item: "RIB safety boat — “Falcon”", type: "Safety boat", last: "22 Sep 2026", next: "22 Dec 2026", tone: "covered" as const, st: "Serviceable", log: ["Handed back after full service (22 Sep)", "New VHF radio fitted", "Assigned to: Powerboat L2, Sat"] },
   { item: "Pico dinghies ×12", type: "Dinghy", last: "10 Sep 2026", next: "10 Mar 2027", tone: "covered" as const, st: "Serviceable", log: ["Hulls & rigging inspected (10 Sep)", "2 new mainsails this season"] },
   { item: "ILCA / Laser ×6", type: "Dinghy", last: "10 Sep 2026", next: "10 Mar 2027", tone: "covered" as const, st: "Serviceable", log: ["Foils checked, no damage", "Assigned to: Improving Skills, Tue"] },
   { item: "Wayfarer ×4", type: "Dinghy", last: "05 Sep 2026", next: "05 Mar 2027", tone: "covered" as const, st: "Serviceable", log: ["Buoyancy tanks pressure-tested", "Assigned to: Start Sailing, Mon"] },
@@ -736,7 +737,7 @@ function DemoEquipment() {
       <p className="text-sm text-slate-500">Boats, engines and safety kit — click an item to open its service log.</p>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
-        <Card><p className="text-sm font-semibold text-navy">Serviceable</p><p className="mt-1 text-3xl font-semibold text-starboard">7</p><p className="text-xs text-slate-500">Ready to go afloat</p></Card>
+        <Card><p className="text-sm font-semibold text-navy">Serviceable</p><p className="mt-1 text-3xl font-semibold text-starboard">8</p><p className="text-xs text-slate-500">Ready to go afloat</p></Card>
         <Card><p className="text-sm font-semibold text-navy">Service due</p><p className="mt-1 text-3xl font-semibold text-amber">2</p><p className="text-xs text-slate-500">Booked in this month</p></Card>
         <Card><p className="text-sm font-semibold text-navy">Out of action</p><p className="mt-1 text-3xl font-semibold text-port">1</p><p className="text-xs text-slate-500">Withdrawn from rostering</p></Card>
       </div>
