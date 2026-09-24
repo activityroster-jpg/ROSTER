@@ -27,6 +27,9 @@ describe("reports service", () => {
     expect(rep.byInstructor[0]?.minutes).toBe(180);
     expect(rep.byWeek[0]?.week).toBe("2026-01-05"); // Monday of that week
     expect(rep.boats.length).toBeGreaterThan(0); // fixture books one boat
+    // Fixture seeds a confirmed £120 booking -> revenue and wage % of revenue.
+    expect(rep.totalRevenue).toBeCloseTo(120, 2);
+    expect(rep.wagePctOfRevenue).toBe(63); // round(75 / 120 * 100)
   });
 
   it("falls back to the instructor pay rate when a record has no rate", async () => {

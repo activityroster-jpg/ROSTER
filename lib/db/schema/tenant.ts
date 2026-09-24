@@ -47,6 +47,10 @@ export const LEAVE_STATUSES = ["pending", "approved", "declined", "cancelled"] a
 export type LeaveStatus = (typeof LEAVE_STATUSES)[number];
 export const OPEN_SHIFT_STATUSES = ["open", "offered", "filled", "cancelled"] as const;
 export type OpenShiftStatus = (typeof OPEN_SHIFT_STATUSES)[number];
+export const BOOKING_STATUSES = ["provisional", "confirmed", "paid", "cancelled"] as const;
+export type BookingStatus = (typeof BOOKING_STATUSES)[number];
+/** Booking statuses that count as earned revenue. */
+export const REVENUE_STATUSES = ["confirmed", "paid"] as const;
 
 // --- Settings / configuration ---------------------------------------------
 
@@ -154,6 +158,7 @@ export const courseType = sqliteTable("course_type", {
   defaultCapacity: integer("default_capacity").notNull().default(1),
   studentsPerInstructor: integer("students_per_instructor").notNull().default(1),
   requiresSafetyBoat: boolCol("requires_safety_boat").default(false),
+  defaultPrice: real("default_price"), // per-head list price, nullable = not priced
   active: boolCol("active").default(true),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
@@ -293,6 +298,7 @@ export const course = sqliteTable("course", {
   name: text("name"),
   capacity: integer("capacity").notNull().default(1),
   ratio: integer("ratio").notNull().default(1), // students per instructor
+  price: real("price"), // per-head price override; falls back to course_type.default_price
   status: text("status", { enum: COURSE_STATUSES }).notNull().default("draft"),
   notes: text("notes"),
   createdAt: createdAt(),
@@ -520,6 +526,31 @@ export const onboardingItem = sqliteTable("onboarding_item", {
   index("onboarding_item_instructor_idx").on(t.instructorId),
 ]);
 
+/**
+ * A customer booking against a course — the revenue side. `amount` is the total
+ * for the booking (per-head price × headcount, or a manual figure). Bookings in
+ * a REVENUE_STATUS count towards reported revenue.
+ */
+export const booking = sqliteTable("booking", {
+  id: id(),
+  organisationId: orgFk(),
+  courseId: text("course_id")
+    .notNull()
+    .references(() => course.id, { onDelete: "cascade" }),
+  customerName: text("customer_name").notNull(),
+  customerEmail: text("customer_email"),
+  headcount: integer("headcount").notNull().default(1),
+  amount: real("amount").notNull().default(0),
+  status: text("status", { enum: BOOKING_STATUSES }).notNull().default("provisional"),
+  paidAt: integer("paid_at", { mode: "timestamp_ms" }),
+  notes: text("notes"),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, (t) => [
+  index("booking_org_idx").on(t.organisationId),
+  index("booking_course_idx").on(t.courseId),
+]);
+
 export const notification = sqliteTable("notification", {
   id: id(),
   organisationId: orgFk(),
@@ -558,3 +589,4 @@ export type TimeEntry = typeof timeEntry.$inferSelect;
 export type LeaveRequest = typeof leaveRequest.$inferSelect;
 export type OpenShift = typeof openShift.$inferSelect;
 export type OnboardingItem = typeof onboardingItem.$inferSelect;
+export type Booking = typeof booking.$inferSelect;

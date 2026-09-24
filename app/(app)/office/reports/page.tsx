@@ -22,7 +22,7 @@ export default async function ReportsPage() {
   const { ctx, repos } = await requireTenant({ role: "admin" });
   const rep = await getLabourReport(repos, ctx);
 
-  const maxWeek = Math.max(1, ...rep.byWeek.map((w) => w.minutes));
+  const maxMoney = Math.max(1, ...rep.byWeek.map((w) => Math.max(w.revenue, w.cost)));
   const maxInstr = Math.max(1, ...rep.byInstructor.map((i) => i.minutes));
   const maxBoat = Math.max(1, ...rep.boats.map((b) => b.bookings));
 
@@ -32,17 +32,20 @@ export default async function ReportsPage() {
       <p className="mb-6 text-sm text-slate-500">Labour cost and utilisation, from your recorded hours.</p>
 
       <div className="mb-6 grid gap-3 sm:grid-cols-4">
-        <Card><p className="text-xs font-semibold text-navy">Wage cost</p><p className="mt-1 text-2xl font-semibold text-navy">{money(rep.totalCost)}</p></Card>
-        <Card><p className="text-xs font-semibold text-navy">Scheduled hours</p><p className="mt-1 text-2xl font-semibold text-navy">{hrs(rep.totalScheduledMinutes)}</p></Card>
-        <Card><p className="text-xs font-semibold text-navy">Actual hours</p><p className="mt-1 text-2xl font-semibold text-navy">{hrs(rep.totalActualMinutes)}</p></Card>
-        <Card><p className="text-xs font-semibold text-navy">Instructors with hours</p><p className="mt-1 text-2xl font-semibold text-navy">{rep.instructorsWithHours}</p></Card>
+        <Card><p className="text-xs font-semibold text-navy">Revenue</p><p className="mt-1 text-2xl font-semibold text-navy">{money(rep.totalRevenue)}</p><p className="text-xs text-slate-400">{money(rep.outstandingRevenue)} provisional</p></Card>
+        <Card><p className="text-xs font-semibold text-navy">Wage cost</p><p className="mt-1 text-2xl font-semibold text-amber">{money(rep.totalCost)}</p></Card>
+        <Card><p className="text-xs font-semibold text-navy">Wage % of revenue</p><p className={`mt-1 text-2xl font-semibold ${rep.wagePctOfRevenue == null ? "text-slate-400" : rep.wagePctOfRevenue <= 55 ? "text-starboard" : "text-port"}`}>{rep.wagePctOfRevenue == null ? "—" : `${rep.wagePctOfRevenue}%`}</p></Card>
+        <Card><p className="text-xs font-semibold text-navy">Actual hours</p><p className="mt-1 text-2xl font-semibold text-navy">{hrs(rep.totalActualMinutes)}</p><p className="text-xs text-slate-400">{hrs(rep.totalScheduledMinutes)} scheduled</p></Card>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
-          <h2 className="mb-3 font-semibold text-navy">Hours &amp; cost by week</h2>
-          {rep.byWeek.length === 0 ? <p className="text-sm text-slate-400">No hours recorded yet.</p> : rep.byWeek.map((w) => (
-            <Bar key={w.week} label={w.week === "unscheduled" ? "Unscheduled" : `Week of ${w.week}`} value={w.minutes} max={maxWeek} sub={`${hrs(w.minutes)}h · ${money(w.cost)}`} tone="teal" />
+          <h2 className="mb-3 font-semibold text-navy">Revenue vs wage cost by week</h2>
+          {rep.byWeek.length === 0 ? <p className="text-sm text-slate-400">No data yet.</p> : rep.byWeek.map((w) => (
+            <div key={w.week} className="mb-3">
+              <Bar label={`${w.week === "unscheduled" ? "Unscheduled" : `Week of ${w.week}`} · revenue`} value={w.revenue} max={maxMoney} sub={money(w.revenue)} tone="teal" />
+              <Bar label="wage cost" value={w.cost} max={maxMoney} sub={money(w.cost)} tone="amber" />
+            </div>
           ))}
         </Card>
         <Card>

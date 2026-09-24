@@ -1,11 +1,13 @@
 import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
 import { weekStart } from "./schedule";
+import { getRevenueSummary } from "./bookings";
 
 export interface WeekCost {
   week: string; // Monday ISO
   minutes: number;
   cost: number;
+  revenue: number;
 }
 
 export interface InstructorHours {
@@ -24,6 +26,9 @@ export interface LabourReport {
   totalScheduledMinutes: number;
   totalActualMinutes: number;
   totalCost: number;
+  totalRevenue: number;
+  outstandingRevenue: number;
+  wagePctOfRevenue: number | null; // null when there's no revenue to divide by
   instructorsWithHours: number;
   byWeek: WeekCost[];
   byInstructor: InstructorHours[];
@@ -37,13 +42,14 @@ export interface LabourReport {
  */
 export async function getLabourReport(repos: Repositories, ctx: AnyTenantContext): Promise<LabourReport> {
   const t = repos.tenant;
-  const [records, instructors, sessions, payRates, courseEquip, equipment] = await Promise.all([
+  const [records, instructors, sessions, payRates, courseEquip, equipment, revenue] = await Promise.all([
     t.hoursRecord.list(ctx),
     t.instructor.list(ctx),
     t.courseSession.list(ctx),
     t.payRate.list(ctx),
     t.courseEquipment.list(ctx),
     t.equipment.list(ctx),
+    getRevenueSummary(repos, ctx),
   ]);
 
   const nameById = new Map(instructors.map((i) => [i.id, i.name]));
@@ -71,7 +77,7 @@ export async function getLabourReport(repos: Repositories, ctx: AnyTenantContext
 
     const date = r.courseSessionId ? sessionDate.get(r.courseSessionId) : undefined;
     const week = date ? weekStart(new Date(`${date}T00:00:00.000Z`)) : "unscheduled";
-    const w = weekMap.get(week) ?? { week, minutes: 0, cost: 0 };
+    const w = weekMap.get(week) ?? { week, minutes: 0, cost: 0, revenue: 0 };
     w.minutes += minutes;
     w.cost += cost;
     weekMap.set(week, w);
@@ -93,10 +99,21 @@ export async function getLabourReport(repos: Repositories, ctx: AnyTenantContext
     .map(([id, bookings]) => ({ name: equipName.get(id) ?? "Equipment", bookings }))
     .sort((a, b) => b.bookings - a.bookings);
 
+  // Fold booking revenue into the same week buckets.
+  for (const [week, amount] of revenue.byWeek) {
+    const w = weekMap.get(week) ?? { week, minutes: 0, cost: 0, revenue: 0 };
+    w.revenue += amount;
+    weekMap.set(week, w);
+  }
+
+  const roundedCost = Math.round(totalCost * 100) / 100;
   return {
     totalScheduledMinutes,
     totalActualMinutes,
-    totalCost: Math.round(totalCost * 100) / 100,
+    totalCost: roundedCost,
+    totalRevenue: revenue.total,
+    outstandingRevenue: revenue.outstanding,
+    wagePctOfRevenue: revenue.total > 0 ? Math.round((roundedCost / revenue.total) * 100) : null,
     instructorsWithHours: instrMap.size,
     byWeek: [...weekMap.values()].sort((a, b) => a.week.localeCompare(b.week)),
     byInstructor: [...instrMap.values()].sort((a, b) => b.minutes - a.minutes),
