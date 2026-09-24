@@ -96,6 +96,7 @@ export const JURISDICTIONS = [
   "scotland",
   "northern_ireland",
   "ireland",
+  "other",
 ] as const;
 export type Jurisdiction = (typeof JURISDICTIONS)[number];
 

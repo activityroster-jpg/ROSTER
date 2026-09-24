@@ -77,6 +77,10 @@ function vettingFor(jurisdiction: Jurisdiction): ComplianceSeed {
       return { name: "AccessNI Enhanced Check", code: "ACCESSNI", mandatory: true, expiryTracked: true };
     case "ireland":
       return { name: "Garda Vetting", code: "GARDA", mandatory: true, expiryTracked: true };
+    case "other":
+      // Outside the UK & Ireland: a generic vetting record, not mandatory (each
+      // centre can make it mandatory in Settings if their jurisdiction requires it).
+      return { name: "Background / Vetting Check", code: "VETTING", mandatory: false, expiryTracked: true };
     case "england":
     case "wales":
     default:

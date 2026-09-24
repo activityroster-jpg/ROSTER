@@ -9,6 +9,7 @@ const JURISDICTIONS = [
   { value: "scotland", label: "Scotland" },
   { value: "northern_ireland", label: "Northern Ireland" },
   { value: "ireland", label: "Ireland" },
+  { value: "other", label: "Other / outside UK & Ireland" },
 ] as const;
 
 const slugify = (s: string) =>
