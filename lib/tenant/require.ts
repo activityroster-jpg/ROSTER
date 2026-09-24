@@ -42,15 +42,10 @@ export async function requireTenant(opts?: { role?: "admin"; skipMfaGate?: boole
 
   const repos = await getRepositories();
 
-  // MFA enforcement for admins (brief §8): an admin without 2FA is sent to the
-  // security setup page (/security, outside the office layout to avoid a redirect
-  // loop) until they enrol. That page passes skipMfaGate.
-  if (res.ctx.role === "admin" && !opts?.skipMfaGate) {
-    const account = await repos.control.userById(res.ctx.userId);
-    if (account && !account.twoFactorEnabled) {
-      redirect("/security");
-    }
-  }
+  // Two-factor authentication is OPTIONAL: admins can enable it from /security
+  // (authenticator app or email code) but are never forced to. `skipMfaGate` is
+  // accepted for backwards compatibility and no longer changes behaviour.
+  void opts?.skipMfaGate;
 
   return { ctx: res.ctx, organisation: res.organisation, repos };
 }

@@ -74,7 +74,19 @@ export function createAuth(db: Database, env: CloudflareEnv) {
           });
         },
       }),
-      twoFactor(),
+      // Two-factor is optional. Members can enable an authenticator app (TOTP)
+      // or receive a one-time code by email as their second factor.
+      twoFactor({
+        otpOptions: {
+          async sendOTP({ user, otp }) {
+            await sendEmail({
+              to: user.email,
+              subject: "Your ActivityRoster verification code",
+              html: `<p>Your verification code is:</p><p style="font-size:22px;font-weight:700;letter-spacing:3px">${otp}</p><p style="color:#64748b;font-size:12px">It expires shortly. If you didn't request it, you can ignore this email.</p>`,
+            });
+          },
+        },
+      }),
     ],
   });
 }
