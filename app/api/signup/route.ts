@@ -32,29 +32,30 @@ export async function POST(req: Request) {
   }
 
   // Create the owner's login through Better Auth (hashes the password + creates
-  // the account), then mark the email verified so they can sign in immediately
-  // — no email round-trip required to get into their new centre.
+  // the account). Better Auth sends a confirmation email; the owner must click
+  // it to verify their address before they can sign in to their new centre.
+  const centreUrl = `https://${slug}.${env.APP_APEX_DOMAIN}`;
   const auth = await getAuth();
   const existing = await control.userByEmail(ownerEmail);
-  if (!existing) {
-    try {
-      await auth.api.signUpEmail({ body: { email: ownerEmail, password, name: centreName } });
-    } catch (err) {
-      console.error("[signup] account creation failed:", (err as Error).message);
-      return NextResponse.json({ error: "Could not create your account. Try a different email or sign in." }, { status: 400 });
-    }
-  } else {
+  if (existing) {
     return NextResponse.json(
       { error: "An account with that email already exists — please sign in to add a centre." },
       { status: 409 },
     );
+  }
+  try {
+    await auth.api.signUpEmail({
+      body: { email: ownerEmail, password, name: centreName, callbackURL: `${centreUrl}/office` },
+    });
+  } catch (err) {
+    console.error("[signup] account creation failed:", (err as Error).message);
+    return NextResponse.json({ error: "Could not create your account. Try a different email or sign in." }, { status: 400 });
   }
 
   const owner = await control.userByEmail(ownerEmail);
   if (!owner) {
     return NextResponse.json({ error: "Could not create your account. Please try again." }, { status: 500 });
   }
-  await control.markEmailVerified(owner.id);
 
   try {
     await provisionCentre(repos, env, {

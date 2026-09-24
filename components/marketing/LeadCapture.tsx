@@ -68,18 +68,22 @@ export function LeadCapture({
   if (status === "done" && result) {
     return (
       <div className={variant === "card" ? "rounded-card bg-white p-6 shadow-lg" : ""}>
-        <p className="font-display text-xl font-semibold text-navy">🎉 {centreName} is ready</p>
+        <p className="font-display text-xl font-semibold text-navy">📩 Confirm your email</p>
         <p className="mt-2 text-sm text-slate-600">
-          Your centre is live at <span className="font-semibold text-navy">{slug}.{apex}</span>. Sign in with your
-          email and the password you just set — your first month is free, no card needed.
+          Your centre <span className="font-semibold text-navy">{centreName}</span> is reserved at{" "}
+          <span className="font-semibold text-navy">{slug}.{apex}</span>. We&apos;ve emailed a confirmation link to{" "}
+          <span className="font-semibold">{email}</span> — click it to verify your address and you&apos;ll be taken
+          straight into your new centre.
         </p>
-        <a href={`${result.url}/sign-in`} className="mt-4 inline-block rounded-lg bg-teal px-5 py-3 font-semibold text-white hover:bg-teal-700">
-          Go to my centre &amp; sign in →
-        </a>
+        <p className="mt-3 rounded-lg bg-canvas p-3 text-xs text-slate-500">
+          Didn&apos;t get it? Check spam, or once confirmed you can always sign in at{" "}
+          <a href={`${result.url}/sign-in`} className="font-semibold text-teal hover:underline">{slug}.{apex}/sign-in</a>
+          {" "}with your email and password.
+        </p>
         <p className="mt-3 text-xs text-slate-500">
           {setupMode === "basic"
-            ? "Set up with RYA defaults — you can start rostering right away."
-            : "Let's get everything set up now — your setup checklist is waiting in the office."}
+            ? "Set up with RYA defaults — you can start rostering as soon as you're in."
+            : "Your full setup checklist will be waiting in the office."}
         </p>
       </div>
     );

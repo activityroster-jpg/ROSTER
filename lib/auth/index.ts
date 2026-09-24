@@ -26,6 +26,24 @@ export function createAuth(db: Database, env: CloudflareEnv) {
       enabled: true,
       requireEmailVerification: true,
     },
+    // New owners must confirm their email before they can get into their centre.
+    // Better Auth sends the link on sign-up and signs them in once confirmed.
+    emailVerification: {
+      sendOnSignUp: true,
+      autoSignInAfterVerification: true,
+      sendVerificationEmail: async ({ user, url }) => {
+        await sendEmail({
+          to: user.email,
+          subject: "Confirm your email to activate your ActivityRoster centre",
+          html: `
+            <p>Welcome to ActivityRoster!</p>
+            <p>Confirm your email to activate your centre and sign in:</p>
+            <p><a href="${url}" style="display:inline-block;background:#0072CE;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none">Confirm my email</a></p>
+            <p style="color:#64748b;font-size:12px">Or paste this link into your browser:<br>${url}</p>
+          `,
+        });
+      },
+    },
     // One session cookie across every centre's subdomain; membership is still
     // re-checked per request server-side.
     advanced: {
