@@ -76,7 +76,7 @@ export default async function DashboardPage() {
               <p className="text-sm text-slate-600">
                 {setup.setupMode === "basic"
                   ? "You're on the RYA defaults and can start rostering now — these steps unlock the rest."
-                  : "Complete your full setup so everything's ready for the season."}
+                  : "You chose full setup — work through these now to get everything ready."}
               </p>
             </div>
             <div className="flex items-center gap-2">

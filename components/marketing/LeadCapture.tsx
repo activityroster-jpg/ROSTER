@@ -77,7 +77,7 @@ export function LeadCapture({
         <p className="mt-3 text-xs text-slate-500">
           {setupMode === "basic"
             ? "Set up with RYA defaults — you can start rostering right away."
-            : "We've created your full setup checklist — finish it in Settings when you're ready."}
+            : "Let's get everything set up now — your setup checklist is waiting in the office."}
         </p>
       </div>
     );
@@ -117,8 +117,8 @@ export function LeadCapture({
         {/* Setup choice */}
         <div className="grid grid-cols-2 gap-2">
           {([
-            ["basic", "Basic setup", "RYA defaults — start now"],
-            ["full", "Full setup", "Tailor it fully (later)"],
+            ["basic", "Quick setup", "RYA defaults — start now, tweak later"],
+            ["full", "Full setup", "Do all my setup now"],
           ] as const).map(([value, title, sub]) => (
             <button
               type="button"
