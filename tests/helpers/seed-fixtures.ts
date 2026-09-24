@@ -153,6 +153,13 @@ export async function seedFullOrg(
     rate: 25,
     approved: false,
   });
+  await t.timeEntry.insert(ctx, {
+    instructorId: instructor.id,
+    courseSessionId: session.id,
+    clockInAt: new Date(start),
+    clockOutAt: new Date(start + 3 * H),
+    source: "clock",
+  });
   await t.notification.insert(ctx, {
     instructorId: instructor.id,
     channel: "in_app",

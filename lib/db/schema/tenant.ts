@@ -39,6 +39,8 @@ export const COURSE_STAFF_STATUSES = ["assigned", "confirmed", "declined"] as co
 export const AVAILABILITY_STATUSES = ["available", "unavailable", "tentative"] as const;
 export const PAY_UNITS = ["hour", "day", "session"] as const;
 export const NOTIFICATION_CHANNELS = ["email", "sms", "in_app"] as const;
+export const TIME_ENTRY_SOURCES = ["clock", "manual"] as const;
+export type TimeEntrySource = (typeof TIME_ENTRY_SOURCES)[number];
 
 // --- Settings / configuration ---------------------------------------------
 
@@ -422,6 +424,31 @@ export const hoursRecord = sqliteTable("hours_record", {
   index("hours_record_instructor_idx").on(t.instructorId),
 ]);
 
+/**
+ * Time & attendance: a clock-in/clock-out event, optionally tied to the session
+ * the instructor is working. An open entry (clockOutAt null) means "on the water
+ * now". On clock-out the elapsed minutes flow into the matching hours_record so
+ * payroll runs on actual, not scheduled, time.
+ */
+export const timeEntry = sqliteTable("time_entry", {
+  id: id(),
+  organisationId: orgFk(),
+  instructorId: text("instructor_id")
+    .notNull()
+    .references(() => instructor.id, { onDelete: "cascade" }),
+  courseSessionId: text("course_session_id").references(() => courseSession.id, { onDelete: "set null" }),
+  clockInAt: integer("clock_in_at", { mode: "timestamp_ms" }).notNull(),
+  clockOutAt: integer("clock_out_at", { mode: "timestamp_ms" }),
+  source: text("source", { enum: TIME_ENTRY_SOURCES }).notNull().default("clock"),
+  note: text("note"),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, (t) => [
+  index("time_entry_org_idx").on(t.organisationId),
+  index("time_entry_instructor_idx").on(t.instructorId),
+  index("time_entry_session_idx").on(t.courseSessionId),
+]);
+
 export const notification = sqliteTable("notification", {
   id: id(),
   organisationId: orgFk(),
@@ -456,3 +483,4 @@ export type Instructor = typeof instructor.$inferSelect;
 export type Course = typeof course.$inferSelect;
 export type CourseSession = typeof courseSession.$inferSelect;
 export type OrgSettings = typeof orgSettings.$inferSelect;
+export type TimeEntry = typeof timeEntry.$inferSelect;

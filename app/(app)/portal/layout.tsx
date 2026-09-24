@@ -1,12 +1,13 @@
 import Link from "next/link";
-import { CalendarCheck, CalendarClock, Clock, FileCheck } from "lucide-react";
+import { CalendarCheck, CalendarClock, Clock, FileCheck, Timer } from "lucide-react";
 import { requireTenant } from "@/lib/tenant/require";
 
 const TABS = [
   { href: "/portal", label: "Schedule", icon: CalendarCheck },
-  { href: "/portal/availability", label: "Availability", icon: CalendarClock },
+  { href: "/portal/availability", label: "Available", icon: CalendarClock },
+  { href: "/portal/timeclock", label: "Clock", icon: Timer },
   { href: "/portal/hours", label: "Hours", icon: Clock },
-  { href: "/portal/documents", label: "Documents", icon: FileCheck },
+  { href: "/portal/documents", label: "Docs", icon: FileCheck },
 ];
 
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {

@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   CalendarDays,
   ClipboardList,
+  Clock,
   History,
   LayoutDashboard,
   LifeBuoy,
@@ -20,6 +21,7 @@ const NAV = [
       { href: "/office", label: "Dashboard", icon: LayoutDashboard },
       { href: "/office/courses", label: "Courses", icon: CalendarDays },
       { href: "/office/availability", label: "Availability", icon: ClipboardList },
+      { href: "/office/timeclock", label: "Time clock", icon: Clock },
     ],
   },
   {

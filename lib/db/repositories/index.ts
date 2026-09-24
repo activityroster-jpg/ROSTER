@@ -39,6 +39,7 @@ export function createTenantRepositories(db: Database) {
     availability: repo(t.availability),
     payRate: repo(t.payRate),
     hoursRecord: repo(t.hoursRecord),
+    timeEntry: repo(t.timeEntry),
     notification: repo(t.notification),
     auditLog: repo(t.auditLog),
   } as const;
@@ -71,6 +72,7 @@ export const TENANT_TABLES = [
   t.availability,
   t.payRate,
   t.hoursRecord,
+  t.timeEntry,
   t.notification,
   t.auditLog,
 ] as const;
