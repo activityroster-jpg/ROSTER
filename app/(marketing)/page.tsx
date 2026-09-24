@@ -60,6 +60,15 @@ const AUDIENCES = [
   { icon: Waves, title: "Activity centres", body: "Dinghy, windsurf, powerboat and kayak under one roof. One roster, one compliance picture, per-jurisdiction vetting built in." },
 ];
 
+function PhotoBand({ src, alt }: { src: string; alt: string }) {
+  return (
+    <div className="relative h-36 w-full overflow-hidden md:h-56" aria-hidden>
+      <img src={src} alt={alt} className="h-full w-full object-cover" loading="lazy" />
+      <div className="pointer-events-none absolute inset-0 bg-navy/10" />
+    </div>
+  );
+}
+
 export default function MarketingHome() {
   const apex = apexDomain();
   return (
@@ -79,7 +88,7 @@ export default function MarketingHome() {
               For RYA yacht clubs, sailing schools &amp; activity centres
             </p>
             <h1 className="font-display text-4xl font-bold leading-tight md:text-5xl" style={{ textWrap: "balance" }}>
-              Rostering, compliance, licences &amp; pay — sorted for your centre.
+              Run your centre, sorted.
             </h1>
             <p className="mt-4 max-w-xl text-lg text-white/80">
               The complete staff platform for RYA centres — scheduling, time &amp; attendance, leave, HR, payroll and
@@ -101,6 +110,23 @@ export default function MarketingHome() {
               <LeadCapture source="hero" />
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Trust strip */}
+      <section className="border-b border-slate-200 bg-white">
+        <div className="mx-auto grid max-w-6xl grid-cols-2 gap-4 px-4 py-6 text-center md:grid-cols-4">
+          {[
+            ["Compliance-first", "RYA rules enforced, not remembered"],
+            ["EU-hosted", "GDPR-ready, data export any time"],
+            ["Fully isolated", "Each centre's data proven separate"],
+            ["Free for a month", "No card required to start"],
+          ].map(([h, s]) => (
+            <div key={h}>
+              <p className="font-display text-base font-semibold text-navy">{h}</p>
+              <p className="mt-0.5 text-xs text-slate-500">{s}</p>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -141,8 +167,33 @@ export default function MarketingHome() {
         </div>
       </section>
 
+      <PhotoBand src="/photos/catamarans.jpg" alt="Catamarans racing" />
+
+      {/* How it works */}
+      <section className="bg-canvas">
+        <div className="mx-auto max-w-6xl px-4 py-16">
+          <h2 className="font-display text-2xl font-semibold text-navy">Up and running in a weekend</h2>
+          <p className="mt-2 max-w-2xl text-slate-600">No IT project. Your centre is live at its own web address, and shapes itself to how you already run.</p>
+          <div className="mt-8 grid gap-6 md:grid-cols-3">
+            {[
+              { n: "1", title: "Set up your centre", body: "We seed the RYA defaults — grades, roles, checks and course types — then you tweak them to match your centre. Add your staff and their tickets." },
+              { n: "2", title: "Build the week", body: "Drop courses onto the calendar. It fit-checks staff, ratios and safety cover as you go, and flags anything that isn't safe to run." },
+              { n: "3", title: "Run the season", body: "Staff clock in, claim open shifts and request leave from their phone. Hours flow into payroll; compliance and revenue stay on the dashboard." },
+            ].map((s) => (
+              <div key={s.n} className="rounded-card border border-slate-200 bg-white p-6">
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-teal font-display text-lg font-bold text-white">{s.n}</span>
+                <h3 className="mt-3 font-display text-lg font-semibold text-navy">{s.title}</h3>
+                <p className="mt-1 text-sm text-slate-600">{s.body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <PhotoBand src="/photos/kayaks.jpg" alt="Sea kayaks" />
+
       {/* Who it's for */}
-      <section className="border-y border-slate-200 bg-white">
+      <section className="border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-6xl px-4 py-16">
           <h2 className="font-display text-2xl font-semibold text-navy">Built for the way RYA centres work</h2>
           <p className="mt-2 max-w-2xl text-slate-600">Every centre starts identical and shapes itself to how you run — grades, roles, checks and course types are all yours to set.</p>
@@ -158,21 +209,7 @@ export default function MarketingHome() {
         </div>
       </section>
 
-      {/* Subtle photo strip for vibe */}
-      <section aria-hidden className="mx-auto max-w-6xl px-4 py-10">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {[
-            ["/photos/dinghies.jpg", "Dinghies"],
-            ["/photos/catamarans.jpg", "Catamarans"],
-            ["/photos/kayaks.jpg", "Kayaks"],
-            ["/photos/marina.jpg", "Marina"],
-          ].map(([src, alt]) => (
-            <div key={src} className="h-24 overflow-hidden rounded-card sm:h-28">
-              <img src={src} alt={alt} className="h-full w-full object-cover opacity-90 transition hover:opacity-100" loading="lazy" />
-            </div>
-          ))}
-        </div>
-      </section>
+      <PhotoBand src="/photos/dinghies.jpg" alt="Dinghies on the water" />
 
       {/* Feature detail — the compliance safety net */}
       <section className="border-y border-slate-200 bg-white">
@@ -214,6 +251,8 @@ export default function MarketingHome() {
           </p>
         </div>
       </section>
+
+      <PhotoBand src="/photos/marina.jpg" alt="Marina at dusk" />
 
       {/* Final CTA / free month signup */}
       <section id="get-demo" className="bg-navy">

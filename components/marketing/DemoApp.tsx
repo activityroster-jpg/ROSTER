@@ -2,13 +2,14 @@
 
 import { Fragment, useState } from "react";
 import Link from "next/link";
+import { Bell } from "lucide-react";
 import { Card, StatusPill } from "@/components/ui";
 
 type Slot = "AM" | "PM" | "EV";
 type Avail = "free" | "maybe" | "busy" | "none";
 type Panel =
   | "dash" | "courses" | "availability" | "timeclock" | "leave"
-  | "staff" | "equipment" | "reports" | "finance" | "settings";
+  | "staff" | "equipment" | "bookings" | "reports" | "finance" | "settings";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -20,6 +21,7 @@ const NAV: { label: string; key: Panel; group?: string }[] = [
   { label: "Leave & cover", key: "leave" },
   { label: "Staff (HR)", key: "staff" },
   { label: "Equipment", key: "equipment" },
+  { label: "Bookings", key: "bookings" },
   { label: "Reports", key: "reports" },
   { label: "Payroll", key: "finance" },
   { label: "Settings", key: "settings" },
@@ -87,9 +89,16 @@ const WEEK: Record<string, Record<Slot, { name: string; time: string; state: "ok
 
 const chipTone = { ok: "bg-starboard/10 text-starboard", att: "bg-amber/10 text-amber", bad: "bg-port/10 text-port" };
 
+const DEMO_ALERTS = [
+  { title: "Leave approved", body: "Liam O'Connor — 6–10 Oct", tone: "starboard" },
+  { title: "Shift claimed", body: "Grace Hollis offered Sat safety-boat cover", tone: "teal" },
+  { title: "Ticket expiring", body: "Tom Bergin — Safeguarding expires 12 Oct", tone: "amber" },
+];
+
 export function DemoApp() {
   const [view, setView] = useState<"office" | "portal">("office");
   const [panel, setPanel] = useState<Panel>("dash");
+  const [showAlerts, setShowAlerts] = useState(false);
 
   return (
     <div>
@@ -115,9 +124,32 @@ export function DemoApp() {
             </button>
           ))}
         </div>
-        <Link href="/#get-demo" className="text-sm font-semibold text-teal hover:underline">
-          Try this free for a month →
-        </Link>
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <button
+              onClick={() => setShowAlerts((s) => !s)}
+              className="relative rounded-full border border-slate-200 bg-white p-2 text-navy hover:bg-slate-50"
+              aria-label="Notifications"
+            >
+              <Bell className="h-4 w-4" />
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-port px-1 text-[10px] font-bold text-white">{DEMO_ALERTS.length}</span>
+            </button>
+            {showAlerts ? (
+              <div className="absolute right-0 z-20 mt-2 w-72 rounded-card border border-slate-200 bg-white p-2 shadow-xl">
+                <p className="px-2 py-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Notifications</p>
+                {DEMO_ALERTS.map((a) => (
+                  <div key={a.title} className="flex gap-2 rounded-lg px-2 py-2 hover:bg-slate-50">
+                    <span className={`mt-1 h-2 w-2 flex-none rounded-full bg-${a.tone}`} />
+                    <div><p className="text-sm font-semibold text-navy">{a.title}</p><p className="text-xs text-slate-500">{a.body}</p></div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </div>
+          <Link href="/#get-demo" className="text-sm font-semibold text-teal hover:underline">
+            Try this free for a month →
+          </Link>
+        </div>
       </div>
 
       {view === "office" ? (
@@ -164,6 +196,7 @@ export function DemoApp() {
               {panel === "leave" ? <DemoLeave /> : null}
               {panel === "staff" ? <DemoStaff /> : null}
               {panel === "equipment" ? <DemoEquipment /> : null}
+              {panel === "bookings" ? <DemoBookings /> : null}
               {panel === "reports" ? <DemoReports /> : null}
               {panel === "finance" ? <DemoFinance /> : null}
               {panel === "settings" ? <DemoSettings /> : null}
@@ -1135,6 +1168,53 @@ function DemoReports() {
         </div>
       </div>
       <p className="mt-2 text-xs text-slate-400">Every figure drills down to the sessions behind it, and exports to CSV or your accountant.</p>
+    </div>
+  );
+}
+
+function DemoBookings() {
+  const rows = [
+    { c: "Powerboat Level 2", who: "M. Fisher", places: 2, amount: "£240", status: "paid" as const },
+    { c: "Start Sailing", who: "The Hendersons", places: 4, amount: "£360", status: "confirmed" as const },
+    { c: "Youth Stage 2", who: "R. Okafor", places: 1, amount: "£110", status: "confirmed" as const },
+    { c: "Start Windsurf", who: "A. Price", places: 2, amount: "£150", status: "provisional" as const },
+    { c: "Adult Improver", who: "J. Kelly", places: 2, amount: "£180", status: "paid" as const },
+    { c: "Stage 1 Junior", who: "The Walsh family", places: 3, amount: "£165", status: "provisional" as const },
+  ];
+  const tone = { paid: "covered", confirmed: "covered", provisional: "attention", cancelled: "conflict" } as const;
+  return (
+    <div>
+      <div className="flex items-center justify-between">
+        <h2 className="font-display text-xl font-semibold text-navy">Bookings</h2>
+        <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-400">+ New booking</span>
+      </div>
+      <p className="text-sm text-slate-500">Customer bookings and course revenue.</p>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <Card><p className="text-sm font-semibold text-navy">Earned revenue</p><p className="mt-1 text-3xl font-semibold text-navy">£890</p><p className="text-xs text-slate-500">Confirmed &amp; paid</p></Card>
+        <Card><p className="text-sm font-semibold text-navy">Provisional</p><p className="mt-1 text-3xl font-semibold text-amber">£315</p><p className="text-xs text-slate-500">Awaiting confirmation</p></Card>
+        <Card><p className="text-sm font-semibold text-navy">Bookings</p><p className="mt-1 text-3xl font-semibold text-navy">{rows.length}</p><p className="text-xs text-slate-500">This month</p></Card>
+      </div>
+
+      <Card className="mt-4 overflow-x-auto p-0">
+        <table className="w-full min-w-[560px] text-left text-sm">
+          <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+            <tr><th className="px-4 py-3">Customer</th><th className="px-4 py-3">Course</th><th className="px-4 py-3">Places</th><th className="px-4 py-3">Amount</th><th className="px-4 py-3">Status</th></tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {rows.map((r) => (
+              <tr key={r.who + r.c} className="hover:bg-slate-50/50">
+                <td className="px-4 py-3 font-medium text-navy">{r.who}</td>
+                <td className="px-4 py-3 text-slate-600">{r.c}</td>
+                <td className="px-4 py-3 text-slate-600">{r.places}</td>
+                <td className="px-4 py-3 font-medium text-navy">{r.amount}</td>
+                <td className="px-4 py-3"><StatusPill tone={tone[r.status]}>{r.status[0]!.toUpperCase() + r.status.slice(1)}</StatusPill></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Card>
+      <p className="mt-2 text-xs text-slate-400">Confirmed &amp; paid bookings feed the revenue vs wage-cost view in Reports.</p>
     </div>
   );
 }

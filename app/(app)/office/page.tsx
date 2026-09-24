@@ -1,6 +1,11 @@
+import Link from "next/link";
 import { requireTenant } from "@/lib/tenant/require";
 import { listStaffWithFit } from "@/lib/services/staff";
 import { getWeekSchedule, weekStart } from "@/lib/services/schedule";
+import { getAttendanceBoard } from "@/lib/services/timeclock";
+import { listLeave } from "@/lib/services/leave";
+import { listOpenShifts } from "@/lib/services/openshifts";
+import { getRevenueSummary } from "@/lib/services/bookings";
 import { Card, StatusPill } from "@/components/ui";
 import type { SlotCode } from "@/lib/db/schema";
 
@@ -12,20 +17,40 @@ const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 function fmtTime(ms: number): string {
   return new Date(ms).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
 }
+const money = (n: number) => `£${n.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+
+function Tile({ href, label, value, sub, tone = "navy" }: { href: string; label: string; value: string | number; sub: string; tone?: "navy" | "port" | "amber" | "starboard" | "teal" }) {
+  const valTone = { navy: "text-navy", port: "text-port", amber: "text-amber", starboard: "text-starboard", teal: "text-teal" }[tone];
+  return (
+    <Link href={href} className="rounded-card border border-slate-200 bg-white p-4 shadow-sm transition hover:border-teal hover:shadow">
+      <p className="text-xs font-medium text-slate-500">{label}</p>
+      <p className={`mt-1 text-2xl font-semibold ${valTone}`}>{value}</p>
+      <p className="mt-0.5 text-xs text-slate-400">{sub}</p>
+    </Link>
+  );
+}
 
 export default async function DashboardPage() {
   const { ctx, repos, organisation } = await requireTenant({ role: "admin" });
   const monday = weekStart(new Date());
-  const [staff, { sessions, coverageByCourse }] = await Promise.all([
+  const today = new Date().toISOString().slice(0, 10);
+
+  const [staff, schedule, attendance, leave, shifts, revenue] = await Promise.all([
     listStaffWithFit(repos, ctx),
     getWeekSchedule(repos, ctx, monday),
+    getAttendanceBoard(repos, ctx, today),
+    listLeave(repos, ctx),
+    listOpenShifts(repos, ctx, true),
+    getRevenueSummary(repos, ctx),
   ]);
+  const { sessions, coverageByCourse } = schedule;
 
   const blocked = staff.filter((s) => !s.fit.fit).length;
   const expiring = staff.filter((s) => s.fit.warnings.length > 0).length;
   const uncovered = [...coverageByCourse.values()].filter((c) => !c.ratio.ok).length;
+  const pendingLeave = leave.filter((l) => l.status === "pending").length;
+  const openShifts = shifts.filter((s) => s.status === "open" || s.status === "offered").length;
 
-  // Build the weekly grid: day (0-6) × slot → sessions.
   const days = DAY_LABELS.map((_, i) => {
     const d = new Date(`${monday}T00:00:00.000Z`);
     d.setUTCDate(d.getUTCDate() + i);
@@ -37,29 +62,29 @@ export default async function DashboardPage() {
     <div>
       <div className="mb-6">
         <h1 className="font-display text-2xl font-semibold text-navy">Dashboard</h1>
-        <p className="text-sm text-slate-500">
-          {organisation.name} · week of {monday}
-        </p>
+        <p className="text-sm text-slate-500">{organisation.name} · week of {monday}</p>
       </div>
 
-      <div className="mb-6 grid gap-4 sm:grid-cols-3">
-        <Card>
-          <p className="text-sm text-slate-500">Staff blocked</p>
-          <p className="mt-1 text-3xl font-semibold text-navy">{blocked}</p>
-          <p className="mt-1 text-xs text-slate-400">Lapsed mandatory checks</p>
-        </Card>
-        <Card>
-          <p className="text-sm text-slate-500">Checks expiring soon</p>
-          <p className="mt-1 text-3xl font-semibold text-navy">{expiring}</p>
-          <p className="mt-1 text-xs text-slate-400">Within alert lead time</p>
-        </Card>
-        <Card>
-          <p className="text-sm text-slate-500">Courses needing attention</p>
-          <p className="mt-1 text-3xl font-semibold text-navy">{uncovered}</p>
-          <p className="mt-1 text-xs text-slate-400">Under-staffed or missing safety cover</p>
-        </Card>
+      {/* Today */}
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Today</p>
+      <div className="mb-6 grid gap-3 sm:grid-cols-3">
+        <Tile href="/office/timeclock" label="On the water now" value={attendance.onWater} sub="Clocked in" tone={attendance.onWater > 0 ? "starboard" : "navy"} />
+        <Tile href="/office/timeclock" label="Hours logged today" value={(attendance.minutesToday / 60).toFixed(1)} sub={`${attendance.started} started`} />
+        <Tile href="/office/bookings" label="Revenue earned" value={money(revenue.total)} sub={`${money(revenue.outstanding)} provisional`} tone="teal" />
       </div>
 
+      {/* Needs attention */}
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Needs attention</p>
+      <div className="mb-8 grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        <Tile href="/office/staff" label="Staff blocked" value={blocked} sub="Lapsed checks" tone={blocked > 0 ? "port" : "navy"} />
+        <Tile href="/office/staff" label="Checks expiring" value={expiring} sub="Within lead time" tone={expiring > 0 ? "amber" : "navy"} />
+        <Tile href="/office/courses" label="Courses to cover" value={uncovered} sub="Understaffed / no cover" tone={uncovered > 0 ? "amber" : "navy"} />
+        <Tile href="/office/leave" label="Leave to approve" value={pendingLeave} sub="Pending requests" tone={pendingLeave > 0 ? "amber" : "navy"} />
+        <Tile href="/office/leave" label="Open shifts" value={openShifts} sub="Need cover" tone={openShifts > 0 ? "amber" : "navy"} />
+      </div>
+
+      {/* Week grid */}
+      <h2 className="mb-3 font-display text-lg font-semibold text-navy">This week</h2>
       <Card className="overflow-x-auto">
         <table className="w-full min-w-[720px] border-collapse text-sm">
           <thead>
@@ -79,12 +104,7 @@ export default async function DashboardPage() {
                 {days.map((d) => (
                   <td key={d + slot} className="min-w-[90px] border border-slate-100 px-1.5 py-1.5">
                     {cell(d, slot).map((s) => (
-                      <div
-                        key={s.sessionId}
-                        className={`mb-1 rounded-md px-2 py-1 text-xs ${
-                          s.coverage.ok ? "bg-starboard/10 text-starboard" : "bg-port/10 text-port"
-                        }`}
-                      >
+                      <div key={s.sessionId} className={`mb-1 rounded-md px-2 py-1 text-xs ${s.coverage.ok ? "bg-starboard/10 text-starboard" : "bg-port/10 text-port"}`}>
                         <div className="font-medium">{s.courseName}</div>
                         <div className="opacity-80">{fmtTime(s.startAt)}</div>
                       </div>
@@ -97,6 +117,7 @@ export default async function DashboardPage() {
         </table>
       </Card>
 
+      {/* Coverage */}
       <div className="mt-6">
         <h2 className="mb-3 font-display text-lg font-semibold text-navy">Coverage</h2>
         <div className="grid gap-3 sm:grid-cols-2">
@@ -114,9 +135,7 @@ export default async function DashboardPage() {
                 ) : (
                   <StatusPill tone="attention">Under-staffed</StatusPill>
                 )}
-                <p className="mt-1 text-xs text-slate-400">
-                  {c.ratio.ratioCountingStaff}/{c.ratio.requiredStaff} staff
-                </p>
+                <p className="mt-1 text-xs text-slate-400">{c.ratio.ratioCountingStaff}/{c.ratio.requiredStaff} staff</p>
               </div>
             </Card>
           ))}

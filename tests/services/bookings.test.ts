@@ -50,6 +50,15 @@ describe("bookings service", () => {
     expect(after.total).toBeCloseTo(200, 2); // 120 + 80
   });
 
+  it("excludes cancelled bookings from revenue and outstanding", async () => {
+    const b = await createBooking(repos, ctx, { courseId, customerName: "Gone", headcount: 1, amount: 99 });
+    await setBookingStatus(repos, ctx, b.id, "cancelled");
+    const summary = await getRevenueSummary(repos, ctx);
+    // Only the seeded £120 confirmed booking counts; the cancelled £99 is ignored.
+    expect(summary.total).toBeCloseTo(120, 2);
+    expect(summary.outstanding).toBeCloseTo(0, 2);
+  });
+
   it("lists bookings with the course name", async () => {
     const rows = await listBookings(repos, ctx);
     expect(rows.length).toBeGreaterThan(0);

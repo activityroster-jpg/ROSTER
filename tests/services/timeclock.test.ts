@@ -55,6 +55,20 @@ describe("timeclock service", () => {
     expect(res).toBeNull();
   });
 
+  it("clock-out creates an hours record when none exists for that session", async () => {
+    // A fresh instructor with no seeded hours record.
+    const fresh = await repos.tenant.instructor.insert(ctx, {
+      name: "Fresh", email: "fresh@alpha.test", employmentType: "employed", status: "active",
+    });
+    await clockIn(repos, ctx, fresh.id, sessionId, NINE_AM);
+    await clockOut(repos, ctx, fresh.id, NINE_AM + 90 * 60 * 1000); // 1.5h
+    const recs = await repos.tenant.hoursRecord.list(ctx);
+    const created = recs.find((r) => r.instructorId === fresh.id && r.courseSessionId === sessionId);
+    expect(created).toBeTruthy();
+    expect(created!.actualMinutes).toBe(90);
+    expect(created!.scheduledMinutes).toBe(180); // taken from the session (09:00–12:00)
+  });
+
   it("attendance board counts on-water vs done for the day", async () => {
     await clockIn(repos, ctx, instructorId, sessionId, NINE_AM);
     let board = await getAttendanceBoard(repos, ctx, DAY, NINE_AM + 30 * 60 * 1000);
