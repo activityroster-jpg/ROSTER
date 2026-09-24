@@ -3,6 +3,18 @@ main = ".open-next/worker.js"
 compatibility_date = "2025-01-01"
 compatibility_flags = ["nodejs_compat"]
 
+# --- Routing ---------------------------------------------------------------
+# The apex serves the marketing site (custom domain, auto-manages its DNS +
+# cert). The wildcard route sends every centre subdomain
+# ({slug}.activityroster.com) to this Worker, which resolves the org from the
+# host. NOTE: a wildcard ROUTE still needs a matching *proxied* DNS record —
+# add a CNAME `*` → activityroster.com (Proxied) in Cloudflare DNS once; a
+# route cannot create that record itself.
+routes = [
+  { pattern = "activityroster.com", custom_domain = true },
+  { pattern = "*.activityroster.com/*", zone_name = "activityroster.com" },
+]
+
 # Static assets produced by the OpenNext build.
 [assets]
 directory = ".open-next/assets"
