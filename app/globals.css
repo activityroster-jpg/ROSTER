@@ -35,8 +35,8 @@ body {
 }
 
 /* Form controls: explicit dark text on light fields, so typed text is always
-   visible regardless of the OS/browser theme. Tailwind text-*/bg-* utilities
-   still override these (higher specificity) where a field needs it. */
+   visible regardless of the OS/browser theme. Tailwind colour utilities still
+   override these (higher specificity) where a field needs a different look. */
 input,
 textarea,
 select {
