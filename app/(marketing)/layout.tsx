@@ -4,11 +4,11 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen bg-canvas">
       <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-          <Link href="/" className="font-display text-xl font-bold text-navy">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4">
+          <Link href="/" className="flex-none font-display text-xl font-bold text-navy">
             Activity<span className="text-teal">Roster</span>
           </Link>
-          <nav className="flex items-center gap-5 text-sm font-medium text-slate-600">
+          <nav className="flex items-center gap-3 text-sm font-medium text-slate-600 sm:gap-5">
             <Link href="/#features" className="hidden hover:text-navy sm:inline">
               Features
             </Link>
@@ -18,8 +18,9 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
             <Link href="/pricing" className="hover:text-navy">
               Pricing
             </Link>
-            <a href="/#get-demo" className="rounded-lg bg-navy px-4 py-2 text-white hover:bg-navy-700">
-              Try free for a month
+            <a href="/#get-demo" className="flex-none whitespace-nowrap rounded-lg bg-navy px-3 py-2 text-white hover:bg-navy-700 sm:px-4">
+              <span className="sm:hidden">Try free</span>
+              <span className="hidden sm:inline">Try free for a month</span>
             </a>
           </nav>
         </div>
