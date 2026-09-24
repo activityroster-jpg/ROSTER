@@ -7,8 +7,17 @@ import { getAuth } from "@/lib/auth";
 import { instructorSchema, complianceItemSchema, qualificationSchema } from "@/lib/validation/entities";
 import { writeAudit } from "@/lib/services/audit";
 import { linkInstructorUser } from "@/lib/services/invite";
+import { toggleOnboarding } from "@/lib/services/hr";
 
 export type ActionState = { ok: boolean; error?: string; message?: string };
+
+/** Tick/untick an onboarding step for a staff member. Admin only. */
+export async function toggleOnboardingAction(itemId: string, done: boolean): Promise<{ ok: boolean; error?: string }> {
+  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const res = await toggleOnboarding(repos, ctx, itemId, done);
+  if (!res) return { ok: false, error: "Not found" };
+  return { ok: true };
+}
 
 /** Add an instructor. Authed (admin), Zod-validated, audited. */
 export async function createInstructorAction(_prev: ActionState, formData: FormData): Promise<ActionState> {

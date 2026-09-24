@@ -1,17 +1,18 @@
 import { eq } from "drizzle-orm";
 import { requireTenant } from "@/lib/tenant/require";
 import { instructor as instructorTable } from "@/lib/db/schema";
+import { getStaffProfile, type DocumentRow } from "@/lib/services/hr";
 import { Card, StatusPill } from "@/components/ui";
-import { DocumentUpload } from "@/components/portal/DocumentUpload";
 
 export const dynamic = "force-dynamic";
 
-function expiryTone(expiry: string | null): "covered" | "attention" | "conflict" | "neutral" {
-  if (!expiry) return "neutral";
-  const t = Date.parse(`${expiry}T23:59:59Z`);
-  if (t < Date.now()) return "conflict";
-  if (t < Date.now() + 30 * 864e5) return "attention";
-  return "covered";
+function docStatus(d: DocumentRow): { tone: "covered" | "attention" | "conflict"; label: string } {
+  if (!d.expiryDate) return { tone: "covered", label: "Current" };
+  const expiry = Date.parse(`${d.expiryDate}T23:59:59.999Z`);
+  const now = Date.now();
+  if (expiry < now) return { tone: "conflict", label: "Expired" };
+  if (expiry < now + 42 * 24 * 60 * 60 * 1000) return { tone: "attention", label: "Expiring" };
+  return { tone: "covered", label: "Valid" };
 }
 
 export default async function PortalDocumentsPage() {
@@ -26,77 +27,32 @@ export default async function PortalDocumentsPage() {
     );
   }
 
-  const [compliance, complianceTypes, quals, gradeTypes] = await Promise.all([
-    repos.tenant.complianceItem.list(ctx),
-    repos.tenant.complianceType.list(ctx),
-    repos.tenant.qualification.list(ctx),
-    repos.tenant.qualificationType.list(ctx),
-  ]);
-  const ctName = new Map(complianceTypes.map((c) => [c.id, c.name]));
-  const gtName = new Map(gradeTypes.map((g) => [g.id, g.name]));
-  const myCompliance = compliance.filter((c) => c.instructorId === me.id);
-  const myQuals = quals.filter((q) => q.instructorId === me.id);
+  const profile = await getStaffProfile(repos, ctx, me.id);
+  const documents = profile?.documents ?? [];
 
   return (
     <div>
-      <h1 className="mb-4 font-display text-xl font-semibold text-navy">My documents</h1>
+      <h1 className="mb-1 font-display text-xl font-semibold text-navy">My documents</h1>
+      <p className="mb-4 text-sm text-slate-500">Your tickets, certificates and vetting — with expiry status.</p>
 
-      <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-400">Compliance checks</h2>
-      <div className="mb-6 space-y-2">
-        {myCompliance.length === 0 ? (
-          <Card><p className="text-sm text-slate-500">No checks recorded.</p></Card>
-        ) : (
-          myCompliance.map((c) => (
-            <Card key={c.id} className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-navy">{ctName.get(c.complianceTypeId) ?? "Check"}</p>
-                <p className="text-xs text-slate-500">Expires {c.expiryDate ?? "—"}</p>
-                <div className="mt-1 flex items-center gap-3">
-                  <DocumentUpload kind="compliance" itemId={c.id} hasDoc={Boolean(c.docKey)} />
-                  {c.docKey ? (
-                    <a
-                      href={`/api/documents/download?key=${encodeURIComponent(c.docKey)}`}
-                      className="text-xs text-slate-500 hover:underline"
-                    >
-                      View
-                    </a>
-                  ) : null}
-                </div>
-              </div>
-              <StatusPill tone={expiryTone(c.expiryDate ?? null)}>
-                {c.expiryDate && expiryTone(c.expiryDate) === "conflict" ? "Expired" : c.verified ? "Verified" : "Pending"}
-              </StatusPill>
-            </Card>
-          ))
-        )}
-      </div>
-
-      <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-400">Grades</h2>
-      <div className="space-y-2">
-        {myQuals.length === 0 ? (
-          <Card><p className="text-sm text-slate-500">No grades recorded.</p></Card>
-        ) : (
-          myQuals.map((q) => (
-            <Card key={q.id} className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-navy">{gtName.get(q.qualificationTypeId) ?? "Grade"}</p>
-                <div className="mt-1 flex items-center gap-3">
-                  <DocumentUpload kind="qualification" itemId={q.id} hasDoc={Boolean(q.docKey)} />
-                  {q.docKey ? (
-                    <a
-                      href={`/api/documents/download?key=${encodeURIComponent(q.docKey)}`}
-                      className="text-xs text-slate-500 hover:underline"
-                    >
-                      View
-                    </a>
-                  ) : null}
-                </div>
-              </div>
-              <StatusPill tone={q.verified ? "covered" : "neutral"}>{q.verified ? "Verified" : "Pending"}</StatusPill>
-            </Card>
-          ))
-        )}
-      </div>
+      {documents.length === 0 ? (
+        <Card><p className="text-sm text-slate-500">No documents on file yet.</p></Card>
+      ) : (
+        <ul className="space-y-2">
+          {documents.map((d, i) => {
+            const st = docStatus(d);
+            return (
+              <li key={i} className="flex items-center justify-between rounded-card border border-slate-200 bg-white px-3 py-3">
+                <span>
+                  <span className="block text-sm font-medium text-navy">{d.name}</span>
+                  <span className="text-xs text-slate-400">{d.expiryDate ? `Expires ${d.expiryDate}` : "No expiry"}{d.mandatory ? " · mandatory" : ""}</span>
+                </span>
+                <StatusPill tone={st.tone}>{st.label}</StatusPill>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 }

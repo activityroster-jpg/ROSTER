@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { Search, Settings2, ChevronsUpDown } from "lucide-react";
 import { StatusPill } from "@/components/ui";
 import { InviteInstructorButton } from "@/components/office/InviteInstructorButton";
@@ -107,7 +108,7 @@ export function StaffTable({ rows }: { rows: StaffRow[] }) {
                       <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-teal/10 text-xs font-semibold text-teal">
                         {r.name.split(" ").map((p) => p[0]).slice(0, 2).join("")}
                       </span>
-                      <span className="font-medium text-navy">{r.name}</span>
+                      <Link href={`/office/staff/${r.id}`} className="font-medium text-navy hover:text-teal hover:underline">{r.name}</Link>
                     </div>
                   </td>
                   <td className="px-4 py-3 text-slate-500">{r.email ?? "—"}</td>

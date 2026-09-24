@@ -173,6 +173,13 @@ export async function seedFullOrg(
     roleTypeId: role.id,
     status: "open",
   });
+  await t.onboardingItem.insert(ctx, {
+    instructorId: instructor.id,
+    label: "Contract signed",
+    done: true,
+    sortOrder: 0,
+    completedAt: new Date(start),
+  });
   await t.notification.insert(ctx, {
     instructorId: instructor.id,
     channel: "in_app",

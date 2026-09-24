@@ -502,6 +502,24 @@ export const openShift = sqliteTable("open_shift", {
   index("open_shift_session_idx").on(t.courseSessionId),
 ]);
 
+/** A single onboarding checklist step for a new staff member. */
+export const onboardingItem = sqliteTable("onboarding_item", {
+  id: id(),
+  organisationId: orgFk(),
+  instructorId: text("instructor_id")
+    .notNull()
+    .references(() => instructor.id, { onDelete: "cascade" }),
+  label: text("label").notNull(),
+  done: boolCol("done").default(false),
+  sortOrder: integer("sort_order").notNull().default(0),
+  completedAt: integer("completed_at", { mode: "timestamp_ms" }),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, (t) => [
+  index("onboarding_item_org_idx").on(t.organisationId),
+  index("onboarding_item_instructor_idx").on(t.instructorId),
+]);
+
 export const notification = sqliteTable("notification", {
   id: id(),
   organisationId: orgFk(),
@@ -539,3 +557,4 @@ export type OrgSettings = typeof orgSettings.$inferSelect;
 export type TimeEntry = typeof timeEntry.$inferSelect;
 export type LeaveRequest = typeof leaveRequest.$inferSelect;
 export type OpenShift = typeof openShift.$inferSelect;
+export type OnboardingItem = typeof onboardingItem.$inferSelect;
