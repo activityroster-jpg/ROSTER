@@ -18,6 +18,12 @@ export function createAuth(db: Database, env: CloudflareEnv) {
   return betterAuth({
     baseURL: env.BETTER_AUTH_URL ?? `https://${env.APP_APEX_DOMAIN}`,
     secret: env.BETTER_AUTH_SECRET ?? "dev-insecure-secret-change-me",
+    // Every centre lives on its own subdomain, so redirects/callbacks to any
+    // {slug}.apex must be trusted (Better Auth only trusts the baseURL by default).
+    trustedOrigins: [
+      `https://${env.APP_APEX_DOMAIN}`,
+      `https://*.${env.APP_APEX_DOMAIN}`,
+    ],
     database: drizzleAdapter(db, {
       provider: "sqlite",
       schema: { user, session, account, verification, twoFactor: twoFactorTable },
