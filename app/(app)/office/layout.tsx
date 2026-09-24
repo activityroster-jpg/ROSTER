@@ -4,6 +4,7 @@ import {
   CalendarOff,
   ClipboardList,
   Clock,
+  BarChart3,
   History,
   LayoutDashboard,
   LifeBuoy,
@@ -32,7 +33,8 @@ const NAV = [
       { href: "/office/staff", label: "Staff", icon: Users },
       { href: "/office/equipment", label: "Equipment", icon: Ship },
       { href: "/office/locations", label: "Locations", icon: MapPin },
-      { href: "/office/finance", label: "Finance", icon: Wallet },
+      { href: "/office/reports", label: "Reports", icon: BarChart3 },
+      { href: "/office/finance", label: "Payroll", icon: Wallet },
     ],
   },
   {
