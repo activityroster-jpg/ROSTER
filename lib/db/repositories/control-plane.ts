@@ -81,6 +81,12 @@ export class ControlPlaneRepository {
     return rows[0] ?? null;
   }
 
+  /** Mark a user's email verified (used when we provision a trusted owner at
+   *  signup so they can sign in immediately without an email round-trip). */
+  async markEmailVerified(userId: string): Promise<void> {
+    await this.db.update(user).set({ emailVerified: true }).where(eq(user.id, userId));
+  }
+
   async createMembership(values: {
     userId: string;
     organisationId: string;

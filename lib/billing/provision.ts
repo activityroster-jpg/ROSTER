@@ -17,6 +17,9 @@ export interface ProvisionParams {
   subscriptionStatus?: SubscriptionStatus;
   /** "basic" (ready to use) or "full" (they'll finish configuring). */
   setupMode?: SetupMode;
+  /** If the owner's auth user already exists (e.g. created via Better Auth at
+   *  signup), link the admin membership to this id instead of creating a shell. */
+  ownerUserId?: string;
 }
 
 function coerceSetupMode(v: string | undefined): SetupMode {
@@ -72,9 +75,10 @@ export async function provisionCentre(
     stripeSubscriptionId: params.stripeSubscriptionId,
   });
 
-  const owner =
-    (await control.userByEmail(params.ownerEmail)) ??
-    (await control.createUser({ name: params.centreName, email: params.ownerEmail }));
+  const owner = params.ownerUserId
+    ? { id: params.ownerUserId }
+    : (await control.userByEmail(params.ownerEmail)) ??
+      (await control.createUser({ name: params.centreName, email: params.ownerEmail }));
   await control.createMembership({ userId: owner.id, organisationId: org.id, role: "admin" });
 
   const ctx: SystemTenantContext = {

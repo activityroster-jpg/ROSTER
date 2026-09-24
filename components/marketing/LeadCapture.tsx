@@ -24,6 +24,7 @@ export function LeadCapture({
   apex?: string;
 }) {
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [centreName, setCentreName] = useState("");
   const [slug, setSlug] = useState("");
   const [slugEdited, setSlugEdited] = useState(false);
@@ -42,12 +43,13 @@ export function LeadCapture({
     e.preventDefault();
     setError(null);
     if (slug.length < 3) { setError("Choose a web address of at least 3 characters."); return; }
+    if (password.length < 8) { setError("Choose a password of at least 8 characters."); return; }
     setStatus("busy");
     try {
       const res = await fetch("/api/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ownerEmail: email, centreName, slug, jurisdiction, setupMode, source }),
+        body: JSON.stringify({ ownerEmail: email, password, centreName, slug, jurisdiction, setupMode, source }),
       });
       const data = (await res.json()) as { ok?: boolean; error?: string; url?: string };
       if (!res.ok || !data.ok) {
@@ -68,11 +70,11 @@ export function LeadCapture({
       <div className={variant === "card" ? "rounded-card bg-white p-6 shadow-lg" : ""}>
         <p className="font-display text-xl font-semibold text-navy">🎉 {centreName} is ready</p>
         <p className="mt-2 text-sm text-slate-600">
-          Your centre is live at <span className="font-semibold text-navy">{slug}.{apex}</span>. We&apos;ve emailed a
-          sign-in link to <span className="font-semibold">{email}</span> — your first month is free, no card needed.
+          Your centre is live at <span className="font-semibold text-navy">{slug}.{apex}</span>. Sign in with your
+          email and the password you just set — your first month is free, no card needed.
         </p>
-        <a href={result.url} className="mt-4 inline-block rounded-lg bg-teal px-5 py-3 font-semibold text-white hover:bg-teal-700">
-          Open your centre →
+        <a href={`${result.url}/sign-in`} className="mt-4 inline-block rounded-lg bg-teal px-5 py-3 font-semibold text-white hover:bg-teal-700">
+          Go to my centre &amp; sign in →
         </a>
         <p className="mt-3 text-xs text-slate-500">
           {setupMode === "basic"
@@ -95,7 +97,8 @@ export function LeadCapture({
         </>
       ) : null}
       <div className="grid gap-3">
-        <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@yourcentre.com" className={field} aria-label="Email" />
+        <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@yourcentre.com" className={field} aria-label="Email" autoComplete="email" />
+        <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Create a password (8+ characters)" className={field} aria-label="Password" autoComplete="new-password" />
         <input required value={centreName} onChange={(e) => onCentreName(e.target.value)} placeholder="Centre / club name" className={field} aria-label="Centre name" />
 
         {/* Web address */}
