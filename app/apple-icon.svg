@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="ActivityRoster">
+  <rect width="32" height="32" rx="7" fill="#0A2E52"/>
+  <!-- mainsail -->
+  <path d="M16.2 5.5 V19 H6.5 Z" fill="#ffffff"/>
+  <!-- jib -->
+  <path d="M17.8 8.5 V19 H24.8 Z" fill="#009EDB"/>
+  <!-- hull -->
+  <path d="M5 21.5 H27 L23.5 26.5 H8.5 Z" fill="#ffffff"/>
+</svg>
