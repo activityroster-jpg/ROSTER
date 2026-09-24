@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   CalendarDays,
+  CalendarOff,
   ClipboardList,
   Clock,
   History,
@@ -22,6 +23,7 @@ const NAV = [
       { href: "/office/courses", label: "Courses", icon: CalendarDays },
       { href: "/office/availability", label: "Availability", icon: ClipboardList },
       { href: "/office/timeclock", label: "Time clock", icon: Clock },
+      { href: "/office/leave", label: "Leave & cover", icon: CalendarOff },
     ],
   },
   {

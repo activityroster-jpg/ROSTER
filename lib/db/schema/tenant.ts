@@ -41,6 +41,12 @@ export const PAY_UNITS = ["hour", "day", "session"] as const;
 export const NOTIFICATION_CHANNELS = ["email", "sms", "in_app"] as const;
 export const TIME_ENTRY_SOURCES = ["clock", "manual"] as const;
 export type TimeEntrySource = (typeof TIME_ENTRY_SOURCES)[number];
+export const LEAVE_TYPES = ["annual", "sick", "training", "unpaid", "other"] as const;
+export type LeaveType = (typeof LEAVE_TYPES)[number];
+export const LEAVE_STATUSES = ["pending", "approved", "declined", "cancelled"] as const;
+export type LeaveStatus = (typeof LEAVE_STATUSES)[number];
+export const OPEN_SHIFT_STATUSES = ["open", "offered", "filled", "cancelled"] as const;
+export type OpenShiftStatus = (typeof OPEN_SHIFT_STATUSES)[number];
 
 // --- Settings / configuration ---------------------------------------------
 
@@ -449,6 +455,53 @@ export const timeEntry = sqliteTable("time_entry", {
   index("time_entry_session_idx").on(t.courseSessionId),
 ]);
 
+/** A leave / absence request from an instructor, approved by an admin. */
+export const leaveRequest = sqliteTable("leave_request", {
+  id: id(),
+  organisationId: orgFk(),
+  instructorId: text("instructor_id")
+    .notNull()
+    .references(() => instructor.id, { onDelete: "cascade" }),
+  type: text("type", { enum: LEAVE_TYPES }).notNull().default("annual"),
+  startDate: text("start_date").notNull(), // "YYYY-MM-DD"
+  endDate: text("end_date").notNull(),
+  days: real("days").notNull().default(1),
+  reason: text("reason"),
+  status: text("status", { enum: LEAVE_STATUSES }).notNull().default("pending"),
+  decidedByUserId: text("decided_by_user_id"),
+  decidedAt: integer("decided_at", { mode: "timestamp_ms" }),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, (t) => [
+  index("leave_request_org_idx").on(t.organisationId),
+  index("leave_request_instructor_idx").on(t.instructorId),
+]);
+
+/**
+ * An uncovered session role broadcast for staff to claim. open → offered (an
+ * instructor has put their hand up) → filled (an admin confirms, which also
+ * assigns them to the course). Config-safe: cancelling sets status, never deletes.
+ */
+export const openShift = sqliteTable("open_shift", {
+  id: id(),
+  organisationId: orgFk(),
+  courseSessionId: text("course_session_id")
+    .notNull()
+    .references(() => courseSession.id, { onDelete: "cascade" }),
+  roleTypeId: text("role_type_id")
+    .notNull()
+    .references(() => roleType.id, { onDelete: "restrict" }),
+  status: text("status", { enum: OPEN_SHIFT_STATUSES }).notNull().default("open"),
+  claimedByInstructorId: text("claimed_by_instructor_id").references(() => instructor.id, { onDelete: "set null" }),
+  filledByInstructorId: text("filled_by_instructor_id").references(() => instructor.id, { onDelete: "set null" }),
+  note: text("note"),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, (t) => [
+  index("open_shift_org_idx").on(t.organisationId),
+  index("open_shift_session_idx").on(t.courseSessionId),
+]);
+
 export const notification = sqliteTable("notification", {
   id: id(),
   organisationId: orgFk(),
@@ -484,3 +537,5 @@ export type Course = typeof course.$inferSelect;
 export type CourseSession = typeof courseSession.$inferSelect;
 export type OrgSettings = typeof orgSettings.$inferSelect;
 export type TimeEntry = typeof timeEntry.$inferSelect;
+export type LeaveRequest = typeof leaveRequest.$inferSelect;
+export type OpenShift = typeof openShift.$inferSelect;

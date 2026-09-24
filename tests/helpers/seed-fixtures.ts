@@ -160,6 +160,19 @@ export async function seedFullOrg(
     clockOutAt: new Date(start + 3 * H),
     source: "clock",
   });
+  await t.leaveRequest.insert(ctx, {
+    instructorId: instructor.id,
+    type: "annual",
+    startDate: "2026-02-01",
+    endDate: "2026-02-03",
+    days: 3,
+    status: "pending",
+  });
+  await t.openShift.insert(ctx, {
+    courseSessionId: session.id,
+    roleTypeId: role.id,
+    status: "open",
+  });
   await t.notification.insert(ctx, {
     instructorId: instructor.id,
     channel: "in_app",

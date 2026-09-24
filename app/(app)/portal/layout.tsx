@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { CalendarCheck, CalendarClock, Clock, FileCheck, Timer } from "lucide-react";
+import { CalendarCheck, CalendarClock, CalendarOff, Clock, FileCheck, Timer } from "lucide-react";
 import { requireTenant } from "@/lib/tenant/require";
 
 const TABS = [
   { href: "/portal", label: "Schedule", icon: CalendarCheck },
   { href: "/portal/availability", label: "Available", icon: CalendarClock },
   { href: "/portal/timeclock", label: "Clock", icon: Timer },
+  { href: "/portal/leave", label: "Leave", icon: CalendarOff },
   { href: "/portal/hours", label: "Hours", icon: Clock },
   { href: "/portal/documents", label: "Docs", icon: FileCheck },
 ];
