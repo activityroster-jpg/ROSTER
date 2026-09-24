@@ -50,6 +50,13 @@
       "when": 1790277571630,
       "tag": "0006_milky_vindicator",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1790281861287,
+      "tag": "0007_milky_namor",
+      "breakpoints": true
     }
   ]
 }

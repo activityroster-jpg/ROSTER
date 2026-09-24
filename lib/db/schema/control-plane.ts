@@ -82,6 +82,10 @@ export const twoFactor = sqliteTable("two_factor", {
   userId: text("user_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
+  // Fields required by the Better Auth twoFactor plugin (verification + lockout).
+  verified: integer("verified", { mode: "boolean" }),
+  failedVerificationCount: integer("failed_verification_count").default(0),
+  lockedUntil: integer("locked_until", { mode: "timestamp_ms" }),
 }, (t) => [index("two_factor_user_idx").on(t.userId)]);
 
 // --- Organisations (centres) & membership ---------------------------------
