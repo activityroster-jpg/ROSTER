@@ -95,22 +95,25 @@ export async function provisionCentre(
 
   await control.releaseSlug(slug);
 
-  // Email is best-effort: a paid, provisioned centre must not be rolled back
-  // because the welcome email hiccuped. Failures are logged for retry.
-  try {
-    const appUrl = `https://${slug}.${env.APP_APEX_DOMAIN}`;
-    await sendEmail({
-      to: params.ownerEmail,
-      subject: `Your ActivityRoster centre is ready — ${params.centreName}`,
-      html: `
-        <p>Welcome to ActivityRoster!</p>
-        <p>Your centre <strong>${params.centreName}</strong> is set up at
-          <a href="${appUrl}">${slug}.${env.APP_APEX_DOMAIN}</a>.</p>
-        <p>Set your password and sign in to get started.</p>
-      `,
-    });
-  } catch (err) {
-    console.error(`[provision] welcome email failed for ${slug}:`, (err as Error).message);
+  // Welcome email is best-effort and only for the paid/checkout path — the
+  // free-month signup sends its own email-confirmation link, so we skip it here
+  // to avoid two conflicting emails.
+  if (params.subscriptionStatus !== "trialing") {
+    try {
+      const appUrl = `https://${slug}.${env.APP_APEX_DOMAIN}`;
+      await sendEmail({
+        to: params.ownerEmail,
+        subject: `Your ActivityRoster centre is ready — ${params.centreName}`,
+        html: `
+          <p>Welcome to ActivityRoster!</p>
+          <p>Your centre <strong>${params.centreName}</strong> is set up at
+            <a href="${appUrl}">${slug}.${env.APP_APEX_DOMAIN}</a>.</p>
+          <p>Sign in to get started.</p>
+        `,
+      });
+    } catch (err) {
+      console.error(`[provision] welcome email failed for ${slug}:`, (err as Error).message);
+    }
   }
 
   return { organisationId: org.id, created: true };
