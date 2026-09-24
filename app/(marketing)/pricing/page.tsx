@@ -1,109 +1,74 @@
 import Link from "next/link";
 import { Check } from "lucide-react";
 
-const TIERS = [
-  {
-    name: "Basic",
-    tagline: "Off the shelf. Everything a centre needs to roster compliantly.",
-    price: "£55",
-    per: "per month",
-    setup: null as string | null,
-    highlight: false,
-    features: [
-      "Compliance-aware assignment (blocks under-qualified staff)",
-      "Ratio & safety-boat cover checks",
-      "Conflict detection with override + audit trail",
-      "Licence, ticket & vetting tracking with expiry alerts",
-      "Instructor portal (schedule, availability, hours)",
-      "Staff hours & pay export (CSV) for payroll",
-      "EU-hosted, GDPR-ready, data export any time",
-    ],
-    cta: "Start my free month",
-  },
-  {
-    name: "Custom",
-    tagline: "Tailored to exactly how your centre runs, set up for you.",
-    price: "£95",
-    per: "per month",
-    setup: "£450 one-off setup",
-    highlight: true,
-    features: [
-      "Everything in Basic",
-      "We configure your grades, roles, checks & course catalogue",
-      "Bespoke session times, jurisdictions & vetting rules",
-      "Data migration from your spreadsheets",
-      "Onboarding & staff training session",
-      "Priority support",
-    ],
-    cta: "Talk to us about setup",
-  },
+const INCLUDED = [
+  "Scheduling & rostering with compliance checks built in",
+  "Time & attendance — clock in/out, auto timesheets",
+  "Availability, leave & open-shift cover",
+  "Licence, ticket & vetting tracking with expiry alerts",
+  "Staff HR, onboarding & encrypted document vault",
+  "Bookings, revenue and labour-cost reporting",
+  "Payroll-ready hours export (CSV)",
+  "Instructor app with clock-in, leave & notifications",
+  "EU-hosted, GDPR-ready, data export any time",
+  "Every centre's data strictly isolated",
 ];
 
 export default function PricingPage() {
   return (
-    <div className="mx-auto max-w-5xl px-4 py-16">
+    <div className="mx-auto max-w-3xl px-4 py-16">
       <div className="text-center">
         <p className="text-sm font-semibold uppercase tracking-wide text-teal">Pricing</p>
-        <h1 className="mt-1 font-display text-3xl font-bold text-navy">Simple pricing, no surprises</h1>
-        <p className="mx-auto mt-2 max-w-2xl text-slate-600">
-          Try it free for a month — no card required. Then pick the plan that suits your centre. Cancel anytime.
+        <h1 className="mt-1 font-display text-3xl font-bold text-navy">One simple plan</h1>
+        <p className="mx-auto mt-2 max-w-xl text-slate-600">
+          Everything in the platform, for your whole centre. Start with a free month — no card required — then keep it
+          only if it&apos;s earning its place.
         </p>
       </div>
 
-      <div className="mt-10 grid gap-8 lg:grid-cols-2">
-        {TIERS.map((tier) => (
-          <div
-            key={tier.name}
-            className={`relative flex flex-col rounded-card border bg-white p-7 ${
-              tier.highlight ? "border-teal shadow-lg" : "border-slate-200"
-            }`}
-          >
-            {tier.highlight ? (
-              <span className="absolute -top-3 left-7 rounded-full bg-teal px-3 py-1 text-xs font-semibold text-white">
-                Most popular
-              </span>
-            ) : null}
-            <h2 className="font-display text-2xl font-semibold text-navy">{tier.name}</h2>
-            <p className="mt-1 min-h-[2.5rem] text-slate-600">{tier.tagline}</p>
-
-            <div className="mt-5">
-              <span className="font-display text-4xl font-bold text-navy">{tier.price}</span>
-              <span className="ml-1 text-slate-500">/{tier.per}</span>
-              {tier.setup ? (
-                <p className="mt-1 text-sm font-semibold text-teal">+ {tier.setup}</p>
-              ) : (
-                <p className="mt-1 text-sm text-slate-400">No setup fee</p>
-              )}
-            </div>
-
-            <ul className="mt-6 flex-1 space-y-2">
-              {tier.features.map((f) => (
-                <li key={f} className="flex items-start gap-2 text-sm text-slate-700">
-                  <Check className="mt-0.5 h-4 w-4 flex-none text-starboard" />
-                  <span>{f}</span>
-                </li>
-              ))}
-            </ul>
-
-            <a
-              href="/#get-demo"
-              className={`mt-7 inline-block rounded-lg px-6 py-3 text-center font-semibold transition ${
-                tier.highlight
-                  ? "bg-teal text-white hover:bg-teal-700"
-                  : "border border-navy text-navy hover:bg-navy hover:text-white"
-              }`}
-            >
-              {tier.cta}
-            </a>
+      <div className="mt-10 overflow-hidden rounded-card border border-teal shadow-lg">
+        <div className="bg-navy px-6 py-3 text-center text-sm font-semibold text-white">
+          🎉 First month free · no card required
+        </div>
+        <div className="grid gap-0 sm:grid-cols-2">
+          {/* Monthly */}
+          <div className="border-b border-slate-200 p-7 text-center sm:border-b-0 sm:border-r">
+            <p className="text-sm font-semibold uppercase tracking-wide text-slate-400">Monthly</p>
+            <p className="mt-2"><span className="font-display text-4xl font-bold text-navy">£75</span><span className="ml-1 text-slate-500">/month</span></p>
+            <p className="mt-1 text-sm text-slate-500">Billed monthly · cancel anytime</p>
           </div>
-        ))}
+          {/* Annual */}
+          <div className="relative p-7 text-center">
+            <span className="absolute right-4 top-4 rounded-full bg-starboard/15 px-2.5 py-0.5 text-xs font-semibold text-starboard">2 months free</span>
+            <p className="text-sm font-semibold uppercase tracking-wide text-slate-400">Yearly</p>
+            <p className="mt-2"><span className="font-display text-4xl font-bold text-navy">£750</span><span className="ml-1 text-slate-500">/year</span></p>
+            <p className="mt-1 text-sm text-slate-500">Save £150 — that&apos;s 2 months free</p>
+          </div>
+        </div>
+
+        <div className="border-t border-slate-200 p-7">
+          <p className="mb-3 text-sm font-semibold text-navy">Everything included:</p>
+          <ul className="grid gap-2 sm:grid-cols-2">
+            {INCLUDED.map((f) => (
+              <li key={f} className="flex items-start gap-2 text-sm text-slate-700">
+                <Check className="mt-0.5 h-4 w-4 flex-none text-starboard" />
+                <span>{f}</span>
+              </li>
+            ))}
+          </ul>
+          <a
+            href="/#get-demo"
+            className="mt-7 block rounded-lg bg-teal px-6 py-3 text-center font-semibold text-white transition hover:bg-teal-700"
+          >
+            Start my free month
+          </a>
+          <p className="mt-2 text-center text-xs text-slate-500">No card required · cancel anytime · your own address at yourclub.activityroster.com</p>
+        </div>
       </div>
 
-      <p className="mt-10 text-center text-sm text-slate-500">
-        Every centre starts with the same strong foundation and a free month.{" "}
-        <Link href="/#get-demo" className="font-semibold text-teal hover:underline">
-          Start your free month →
-        </Link>
+      <p className="mt-8 text-center text-sm text-slate-500">
+        Need help getting set up or migrating your spreadsheets?{" "}
+        <Link href="/#get-demo" className="font-semibold text-teal hover:underline">Talk to us</Link> — onboarding help is available.
       </p>
     </div>
   );

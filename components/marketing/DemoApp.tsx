@@ -907,7 +907,7 @@ function DemoSettings() {
     { title: "Compliance checks", desc: "The licences and vetting that must be valid to roster.", items: ["First Aid (mandatory)", "Safeguarding (mandatory)", "DBS / PVG / AccessNI / Garda vetting", "RYA instructor certificates"] },
     { title: "Course catalogue", desc: "RYA course types, ratios and required qualifications.", items: ["RYA National Sailing scheme", "RYA Youth Sailing scheme", "RYA Powerboat & Windsurfing", "Custom sessions"] },
     { title: "Jurisdictions & vetting", desc: "Right checks for where your staff work.", items: ["England & Wales — DBS", "Scotland — PVG", "Northern Ireland — AccessNI", "Ireland — Garda vetting"] },
-    { title: "Billing", desc: "Plan, invoices and payment method.", items: ["Basic plan · £55/month", "Update payment method", "Download invoices"] },
+    { title: "Billing", desc: "Plan, invoices and payment method.", items: ["£75/month or £750/year (2 months free)", "Update payment method", "Download invoices"] },
   ];
   return (
     <div>
