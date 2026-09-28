@@ -16,6 +16,9 @@ export interface StaffRow {
   blockText: string;
   linked: boolean;
   hasEmail: boolean;
+  teaches: string[];
+  teachesYouth: boolean;
+  teachesAdult: boolean;
 }
 
 type Tab = "all" | "fit" | "blocked" | "expiring";
@@ -90,6 +93,7 @@ export function StaffTable({ rows }: { rows: StaffRow[] }) {
               <Th>Name</Th>
               <Th>Email</Th>
               <Th>Employment</Th>
+              <Th>Can teach</Th>
               <Th>Fit to roster</Th>
               <Th>Portal access</Th>
               <th className="px-4 py-3 text-right"><Settings2 className="ml-auto h-4 w-4 text-slate-300" /></th>
@@ -98,7 +102,7 @@ export function StaffTable({ rows }: { rows: StaffRow[] }) {
           <tbody className="divide-y divide-slate-100">
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-10 text-center text-slate-400">No staff match this view.</td>
+                <td colSpan={7} className="px-4 py-10 text-center text-slate-400">No staff match this view.</td>
               </tr>
             ) : (
               filtered.map((r) => (
@@ -113,6 +117,21 @@ export function StaffTable({ rows }: { rows: StaffRow[] }) {
                   </td>
                   <td className="px-4 py-3 text-slate-500">{r.email ?? "—"}</td>
                   <td className="px-4 py-3 capitalize text-slate-600">{r.employment}</td>
+                  <td className="px-4 py-3">
+                    {r.teaches.length === 0 ? (
+                      <span className="text-xs text-slate-400">Add a qualification</span>
+                    ) : (
+                      <div className="flex flex-col gap-1">
+                        <div className="flex flex-wrap gap-1">
+                          {r.teachesYouth ? <span className="rounded-full bg-amber/15 px-2 py-0.5 text-[11px] font-semibold text-amber">Youth</span> : null}
+                          {r.teachesAdult ? <span className="rounded-full bg-teal/15 px-2 py-0.5 text-[11px] font-semibold text-teal">Adult</span> : null}
+                        </div>
+                        <span className="text-xs text-slate-500" title={r.teaches.join(", ")}>
+                          {r.teaches.slice(0, 2).join(", ")}{r.teaches.length > 2 ? ` +${r.teaches.length - 2} more` : ""}
+                        </span>
+                      </div>
+                    )}
+                  </td>
                   <td className="px-4 py-3">
                     {r.fit ? <StatusPill tone="covered">Fit</StatusPill> : <StatusPill tone="conflict">Blocked</StatusPill>}
                     {r.warnings > 0 ? (

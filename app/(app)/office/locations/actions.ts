@@ -31,6 +31,17 @@ export async function createLocationAction(_prev: ActionState, formData: FormDat
   return { ok: true, message: "Location added" };
 }
 
+/** Add a location category (a location type) the centre can then file locations under. */
+export async function createLocationCategoryAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) return { ok: false, error: "Give the category a name" };
+  const created = await repos.tenant.locationType.insert(ctx, { name, active: true });
+  await writeAudit(repos, ctx, { action: "create", entity: "location_type", entityId: created.id, after: created });
+  revalidatePath("/office/locations");
+  return { ok: true, message: `“${name}” category added` };
+}
+
 /** Deactivate/reactivate a location (deactivate-never-delete). */
 export async function setLocationActiveAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const { ctx, repos } = await requireTenant({ role: "admin" });
