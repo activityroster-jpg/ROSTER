@@ -13,11 +13,11 @@ const GROUPS: { key: CourseTypeChoice["audience"]; label: string }[] = [
   { key: "all", label: "All ages" },
 ];
 
-export function CreateCourseForm({ courseTypes }: { courseTypes: CourseTypeChoice[] }) {
+export function CreateCourseForm({ courseTypes, slotStyle = "slots" }: { courseTypes: CourseTypeChoice[]; slotStyle?: "slots" | "times" }) {
   const [state, action, pending] = useActionState(createCourseAction, initial);
 
   return (
-    <form action={action} className="grid gap-3 sm:grid-cols-5 sm:items-end">
+    <form action={action} className="grid gap-3 sm:grid-cols-6 sm:items-end">
       <div className="sm:col-span-2">
         <label className="mb-1 block text-xs font-medium text-slate-500">Course type</label>
         <select name="courseTypeId" required className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal">
@@ -35,14 +35,29 @@ export function CreateCourseForm({ courseTypes }: { courseTypes: CourseTypeChoic
         <label className="mb-1 block text-xs font-medium text-slate-500">Date</label>
         <input name="date" type="date" required className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal" />
       </div>
-      <div>
-        <label className="mb-1 block text-xs font-medium text-slate-500">Slot</label>
-        <select name="slot" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal">
-          <option value="AM">AM</option>
-          <option value="PM">PM</option>
-          <option value="EV">EV</option>
-        </select>
-      </div>
+
+      {slotStyle === "times" ? (
+        <>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-500">Start</label>
+            <input name="startTime" type="time" required className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal" />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-500">End</label>
+            <input name="endTime" type="time" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal" />
+          </div>
+        </>
+      ) : (
+        <div>
+          <label className="mb-1 block text-xs font-medium text-slate-500">Slot</label>
+          <select name="slot" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal">
+            <option value="AM">Morning (AM)</option>
+            <option value="PM">Afternoon (PM)</option>
+            <option value="EV">Evening (EV)</option>
+          </select>
+        </div>
+      )}
+
       <div>
         <button
           type="submit"
@@ -52,8 +67,8 @@ export function CreateCourseForm({ courseTypes }: { courseTypes: CourseTypeChoic
           {pending ? "Creating…" : "Create course"}
         </button>
       </div>
-      {state.error ? <p className="text-sm text-port sm:col-span-5">{state.error}</p> : null}
-      {state.ok ? <p className="text-sm text-starboard sm:col-span-5">{state.message}</p> : null}
+      {state.error ? <p className="text-sm text-port sm:col-span-6">{state.error}</p> : null}
+      {state.ok ? <p className="text-sm text-starboard sm:col-span-6">{state.message}</p> : null}
     </form>
   );
 }

@@ -5,6 +5,7 @@ import { requireTenant } from "@/lib/tenant/require";
 import { createCourseWithSessions } from "@/lib/services/courses";
 import { assignStaff } from "@/lib/services/assignment";
 import { SLOT_CODES, type SlotCode } from "@/lib/db/schema";
+import { normaliseTime, timeToSlot } from "@/lib/import/parse";
 
 export type ActionState = { ok: boolean; error?: string; message?: string };
 
@@ -12,24 +13,35 @@ function isSlot(v: unknown): v is SlotCode {
   return typeof v === "string" && (SLOT_CODES as readonly string[]).includes(v);
 }
 
-/** Create a course with a first session (more sessions can be added later). */
+/** Create a course with a first session (more sessions can be added later). The
+ * form works two ways: an AM/PM/EV slot, or explicit start/end times (centres on
+ * the "set times" style). With times, the slot code is derived for storage. */
 export async function createCourseAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const { ctx, repos } = await requireTenant({ role: "admin" });
   const courseTypeId = String(formData.get("courseTypeId") ?? "");
   const name = (formData.get("name") as string) || undefined;
   const date = String(formData.get("date") ?? "");
-  const slot = formData.get("slot");
+  if (!courseTypeId || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return { ok: false, error: "Pick a course type and date" };
+  }
 
-  if (!courseTypeId || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !isSlot(slot)) {
-    return { ok: false, error: "Pick a course type, date and slot" };
+  const rawStart = normaliseTime(String(formData.get("startTime") ?? ""));
+  const rawEnd = normaliseTime(String(formData.get("endTime") ?? ""));
+  const slotField = formData.get("slot");
+
+  let session: { date: string; slot: SlotCode; startTime?: string; endTime?: string };
+  if (rawStart) {
+    // Set-times mode: derive the slot bucket from the start time.
+    if (rawEnd && rawEnd <= rawStart) return { ok: false, error: "End time must be after start time" };
+    session = { date, slot: timeToSlot(rawStart), startTime: rawStart, endTime: rawEnd || undefined };
+  } else if (isSlot(slotField)) {
+    session = { date, slot: slotField };
+  } else {
+    return { ok: false, error: "Set a start time, or pick a slot" };
   }
 
   try {
-    await createCourseWithSessions(repos, ctx, {
-      courseTypeId,
-      name,
-      sessions: [{ date, slot }],
-    });
+    await createCourseWithSessions(repos, ctx, { courseTypeId, name, sessions: [session] });
     revalidatePath("/office/courses");
     revalidatePath("/office");
     return { ok: true, message: "Course created" };

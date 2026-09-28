@@ -6,6 +6,10 @@ import { writeAudit } from "./audit";
 export interface NewCourseSession {
   date: string; // YYYY-MM-DD
   slot: SlotCode;
+  /** Optional explicit times (centres on the "set times" style). When present
+   * they override the slot's configured times; the slot code is still stored. */
+  startTime?: string; // HH:MM
+  endTime?: string; // HH:MM
 }
 
 export interface CreateCourseInput {
@@ -50,8 +54,8 @@ export async function createCourseWithSessions(
 
   for (const s of input.sessions) {
     const slot = slotByCode.get(s.slot);
-    const startTime = slot?.startTime ?? "09:00";
-    const endTime = slot?.endTime ?? "12:00";
+    const startTime = s.startTime ?? slot?.startTime ?? "09:00";
+    const endTime = s.endTime ?? slot?.endTime ?? "12:00";
     await t.courseSession.insert(ctx, {
       courseId: course.id,
       date: s.date,

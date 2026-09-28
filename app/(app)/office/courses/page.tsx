@@ -10,14 +10,16 @@ export const dynamic = "force-dynamic";
 export default async function CoursesPage() {
   const { ctx, repos } = await requireTenant({ role: "admin" });
   const monday = weekStart(new Date());
-  const [{ coverageByCourse }, courseTypes, staff, roles, assignments, instructors] = await Promise.all([
+  const [{ coverageByCourse }, courseTypes, staff, roles, assignments, instructors, settings] = await Promise.all([
     getWeekSchedule(repos, ctx, monday),
     repos.tenant.courseType.list(ctx),
     listStaffWithFit(repos, ctx),
     repos.tenant.roleType.list(ctx),
     repos.tenant.courseStaff.list(ctx),
     repos.tenant.instructor.list(ctx),
+    repos.tenant.orgSettings.list(ctx),
   ]);
+  const slotStyle = settings[0]?.slotStyle ?? "slots";
   const courses = [...coverageByCourse.values()];
   const activeTypes = courseTypes.filter((c) => c.active).map((c) => ({ id: c.id, name: c.name, audience: c.audience }));
   const audienceByCourse = new Map(
@@ -52,8 +54,8 @@ export default async function CoursesPage() {
 
       <Card className="mb-6">
         <h2 className="font-semibold text-navy">Add a course</h2>
-        <p className="mb-3 text-xs text-slate-500">Pick a course type and its date/slot. Only course types you run appear here (manage those in Settings).</p>
-        <CreateCourseForm courseTypes={activeTypes} />
+        <p className="mb-3 text-xs text-slate-500">Pick a course type and its date{slotStyle === "times" ? " and times" : " and slot"}. Only course types you run appear here (manage those in Settings).</p>
+        <CreateCourseForm courseTypes={activeTypes} slotStyle={slotStyle} />
       </Card>
 
       <div className="space-y-4">

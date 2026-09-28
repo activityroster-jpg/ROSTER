@@ -8,7 +8,11 @@ import {
   course,
   booking,
   courseSession,
+  marketingProspect,
+  type MarketingProspect,
+  type NewMarketingProspect,
   type Organisation,
+  type ProspectStatus,
 } from "@/lib/db/schema";
 
 export interface OrgUsage {
@@ -71,5 +75,49 @@ export class PlatformRepository {
       .innerJoin(user, eq(user.id, membership.userId))
       .where(eq(membership.organisationId, orgId));
     return rows as OrgMember[];
+  }
+
+  // --- Marketing prospects (platform-owner outreach CRM) -------------------
+
+  async listProspects(): Promise<MarketingProspect[]> {
+    return this.db.select().from(marketingProspect).orderBy(desc(marketingProspect.createdAt));
+  }
+
+  async prospectById(id: string): Promise<MarketingProspect | null> {
+    const rows = await this.db.select().from(marketingProspect).where(eq(marketingProspect.id, id)).limit(1);
+    return rows[0] ?? null;
+  }
+
+  async createProspect(values: Omit<NewMarketingProspect, "id" | "createdAt" | "updatedAt">): Promise<MarketingProspect> {
+    const rows = await this.db.insert(marketingProspect).values(values).returning();
+    return rows[0]!;
+  }
+
+  async insertProspects(rows: Omit<NewMarketingProspect, "id" | "createdAt" | "updatedAt">[]): Promise<number> {
+    if (rows.length === 0) return 0;
+    const inserted = await this.db.insert(marketingProspect).values(rows).returning({ id: marketingProspect.id });
+    return inserted.length;
+  }
+
+  async updateProspect(id: string, patch: Partial<Omit<NewMarketingProspect, "id" | "createdAt">>): Promise<MarketingProspect | null> {
+    const rows = await this.db
+      .update(marketingProspect)
+      .set({ ...patch, updatedAt: new Date() })
+      .where(eq(marketingProspect.id, id))
+      .returning();
+    return rows[0] ?? null;
+  }
+
+  async setProspectStatus(id: string, status: ProspectStatus): Promise<MarketingProspect | null> {
+    return this.updateProspect(id, { status });
+  }
+
+  async deleteProspect(id: string): Promise<void> {
+    await this.db.delete(marketingProspect).where(eq(marketingProspect.id, id));
+  }
+
+  async countProspects(): Promise<number> {
+    const rows = await this.db.select({ id: marketingProspect.id }).from(marketingProspect);
+    return rows.length;
   }
 }

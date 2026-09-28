@@ -217,11 +217,56 @@ export const lead = sqliteTable("lead", {
   createdAt: createdAt(),
 }, (t) => [uniqueIndex("lead_email_uq").on(t.email)]);
 
+// --- Marketing prospects (platform-owner outreach CRM) ---------------------
+
+/** Outreach pipeline stage for a prospect centre/club. */
+export const PROSPECT_STATUSES = [
+  "new",
+  "letter_sent",
+  "email_sent",
+  "linkedin_contacted",
+  "called",
+  "purchased",
+  "rejected",
+] as const;
+export type ProspectStatus = (typeof PROSPECT_STATUSES)[number];
+
+/**
+ * A prospective centre/club for the platform owner's marketing outreach — a
+ * lightweight CRM. Control-plane (global, not tenant-owned); only ever reached
+ * behind requirePlatformAdmin(). Postal fields feed the C5-window letter.
+ */
+export const marketingProspect = sqliteTable("marketing_prospect", {
+  id: id(),
+  name: text("name").notNull(),
+  region: text("region"),
+  addressLine1: text("address_line1"),
+  addressLine2: text("address_line2"),
+  city: text("city"),
+  postcode: text("postcode"),
+  country: text("country").notNull().default("United Kingdom"),
+  email: text("email"),
+  website: text("website"),
+  linkedinUrl: text("linkedin_url"),
+  contactName: text("contact_name"),
+  contactRole: text("contact_role"),
+  status: text("status", { enum: PROSPECT_STATUSES }).notNull().default("new"),
+  notes: text("notes"),
+  source: text("source").notNull().default("manual"),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, (t) => [
+  index("marketing_prospect_status_idx").on(t.status),
+  index("marketing_prospect_region_idx").on(t.region),
+]);
+
 export type Organisation = typeof organisation.$inferSelect;
 export type NewOrganisation = typeof organisation.$inferInsert;
 export type Membership = typeof membership.$inferSelect;
 export type User = typeof user.$inferSelect;
 export type Lead = typeof lead.$inferSelect;
+export type MarketingProspect = typeof marketingProspect.$inferSelect;
+export type NewMarketingProspect = typeof marketingProspect.$inferInsert;
 
 // A tiny re-export so migrations pick up the raw-sql helper if needed.
 export const _sql = sql;
