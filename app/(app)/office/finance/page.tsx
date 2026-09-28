@@ -1,18 +1,24 @@
 import { requireTenant } from "@/lib/tenant/require";
 import { getHoursSummary } from "@/lib/services/finance";
 import { Card, StatusPill } from "@/components/ui";
+import { FeatureNotice } from "@/components/office/FeatureNotice";
+import { hasFeature } from "@/lib/features";
 
 export const dynamic = "force-dynamic";
 
 export default async function FinancePage() {
   const { ctx, repos } = await requireTenant({ role: "admin" });
-  const rows = await getHoursSummary(repos, ctx);
+  const [rows, settings] = await Promise.all([
+    getHoursSummary(repos, ctx),
+    repos.tenant.orgSettings.list(ctx),
+  ]);
   const totalPay = rows.reduce((sum, r) => sum + (r.pay ?? 0), 0);
+  const enabled = hasFeature(settings[0]?.enabledFeatures, "payroll");
 
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="font-display text-2xl font-semibold text-navy">Finance</h1>
+        <h1 className="font-display text-2xl font-semibold text-navy">Payroll</h1>
         <a
           href="/api/office/finance/csv"
           className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-navy hover:bg-slate-50"
@@ -20,6 +26,8 @@ export default async function FinancePage() {
           Export CSV
         </a>
       </div>
+
+      <FeatureNotice feature="payroll" enabled={enabled} />
 
       <Card className="mb-4">
         <p className="text-sm text-slate-500">Total pay (from recorded hours)</p>

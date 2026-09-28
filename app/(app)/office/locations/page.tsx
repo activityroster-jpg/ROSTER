@@ -3,16 +3,20 @@ import { Card } from "@/components/ui";
 import { AddLocationForm } from "@/components/office/AddLocationForm";
 import { AddLocationCategoryForm } from "@/components/office/AddLocationCategoryForm";
 import { LocationItem } from "@/components/office/LocationItem";
+import { FeatureNotice } from "@/components/office/FeatureNotice";
+import { hasFeature } from "@/lib/features";
 
 export const dynamic = "force-dynamic";
 
 export default async function LocationsPage() {
   const { ctx, repos } = await requireTenant({ role: "admin" });
-  const [locations, types] = await Promise.all([
+  const [locations, types, settings] = await Promise.all([
     repos.tenant.location.list(ctx),
     repos.tenant.locationType.list(ctx),
+    repos.tenant.orgSettings.list(ctx),
   ]);
   const activeTypes = types.filter((t) => t.active).map((t) => ({ id: t.id, name: t.name }));
+  const locationsEnabled = hasFeature(settings[0]?.enabledFeatures, "locations") || hasFeature(settings[0]?.enabledFeatures, "operatingAreas");
 
   // Bucket locations under each active category, preserving category order, plus
   // an "Uncategorised" bucket for anything without a (still-active) category.
@@ -29,6 +33,7 @@ export default async function LocationsPage() {
   return (
     <div>
       <h1 className="mb-1 font-display text-2xl font-semibold text-navy">Locations</h1>
+      <FeatureNotice feature="locations" enabled={locationsEnabled} />
       <p className="mb-6 text-sm text-slate-500">
         Everywhere activity happens — launch areas, classrooms, pontoons, operating areas. Group them into categories
         so they&apos;re easy to pick when you build a roster.

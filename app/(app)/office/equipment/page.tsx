@@ -1,21 +1,26 @@
 import { requireTenant } from "@/lib/tenant/require";
 import { Card, StatusPill } from "@/components/ui";
 import { AddEquipmentForm } from "@/components/office/AddEquipmentForm";
+import { FeatureNotice } from "@/components/office/FeatureNotice";
+import { hasFeature } from "@/lib/features";
 
 export const dynamic = "force-dynamic";
 
 export default async function EquipmentPage() {
   const { ctx, repos } = await requireTenant({ role: "admin" });
-  const [equipment, types] = await Promise.all([
+  const [equipment, types, settings] = await Promise.all([
     repos.tenant.equipment.list(ctx),
     repos.tenant.equipmentType.list(ctx),
+    repos.tenant.orgSettings.list(ctx),
   ]);
   const typeName = new Map(types.map((t) => [t.id, t.name]));
   const activeTypes = types.filter((t) => t.active).map((t) => ({ id: t.id, name: t.name }));
+  const enabled = hasFeature(settings[0]?.enabledFeatures, "equipment");
 
   return (
     <div>
       <h1 className="mb-6 font-display text-2xl font-semibold text-navy">Equipment</h1>
+      <FeatureNotice feature="equipment" enabled={enabled} />
 
       <Card className="mb-6">
         <h2 className="mb-3 font-semibold text-navy">Add equipment</h2>
