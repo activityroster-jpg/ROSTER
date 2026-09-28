@@ -1,4 +1,4 @@
-import type { Jurisdiction } from "@/lib/db/schema";
+import type { CourseAudience, Jurisdiction } from "@/lib/db/schema";
 
 /**
  * RYA-aware default catalogue seeded into every new centre on provisioning.
@@ -104,36 +104,90 @@ export interface EquipmentTypeSeed {
 
 export const DEFAULT_EQUIPMENT_TYPES: EquipmentTypeSeed[] = [
   { name: "Dinghy", inventoryTracked: true },
+  { name: "Keelboat", inventoryTracked: true },
+  { name: "Yacht", inventoryTracked: true },
+  { name: "Motor Cruiser", inventoryTracked: true },
   { name: "Safety Boat", inventoryTracked: true },
+  { name: "Coach Boat", inventoryTracked: true },
   { name: "Windsurf Board", inventoryTracked: true },
+  { name: "Paddleboard (SUP)", inventoryTracked: true },
   { name: "Kayak", inventoryTracked: true },
   { name: "Buoyancy Aid", inventoryTracked: false },
   { name: "Wetsuit", inventoryTracked: false },
+  { name: "Other", inventoryTracked: false },
 ];
 
 export const DEFAULT_LOCATION_TYPES: string[] = [
   "Operating area",
   "Launch area",
   "Classroom",
+  "Pontoon / berth",
+  "Boat store / workshop",
   "Changing facilities",
+  "Meeting point",
 ];
 
 export interface CourseTypeSeed {
   name: string;
   scheme: string;
+  /** youth / adult / all — keeps youth and adult provision cleanly separated. */
+  audience: CourseAudience;
+  /** How centres tend to group it when selling it. */
+  category: string;
   defaultCapacity: number;
   studentsPerInstructor: number;
   requiresSafetyBoat: boolean;
 }
 
+/**
+ * A broad RYA-aware starter catalogue spanning the main schemes and both youth
+ * and adult provision. Centres tick the ones they run during onboarding (and
+ * add their own), so a wide default list means less typing, never clutter.
+ */
 export const DEFAULT_COURSE_TYPES: CourseTypeSeed[] = [
-  { name: "Start Sailing", scheme: "RYA National Sailing", defaultCapacity: 6, studentsPerInstructor: 3, requiresSafetyBoat: true },
-  { name: "Basic Skills", scheme: "RYA National Sailing", defaultCapacity: 6, studentsPerInstructor: 3, requiresSafetyBoat: true },
-  { name: "Improving Skills", scheme: "RYA National Sailing", defaultCapacity: 6, studentsPerInstructor: 3, requiresSafetyBoat: true },
-  { name: "Youth Stage 1", scheme: "RYA Youth Sailing", defaultCapacity: 8, studentsPerInstructor: 4, requiresSafetyBoat: true },
-  { name: "Youth Stage 2", scheme: "RYA Youth Sailing", defaultCapacity: 8, studentsPerInstructor: 4, requiresSafetyBoat: true },
-  { name: "Powerboat Level 1", scheme: "RYA Powerboat", defaultCapacity: 3, studentsPerInstructor: 3, requiresSafetyBoat: false },
-  { name: "Powerboat Level 2", scheme: "RYA Powerboat", defaultCapacity: 3, studentsPerInstructor: 3, requiresSafetyBoat: false },
-  { name: "Safety Boat Course", scheme: "RYA Powerboat", defaultCapacity: 3, studentsPerInstructor: 3, requiresSafetyBoat: false },
-  { name: "Start Windsurfing", scheme: "RYA Windsurfing", defaultCapacity: 6, studentsPerInstructor: 3, requiresSafetyBoat: true },
+  // --- Adult dinghy (RYA National Sailing Scheme) ---
+  { name: "Start Sailing (Level 1)", scheme: "RYA National Sailing", audience: "adult", category: "Adult dinghy", defaultCapacity: 6, studentsPerInstructor: 3, requiresSafetyBoat: true },
+  { name: "Basic Skills (Level 2)", scheme: "RYA National Sailing", audience: "adult", category: "Adult dinghy", defaultCapacity: 6, studentsPerInstructor: 3, requiresSafetyBoat: true },
+  { name: "Improving Skills", scheme: "RYA National Sailing", audience: "adult", category: "Adult dinghy", defaultCapacity: 6, studentsPerInstructor: 3, requiresSafetyBoat: true },
+  { name: "Day Sailing", scheme: "RYA National Sailing", audience: "adult", category: "Adult dinghy", defaultCapacity: 6, studentsPerInstructor: 3, requiresSafetyBoat: true },
+  { name: "Seamanship Skills", scheme: "RYA National Sailing", audience: "adult", category: "Adult dinghy", defaultCapacity: 6, studentsPerInstructor: 3, requiresSafetyBoat: true },
+  { name: "Sailing with Spinnakers", scheme: "RYA National Sailing", audience: "adult", category: "Adult dinghy", defaultCapacity: 6, studentsPerInstructor: 3, requiresSafetyBoat: true },
+  { name: "Performance Sailing", scheme: "RYA National Sailing", audience: "adult", category: "Adult dinghy", defaultCapacity: 6, studentsPerInstructor: 3, requiresSafetyBoat: true },
+
+  // --- Youth (RYA Youth Sailing Scheme — Stages 1–4 + modules) ---
+  { name: "Youth Stage 1", scheme: "RYA Youth Sailing", audience: "youth", category: "Youth scheme", defaultCapacity: 8, studentsPerInstructor: 4, requiresSafetyBoat: true },
+  { name: "Youth Stage 2", scheme: "RYA Youth Sailing", audience: "youth", category: "Youth scheme", defaultCapacity: 8, studentsPerInstructor: 4, requiresSafetyBoat: true },
+  { name: "Youth Stage 3", scheme: "RYA Youth Sailing", audience: "youth", category: "Youth scheme", defaultCapacity: 8, studentsPerInstructor: 4, requiresSafetyBoat: true },
+  { name: "Youth Stage 4", scheme: "RYA Youth Sailing", audience: "youth", category: "Youth scheme", defaultCapacity: 8, studentsPerInstructor: 4, requiresSafetyBoat: true },
+  { name: "Youth Advanced Boat Handling", scheme: "RYA Youth Sailing", audience: "youth", category: "Youth scheme", defaultCapacity: 8, studentsPerInstructor: 4, requiresSafetyBoat: true },
+
+  // --- Youth how centres actually sell it ---
+  { name: "Summer Camp (5-day)", scheme: "RYA Youth Sailing", audience: "youth", category: "Summer camp", defaultCapacity: 12, studentsPerInstructor: 4, requiresSafetyBoat: true },
+  { name: "Junior Club Session", scheme: "RYA Youth Sailing", audience: "youth", category: "Junior club", defaultCapacity: 16, studentsPerInstructor: 4, requiresSafetyBoat: true },
+  { name: "School Group Session", scheme: "RYA OnBoard", audience: "youth", category: "School groups", defaultCapacity: 16, studentsPerInstructor: 4, requiresSafetyBoat: true },
+
+  // --- Windsurfing ---
+  { name: "Start Windsurfing", scheme: "RYA Windsurfing", audience: "all", category: "Windsurfing", defaultCapacity: 6, studentsPerInstructor: 3, requiresSafetyBoat: true },
+  { name: "Intermediate Windsurfing", scheme: "RYA Windsurfing", audience: "all", category: "Windsurfing", defaultCapacity: 6, studentsPerInstructor: 3, requiresSafetyBoat: true },
+
+  // --- Powerboat ---
+  { name: "Powerboat Level 1", scheme: "RYA Powerboat", audience: "adult", category: "Powerboat", defaultCapacity: 3, studentsPerInstructor: 3, requiresSafetyBoat: false },
+  { name: "Powerboat Level 2", scheme: "RYA Powerboat", audience: "adult", category: "Powerboat", defaultCapacity: 3, studentsPerInstructor: 3, requiresSafetyBoat: false },
+  { name: "Safety Boat Course", scheme: "RYA Powerboat", audience: "adult", category: "Powerboat", defaultCapacity: 3, studentsPerInstructor: 3, requiresSafetyBoat: false },
+  { name: "Advanced Powerboat", scheme: "RYA Powerboat", audience: "adult", category: "Powerboat", defaultCapacity: 3, studentsPerInstructor: 3, requiresSafetyBoat: false },
+
+  // --- Keelboat ---
+  { name: "Start Keelboating", scheme: "RYA Keelboat", audience: "adult", category: "Keelboat", defaultCapacity: 4, studentsPerInstructor: 2, requiresSafetyBoat: false },
+
+  // --- Yacht cruising (RYA Cruising / Yachtmaster — practical) ---
+  { name: "Start Yachting", scheme: "RYA Cruising", audience: "adult", category: "Yacht cruising", defaultCapacity: 4, studentsPerInstructor: 4, requiresSafetyBoat: false },
+  { name: "Competent Crew", scheme: "RYA Cruising", audience: "adult", category: "Yacht cruising", defaultCapacity: 5, studentsPerInstructor: 5, requiresSafetyBoat: false },
+  { name: "Day Skipper (Practical)", scheme: "RYA Cruising", audience: "adult", category: "Yacht cruising", defaultCapacity: 5, studentsPerInstructor: 5, requiresSafetyBoat: false },
+  { name: "Coastal Skipper (Practical)", scheme: "RYA Cruising", audience: "adult", category: "Yacht cruising", defaultCapacity: 5, studentsPerInstructor: 5, requiresSafetyBoat: false },
+  { name: "Yachtmaster Preparation", scheme: "RYA Cruising", audience: "adult", category: "Yacht cruising", defaultCapacity: 4, studentsPerInstructor: 4, requiresSafetyBoat: false },
+
+  // --- Shorebased / theory (classroom) ---
+  { name: "Essential Navigation & Seamanship", scheme: "RYA Shorebased", audience: "adult", category: "Shorebased theory", defaultCapacity: 12, studentsPerInstructor: 12, requiresSafetyBoat: false },
+  { name: "Day Skipper Theory", scheme: "RYA Shorebased", audience: "adult", category: "Shorebased theory", defaultCapacity: 12, studentsPerInstructor: 12, requiresSafetyBoat: false },
+  { name: "Coastal / Yachtmaster Theory", scheme: "RYA Shorebased", audience: "adult", category: "Shorebased theory", defaultCapacity: 12, studentsPerInstructor: 12, requiresSafetyBoat: false },
 ];

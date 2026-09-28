@@ -28,6 +28,29 @@ export type SchedulingMode = (typeof SCHEDULING_MODES)[number];
 export const SETUP_MODES = ["basic", "full"] as const;
 export type SetupMode = (typeof SETUP_MODES)[number];
 
+/**
+ * How the centre runs sessions: fixed AM/PM/EV slots (the RYA-centre default),
+ * or explicit start/end times per session (centres that run to a timetable).
+ */
+export const SLOT_STYLES = ["slots", "times"] as const;
+export type SlotStyle = (typeof SLOT_STYLES)[number];
+
+/**
+ * Who a course is aimed at. Centres draw a hard line between youth and adult
+ * provision (safeguarding, ratios, marketing), so it is a first-class attribute
+ * carried through scheduling and reporting.
+ */
+export const COURSE_AUDIENCES = ["youth", "adult", "all"] as const;
+export type CourseAudience = (typeof COURSE_AUDIENCES)[number];
+
+/**
+ * Optional capability areas a centre can switch on during onboarding. Courses
+ * and team are always on (the rostering core); these add complexity only when a
+ * centre wants it. Stored as a JSON string array on org_settings.enabledFeatures.
+ */
+export const OPTIONAL_FEATURES = ["equipment", "locations", "operatingAreas", "payroll", "documents"] as const;
+export type OptionalFeature = (typeof OPTIONAL_FEATURES)[number];
+
 /** The shared slot vocabulary: availability, calendar and sessions all use it. */
 export const SLOT_CODES = ["AM", "PM", "EV"] as const;
 export type SlotCode = (typeof SLOT_CODES)[number];
@@ -65,6 +88,9 @@ export const orgSettings = sqliteTable("org_settings", {
   organisationId: orgFk(),
   schedulingMode: text("scheduling_mode", { enum: SCHEDULING_MODES }).notNull().default("session"),
   setupMode: text("setup_mode", { enum: SETUP_MODES }).notNull().default("basic"),
+  slotStyle: text("slot_style", { enum: SLOT_STYLES }).notNull().default("slots"),
+  /** JSON string array of enabled OPTIONAL_FEATURES, e.g. ["equipment","payroll"]. */
+  enabledFeatures: text("enabled_features").notNull().default("[]"),
   alertLeadDays: integer("alert_lead_days").notNull().default(30),
   currency: text("currency").notNull().default("GBP"),
   timezone: text("timezone").notNull().default("Europe/London"),
@@ -161,6 +187,12 @@ export const courseType = sqliteTable("course_type", {
   organisationId: orgFk(),
   name: text("name").notNull(),
   scheme: text("scheme"),
+  /** youth / adult / all — centres separate youth and adult provision. */
+  audience: text("audience", { enum: COURSE_AUDIENCES }).notNull().default("all"),
+  /** Free-text grouping the centre uses, e.g. "Summer camp", "Junior club",
+   * "School groups", "Adult evening". Lets a centre organise the same RYA scheme
+   * into how they actually sell it. Nullable. */
+  category: text("category"),
   defaultCapacity: integer("default_capacity").notNull().default(1),
   studentsPerInstructor: integer("students_per_instructor").notNull().default(1),
   requiresSafetyBoat: boolCol("requires_safety_boat").default(false),
@@ -588,6 +620,7 @@ export const auditLog = sqliteTable("audit_log", {
 
 // Handy inferred types used across the app.
 export type Instructor = typeof instructor.$inferSelect;
+export type CourseType = typeof courseType.$inferSelect;
 export type Course = typeof course.$inferSelect;
 export type CourseSession = typeof courseSession.$inferSelect;
 export type OrgSettings = typeof orgSettings.$inferSelect;
