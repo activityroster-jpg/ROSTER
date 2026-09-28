@@ -4,6 +4,7 @@ import { Fragment, useState } from "react";
 import Link from "next/link";
 import { Bell } from "lucide-react";
 import { Card, StatusPill } from "@/components/ui";
+import { Logo } from "@/components/Logo";
 
 type Slot = "AM" | "PM" | "EV";
 type Avail = "free" | "maybe" | "busy" | "none";
@@ -156,10 +157,8 @@ export function DemoApp() {
         <div className="overflow-hidden rounded-card border border-slate-200 shadow-sm">
           <div className="grid md:grid-cols-[200px_1fr]">
             <aside className="hidden bg-navy p-4 text-white md:block">
-              <p className="font-display text-lg font-bold">
-                Activity<span className="text-ryablue-bright">Roster</span>
-              </p>
-              <p className="mb-3 border-b border-white/10 pb-3 text-xs text-white/60">Harbour Sailing Centre</p>
+              <Logo variant="onDark" size="sm" />
+              <p className="mb-3 mt-1 border-b border-white/10 pb-3 text-xs text-white/60">Harbour Sailing Centre</p>
               {NAV.map((item) => {
                 const active = panel === item.key;
                 return (
@@ -1238,8 +1237,8 @@ function DemoPortal() {
     <div className="flex justify-center py-6">
       <div className="w-[340px] max-w-full overflow-hidden rounded-[30px] border-[10px] border-[#0b1620] shadow-2xl">
         <div className="bg-navy px-4 py-4 text-white">
-          <p className="font-display text-lg font-bold">Activity<span className="text-ryablue-bright">Roster</span></p>
-          <p className="text-xs text-white/70">Harbour Sailing Centre · Sarah Whitlock</p>
+          <Logo variant="onDark" size="sm" />
+          <p className="mt-1 text-xs text-white/70">Harbour Sailing Centre · Sarah Whitlock</p>
         </div>
         <div className="min-h-[380px] bg-canvas p-4">
           <p className="mb-2 font-display text-lg font-semibold text-navy">My schedule</p>

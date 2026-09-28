@@ -1,12 +1,13 @@
 import Link from "next/link";
+import { Logo } from "@/components/Logo";
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-canvas">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4">
-          <Link href="/" className="flex-none font-display text-xl font-bold text-navy">
-            Activity<span className="text-teal">Roster</span>
+          <Link href="/" className="flex-none">
+            <Logo variant="onLight" />
           </Link>
           <nav className="flex items-center gap-3 text-sm font-medium text-slate-600 sm:gap-5">
             <Link href="/#features" className="hidden hover:text-navy sm:inline">

@@ -16,6 +16,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { requireTenant } from "@/lib/tenant/require";
+import { Logo } from "@/components/Logo";
 
 const NAV = [
   {
@@ -56,9 +57,7 @@ export default async function OfficeLayout({ children }: { children: React.React
     <div className="flex min-h-screen bg-canvas">
       <aside className="flex w-60 flex-none flex-col bg-navy text-white">
         <div className="border-b border-white/10 px-5 py-5">
-          <p className="font-display text-lg font-bold">
-            Activity<span className="text-ryablue-bright">Roster</span>
-          </p>
+          <Logo variant="onDark" size="sm" />
           <p className="mt-1 truncate text-sm text-white/70">{organisation.name}</p>
         </div>
         <nav className="flex-1 overflow-y-auto px-3 py-4">

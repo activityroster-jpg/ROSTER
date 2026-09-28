@@ -4,6 +4,7 @@ import { Bell, CalendarCheck, CalendarClock, CalendarOff, Clock, FileCheck, Time
 import { requireTenant } from "@/lib/tenant/require";
 import { instructor as instructorTable } from "@/lib/db/schema";
 import { unreadCount } from "@/lib/services/notifications";
+import { Logo } from "@/components/Logo";
 
 const TABS = [
   { href: "/portal", label: "Schedule", icon: CalendarCheck },
@@ -23,10 +24,8 @@ export default async function PortalLayout({ children }: { children: React.React
     <div className="mx-auto flex min-h-screen max-w-md flex-col bg-canvas">
       <header className="flex items-center justify-between bg-navy px-4 py-4 text-white">
         <div>
-          <p className="font-display text-lg font-bold">
-            Activity<span className="text-ryablue-bright">Roster</span>
-          </p>
-          <p className="text-sm text-white/70">{organisation.name}</p>
+          <Logo variant="onDark" size="sm" />
+          <p className="mt-1 text-sm text-white/70">{organisation.name}</p>
         </div>
         <Link href="/portal/notifications" className="relative rounded-full p-2 hover:bg-white/10" aria-label={`Notifications${unread ? ` (${unread} unread)` : ""}`}>
           <Bell className="h-5 w-5" />
