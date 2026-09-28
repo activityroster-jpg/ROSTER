@@ -1,5 +1,8 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { requireTenant } from "@/lib/tenant/require";
+import { ONBOARDED_COOKIE } from "@/lib/onboarding";
 import { listStaffWithFit } from "@/lib/services/staff";
 import { getWeekSchedule, weekStart } from "@/lib/services/schedule";
 import { getAttendanceBoard } from "@/lib/services/timeclock";
@@ -47,6 +50,12 @@ export default async function DashboardPage() {
   ]);
   const { sessions, coverageByCourse } = schedule;
 
+  // Brand-new centre with no staff yet → guide them through onboarding first,
+  // unless they've chosen to skip it (cookie).
+  const hasStaff = setup.steps.find((s) => s.label === "Add your staff")?.done ?? false;
+  const dismissed = (await cookies()).get(ONBOARDED_COOKIE)?.value === "1";
+  if (!hasStaff && !dismissed) redirect("/office/onboarding");
+
   const blocked = staff.filter((s) => !s.fit.fit).length;
   const expiring = staff.filter((s) => s.fit.warnings.length > 0).length;
   const uncovered = [...coverageByCourse.values()].filter((c) => !c.ratio.ok).length;
@@ -79,9 +88,12 @@ export default async function DashboardPage() {
                   : "You chose full setup — work through these now to get everything ready."}
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="h-2 w-28 overflow-hidden rounded-full bg-white"><div className="h-full rounded-full bg-teal" style={{ width: `${setup.completePct}%` }} /></div>
-              <span className="text-sm font-semibold text-navy">{setup.completePct}%</span>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <div className="h-2 w-28 overflow-hidden rounded-full bg-white"><div className="h-full rounded-full bg-teal" style={{ width: `${setup.completePct}%` }} /></div>
+                <span className="text-sm font-semibold text-navy">{setup.completePct}%</span>
+              </div>
+              <Link href="/office/onboarding" className="rounded-lg bg-teal px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-700">Guided setup</Link>
             </div>
           </div>
           <ul className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">

@@ -8,7 +8,14 @@ export const dynamic = "force-dynamic";
 
 export default async function StaffPage() {
   const { ctx, repos } = await requireTenant({ role: "admin" });
-  const staff = await listStaffWithFit(repos, ctx);
+  const [staff, qualTypes] = await Promise.all([
+    listStaffWithFit(repos, ctx),
+    repos.tenant.qualificationType.list(ctx),
+  ]);
+  const qualChoices = qualTypes
+    .filter((q) => q.active)
+    .sort((a, b) => a.rank - b.rank)
+    .map((q) => ({ id: q.id, name: q.name }));
 
   const rows: StaffRow[] = staff.map(({ instructor, fit }) => ({
     id: instructor.id,
@@ -31,7 +38,7 @@ export default async function StaffPage() {
 
       <Card className="mb-5">
         <h2 className="mb-3 font-semibold text-navy">Add an instructor</h2>
-        <AddInstructorForm />
+        <AddInstructorForm quals={qualChoices} />
       </Card>
 
       <StaffTable rows={rows} />

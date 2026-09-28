@@ -38,7 +38,26 @@ export async function createInstructorAction(_prev: ActionState, formData: FormD
     employmentType: parsed.data.employmentType,
     status: parsed.data.status,
   });
-  await writeAudit(repos, ctx, { action: "create", entity: "instructor", entityId: created.id, after: created });
+
+  // Qualifications (instructor types) ticked on the form → qualification rows.
+  const qualIds = formData.getAll("qual").map(String).filter(Boolean);
+  if (qualIds.length) {
+    const valid = new Set((await repos.tenant.qualificationType.list(ctx)).map((q) => q.id));
+    for (const qid of qualIds) {
+      if (valid.has(qid)) {
+        await repos.tenant.qualification.insert(ctx, {
+          instructorId: created.id,
+          qualificationTypeId: qid,
+          certNo: null,
+          issueDate: null,
+          expiryDate: null,
+          verified: false,
+        });
+      }
+    }
+  }
+
+  await writeAudit(repos, ctx, { action: "create", entity: "instructor", entityId: created.id, after: { ...created, quals: qualIds } });
   revalidatePath("/office/staff");
   return { ok: true };
 }
