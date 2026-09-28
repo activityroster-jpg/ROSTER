@@ -50,15 +50,34 @@ export interface GradeSeed {
 }
 
 export const DEFAULT_GRADES: GradeSeed[] = [
+  // Dinghy
   { name: "Dinghy Assistant Instructor", code: "DAI", rank: 10, discipline: "dinghy", expiryTracked: false },
   { name: "Dinghy Instructor", code: "DI", rank: 20, discipline: "dinghy", expiryTracked: false },
   { name: "Dinghy Senior Instructor", code: "DSI", rank: 30, discipline: "dinghy", expiryTracked: false },
   { name: "Advanced Dinghy Instructor", code: "ADI", rank: 40, discipline: "dinghy", expiryTracked: false },
-  { name: "Powerboat Instructor", code: "PBI", rank: 20, discipline: "powerboat", expiryTracked: false },
-  { name: "Safety Boat Certificate", code: "SBC", rank: 15, discipline: "powerboat", expiryTracked: false },
-  { name: "Windsurfing Instructor", code: "WI", rank: 20, discipline: "windsurf", expiryTracked: false },
-  { name: "Senior Windsurfing Instructor", code: "SWI", rank: 30, discipline: "windsurf", expiryTracked: false },
+  { name: "Dinghy Racing Coach", code: "DRC", rank: 35, discipline: "dinghy", expiryTracked: false },
+  { name: "Sailability Instructor", code: "SAIL", rank: 20, discipline: "dinghy", expiryTracked: false },
+  // Keelboat
   { name: "Keelboat Instructor", code: "KBI", rank: 20, discipline: "keelboat", expiryTracked: false },
+  { name: "Keelboat Senior Instructor", code: "KBSI", rank: 30, discipline: "keelboat", expiryTracked: false },
+  // Windsurfing
+  { name: "Windsurfing Instructor", code: "WI", rank: 20, discipline: "windsurf", expiryTracked: false },
+  { name: "Advanced Windsurfing Instructor", code: "AWI", rank: 30, discipline: "windsurf", expiryTracked: false },
+  { name: "Senior Windsurfing Instructor", code: "SWI", rank: 40, discipline: "windsurf", expiryTracked: false },
+  // Paddleboarding (SUP)
+  { name: "Paddleboard (SUP) Instructor", code: "SUPI", rank: 20, discipline: "sup", expiryTracked: false },
+  // Powerboat
+  { name: "Safety Boat Certificate", code: "SBC", rank: 15, discipline: "powerboat", expiryTracked: false },
+  { name: "Powerboat Instructor", code: "PBI", rank: 20, discipline: "powerboat", expiryTracked: false },
+  { name: "Advanced Powerboat Instructor", code: "APBI", rank: 30, discipline: "powerboat", expiryTracked: false },
+  { name: "Personal Watercraft (PWC) Instructor", code: "PWCI", rank: 25, discipline: "powerboat", expiryTracked: false },
+  { name: "Powerboat Trainer", code: "PBT", rank: 45, discipline: "powerboat", expiryTracked: false },
+  // Cruising / yacht
+  { name: "Cruising Instructor", code: "CI", rank: 30, discipline: "cruising", expiryTracked: false },
+  { name: "Yachtmaster Instructor", code: "YMI", rank: 45, discipline: "cruising", expiryTracked: false },
+  // Shorebased / theory
+  { name: "Shorebased Instructor", code: "SBI", rank: 20, discipline: "shorebased", expiryTracked: false },
+  { name: "First Aid Instructor", code: "FAI", rank: 15, discipline: "first_aid", expiryTracked: false },
 ];
 
 export interface ComplianceSeed {
@@ -166,15 +185,29 @@ export const DEFAULT_COURSE_TYPES: CourseTypeSeed[] = [
   { name: "Junior Club Session", scheme: "RYA Youth Sailing", audience: "youth", category: "Junior club", defaultCapacity: 16, studentsPerInstructor: 4, requiresSafetyBoat: true },
   { name: "School Group Session", scheme: "RYA OnBoard", audience: "youth", category: "School groups", defaultCapacity: 16, studentsPerInstructor: 4, requiresSafetyBoat: true },
 
+  // --- Racing ---
+  { name: "Club Racing", scheme: "RYA National Sailing", audience: "all", category: "Racing", defaultCapacity: 8, studentsPerInstructor: 4, requiresSafetyBoat: true },
+  { name: "Race Coaching", scheme: "RYA National Sailing", audience: "all", category: "Racing", defaultCapacity: 8, studentsPerInstructor: 4, requiresSafetyBoat: true },
+
+  // --- Sailability (disability sailing) ---
+  { name: "Sailability Session", scheme: "RYA Sailability", audience: "all", category: "Sailability", defaultCapacity: 8, studentsPerInstructor: 2, requiresSafetyBoat: true },
+
   // --- Windsurfing ---
   { name: "Start Windsurfing", scheme: "RYA Windsurfing", audience: "all", category: "Windsurfing", defaultCapacity: 6, studentsPerInstructor: 3, requiresSafetyBoat: true },
   { name: "Intermediate Windsurfing", scheme: "RYA Windsurfing", audience: "all", category: "Windsurfing", defaultCapacity: 6, studentsPerInstructor: 3, requiresSafetyBoat: true },
+  { name: "Advanced Windsurfing", scheme: "RYA Windsurfing", audience: "all", category: "Windsurfing", defaultCapacity: 6, studentsPerInstructor: 3, requiresSafetyBoat: true },
+
+  // --- Paddleboarding (SUP) ---
+  { name: "Start Paddleboarding", scheme: "RYA Paddleboarding", audience: "all", category: "Paddleboarding", defaultCapacity: 8, studentsPerInstructor: 6, requiresSafetyBoat: true },
+  { name: "Progression Paddleboarding", scheme: "RYA Paddleboarding", audience: "all", category: "Paddleboarding", defaultCapacity: 8, studentsPerInstructor: 6, requiresSafetyBoat: true },
 
   // --- Powerboat ---
   { name: "Powerboat Level 1", scheme: "RYA Powerboat", audience: "adult", category: "Powerboat", defaultCapacity: 3, studentsPerInstructor: 3, requiresSafetyBoat: false },
   { name: "Powerboat Level 2", scheme: "RYA Powerboat", audience: "adult", category: "Powerboat", defaultCapacity: 3, studentsPerInstructor: 3, requiresSafetyBoat: false },
-  { name: "Safety Boat Course", scheme: "RYA Powerboat", audience: "adult", category: "Powerboat", defaultCapacity: 3, studentsPerInstructor: 3, requiresSafetyBoat: false },
+  { name: "Intermediate Powerboat", scheme: "RYA Powerboat", audience: "adult", category: "Powerboat", defaultCapacity: 3, studentsPerInstructor: 3, requiresSafetyBoat: false },
   { name: "Advanced Powerboat", scheme: "RYA Powerboat", audience: "adult", category: "Powerboat", defaultCapacity: 3, studentsPerInstructor: 3, requiresSafetyBoat: false },
+  { name: "Safety Boat Course", scheme: "RYA Powerboat", audience: "adult", category: "Powerboat", defaultCapacity: 3, studentsPerInstructor: 3, requiresSafetyBoat: false },
+  { name: "Personal Watercraft (PWC / Jet Ski)", scheme: "RYA Powerboat", audience: "adult", category: "Powerboat", defaultCapacity: 3, studentsPerInstructor: 3, requiresSafetyBoat: false },
 
   // --- Keelboat ---
   { name: "Start Keelboating", scheme: "RYA Keelboat", audience: "adult", category: "Keelboat", defaultCapacity: 4, studentsPerInstructor: 2, requiresSafetyBoat: false },
@@ -190,4 +223,8 @@ export const DEFAULT_COURSE_TYPES: CourseTypeSeed[] = [
   { name: "Essential Navigation & Seamanship", scheme: "RYA Shorebased", audience: "adult", category: "Shorebased theory", defaultCapacity: 12, studentsPerInstructor: 12, requiresSafetyBoat: false },
   { name: "Day Skipper Theory", scheme: "RYA Shorebased", audience: "adult", category: "Shorebased theory", defaultCapacity: 12, studentsPerInstructor: 12, requiresSafetyBoat: false },
   { name: "Coastal / Yachtmaster Theory", scheme: "RYA Shorebased", audience: "adult", category: "Shorebased theory", defaultCapacity: 12, studentsPerInstructor: 12, requiresSafetyBoat: false },
+  { name: "VHF / SRC Radio Course", scheme: "RYA Shorebased", audience: "adult", category: "Shorebased theory", defaultCapacity: 12, studentsPerInstructor: 12, requiresSafetyBoat: false },
+  { name: "First Aid Course", scheme: "RYA Shorebased", audience: "adult", category: "Shorebased theory", defaultCapacity: 12, studentsPerInstructor: 12, requiresSafetyBoat: false },
+  { name: "Sea Survival", scheme: "RYA Shorebased", audience: "adult", category: "Shorebased theory", defaultCapacity: 12, studentsPerInstructor: 12, requiresSafetyBoat: false },
+  { name: "Diesel Engine Course", scheme: "RYA Shorebased", audience: "adult", category: "Shorebased theory", defaultCapacity: 12, studentsPerInstructor: 12, requiresSafetyBoat: false },
 ];

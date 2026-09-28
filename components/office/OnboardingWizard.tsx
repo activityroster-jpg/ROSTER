@@ -4,6 +4,9 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import {
   addCustomCourseAction,
+  addDefaultCoursesAction,
+  addDefaultGradesAction,
+  addQualificationTypeAction,
   addTeamMemberAction,
   dismissOnboardingAction,
   setCoursesRunAction,
@@ -33,7 +36,7 @@ const STEP_LABELS = ["How you run", "Courses", "Team", "Finish"];
 export function OnboardingWizard({
   centreName,
   courseTypes,
-  quals,
+  quals: initialQuals,
   existingStaff,
   initialFeatures,
   initialSlotStyle,
@@ -45,6 +48,7 @@ export function OnboardingWizard({
   initialFeatures: OptionalFeature[];
   initialSlotStyle: string;
 }) {
+  const [quals, setQuals] = useState<QualOpt[]>(initialQuals);
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [pending, startTransition] = useTransition();
@@ -81,6 +85,32 @@ export function OnboardingWizard({
   const [employment, setEmployment] = useState("employed");
   const [chosenQuals, setChosenQuals] = useState<Set<string>>(new Set());
   const toggleQual = (id: string) => setChosenQuals((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const [newType, setNewType] = useState("");
+
+  const addType = () => {
+    const name = newType.trim();
+    if (!name) return;
+    setMsg(null);
+    startTransition(async () => {
+      const res = await addQualificationTypeAction({ name });
+      if (res.ok && res.id) {
+        setQuals((q) => [...q, { id: res.id!, name: res.name!, discipline: res.discipline ?? null }]);
+        setChosenQuals((s) => new Set(s).add(res.id!));
+        setNewType("");
+      } else setMsg(res.error ?? "Could not add type");
+    });
+  };
+  const addAllTypes = () => startTransition(async () => {
+    const res = await addDefaultGradesAction();
+    if (res.ok && res.created.length) setQuals((q) => [...q, ...res.created.map((c) => ({ id: c.id, name: c.name, discipline: c.discipline }))]);
+  });
+  const addAllCourses = () => startTransition(async () => {
+    const res = await addDefaultCoursesAction();
+    if (res.ok && res.created.length) {
+      setAllCourses((c) => [...c, ...res.created.map((x) => ({ id: x.id, name: x.name, scheme: x.scheme, audience: x.audience as CourseAudience, category: x.category, active: true }))]);
+      setSelectedCourses((s) => { const n = new Set(s); res.created.forEach((x) => n.add(x.id)); return n; });
+    }
+  });
 
   const savePrefsThenNext = () => {
     setMsg(null);
@@ -206,8 +236,11 @@ export function OnboardingWizard({
       {/* STEP 2 — courses */}
       {step === 2 ? (
         <div className="rounded-card border border-slate-200 bg-white p-6">
-          <h2 className="font-display text-lg font-semibold text-navy">Which courses do you run?</h2>
-          <p className="mt-1 text-sm text-slate-500">Grouped by youth and adult. Tick the ones you offer, or add your own below. Change anytime in Settings.</p>
+          <div className="flex items-start justify-between gap-3">
+            <h2 className="font-display text-lg font-semibold text-navy">Which courses do you run?</h2>
+            <button type="button" onClick={addAllCourses} disabled={pending} className="flex-none text-xs font-semibold text-teal hover:underline disabled:opacity-50">+ Add all RYA courses</button>
+          </div>
+          <p className="mt-1 text-sm text-slate-500">Grouped by youth and adult. Tick the ones you offer, or add your own below. Missing some? Use &ldquo;Add all RYA courses&rdquo;. Change anytime in Settings.</p>
 
           <div className="mt-5 space-y-5">
             {AUDIENCE_ORDER.filter((a) => grouped.has(a.key)).map((a) => (
@@ -278,7 +311,10 @@ export function OnboardingWizard({
                 {EMPLOYMENT.map((e) => <option key={e.value} value={e.value}>{e.label}</option>)}
               </select>
             </div>
-            <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-slate-400">Qualifications / instructor type</p>
+            <div className="mt-3 flex items-center justify-between">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Qualifications / instructor type</p>
+              <button type="button" onClick={addAllTypes} disabled={pending} className="text-xs font-semibold text-teal hover:underline disabled:opacity-50">+ Add all RYA types</button>
+            </div>
             <div className="mt-2 flex flex-wrap gap-2">
               {quals.map((q) => {
                 const on = chosenQuals.has(q.id);
@@ -289,6 +325,16 @@ export function OnboardingWizard({
                   </button>
                 );
               })}
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <input
+                value={newType}
+                onChange={(e) => setNewType(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addType(); } }}
+                placeholder="Add another type / job role…"
+                className="min-w-[12rem] flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-xs outline-none focus:border-teal"
+              />
+              <button type="button" onClick={addType} disabled={pending} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-navy hover:bg-slate-50 disabled:opacity-50">+ Add type</button>
             </div>
             <div className="mt-4 flex items-center gap-3">
               <button type="submit" disabled={pending} className="rounded-lg bg-navy px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:opacity-60">

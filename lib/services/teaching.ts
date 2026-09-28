@@ -20,9 +20,12 @@ export interface InstructorTeaching {
 function schemeDiscipline(scheme: string | null): string | null {
   const s = (scheme ?? "").toLowerCase();
   if (s.includes("windsurf")) return "windsurf";
+  if (s.includes("paddleboard") || s.includes("sup")) return "sup";
   if (s.includes("powerboat")) return "powerboat";
   if (s.includes("keelboat")) return "keelboat";
-  if (s.includes("cruising") || s.includes("shorebased")) return "keelboat";
+  if (s.includes("cruising")) return "cruising";
+  if (s.includes("shorebased")) return "shorebased";
+  if (s.includes("sailability")) return "dinghy";
   if (s.includes("sailing") || s.includes("onboard")) return "dinghy";
   return null;
 }

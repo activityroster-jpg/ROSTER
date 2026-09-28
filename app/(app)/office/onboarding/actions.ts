@@ -14,9 +14,14 @@ import {
 } from "@/lib/db/schema";
 import { writeAudit } from "@/lib/services/audit";
 import { serializeFeatures } from "@/lib/features";
+import { DEFAULT_COURSE_TYPES, DEFAULT_GRADES } from "@/lib/seed/catalogue";
 import { ONBOARDED_COOKIE } from "@/lib/onboarding";
 
 type Result = { ok: boolean; error?: string };
+
+function toCode(name: string): string {
+  return name.trim().toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_|_$/g, "").slice(0, 24) || "TYPE";
+}
 
 /** Save which optional features the centre wants, and how sessions are run. */
 export async function setSetupPreferencesAction(input: {
@@ -127,6 +132,82 @@ export async function addTeamMemberAction(input: {
   revalidatePath("/office/onboarding");
   revalidatePath("/office/staff");
   return { ok: true };
+}
+
+/** Add a custom qualification / instructor type ("job type") on the fly. */
+export async function addQualificationTypeAction(input: {
+  name: string;
+  discipline?: string;
+}): Promise<{ ok: boolean; error?: string; id?: string; name?: string; discipline?: string | null }> {
+  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const name = (input.name ?? "").trim();
+  if (!name) return { ok: false, error: "Give the type a name" };
+
+  const existing = await repos.tenant.qualificationType.list(ctx);
+  if (existing.some((q) => q.name.trim().toLowerCase() === name.toLowerCase())) {
+    return { ok: false, error: "That type already exists" };
+  }
+  const codes = new Set(existing.map((q) => q.code));
+  let code = toCode(name);
+  while (codes.has(code)) code = `${code}_${Math.random().toString(36).slice(2, 5).toUpperCase()}`;
+  const maxRank = existing.reduce((m, q) => Math.max(m, q.rank), 0);
+
+  const created = await repos.tenant.qualificationType.insert(ctx, {
+    name,
+    code,
+    rank: maxRank + 10,
+    discipline: input.discipline?.trim() || null,
+    expiryTracked: false,
+    defaultValidMonths: null,
+    active: true,
+  });
+  await writeAudit(repos, ctx, { action: "create", entity: "qualification_type", entityId: created.id, after: { name } });
+  revalidatePath("/office/onboarding");
+  revalidatePath("/office/staff");
+  revalidatePath("/office/settings");
+  return { ok: true, id: created.id, name: created.name, discipline: created.discipline ?? null };
+}
+
+/** Add any RYA default instructor types this centre is missing (by name). */
+export async function addDefaultGradesAction(): Promise<{ ok: boolean; created: { id: string; name: string; discipline: string | null }[] }> {
+  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const existing = await repos.tenant.qualificationType.list(ctx);
+  const haveNames = new Set(existing.map((q) => q.name.trim().toLowerCase()));
+  const haveCodes = new Set(existing.map((q) => q.code));
+  const created: { id: string; name: string; discipline: string | null }[] = [];
+  for (const g of DEFAULT_GRADES) {
+    if (haveNames.has(g.name.toLowerCase())) continue;
+    let code = g.code;
+    while (haveCodes.has(code)) code = `${g.code}_${Math.random().toString(36).slice(2, 5).toUpperCase()}`;
+    haveCodes.add(code);
+    const row = await repos.tenant.qualificationType.insert(ctx, {
+      ...g, code, defaultValidMonths: g.defaultValidMonths ?? null, active: true,
+    });
+    created.push({ id: row.id, name: row.name, discipline: row.discipline ?? null });
+  }
+  if (created.length) await writeAudit(repos, ctx, { action: "add_default_grades", entity: "qualification_type", after: { count: created.length } });
+  revalidatePath("/office/onboarding");
+  revalidatePath("/office/staff");
+  revalidatePath("/office/settings");
+  return { ok: true, created };
+}
+
+/** Add any RYA default course types this centre is missing (by name), activated. */
+export async function addDefaultCoursesAction(): Promise<{ ok: boolean; created: { id: string; name: string; scheme: string | null; audience: string; category: string | null }[] }> {
+  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const existing = await repos.tenant.courseType.list(ctx);
+  const haveNames = new Set(existing.map((c) => c.name.trim().toLowerCase()));
+  const created: { id: string; name: string; scheme: string | null; audience: string; category: string | null }[] = [];
+  for (const c of DEFAULT_COURSE_TYPES) {
+    if (haveNames.has(c.name.toLowerCase())) continue;
+    const row = await repos.tenant.courseType.insert(ctx, { ...c, active: true });
+    created.push({ id: row.id, name: row.name, scheme: row.scheme, audience: row.audience, category: row.category ?? null });
+  }
+  if (created.length) await writeAudit(repos, ctx, { action: "add_default_courses", entity: "course_type", after: { count: created.length } });
+  revalidatePath("/office/onboarding");
+  revalidatePath("/office/courses");
+  revalidatePath("/office/settings");
+  return { ok: true, created };
 }
 
 /** Mark onboarding dismissed for this browser so the dashboard stops redirecting. */
