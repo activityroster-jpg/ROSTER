@@ -1,6 +1,7 @@
+import Link from "next/link";
 import { requireTenant } from "@/lib/tenant/require";
 import { getWeekAvailabilityMatrix } from "@/lib/services/availability";
-import { weekStart } from "@/lib/services/schedule";
+import { addDays, weekStart } from "@/lib/services/schedule";
 import { Card } from "@/components/ui";
 import type { SlotCode } from "@/lib/db/schema";
 
@@ -8,6 +9,13 @@ export const dynamic = "force-dynamic";
 
 const SLOTS: SlotCode[] = ["AM", "PM", "EV"];
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const ISO = /^\d{4}-\d{2}-\d{2}$/;
+
+function fmtWeek(mondayIso: string): string {
+  const sun = addDays(mondayIso, 6);
+  const d = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+  return `${d(mondayIso)} – ${d(sun)}`;
+}
 
 const CELL: Record<string, { label: string; cls: string }> = {
   available: { label: "✓", cls: "bg-starboard/15 text-starboard" },
@@ -16,17 +24,30 @@ const CELL: Record<string, { label: string; cls: string }> = {
   none: { label: "", cls: "bg-slate-50 text-slate-300" },
 };
 
-export default async function AvailabilityPage() {
+export default async function AvailabilityPage({ searchParams }: { searchParams: Promise<{ week?: string }> }) {
   const { ctx, repos } = await requireTenant({ role: "admin" });
-  const monday = weekStart(new Date());
+  const thisMonday = weekStart(new Date());
+  const sp = await searchParams;
+  const requested = typeof sp.week === "string" && ISO.test(sp.week) ? weekStart(new Date(`${sp.week}T00:00:00Z`)) : thisMonday;
+  const monday = requested;
+  const prev = addDays(monday, -7);
+  const next = addDays(monday, 7);
+  const isThisWeek = monday === thisMonday;
   const { days, rows, availableCounts } = await getWeekAvailabilityMatrix(repos, ctx, monday);
 
   return (
     <div>
       <h1 className="mb-1 font-display text-2xl font-semibold text-navy">Availability</h1>
       <p className="mb-4 text-sm text-slate-500">
-        Who&apos;s available this week — submitted by instructors in their app. Week of {monday}.
+        Who&apos;s available — submitted by instructors in their app. Click through to plan future weeks.
       </p>
+
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <Link href={`/office/availability?week=${prev}`} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-navy hover:bg-slate-50">← Previous</Link>
+        <span className="rounded-lg bg-navy px-3 py-1.5 text-sm font-semibold text-white">{fmtWeek(monday)}{isThisWeek ? " · this week" : ""}</span>
+        <Link href={`/office/availability?week=${next}`} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-navy hover:bg-slate-50">Next →</Link>
+        {!isThisWeek ? <Link href="/office/availability" className="rounded-lg px-3 py-1.5 text-sm font-medium text-teal hover:underline">Jump to this week</Link> : null}
+      </div>
 
       <div className="mb-3 flex flex-wrap gap-2 text-xs">
         <span className="inline-flex items-center gap-1 rounded-full bg-starboard/15 px-2.5 py-0.5 font-medium text-starboard">✓ Free</span>

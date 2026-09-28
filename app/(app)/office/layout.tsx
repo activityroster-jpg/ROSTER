@@ -11,7 +11,6 @@ import {
   MapPin,
   Settings,
   Ship,
-  Ticket,
   Users,
   Wallet,
 } from "lucide-react";
@@ -35,7 +34,6 @@ const NAV = [
       { href: "/office/staff", label: "Staff", icon: Users },
       { href: "/office/equipment", label: "Equipment", icon: Ship },
       { href: "/office/locations", label: "Locations", icon: MapPin },
-      { href: "/office/bookings", label: "Bookings", icon: Ticket },
       { href: "/office/reports", label: "Reports", icon: BarChart3 },
       { href: "/office/finance", label: "Payroll", icon: Wallet },
     ],

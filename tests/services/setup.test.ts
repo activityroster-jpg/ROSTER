@@ -19,14 +19,14 @@ describe("setup status", () => {
   });
 
   it("reflects the seeded org's data as completed steps", async () => {
-    // The fixture adds an instructor, pay rate, course and booking, so those
-    // steps are done; nobody is invited to the app yet, so that step is not.
+    // The fixture adds an instructor, pay rate, course and a staff assignment, so
+    // those steps are done; nobody is invited to the app yet, so that step is not.
     const status = await getSetupStatus(repos, ctx);
     const byLabel = Object.fromEntries(status.steps.map((s) => [s.label, s.done]));
     expect(byLabel["Add your staff"]).toBe(true);
     expect(byLabel["Set pay rates"]).toBe(true);
     expect(byLabel["Create your first course"]).toBe(true);
-    expect(byLabel["Take a booking"]).toBe(true);
+    expect(byLabel["Roster staff onto a course"]).toBe(true);
     expect(byLabel["Invite an instructor to the app"]).toBe(false);
     expect(status.complete).toBe(false);
     expect(status.setupMode).toBe("basic");

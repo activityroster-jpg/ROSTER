@@ -8,7 +8,7 @@ import {
   type RatioResult,
   type ResourceBooking,
 } from "@/lib/domain";
-import type { SlotCode } from "@/lib/db/schema";
+import type { CourseAudience, SlotCode } from "@/lib/db/schema";
 
 export interface CourseCoverage {
   courseId: string;
@@ -186,4 +186,103 @@ export async function getWeekSchedule(
     .sort((a, b) => a.startAt - b.startAt);
 
   return { sessions: weekSessions, coverageByCourse };
+}
+
+export interface RotaSession {
+  sessionId: string;
+  courseId: string;
+  slot: SlotCode;
+  startAt: number;
+  endAt: number;
+  courseName: string;
+  courseTypeName: string;
+  audience: CourseAudience;
+  status: string;
+  coverageOk: boolean;
+  staff: { name: string; role: string }[];
+  locations: string[];
+}
+export interface RotaDay {
+  date: string;
+  label: string;
+  sessions: RotaSession[];
+}
+
+/**
+ * A print-ready rota for one week: every session, who is on it (name + role),
+ * where (locations / classrooms) and when. All reads tenant scoped; this is the
+ * assembled view the office and instructors work from and export as PDF.
+ */
+export async function getWeekRota(
+  repos: Repositories,
+  ctx: AnyTenantContext,
+  mondayIso: string,
+): Promise<RotaDay[]> {
+  const t = repos.tenant;
+  const [courses, courseTypes, sessions, staffAssignments, roleTypes, instructors, courseLocations, locations] =
+    await Promise.all([
+      t.course.list(ctx),
+      t.courseType.list(ctx),
+      t.courseSession.list(ctx),
+      t.courseStaff.list(ctx),
+      t.roleType.list(ctx),
+      t.instructor.list(ctx),
+      t.courseLocation.list(ctx),
+      t.location.list(ctx),
+    ]);
+
+  const { coverageByCourse } = await getWeekSchedule(repos, ctx, mondayIso);
+  const courseById = new Map(courses.map((c) => [c.id, c]));
+  const ctById = new Map(courseTypes.map((c) => [c.id, c]));
+  const roleName = new Map(roleTypes.map((r) => [r.id, r.name]));
+  const instructorName = new Map(instructors.map((i) => [i.id, i.name]));
+  const locationName = new Map(locations.map((l) => [l.id, l.name]));
+
+  const staffByCourse = new Map<string, { name: string; role: string }[]>();
+  for (const sa of staffAssignments) {
+    const arr = staffByCourse.get(sa.courseId) ?? [];
+    arr.push({ name: instructorName.get(sa.instructorId) ?? "—", role: roleName.get(sa.roleTypeId) ?? "Staff" });
+    staffByCourse.set(sa.courseId, arr);
+  }
+  const locsByCourse = new Map<string, string[]>();
+  for (const cl of courseLocations) {
+    const arr = locsByCourse.get(cl.courseId) ?? [];
+    const n = locationName.get(cl.locationId);
+    if (n) arr.push(n);
+    locsByCourse.set(cl.courseId, arr);
+  }
+
+  const sunday = addDays(mondayIso, 7);
+  const inWeek = sessions.filter((s) => s.date >= mondayIso && s.date < sunday);
+  const slotRank: Record<SlotCode, number> = { AM: 0, PM: 1, EV: 2 };
+
+  const days: RotaDay[] = [];
+  for (let i = 0; i < 7; i++) {
+    const date = addDays(mondayIso, i);
+    const label = new Date(`${date}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short", timeZone: "UTC" });
+    const daySessions: RotaSession[] = inWeek
+      .filter((s) => s.date === date)
+      .map((s) => {
+        const course = courseById.get(s.courseId);
+        const ct = course ? ctById.get(course.courseTypeId) : undefined;
+        const cov = coverageByCourse.get(s.courseId);
+        return {
+          sessionId: s.id,
+          courseId: s.courseId,
+          slot: s.slot,
+          startAt: s.startAt instanceof Date ? s.startAt.getTime() : Number(s.startAt),
+          endAt: s.endAt instanceof Date ? s.endAt.getTime() : Number(s.endAt),
+          courseName: course?.name ?? ct?.name ?? "Session",
+          courseTypeName: ct?.name ?? "—",
+          audience: (ct?.audience ?? "all") as CourseAudience,
+          status: course?.status ?? "scheduled",
+          coverageOk: cov?.ratio.ok ?? true,
+          staff: staffByCourse.get(s.courseId) ?? [],
+          locations: locsByCourse.get(s.courseId) ?? [],
+        };
+      })
+      .sort((a, b) => slotRank[a.slot] - slotRank[b.slot] || a.startAt - b.startAt);
+    days.push({ date, label, sessions: daySessions });
+  }
+  return days;
 }

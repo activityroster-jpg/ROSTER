@@ -4,24 +4,20 @@ import { redirect } from "next/navigation";
 import { requireTenant } from "@/lib/tenant/require";
 import { ONBOARDED_COOKIE } from "@/lib/onboarding";
 import { listStaffWithFit } from "@/lib/services/staff";
-import { getWeekSchedule, weekStart } from "@/lib/services/schedule";
+import { getWeekRota, getWeekSchedule, weekStart } from "@/lib/services/schedule";
 import { getAttendanceBoard } from "@/lib/services/timeclock";
 import { listLeave } from "@/lib/services/leave";
 import { listOpenShifts } from "@/lib/services/openshifts";
-import { getRevenueSummary } from "@/lib/services/bookings";
 import { getSetupStatus } from "@/lib/services/setup";
 import { Card, StatusPill } from "@/components/ui";
-import type { SlotCode } from "@/lib/db/schema";
 
 export const dynamic = "force-dynamic";
 
-const SLOTS: SlotCode[] = ["AM", "PM", "EV"];
-const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const SLOT_LABEL: Record<string, string> = { AM: "Morning", PM: "Afternoon", EV: "Evening" };
 
 function fmtTime(ms: number): string {
   return new Date(ms).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
 }
-const money = (n: number) => `£${n.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
 
 function Tile({ href, label, value, sub, tone = "navy" }: { href: string; label: string; value: string | number; sub: string; tone?: "navy" | "port" | "amber" | "starboard" | "teal" }) {
   const valTone = { navy: "text-navy", port: "text-port", amber: "text-amber", starboard: "text-starboard", teal: "text-teal" }[tone];
@@ -39,14 +35,14 @@ export default async function DashboardPage() {
   const monday = weekStart(new Date());
   const today = new Date().toISOString().slice(0, 10);
 
-  const [staff, schedule, attendance, leave, shifts, revenue, setup] = await Promise.all([
+  const [staff, schedule, attendance, leave, shifts, setup, rota] = await Promise.all([
     listStaffWithFit(repos, ctx),
     getWeekSchedule(repos, ctx, monday),
     getAttendanceBoard(repos, ctx, today),
     listLeave(repos, ctx),
     listOpenShifts(repos, ctx, true),
-    getRevenueSummary(repos, ctx),
     getSetupStatus(repos, ctx),
+    getWeekRota(repos, ctx, monday),
   ]);
   const { sessions, coverageByCourse } = schedule;
 
@@ -62,12 +58,7 @@ export default async function DashboardPage() {
   const pendingLeave = leave.filter((l) => l.status === "pending").length;
   const openShifts = shifts.filter((s) => s.status === "open" || s.status === "offered").length;
 
-  const days = DAY_LABELS.map((_, i) => {
-    const d = new Date(`${monday}T00:00:00.000Z`);
-    d.setUTCDate(d.getUTCDate() + i);
-    return d.toISOString().slice(0, 10);
-  });
-  const cell = (dateIso: string, slot: SlotCode) => sessions.filter((s) => s.date === dateIso && s.slot === slot);
+  const weekSessions = sessions.length;
 
   return (
     <div>
@@ -114,7 +105,7 @@ export default async function DashboardPage() {
       <div className="mb-6 grid gap-3 sm:grid-cols-3">
         <Tile href="/office/timeclock" label="On the water now" value={attendance.onWater} sub="Clocked in" tone={attendance.onWater > 0 ? "starboard" : "navy"} />
         <Tile href="/office/timeclock" label="Hours logged today" value={(attendance.minutesToday / 60).toFixed(1)} sub={`${attendance.started} started`} />
-        <Tile href="/office/bookings" label="Revenue earned" value={money(revenue.total)} sub={`${money(revenue.outstanding)} provisional`} tone="teal" />
+        <Tile href="/office/rota" label="Sessions this week" value={weekSessions} sub="View / print rota" tone="teal" />
       </div>
 
       {/* Needs attention */}
@@ -127,38 +118,41 @@ export default async function DashboardPage() {
         <Tile href="/office/leave" label="Open shifts" value={openShifts} sub="Need cover" tone={openShifts > 0 ? "amber" : "navy"} />
       </div>
 
-      {/* Week grid */}
-      <h2 className="mb-3 font-display text-lg font-semibold text-navy">This week</h2>
-      <Card className="overflow-x-auto">
-        <table className="w-full min-w-[720px] border-collapse text-sm">
-          <thead>
-            <tr>
-              <th className="w-16 px-2 py-2 text-left text-xs uppercase text-slate-400"></th>
-              {days.map((d, i) => (
-                <th key={d} className="px-2 py-2 text-left text-xs font-semibold text-slate-500">
-                  {DAY_LABELS[i]} <span className="text-slate-400">{d.slice(8)}</span>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {SLOTS.map((slot) => (
-              <tr key={slot} className="align-top">
-                <td className="px-2 py-2 text-xs font-semibold text-slate-400">{slot}</td>
-                {days.map((d) => (
-                  <td key={d + slot} className="min-w-[90px] border border-slate-100 px-1.5 py-1.5">
-                    {cell(d, slot).map((s) => (
-                      <div key={s.sessionId} className={`mb-1 rounded-md px-2 py-1 text-xs ${s.coverage.ok ? "bg-starboard/10 text-starboard" : "bg-port/10 text-port"}`}>
-                        <div className="font-medium">{s.courseName}</div>
-                        <div className="opacity-80">{fmtTime(s.startAt)}</div>
-                      </div>
-                    ))}
-                  </td>
-                ))}
-              </tr>
+      {/* This week's rota */}
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="font-display text-lg font-semibold text-navy">This week&apos;s rota</h2>
+        <Link href="/office/rota" className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-navy hover:bg-slate-50">
+          Full rota · print / PDF →
+        </Link>
+      </div>
+      <Card className="p-0">
+        {weekSessions === 0 ? (
+          <p className="px-4 py-6 text-sm text-slate-400">No sessions scheduled this week. Add courses and roster staff in <Link href="/office/courses" className="text-teal hover:underline">Courses</Link>.</p>
+        ) : (
+          <div className="divide-y divide-slate-100">
+            {rota.filter((d) => d.sessions.length > 0).map((day) => (
+              <div key={day.date} className="px-4 py-3">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">{day.label}</p>
+                <ul className="space-y-1.5">
+                  {day.sessions.map((s) => (
+                    <li key={s.sessionId} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                      <span className="w-28 flex-none font-medium text-navy">{SLOT_LABEL[s.slot] ?? s.slot} <span className="text-xs font-normal text-slate-400">{fmtTime(s.startAt)}</span></span>
+                      <span className="flex-1 min-w-[10rem]">
+                        <span className={`mr-1.5 rounded px-1.5 py-0.5 text-[10px] font-semibold ${s.audience === "youth" ? "bg-amber/15 text-amber" : s.audience === "adult" ? "bg-teal/15 text-teal" : "bg-slate-100 text-slate-500"}`}>{s.audience === "youth" ? "Youth" : s.audience === "adult" ? "Adult" : "All"}</span>
+                        <span className="font-medium text-navy">{s.courseName}</span>
+                        {s.locations.length ? <span className="text-xs text-slate-400"> · {s.locations.join(", ")}</span> : null}
+                      </span>
+                      <span className="text-xs text-slate-500">
+                        {s.staff.length ? s.staff.map((m) => m.name).join(", ") : <span className="font-semibold text-port">Unassigned</span>}
+                      </span>
+                      {!s.coverageOk ? <StatusPill tone="attention">Needs cover</StatusPill> : null}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             ))}
-          </tbody>
-        </table>
+          </div>
+        )}
       </Card>
 
       {/* Coverage */}

@@ -24,21 +24,21 @@ export interface SetupStatus {
  */
 export async function getSetupStatus(repos: Repositories, ctx: AnyTenantContext): Promise<SetupStatus> {
   const t = repos.tenant;
-  const [settings, instructors, linked, courses, payRates, bookings] = await Promise.all([
+  const [settings, instructors, linked, courses, payRates, assignments] = await Promise.all([
     t.orgSettings.list(ctx),
     t.instructor.count(ctx),
     t.instructor.count(ctx, isNotNull(instructorTable.userId)),
     t.course.count(ctx),
     t.payRate.count(ctx),
-    t.booking.count(ctx),
+    t.courseStaff.count(ctx),
   ]);
 
   const steps: SetupStep[] = [
     { label: "Add your staff", href: "/office/staff", done: instructors > 0 },
-    { label: "Set pay rates", href: "/office/finance", done: payRates > 0 },
     { label: "Create your first course", href: "/office/courses", done: courses > 0 },
+    { label: "Roster staff onto a course", href: "/office/courses", done: assignments > 0 },
+    { label: "Set pay rates", href: "/office/finance", done: payRates > 0 },
     { label: "Invite an instructor to the app", href: "/office/staff", done: linked > 0 },
-    { label: "Take a booking", href: "/office/bookings", done: bookings > 0 },
   ];
 
   const doneCount = steps.filter((s) => s.done).length;
