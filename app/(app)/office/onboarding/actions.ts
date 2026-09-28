@@ -3,11 +3,73 @@
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { requireTenant } from "@/lib/tenant/require";
-import { EMPLOYMENT_TYPES, type EmploymentType } from "@/lib/db/schema";
+import {
+  COURSE_AUDIENCES,
+  EMPLOYMENT_TYPES,
+  SLOT_STYLES,
+  type CourseAudience,
+  type EmploymentType,
+  type OptionalFeature,
+  type SlotStyle,
+} from "@/lib/db/schema";
 import { writeAudit } from "@/lib/services/audit";
+import { serializeFeatures } from "@/lib/features";
 import { ONBOARDED_COOKIE } from "@/lib/onboarding";
 
 type Result = { ok: boolean; error?: string };
+
+/** Save which optional features the centre wants, and how sessions are run. */
+export async function setSetupPreferencesAction(input: {
+  features: string[];
+  slotStyle: string;
+}): Promise<Result> {
+  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const features = serializeFeatures(input.features as OptionalFeature[]);
+  const slotStyle: SlotStyle = (SLOT_STYLES as readonly string[]).includes(input.slotStyle)
+    ? (input.slotStyle as SlotStyle)
+    : "slots";
+
+  const existing = (await repos.tenant.orgSettings.list(ctx))[0];
+  if (existing) {
+    await repos.tenant.orgSettings.update(ctx, existing.id, { enabledFeatures: features, slotStyle });
+  } else {
+    await repos.tenant.orgSettings.insert(ctx, { enabledFeatures: features, slotStyle });
+  }
+  await writeAudit(repos, ctx, { action: "onboarding_set_preferences", entity: "org_settings", after: { features: input.features, slotStyle } });
+  revalidatePath("/office");
+  revalidatePath("/office/onboarding");
+  return { ok: true };
+}
+
+/** Create a custom course type during onboarding (name + audience + optional category). */
+export async function addCustomCourseAction(input: {
+  name: string;
+  audience: string;
+  category?: string;
+}): Promise<{ ok: boolean; error?: string; id?: string }> {
+  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const name = (input.name ?? "").trim();
+  if (!name) return { ok: false, error: "Give the course a name" };
+  const audience: CourseAudience = (COURSE_AUDIENCES as readonly string[]).includes(input.audience)
+    ? (input.audience as CourseAudience)
+    : "all";
+
+  const created = await repos.tenant.courseType.insert(ctx, {
+    name,
+    scheme: input.category?.trim() || "Centre course",
+    audience,
+    category: input.category?.trim() || null,
+    defaultCapacity: 8,
+    studentsPerInstructor: 4,
+    requiresSafetyBoat: audience === "youth",
+    active: true,
+  });
+  await writeAudit(repos, ctx, { action: "create", entity: "course_type", entityId: created.id, after: { name, audience } });
+  revalidatePath("/office/onboarding");
+  revalidatePath("/office/courses");
+  revalidatePath("/office/settings");
+  return { ok: true, id: created.id };
+}
 
 /** Set which RYA course types this centre runs (activate selected, retire the rest). */
 export async function setCoursesRunAction(activeIds: string[]): Promise<Result> {

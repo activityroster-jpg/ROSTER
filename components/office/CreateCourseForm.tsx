@@ -5,7 +5,15 @@ import { createCourseAction, type ActionState } from "@/app/(app)/office/courses
 
 const initial: ActionState = { ok: false };
 
-export function CreateCourseForm({ courseTypes }: { courseTypes: { id: string; name: string }[] }) {
+export interface CourseTypeChoice { id: string; name: string; audience: "youth" | "adult" | "all" }
+
+const GROUPS: { key: CourseTypeChoice["audience"]; label: string }[] = [
+  { key: "youth", label: "Youth" },
+  { key: "adult", label: "Adult" },
+  { key: "all", label: "All ages" },
+];
+
+export function CreateCourseForm({ courseTypes }: { courseTypes: CourseTypeChoice[] }) {
   const [state, action, pending] = useActionState(createCourseAction, initial);
 
   return (
@@ -14,10 +22,12 @@ export function CreateCourseForm({ courseTypes }: { courseTypes: { id: string; n
         <label className="mb-1 block text-xs font-medium text-slate-500">Course type</label>
         <select name="courseTypeId" required className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal">
           <option value="">Select…</option>
-          {courseTypes.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
+          {GROUPS.filter((g) => courseTypes.some((c) => c.audience === g.key)).map((g) => (
+            <optgroup key={g.key} label={g.label}>
+              {courseTypes.filter((c) => c.audience === g.key).map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </optgroup>
           ))}
         </select>
       </div>

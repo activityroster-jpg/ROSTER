@@ -19,7 +19,10 @@ export default async function CoursesPage() {
     repos.tenant.instructor.list(ctx),
   ]);
   const courses = [...coverageByCourse.values()];
-  const activeTypes = courseTypes.filter((c) => c.active).map((c) => ({ id: c.id, name: c.name }));
+  const activeTypes = courseTypes.filter((c) => c.active).map((c) => ({ id: c.id, name: c.name, audience: c.audience }));
+  const audienceByCourse = new Map(
+    (await repos.tenant.course.list(ctx)).map((c) => [c.id, courseTypes.find((t) => t.id === c.courseTypeId)?.audience ?? "all"]),
+  );
   const activeRoles = roles.filter((r) => r.active).map((r) => ({ id: r.id, name: r.name }));
   const fitByInstructor = new Map(staff.map((s) => [s.instructor.id, s.fit.fit]));
   const instructorOptions = instructors
@@ -37,11 +40,14 @@ export default async function CoursesPage() {
     <div>
       <div className="mb-1 flex items-center justify-between">
         <h1 className="font-display text-2xl font-semibold text-navy">Courses</h1>
-        <span className="text-sm text-slate-500">{courses.length} scheduled</span>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-slate-500">{courses.length} scheduled</span>
+          <a href="/office/import" className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-navy hover:bg-slate-50">Import from spreadsheet / calendar</a>
+        </div>
       </div>
       <p className="mb-6 text-sm text-slate-500">
         Add a course, then assign staff to it. We check ratios, safety-boat cover and each instructor&apos;s
-        qualifications as you go — anything short is flagged below.
+        qualifications as you go — anything short is flagged below. Youth and adult courses are labelled so they never get mixed up.
       </p>
 
       <Card className="mb-6">
@@ -62,7 +68,12 @@ export default async function CoursesPage() {
               <Card key={c.courseId}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium text-navy">{c.courseName}</p>
+                    <p className="flex items-center gap-2 font-medium text-navy">
+                      {(() => { const a = audienceByCourse.get(c.courseId) ?? "all"; return (
+                        <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${a === "youth" ? "bg-amber/15 text-amber" : a === "adult" ? "bg-teal/15 text-teal" : "bg-slate-100 text-slate-500"}`}>{a === "youth" ? "Youth" : a === "adult" ? "Adult" : "All"}</span>
+                      ); })()}
+                      {c.courseName}
+                    </p>
                     <p className="text-xs text-slate-500">
                       {c.courseTypeName} · <span className="capitalize">{c.status}</span> ·{" "}
                       {c.ratio.ratioCountingStaff}/{c.ratio.requiredStaff} staff
