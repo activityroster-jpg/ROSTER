@@ -35,13 +35,18 @@ export default async function CoursesPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-1 flex items-center justify-between">
         <h1 className="font-display text-2xl font-semibold text-navy">Courses</h1>
-        <span className="text-sm text-slate-500">{courses.length} courses</span>
+        <span className="text-sm text-slate-500">{courses.length} scheduled</span>
       </div>
+      <p className="mb-6 text-sm text-slate-500">
+        Add a course, then assign staff to it. We check ratios, safety-boat cover and each instructor&apos;s
+        qualifications as you go — anything short is flagged below.
+      </p>
 
       <Card className="mb-6">
-        <h2 className="mb-3 font-semibold text-navy">Add a course</h2>
+        <h2 className="font-semibold text-navy">Add a course</h2>
+        <p className="mb-3 text-xs text-slate-500">Pick a course type and its date/slot. Only course types you run appear here (manage those in Settings).</p>
         <CreateCourseForm courseTypes={activeTypes} />
       </Card>
 

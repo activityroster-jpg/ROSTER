@@ -24,10 +24,15 @@ export default async function SettingsPage() {
 
   return (
     <div>
-      <h1 className="mb-6 font-display text-2xl font-semibold text-navy">Settings</h1>
+      <h1 className="mb-1 font-display text-2xl font-semibold text-navy">Settings</h1>
+      <p className="mb-6 text-sm text-slate-500">
+        Shape ActivityRoster to how your centre runs — courses, grades, roles, checks and slots are all yours to edit.
+        Retiring an item hides it from new records but keeps your history intact (nothing is deleted).
+      </p>
 
       <Card className="mb-6">
-        <h2 className="mb-3 font-semibold text-navy">General</h2>
+        <h2 className="mb-1 font-semibold text-navy">General</h2>
+        <p className="mb-3 text-xs text-slate-500">Alert lead time controls how early expiring tickets are flagged.</p>
         <GeneralSettingsForm
           schedulingMode={s?.schedulingMode ?? "session"}
           alertLeadDays={s?.alertLeadDays ?? 30}
