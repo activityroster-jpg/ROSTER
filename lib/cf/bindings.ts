@@ -23,6 +23,8 @@ export interface CloudflareEnv {
   STRIPE_PRICE_FULL?: string;
   SENTRY_DSN?: string;
   RESEND_API_KEY?: string;
+  // Comma-separated emails allowed into the platform-owner admin area (/admin).
+  PLATFORM_ADMIN_EMAILS?: string;
 }
 
 export function getEnv(): CloudflareEnv {

@@ -20,6 +20,13 @@ export function middleware(req: NextRequest) {
   const isAppPath = path.startsWith("/office") || path.startsWith("/portal");
 
   if (host.kind === "tenant") {
+    // The platform admin area is apex-only; bounce it off centre subdomains.
+    if (path.startsWith("/admin")) {
+      const to = url.clone();
+      to.pathname = "/admin";
+      to.host = APEX;
+      return NextResponse.redirect(to);
+    }
     // On a centre subdomain, send the root to the office app.
     if (path === "/") {
       const to = url.clone();
