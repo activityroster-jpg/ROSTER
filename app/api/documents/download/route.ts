@@ -18,7 +18,8 @@ export async function GET(req: Request) {
 
   if (ctx.role !== "admin") {
     const me = (await repos.tenant.instructor.list(ctx, eq(instructorTable.userId, ctx.userId)))[0];
-    if (!me || !key.includes(`instructor_${me.id}/`)) {
+    // Instructors may only read keys under their own org+instructor prefix.
+    if (!me || !key.startsWith(`org_${ctx.organisationId}/instructor_${me.id}/`)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
   }

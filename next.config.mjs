@@ -1,10 +1,43 @@
 /** @type {import('next').NextConfig} */
+
+// Security headers applied to every response. The CSP is deliberately pragmatic:
+// it locks the dangerous vectors (framing, object/embed, base-uri, external
+// script origins) while allowing the inline script/style Next.js and Tailwind
+// emit. Stripe Checkout/Portal are full-page redirects, so no embedding is needed.
+const csp = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+  "frame-ancestors 'self'",
+  "img-src 'self' data: https:",
+  "font-src 'self' https://fonts.gstatic.com data:",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "script-src 'self' 'unsafe-inline'",
+  "connect-src 'self' https:",
+  "form-action 'self' https://checkout.stripe.com https://billing.stripe.com",
+  "frame-src https://js.stripe.com https://hooks.stripe.com",
+  "upgrade-insecure-requests",
+].join("; ");
+
+const securityHeaders = [
+  { key: "Content-Security-Policy", value: csp },
+  { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "X-Frame-Options", value: "SAMEORIGIN" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(self \"https://checkout.stripe.com\")" },
+  { key: "X-DNS-Prefetch-Control", value: "off" },
+];
+
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   experimental: {
     // Keep server bundles lean for the Workers runtime.
     serverMinification: true,
+  },
+  async headers() {
+    return [{ source: "/:path*", headers: securityHeaders }];
   },
 };
 

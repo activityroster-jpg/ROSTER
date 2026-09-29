@@ -1,0 +1,45 @@
+import { LegalPage, H2, P, UL } from "@/components/marketing/LegalPage";
+
+export const metadata = { title: "Terms of Service · ActivityRoster" };
+
+export default function TermsPage() {
+  return (
+    <LegalPage title="Terms of Service" updated="29 September 2026">
+      <P>These terms govern your use of ActivityRoster. By creating an account or using the service, you agree to them.</P>
+
+      <H2>The service</H2>
+      <P>ActivityRoster is a subscription tool for staff rostering, compliance tracking and course administration for sailing &amp; watersports centres. We may improve or change features over time; we won&apos;t materially reduce the core service you pay for without notice.</P>
+
+      <H2>Accounts &amp; your responsibilities</H2>
+      <UL items={[
+        "Keep your login, password and PIN secure and don't share them.",
+        "You're responsible for what your centre's admins and staff do in your account.",
+        "You must have the right to store the staff and compliance data you enter, and to keep it accurate.",
+        "Don't misuse the service, attempt to breach security, or use it unlawfully.",
+      ]} />
+
+      <H2>Free trial &amp; billing</H2>
+      <UL items={[
+        "New centres start with a free trial — no card required.",
+        "To continue after the trial, you subscribe monthly or annually. Prices are shown at checkout and may include VAT.",
+        "Subscriptions renew automatically until cancelled. You can cancel anytime from Billing; access continues to the end of the paid period.",
+        "Payments are handled by Stripe; a VAT invoice is issued for each payment.",
+      ]} />
+
+      <H2>Your data</H2>
+      <P>Your data remains yours. We process it under our Privacy Policy and Data Processing terms. You can export it at any time, and after cancellation we provide a window to export before deletion.</P>
+
+      <H2>Availability</H2>
+      <P>We aim for high availability but the service is provided &ldquo;as is&rdquo; without a guaranteed uptime unless separately agreed. We are not liable for losses arising from downtime, data entered incorrectly, or reliance on the tool in place of your own compliance checks — you remain responsible for meeting your RYA and legal obligations.</P>
+
+      <H2>Limitation of liability</H2>
+      <P>To the extent permitted by law, our total liability for any claim is limited to the fees you paid in the 12 months before the claim. We are not liable for indirect or consequential loss.</P>
+
+      <H2>Suspension &amp; termination</H2>
+      <P>We may suspend or end access for non-payment or serious breach of these terms. You may stop using the service at any time.</P>
+
+      <H2>Changes &amp; contact</H2>
+      <P>We may update these terms; we&apos;ll post the new version here and, for material changes, notify you. Questions: <a className="text-teal hover:underline" href="mailto:hello@activityroster.com">hello@activityroster.com</a>.</P>
+    </LegalPage>
+  );
+}
