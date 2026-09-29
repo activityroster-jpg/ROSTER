@@ -188,6 +188,53 @@ export async function getWeekSchedule(
   return { sessions: weekSessions, coverageByCourse };
 }
 
+export interface SessionEvent {
+  id: string;
+  courseId: string;
+  date: string;
+  slot: SlotCode;
+  startAt: number;
+  endAt: number;
+  courseName: string;
+  audience: CourseAudience;
+}
+
+/**
+ * Lightweight session events in a date window, for the courses calendar. Tenant
+ * scoped. Returns everything between fromIso (inclusive) and toIso (exclusive).
+ */
+export async function getSessionEvents(
+  repos: Repositories,
+  ctx: AnyTenantContext,
+  fromIso: string,
+  toIso: string,
+): Promise<SessionEvent[]> {
+  const t = repos.tenant;
+  const [sessions, courses, courseTypes] = await Promise.all([
+    t.courseSession.list(ctx),
+    t.course.list(ctx),
+    t.courseType.list(ctx),
+  ]);
+  const courseById = new Map(courses.map((c) => [c.id, c]));
+  const ctById = new Map(courseTypes.map((c) => [c.id, c]));
+  return sessions
+    .filter((s) => s.date >= fromIso && s.date < toIso)
+    .map((s) => {
+      const course = courseById.get(s.courseId);
+      const ct = course ? ctById.get(course.courseTypeId) : undefined;
+      return {
+        id: s.id,
+        courseId: s.courseId,
+        date: s.date,
+        slot: s.slot,
+        startAt: s.startAt instanceof Date ? s.startAt.getTime() : Number(s.startAt),
+        endAt: s.endAt instanceof Date ? s.endAt.getTime() : Number(s.endAt),
+        courseName: course?.name ?? ct?.name ?? "Session",
+        audience: (ct?.audience ?? "all") as CourseAudience,
+      };
+    });
+}
+
 export interface RotaSession {
   sessionId: string;
   courseId: string;

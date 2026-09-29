@@ -62,6 +62,34 @@ export async function createCourseAction(_prev: ActionState, formData: FormData)
   }
 }
 
+export interface FlexSession { date: string; startTime?: string; endTime?: string; slot?: string }
+
+/** Create a course with an arbitrary set of sessions (any days/times) and a name. */
+export async function createCourseFlexibleAction(input: { courseTypeId: string; name?: string; sessions: FlexSession[] }): Promise<ActionState> {
+  const { ctx, repos } = await requireTenant({ role: "admin" });
+  if (!input.courseTypeId) return { ok: false, error: "Pick a course type" };
+  const rawSessions = Array.isArray(input.sessions) ? input.sessions : [];
+  const sessions: NewCourseSession[] = [];
+  for (const s of rawSessions) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(s.date ?? "")) continue;
+    const start = normaliseTime(s.startTime ?? "");
+    const end = normaliseTime(s.endTime ?? "");
+    if (start && end && end <= start) return { ok: false, error: `End must be after start on ${s.date}` };
+    const slot: SlotCode = start ? timeToSlot(start) : isSlot(s.slot) ? s.slot : "AM";
+    sessions.push({ date: s.date, slot, startTime: start || undefined, endTime: end || undefined });
+  }
+  if (sessions.length === 0) return { ok: false, error: "Add at least one session with a valid date" };
+
+  try {
+    await createCourseWithSessions(repos, ctx, { courseTypeId: input.courseTypeId, name: input.name?.trim() || undefined, sessions });
+    revalidatePath("/office/courses");
+    revalidatePath("/office");
+    return { ok: true, message: `Course created with ${sessions.length} session${sessions.length === 1 ? "" : "s"}` };
+  } catch (err) {
+    return { ok: false, error: (err as Error).message };
+  }
+}
+
 /** Change a course's status (draft/scheduled/confirmed/completed/cancelled). */
 export async function setCourseStatusAction(courseId: string, status: string): Promise<ActionState> {
   const { ctx, repos } = await requireTenant({ role: "admin" });

@@ -1,8 +1,8 @@
 import { requireTenant } from "@/lib/tenant/require";
-import { getWeekSchedule, weekStart } from "@/lib/services/schedule";
+import { addDays, getSessionEvents, getWeekSchedule, weekStart } from "@/lib/services/schedule";
 import { listStaffWithFit } from "@/lib/services/staff";
 import { Card, StatusPill } from "@/components/ui";
-import { CreateCourseForm } from "@/components/office/CreateCourseForm";
+import { CoursePlanner } from "@/components/office/CoursePlanner";
 import { AssignStaffForm } from "@/components/office/AssignStaffForm";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function CoursesPage() {
   const { ctx, repos } = await requireTenant({ role: "admin" });
   const monday = weekStart(new Date());
-  const [{ coverageByCourse }, courseTypes, staff, roles, assignments, instructors, settings] = await Promise.all([
+  const [{ coverageByCourse }, courseTypes, staff, roles, assignments, instructors, settings, events] = await Promise.all([
     getWeekSchedule(repos, ctx, monday),
     repos.tenant.courseType.list(ctx),
     listStaffWithFit(repos, ctx),
@@ -18,6 +18,7 @@ export default async function CoursesPage() {
     repos.tenant.courseStaff.list(ctx),
     repos.tenant.instructor.list(ctx),
     repos.tenant.orgSettings.list(ctx),
+    getSessionEvents(repos, ctx, addDays(monday, -28), addDays(monday, 7 * 26)),
   ]);
   const slotStyle = settings[0]?.slotStyle ?? "slots";
   const courses = [...coverageByCourse.values()];
@@ -52,12 +53,9 @@ export default async function CoursesPage() {
         qualifications as you go — anything short is flagged below. Youth and adult courses are labelled so they never get mixed up.
       </p>
 
-      <Card className="mb-6">
-        <h2 className="font-semibold text-navy">Add a course</h2>
-        <p className="mb-3 text-xs text-slate-500">Pick a course type and its date{slotStyle === "times" ? " and times" : " and slot"}. Only course types you run appear here (manage those in Settings).</p>
-        <CreateCourseForm courseTypes={activeTypes} slotStyle={slotStyle} />
-      </Card>
+      <CoursePlanner courseTypes={activeTypes} events={events} slotStyle={slotStyle} />
 
+      <h2 className="mb-3 font-display text-lg font-semibold text-navy">Scheduled courses</h2>
       <div className="space-y-4">
         {courses.length === 0 ? (
           <Card>
