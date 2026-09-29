@@ -26,7 +26,7 @@ export function AssignStaffForm({
   return (
     <form action={action} className="mt-3 grid gap-2 rounded-lg bg-slate-50 p-3 sm:grid-cols-2">
       <input type="hidden" name="courseId" value={courseId} />
-      <select name="instructorId" required value={chosen} onChange={(e) => setChosen(e.target.value)} className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal">
+      <select aria-label="Instructor" name="instructorId" required value={chosen} onChange={(e) => setChosen(e.target.value)} className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal">
         <option value="">Instructor…</option>
         {instructors.map((i) => (
           <option key={i.id} value={i.id}>
@@ -36,7 +36,7 @@ export function AssignStaffForm({
           </option>
         ))}
       </select>
-      <select name="roleTypeId" required className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal">
+      <select aria-label="Role" name="roleTypeId" required className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal">
         <option value="">Role…</option>
         {roles.map((r) => (
           <option key={r.id} value={r.id}>
@@ -67,8 +67,8 @@ export function AssignStaffForm({
         >
           {pending ? "Assigning…" : "Assign"}
         </button>
-        {state.error ? <span className="ml-3 text-sm text-port">{state.error}</span> : null}
-        {state.ok ? <span className="ml-3 text-sm text-starboard">{state.message}</span> : null}
+        {state.error ? <span role="alert" className="ml-3 text-sm text-port">{state.error}</span> : null}
+        {state.ok ? <span role="status" className="ml-3 text-sm text-starboard">{state.message}</span> : null}
       </div>
     </form>
   );

@@ -32,11 +32,11 @@ export function WeekCalendarView({ events, addHref }: { events: EventUi[]; addHr
   return (
     <div className="rounded-card border border-slate-200 bg-white p-4 shadow-sm">
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <button onClick={() => setMonday((m) => addDaysIso(m, -7))} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-navy hover:bg-slate-50" aria-label="Previous week">←</button>
-        <span className="rounded-lg bg-navy px-3 py-1.5 text-sm font-semibold text-white">{fmtDay(monday)} – {fmtDay(addDaysIso(monday, 6))}{monday === thisMonday ? " · this week" : ""}</span>
-        <button onClick={() => setMonday((m) => addDaysIso(m, 7))} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-navy hover:bg-slate-50" aria-label="Next week">→</button>
-        {monday !== thisMonday ? <button onClick={() => setMonday(thisMonday)} className="text-sm font-medium text-teal hover:underline">This week</button> : null}
-        {addHref ? <a href={addHref} className="ml-auto rounded-lg bg-teal px-3 py-1.5 text-sm font-semibold text-white hover:bg-teal-700">＋ New course</a> : null}
+        <button type="button" onClick={() => setMonday((m) => addDaysIso(m, -7))} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-navy hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal" aria-label="Previous week">←</button>
+        <span className="rounded-lg bg-navy px-3 py-1.5 text-sm font-semibold text-white" aria-live="polite">{fmtDay(monday)} – {fmtDay(addDaysIso(monday, 6))}{monday === thisMonday ? " · this week" : ""}</span>
+        <button type="button" onClick={() => setMonday((m) => addDaysIso(m, 7))} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-navy hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal" aria-label="Next week">→</button>
+        {monday !== thisMonday ? <button type="button" onClick={() => setMonday(thisMonday)} className="text-sm font-medium text-teal hover:underline">This week</button> : null}
+        {addHref ? <a href={addHref} className="ml-auto rounded-lg bg-teal px-3 py-1.5 text-sm font-semibold text-white hover:bg-teal-700"><span aria-hidden="true">＋</span> New course</a> : null}
       </div>
       <div className="grid grid-cols-7 gap-2">
         {days.map((d, i) => {
@@ -48,7 +48,7 @@ export function WeekCalendarView({ events, addHref }: { events: EventUi[]; addHr
                 <div className={`text-sm font-bold ${isToday(d) ? "text-teal" : "text-navy"}`}>{d.slice(8)}</div>
               </div>
               {evs.length === 0 ? <p className="text-center text-[10px] text-slate-300">—</p> : evs.map((e) => (
-                <a key={e.id} href={`/office/courses/${e.courseId}`} className={`mb-1 block rounded border-l-4 px-1.5 py-1 text-[11px] leading-tight hover:brightness-95 ${tint(e.audience)}`}>
+                <a key={e.id} href={`/office/courses/${e.courseId}`} aria-label={`${e.courseName}, ${e.audience} course at ${fmtTime(e.startAt)} on ${fmtDay(e.date)}`} className={`mb-1 block rounded border-l-4 px-1.5 py-1 text-[11px] leading-tight hover:brightness-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal ${tint(e.audience)}`}>
                   <span className="block font-semibold">{fmtTime(e.startAt)}</span>
                   <span className="block truncate">{e.courseName}</span>
                 </a>

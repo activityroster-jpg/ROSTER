@@ -80,25 +80,25 @@ export function BulkAssignForm({
       {open ? (
         <div className="border-t border-slate-100 p-4">
           <div className="grid gap-2 sm:grid-cols-2">
-            <select value={instructorId} onChange={(e) => setInstructorId(e.target.value)} className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal">
+            <select aria-label="Instructor to assign" value={instructorId} onChange={(e) => setInstructorId(e.target.value)} className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal">
               <option value="">Instructor…</option>
               {instructors.map((i) => (
                 <option key={i.id} value={i.id}>{i.name}{i.fit ? "" : ` — ${i.reason || "not cleared"}`}</option>
               ))}
             </select>
-            <select value={roleTypeId} onChange={(e) => setRoleTypeId(e.target.value)} className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal">
+            <select aria-label="Role to assign them in" value={roleTypeId} onChange={(e) => setRoleTypeId(e.target.value)} className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal">
               <option value="">Role…</option>
               {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
           </div>
 
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-            <div className="flex flex-wrap gap-1.5 text-xs">
+            <div className="flex flex-wrap gap-1.5 text-xs" role="group" aria-label="Filter courses">
               {([["all", "All"], ["youth", "Youth"], ["adult", "Adult"], ["uncovered", "Needs cover"]] as const).map(([k, label]) => (
-                <button key={k} onClick={() => setFilter(k)} className={`rounded-full px-2.5 py-0.5 font-medium ${filter === k ? "bg-navy text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}>{label}</button>
+                <button key={k} type="button" aria-pressed={filter === k} onClick={() => setFilter(k)} className={`rounded-full px-2.5 py-0.5 font-medium ${filter === k ? "bg-navy text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}>{label}</button>
               ))}
             </div>
-            <button onClick={toggleAll} className="text-xs font-semibold text-teal hover:underline">{allShownPicked ? "Clear" : "Select all shown"} ({shown.length})</button>
+            <button type="button" onClick={toggleAll} className="text-xs font-semibold text-teal hover:underline">{allShownPicked ? "Clear" : "Select all shown"} ({shown.length})</button>
           </div>
 
           <div className="mt-2 max-h-60 space-y-1 overflow-y-auto rounded-lg border border-slate-100 p-2">
@@ -126,7 +126,7 @@ export function BulkAssignForm({
             <button onClick={submit} disabled={pending} className="rounded-lg bg-teal px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">
               {pending ? "Assigning…" : `Assign to ${picked.size} course${picked.size === 1 ? "" : "s"}`}
             </button>
-            {msg ? <span className={`text-sm ${msg.ok ? "text-starboard" : "text-port"}`}>{msg.text}</span> : null}
+            {msg ? <span role="status" className={`text-sm ${msg.ok ? "text-starboard" : "text-port"}`}>{msg.text}</span> : null}
           </div>
         </div>
       ) : null}

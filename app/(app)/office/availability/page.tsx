@@ -17,11 +17,11 @@ function fmtWeek(mondayIso: string): string {
   return `${d(mondayIso)} – ${d(sun)}`;
 }
 
-const CELL: Record<string, { label: string; cls: string }> = {
-  available: { label: "✓", cls: "bg-starboard/15 text-starboard" },
-  tentative: { label: "~", cls: "bg-amber/15 text-amber" },
-  unavailable: { label: "✕", cls: "bg-port/15 text-port" },
-  none: { label: "", cls: "bg-slate-50 text-slate-300" },
+const CELL: Record<string, { label: string; word: string; cls: string }> = {
+  available: { label: "✓", word: "Free", cls: "bg-starboard/15 text-starboard" },
+  tentative: { label: "~", word: "Maybe", cls: "bg-amber/15 text-amber" },
+  unavailable: { label: "✕", word: "Busy", cls: "bg-port/15 text-port" },
+  none: { label: "", word: "Not set", cls: "bg-slate-50 text-slate-300" },
 };
 
 export default async function AvailabilityPage({ searchParams }: { searchParams: Promise<{ week?: string }> }) {
@@ -89,11 +89,12 @@ export default async function AvailabilityPage({ searchParams }: { searchParams:
                     const status = r.cells[`${d}|${s}`] ?? "none";
                     const cfg = CELL[status] ?? CELL.none;
                     const rostered = r.assigned[`${d}|${s}`];
+                    const cellLabel = `${r.name}, ${DAY_LABELS[di]} ${s}: ${cfg!.word}${rostered?.length ? ` · rostered on ${rostered.join(", ")}` : ""}`;
                     return (
                       <td key={`${r.instructorId}-${di}-${s}`} className={`p-0 ${si === 0 ? "border-l border-slate-200" : ""}`}>
-                        <span className={`relative inline-block h-6 w-9 leading-6 font-semibold ${cfg!.cls}`} title={rostered?.length ? `Rostered: ${rostered.join(", ")}` : undefined}>
-                          {cfg!.label}
-                          {rostered?.length ? <span className="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-navy" /> : null}
+                        <span className={`relative inline-block h-6 w-9 leading-6 font-semibold ${cfg!.cls}`} title={cellLabel} aria-label={cellLabel}>
+                          <span aria-hidden="true">{cfg!.label}</span>
+                          {rostered?.length ? <span aria-hidden="true" className="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-navy" /> : null}
                         </span>
                       </td>
                     );

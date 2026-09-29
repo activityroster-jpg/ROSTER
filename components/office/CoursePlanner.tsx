@@ -71,10 +71,10 @@ export function CoursePlanner({ courseTypes, events, slotStyle }: { courseTypes:
       <div className="rounded-card border border-slate-200 bg-white p-4 shadow-sm">
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <h2 className="mr-1 font-display text-lg font-semibold text-navy">Calendar</h2>
-          <button onClick={() => setMonday((m) => addDaysIso(m, -7))} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-navy hover:bg-slate-50" aria-label="Previous week">←</button>
-          <span className="rounded-lg bg-navy px-3 py-1.5 text-sm font-semibold text-white">{fmtDay(monday)} – {fmtDay(addDaysIso(monday, 6))}{monday === thisMonday ? " · this week" : ""}</span>
-          <button onClick={() => setMonday((m) => addDaysIso(m, 7))} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-navy hover:bg-slate-50" aria-label="Next week">→</button>
-          {monday !== thisMonday ? <button onClick={() => setMonday(thisMonday)} className="text-sm font-medium text-teal hover:underline">This week</button> : null}
+          <button type="button" onClick={() => setMonday((m) => addDaysIso(m, -7))} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-navy hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal" aria-label="Previous week">←</button>
+          <span className="rounded-lg bg-navy px-3 py-1.5 text-sm font-semibold text-white" aria-live="polite">{fmtDay(monday)} – {fmtDay(addDaysIso(monday, 6))}{monday === thisMonday ? " · this week" : ""}</span>
+          <button type="button" onClick={() => setMonday((m) => addDaysIso(m, 7))} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-navy hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal" aria-label="Next week">→</button>
+          {monday !== thisMonday ? <button type="button" onClick={() => setMonday(thisMonday)} className="text-sm font-medium text-teal hover:underline">This week</button> : null}
           <span className="ml-auto text-xs text-slate-400">Tap any day to add a session to the course you&apos;re building below.</span>
         </div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
@@ -100,8 +100,8 @@ export function CoursePlanner({ courseTypes, events, slotStyle }: { courseTypes:
                     </div>
                   ))}
                 </div>
-                <button onClick={() => addRow(d)} className="mt-1 flex w-full items-center justify-center gap-1 rounded-md border border-teal/40 bg-teal/5 py-1 text-[11px] font-semibold text-teal hover:bg-teal hover:text-white" title="Add a session on this day">
-                  ＋ Add
+                <button type="button" onClick={() => addRow(d)} className="mt-1 flex w-full items-center justify-center gap-1 rounded-md border border-teal/40 bg-teal/5 py-1 text-[11px] font-semibold text-teal hover:bg-teal hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-teal" aria-label={`Add a session on ${fmtDay(d)}`}>
+                  <span aria-hidden="true">＋</span> Add
                 </button>
               </div>
             );
@@ -130,7 +130,7 @@ export function CoursePlanner({ courseTypes, events, slotStyle }: { courseTypes:
         <div className="mt-4">
           <div className="mb-1 flex items-center justify-between">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Sessions ({rows.length})</p>
-            <button onClick={() => addRow(monday)} className="text-xs font-semibold text-teal hover:underline">＋ Add session</button>
+            <button type="button" onClick={() => addRow(monday)} className="text-xs font-semibold text-teal hover:underline">＋ Add session</button>
           </div>
           {rows.length === 0 ? (
             <p className="rounded-lg border border-dashed border-slate-200 p-3 text-xs text-slate-400">No sessions yet — click a day above or “Add session”.</p>
@@ -155,7 +155,7 @@ export function CoursePlanner({ courseTypes, events, slotStyle }: { courseTypes:
                       </select>
                     </div>
                   )}
-                  <button onClick={() => removeRow(r.key)} className="ml-auto text-xs text-slate-400 hover:text-port">Remove</button>
+                  <button type="button" onClick={() => removeRow(r.key)} className="ml-auto text-xs text-slate-400 hover:text-port" aria-label={`Remove session on ${r.date}`}>Remove</button>
                 </li>
               ))}
             </ul>
@@ -163,10 +163,10 @@ export function CoursePlanner({ courseTypes, events, slotStyle }: { courseTypes:
         </div>
 
         <div className="mt-4 flex items-center gap-3">
-          <button onClick={create} disabled={pending} className="rounded-lg bg-teal px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">
+          <button type="button" onClick={create} disabled={pending} className="rounded-lg bg-teal px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">
             {pending ? "Creating…" : `Create course${rows.length ? ` (${rows.length} session${rows.length === 1 ? "" : "s"})` : ""}`}
           </button>
-          {msg ? <span className={`text-sm ${msg.ok ? "text-starboard" : "text-port"}`}>{msg.text}</span> : null}
+          {msg ? <span className={`text-sm ${msg.ok ? "text-starboard" : "text-port"}`} role="status">{msg.text}</span> : null}
         </div>
       </div>
     </div>
