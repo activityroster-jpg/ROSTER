@@ -144,6 +144,18 @@ async function provisionFromSession(
   session: Stripe.Checkout.Session,
 ): Promise<void> {
   const m = session.metadata ?? {};
+
+  // A free-trial centre converting to paid: link the subscription to the org.
+  if (m.org_id) {
+    await repos.control.updateOrganisation(m.org_id, {
+      subscriptionStatus: "active",
+      status: "active",
+      stripeCustomerId: typeof session.customer === "string" ? session.customer : null,
+      stripeSubscriptionId: typeof session.subscription === "string" ? session.subscription : null,
+    });
+    return;
+  }
+
   if (m.pending_signup !== "1" || !m.slug) return; // not one of ours
   await provisionCentre(repos, env, {
     slug: m.slug,

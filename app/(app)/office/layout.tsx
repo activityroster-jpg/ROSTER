@@ -12,8 +12,11 @@ import {
   Ship,
   Users,
   Wallet,
+  CreditCard,
 } from "lucide-react";
 import { requireTenant } from "@/lib/tenant/require";
+import { getDb } from "@/lib/cf/bindings";
+import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { Logo } from "@/components/Logo";
 
 const NAV = [
@@ -40,6 +43,7 @@ const NAV = [
     group: "Configure",
     items: [
       { href: "/office/settings", label: "Settings", icon: Settings },
+      { href: "/office/billing", label: "Billing", icon: CreditCard },
       { href: "/office/course-setup", label: "Course setup", icon: LifeBuoy },
       { href: "/office/change-log", label: "Change log", icon: History },
     ],
@@ -48,6 +52,17 @@ const NAV = [
 
 export default async function OfficeLayout({ children }: { children: React.ReactNode }) {
   const { organisation } = await requireTenant({ role: "admin" });
+
+  // Free-trial nudge: show days left until they add payment.
+  let trialBanner: { daysLeft: number } | null = null;
+  if (organisation.subscriptionStatus !== "active") {
+    try {
+      const pricing = await new PlatformRepository(await getDb()).getPricing();
+      const created = organisation.createdAt instanceof Date ? organisation.createdAt.getTime() : Number(organisation.createdAt);
+      const ends = created + pricing.trialDays * 24 * 60 * 60 * 1000;
+      trialBanner = { daysLeft: Math.max(0, Math.ceil((ends - Date.now()) / (24 * 60 * 60 * 1000))) };
+    } catch { trialBanner = null; }
+  }
 
   return (
     <div className="flex min-h-screen bg-canvas">
@@ -85,6 +100,13 @@ export default async function OfficeLayout({ children }: { children: React.React
         </div>
       </aside>
       <div className="flex-1 overflow-x-hidden">
+        {trialBanner ? (
+          <Link href="/office/billing" className="block bg-amber/15 px-6 py-2 text-center text-sm font-medium text-navy hover:bg-amber/20">
+            {trialBanner.daysLeft > 0
+              ? `You're on a free trial — ${trialBanner.daysLeft} day${trialBanner.daysLeft === 1 ? "" : "s"} left. Add payment to keep your centre active →`
+              : "Your free trial has ended — add payment to keep your centre active →"}
+          </Link>
+        ) : null}
         <div className="mx-auto max-w-6xl px-6 py-8">{children}</div>
       </div>
     </div>
