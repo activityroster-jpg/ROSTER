@@ -19,6 +19,10 @@ export interface CloudflareEnv {
   BETTER_AUTH_URL?: string;
   STRIPE_SECRET_KEY?: string;
   STRIPE_WEBHOOK_SECRET?: string;
+  // Recurring price IDs for the single plan, one per billing interval.
+  STRIPE_PRICE_MONTHLY?: string;
+  STRIPE_PRICE_ANNUAL?: string;
+  // Legacy names (kept as fallbacks for the monthly price).
   STRIPE_PRICE_ROSTERING?: string;
   STRIPE_PRICE_FULL?: string;
   SENTRY_DSN?: string;

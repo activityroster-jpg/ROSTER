@@ -18,3 +18,18 @@ export const PLAN_LABELS: Record<Plan, string> = {
   rostering: "Rostering",
   full: "Full",
 };
+
+export const BILLING_INTERVALS = ["monthly", "annual"] as const;
+export type BillingInterval = (typeof BILLING_INTERVALS)[number];
+
+/**
+ * The Stripe price id for a billing interval, from env (never the client). The
+ * monthly price falls back to the legacy STRIPE_PRICE_ROSTERING name.
+ */
+export function priceIdForInterval(env: CloudflareEnv, interval: BillingInterval): string {
+  const priceId = interval === "annual"
+    ? env.STRIPE_PRICE_ANNUAL
+    : (env.STRIPE_PRICE_MONTHLY ?? env.STRIPE_PRICE_ROSTERING);
+  if (!priceId) throw new Error(`No Stripe price configured for the ${interval} interval`);
+  return priceId;
+}
