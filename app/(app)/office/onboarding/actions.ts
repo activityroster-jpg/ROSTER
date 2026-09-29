@@ -1,8 +1,9 @@
 "use server";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { requireTenant } from "@/lib/tenant/require";
+import { getAuth } from "@/lib/auth";
 import {
   COURSE_AUDIENCES,
   EMPLOYMENT_TYPES,
@@ -13,6 +14,7 @@ import {
   type SlotStyle,
 } from "@/lib/db/schema";
 import { writeAudit } from "@/lib/services/audit";
+import { linkInstructorUser } from "@/lib/services/invite";
 import { serializeFeatures } from "@/lib/features";
 import { DEFAULT_COURSE_TYPES, DEFAULT_GRADES } from "@/lib/seed/catalogue";
 import { ONBOARDED_COOKIE } from "@/lib/onboarding";
@@ -91,16 +93,23 @@ export async function setCoursesRunAction(activeIds: string[]): Promise<Result> 
   return { ok: true };
 }
 
-/** Add a team member with the qualifications (instructor types) they hold. */
+/**
+ * Add a team member: the qualifications (instructor types) they hold, the
+ * courses they're approved to teach, and — if an email is given — a portal
+ * invite. Mirrors the simplified staff-tab flow (setupInstructorAction) so
+ * onboarding and the Staff tab stay identical.
+ */
 export async function addTeamMemberAction(input: {
   name: string;
   email?: string;
   employmentType: string;
   qualificationTypeIds: string[];
-}): Promise<Result> {
+  courseTypeIds?: string[];
+}): Promise<{ ok: boolean; error?: string; invited?: boolean; message?: string }> {
   const { ctx, repos } = await requireTenant({ role: "admin" });
   const name = (input.name ?? "").trim();
   if (!name) return { ok: false, error: "Name is required" };
+  const email = input.email?.trim().toLowerCase() || null;
 
   const employmentType: EmploymentType = (EMPLOYMENT_TYPES as readonly string[]).includes(input.employmentType)
     ? (input.employmentType as EmploymentType)
@@ -108,7 +117,7 @@ export async function addTeamMemberAction(input: {
 
   const instructor = await repos.tenant.instructor.insert(ctx, {
     name,
-    email: input.email?.trim() || null,
+    email,
     phone: null,
     employmentType,
     status: "active",
@@ -128,10 +137,43 @@ export async function addTeamMemberAction(input: {
     }
   }
 
-  await writeAudit(repos, ctx, { action: "create", entity: "instructor", entityId: instructor.id, after: { name, quals: input.qualificationTypeIds } });
+  // Courses they're approved to teach (validated against this centre's types).
+  const courseTypeIds = [...new Set(input.courseTypeIds ?? [])];
+  if (courseTypeIds.length) {
+    const validCourses = new Set((await repos.tenant.courseType.list(ctx)).map((c) => c.id));
+    for (const cid of courseTypeIds) {
+      if (validCourses.has(cid)) await repos.tenant.instructorCourseType.insert(ctx, { instructorId: instructor.id, courseTypeId: cid });
+    }
+  }
+
+  await writeAudit(repos, ctx, { action: "create", entity: "instructor", entityId: instructor.id, after: { name, quals: input.qualificationTypeIds, courses: courseTypeIds.length } });
+
+  // Invite: link a user + membership and email a magic sign-in link (best effort).
+  let invited = false;
+  if (email) {
+    const linked = await linkInstructorUser(repos, ctx, instructor.id);
+    if (linked.ok) {
+      try {
+        const auth = await getAuth();
+        await auth.api.signInMagicLink({ body: { email: linked.email, callbackURL: "/portal/documents" }, headers: new Headers(await headers()) });
+        invited = true;
+      } catch (err) {
+        console.error("[onboarding] invite email failed:", (err as Error).message);
+      }
+    }
+  }
+
   revalidatePath("/office/onboarding");
   revalidatePath("/office/staff");
-  return { ok: true };
+  return {
+    ok: true,
+    invited,
+    message: invited
+      ? `${name} added — invite emailed to ${email}`
+      : email
+        ? `${name} added — couldn't email the invite, resend from their profile`
+        : `${name} added`,
+  };
 }
 
 /** Add a custom qualification / instructor type ("job type") on the fly. */

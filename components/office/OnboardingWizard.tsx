@@ -17,7 +17,7 @@ import { OPTIONAL_FEATURES, type CourseAudience, type OptionalFeature } from "@/
 
 export interface CourseTypeOpt { id: string; name: string; scheme: string | null; audience: CourseAudience; category: string | null; active: boolean }
 export interface QualOpt { id: string; name: string; discipline: string | null }
-export interface TeamMember { name: string; employment: string; quals: number }
+export interface TeamMember { name: string; employment: string; quals: number; courses?: number; invited?: boolean }
 
 const EMPLOYMENT = [
   { value: "employed", label: "Employed" },
@@ -85,7 +85,12 @@ export function OnboardingWizard({
   const [employment, setEmployment] = useState("employed");
   const [chosenQuals, setChosenQuals] = useState<Set<string>>(new Set());
   const toggleQual = (id: string) => setChosenQuals((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const [chosenTeach, setChosenTeach] = useState<Set<string>>(new Set());
+  const toggleTeach = (id: string) => setChosenTeach((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const [newType, setNewType] = useState("");
+
+  // Courses this instructor can teach are picked from the ones the centre runs.
+  const runCourses = useMemo(() => allCourses.filter((c) => selectedCourses.has(c.id)), [allCourses, selectedCourses]);
 
   const addType = () => {
     const name = newType.trim();
@@ -147,10 +152,11 @@ export function OnboardingWizard({
     setMsg(null);
     if (!name.trim()) { setMsg("Enter a name"); return; }
     startTransition(async () => {
-      const res = await addTeamMemberAction({ name, email, employmentType: employment, qualificationTypeIds: [...chosenQuals] });
+      const res = await addTeamMemberAction({ name, email, employmentType: employment, qualificationTypeIds: [...chosenQuals], courseTypeIds: [...chosenTeach] });
       if (res.ok) {
-        setTeam((t) => [...t, { name: name.trim(), employment, quals: chosenQuals.size }]);
-        setName(""); setEmail(""); setChosenQuals(new Set());
+        setTeam((t) => [...t, { name: name.trim(), employment, quals: chosenQuals.size, courses: chosenTeach.size, invited: res.invited }]);
+        setName(""); setEmail(""); setChosenQuals(new Set()); setChosenTeach(new Set());
+        setMsg(res.message ?? null);
       } else setMsg(res.error ?? "Could not add");
     });
   };
@@ -301,12 +307,12 @@ export function OnboardingWizard({
       {step === 3 ? (
         <div className="rounded-card border border-slate-200 bg-white p-6">
           <h2 className="font-display text-lg font-semibold text-navy">Add your team</h2>
-          <p className="mt-1 text-sm text-slate-500">Add instructors and tick the qualifications they hold. The courses they&apos;re approved to run are worked out from these automatically.</p>
+          <p className="mt-1 text-sm text-slate-500">Add each instructor, tick the qualifications they hold and the courses they can teach. Add their email and we&apos;ll send them an invite to upload their licences themselves.</p>
 
           <form onSubmit={addMember} className="mt-4 rounded-lg bg-canvas p-4">
             <div className="grid gap-3 sm:grid-cols-3">
               <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-              <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email (optional)" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+              <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email (to send an invite)" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
               <select value={employment} onChange={(e) => setEmployment(e.target.value)} className="rounded-lg border border-slate-300 px-3 py-2 text-sm">
                 {EMPLOYMENT.map((e) => <option key={e.value} value={e.value}>{e.label}</option>)}
               </select>
@@ -336,11 +342,29 @@ export function OnboardingWizard({
               />
               <button type="button" onClick={addType} disabled={pending} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-navy hover:bg-slate-50 disabled:opacity-50">+ Add type</button>
             </div>
+
+            <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">Courses they can teach</p>
+            {runCourses.length === 0 ? (
+              <p className="mt-1 text-xs text-slate-400">Pick the courses you run in the previous step and they&apos;ll appear here.</p>
+            ) : (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {runCourses.map((c) => {
+                  const on = chosenTeach.has(c.id);
+                  return (
+                    <button key={c.id} type="button" onClick={() => toggleTeach(c.id)}
+                      className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${on ? "border-teal bg-teal text-white" : "border-slate-300 text-slate-600 hover:border-slate-400"}`}>
+                      {on ? "✓ " : ""}{c.name}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
             <div className="mt-4 flex items-center gap-3">
               <button type="submit" disabled={pending} className="rounded-lg bg-navy px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:opacity-60">
                 {pending ? "Adding…" : "+ Add to team"}
               </button>
-              {msg ? <span className="text-sm text-port">{msg}</span> : null}
+              {msg ? <span className={`text-sm ${/couldn|required|Enter/.test(msg) ? "text-port" : "text-starboard"}`}>{msg}</span> : null}
             </div>
           </form>
 
@@ -348,8 +372,8 @@ export function OnboardingWizard({
             <ul className="mt-4 space-y-1.5">
               {team.map((m, i) => (
                 <li key={i} className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-sm">
-                  <span className="font-medium text-navy">{m.name}</span>
-                  <span className="text-xs text-slate-400 capitalize">{m.employment}{m.quals ? ` · ${m.quals} qual${m.quals > 1 ? "s" : ""}` : ""}</span>
+                  <span className="font-medium text-navy">{m.name}{m.invited ? <span className="ml-2 rounded-full bg-teal/15 px-2 py-0.5 text-[10px] font-semibold text-teal">invited</span> : null}</span>
+                  <span className="text-xs text-slate-400 capitalize">{m.employment}{m.quals ? ` · ${m.quals} qual${m.quals > 1 ? "s" : ""}` : ""}{m.courses ? ` · teaches ${m.courses}` : ""}</span>
                 </li>
               ))}
             </ul>
