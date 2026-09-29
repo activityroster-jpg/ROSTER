@@ -53,15 +53,18 @@ const NAV = [
 export default async function OfficeLayout({ children }: { children: React.ReactNode }) {
   const { organisation } = await requireTenant({ role: "admin" });
 
-  // Free-trial nudge: show days left until they add payment.
-  let trialBanner: { daysLeft: number } | null = null;
-  if (organisation.subscriptionStatus !== "active") {
+  // Billing nudge: distinguish an active free trial from a failed payment.
+  const sub = organisation.subscriptionStatus;
+  let banner: { kind: "trial" | "pastdue"; daysLeft: number } | null = null;
+  if (sub === "past_due" || sub === "unpaid") {
+    banner = { kind: "pastdue", daysLeft: 0 };
+  } else if (sub === "trialing" || sub == null) {
     try {
       const pricing = await new PlatformRepository(await getDb()).getPricing();
       const created = organisation.createdAt instanceof Date ? organisation.createdAt.getTime() : Number(organisation.createdAt);
       const ends = created + pricing.trialDays * 24 * 60 * 60 * 1000;
-      trialBanner = { daysLeft: Math.max(0, Math.ceil((ends - Date.now()) / (24 * 60 * 60 * 1000))) };
-    } catch { trialBanner = null; }
+      banner = { kind: "trial", daysLeft: Math.max(0, Math.ceil((ends - Date.now()) / (24 * 60 * 60 * 1000))) };
+    } catch { banner = null; }
   }
 
   return (
@@ -100,10 +103,14 @@ export default async function OfficeLayout({ children }: { children: React.React
         </div>
       </aside>
       <div className="flex-1 overflow-x-hidden">
-        {trialBanner ? (
+        {banner?.kind === "pastdue" ? (
+          <Link href="/office/billing" className="block bg-port/15 px-6 py-2 text-center text-sm font-medium text-port hover:bg-port/20">
+            Your last payment failed — update your card to keep your centre active →
+          </Link>
+        ) : banner?.kind === "trial" ? (
           <Link href="/office/billing" className="block bg-amber/15 px-6 py-2 text-center text-sm font-medium text-navy hover:bg-amber/20">
-            {trialBanner.daysLeft > 0
-              ? `You're on a free trial — ${trialBanner.daysLeft} day${trialBanner.daysLeft === 1 ? "" : "s"} left. Add payment to keep your centre active →`
+            {banner.daysLeft > 0
+              ? `You're on a free trial — ${banner.daysLeft} day${banner.daysLeft === 1 ? "" : "s"} left. Add payment to keep your centre active →`
               : "Your free trial has ended — add payment to keep your centre active →"}
           </Link>
         ) : null}

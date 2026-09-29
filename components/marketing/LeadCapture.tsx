@@ -33,7 +33,7 @@ export function LeadCapture({
   const [setupMode, setSetupMode] = useState<"basic" | "full">("basic");
   const [status, setStatus] = useState<"idle" | "busy" | "done" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<{ url: string; emailSent: boolean; emailError?: string } | null>(null);
+  const [result, setResult] = useState<{ url: string; emailSent: boolean } | null>(null);
 
   const onCentreName = (v: string) => {
     setCentreName(v);
@@ -52,13 +52,13 @@ export function LeadCapture({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ownerEmail: email, password, centreName, slug, jurisdiction, setupMode, source }),
       });
-      const data = (await res.json()) as { ok?: boolean; error?: string; detail?: string; url?: string; emailSent?: boolean; emailError?: string };
+      const data = (await res.json()) as { ok?: boolean; error?: string; url?: string; emailSent?: boolean };
       if (!res.ok || !data.ok) {
-        setError([data.error, data.detail].filter(Boolean).join(" — ") || "Something went wrong. Please try again.");
+        setError(data.error || "Something went wrong. Please try again.");
         setStatus("error");
         return;
       }
-      setResult({ url: data.url ?? `https://${slug}.${apex}`, emailSent: data.emailSent ?? false, emailError: data.emailError });
+      setResult({ url: data.url ?? `https://${slug}.${apex}`, emailSent: data.emailSent ?? false });
       setStatus("done");
     } catch {
       setError("Network error. Please try again.");
@@ -83,9 +83,6 @@ export function LeadCapture({
           {result.emailSent ? <>Didn&apos;t get it? Check spam, or sign in at </> : <>Go to </>}
           <a href={`${result.url}/sign-in`} className="font-semibold text-teal hover:underline">{slug}.{apex}/sign-in</a>.
         </p>
-        {result.emailError ? (
-          <p className="mt-2 text-xs text-port">Confirmation email couldn&apos;t send: {result.emailError}</p>
-        ) : null}
         <p className="mt-3 text-xs text-slate-500">
           {setupMode === "basic"
             ? "Set up with RYA defaults — you can start rostering as soon as you're in."
