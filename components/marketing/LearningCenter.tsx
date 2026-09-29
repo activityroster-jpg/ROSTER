@@ -1,0 +1,411 @@
+"use client";
+
+import { useState } from "react";
+
+/** A block of guide content. */
+type Block =
+  | { kind: "p"; text: string }
+  | { kind: "steps"; items: string[] }
+  | { kind: "bullets"; items: string[] }
+  | { kind: "tip"; text: string }
+  | { kind: "sub"; text: string };
+
+interface Section {
+  id: string;
+  icon: string;
+  label: string;
+  blurb: string;
+  blocks: Block[];
+}
+
+const SECTIONS: Section[] = [
+  {
+    id: "getting-started",
+    icon: "🚀",
+    label: "Getting started",
+    blurb: "Set your centre up in a few minutes with the guided wizard.",
+    blocks: [
+      { kind: "p", text: "When you first sign in you land on the onboarding wizard. It only asks for what it needs to get you rostering — everything else can wait." },
+      { kind: "sub", text: "The four steps" },
+      { kind: "steps", items: [
+        "How you run — pick the extra features you want (equipment, locations, operating areas, payroll, info) and choose whether your sessions run as Morning/Afternoon/Evening slots or with explicit start & end times.",
+        "Courses — tick the RYA courses you offer (grouped by youth and adult), or add your own. Use “Add all RYA courses” if you run a lot of them.",
+        "Team — add each instructor, tick the qualifications they hold and the courses they can teach, and add their email to send an invite.",
+        "Finish — you're ready to roster. Any optional features you switched on appear here with a “set up” link.",
+      ] },
+      { kind: "tip", text: "You can leave the wizard at any time with “Skip for now”. The dashboard keeps a checklist so you can finish setup later." },
+    ],
+  },
+  {
+    id: "dashboard",
+    icon: "📊",
+    label: "Dashboard & calendar",
+    blurb: "Your week at a glance — the visual heart of the platform.",
+    blocks: [
+      { kind: "p", text: "The dashboard opens on today. At the top you'll find quick tiles (on the water now, hours logged, sessions this week) and anything needing attention (staff not cleared, checks expiring, courses to cover, leave to approve, open shifts)." },
+      { kind: "sub", text: "The week calendar" },
+      { kind: "p", text: "Below the tiles is a colour-coded week calendar — youth courses in amber, adult in teal. Use the ← → buttons to move between weeks, or “This week” to jump back. Click any course block to open it." },
+      { kind: "sub", text: "This week's rota" },
+      { kind: "p", text: "Under the calendar is the written rota for the week — every session, who's on it, where and when — with a link to the full printable rota." },
+      { kind: "tip", text: "The “＋ New course” button on the calendar takes you straight to the course planner." },
+    ],
+  },
+  {
+    id: "courses",
+    icon: "📅",
+    label: "Courses & sessions",
+    blurb: "Build a course with any pattern of sessions across days and times.",
+    blocks: [
+      { kind: "p", text: "Open Courses. At the top is the planner: a week calendar plus a builder. A course is one thing (e.g. “Aug Half-Term Kids Camp”) made of one or more sessions on whatever days and times you like." },
+      { kind: "sub", text: "Create a course" },
+      { kind: "steps", items: [
+        "Give it a name (optional but recommended — it makes the course unique and easy to find).",
+        "Pick the course type (this sets the RYA scheme, ratios and whether safety cover is required).",
+        "Add sessions — click a day in the calendar, or use “＋ Add session”. Add as many as you need: e.g. two on Saturday, one Monday evening, one Wednesday.",
+        "For each session set the slot (Morning/Afternoon/Evening) or the exact start & end times, depending on your setup.",
+        "Click “Create course”.",
+      ] },
+      { kind: "sub", text: "Manage a course" },
+      { kind: "bullets", items: [
+        "Open a course to rename it, change its status (draft, scheduled, confirmed, completed, cancelled), add or remove sessions, and assign staff.",
+        "Each course card shows its audience (youth/adult), the date/times of its sessions, and its staffing status (covered / under-staffed / no safety cover).",
+      ] },
+      { kind: "tip", text: "Deleting a course removes its sessions, staff assignments, equipment and location links too — so you don't leave orphans behind." },
+    ],
+  },
+  {
+    id: "import",
+    icon: "📥",
+    label: "Importing courses",
+    blurb: "Bring your existing schedule in from a spreadsheet or calendar.",
+    blocks: [
+      { kind: "p", text: "On the Courses page use “Import from spreadsheet / calendar”. You can paste or upload a CSV, or an .ics calendar file." },
+      { kind: "steps", items: [
+        "Upload or paste your data.",
+        "We detect the columns (course, date, time, audience) automatically and turn each row into a draft session.",
+        "Review the drafts — anything uncertain is flagged so you can correct it before it's saved.",
+        "Confirm to create the courses and sessions.",
+      ] },
+      { kind: "tip", text: "Import is a great way to move a season's worth of courses over in one go instead of typing them in one by one." },
+    ],
+  },
+  {
+    id: "staff",
+    icon: "👥",
+    label: "Staff & team",
+    blurb: "Add instructors, job types and the courses they can teach.",
+    blocks: [
+      { kind: "p", text: "The Staff tab lists everyone at your centre with their status and whether they're cleared to roster." },
+      { kind: "sub", text: "Add an instructor" },
+      { kind: "steps", items: [
+        "Enter their name and (optionally) email.",
+        "Pick their employment type — employed, freelance or volunteer. Need a different one? Add a custom job/instructor type inline.",
+        "Tick the qualifications/tickets they hold and the courses they can teach (a searchable tickbox list).",
+        "Save. If you gave an email, they're automatically invited to the instructor app to upload their own licences.",
+      ] },
+      { kind: "sub", text: "Courses each person can teach" },
+      { kind: "p", text: "Each staff profile shows the courses they're approved to teach. This drives the fit checks when you roster — and you can see it at a glance on their profile." },
+    ],
+  },
+  {
+    id: "licences",
+    icon: "🎫",
+    label: "Licences, tickets & vetting",
+    blurb: "Track every ticket and check, with expiry alerts.",
+    blocks: [
+      { kind: "p", text: "Every instructor has a document area for their qualifications (dinghy, keelboat, windsurf, SUP, powerboat, first aid…) and their checks (DBS, safeguarding, first aid)." },
+      { kind: "sub", text: "Two ways to add documents" },
+      { kind: "bullets", items: [
+        "The instructor uploads their own: they pick the licence from a dropdown, add a photo/scan and the expiry date.",
+        "The office uploads on their behalf and can edit the expiry, add a reference/certificate number, and mark it verified.",
+      ] },
+      { kind: "sub", text: "Expiry alerts" },
+      { kind: "p", text: "Anything expiring within your lead time is flagged on the dashboard and the staff list. Expired mandatory checks stop an instructor being rostered until they're renewed." },
+      { kind: "tip", text: "“Not cleared to roster” always shows the actual reason (e.g. “DBS missing”, “First Aid expired”) rather than a vague label." },
+    ],
+  },
+  {
+    id: "availability",
+    icon: "🗓️",
+    label: "Availability",
+    blurb: "Collect availability and see it before you build the roster.",
+    blocks: [
+      { kind: "p", text: "Instructors submit their availability from their own app — free, maybe or busy for each Morning/Afternoon/Evening slot." },
+      { kind: "sub", text: "The availability sheet" },
+      { kind: "bullets", items: [
+        "The office sees a grid of everyone's availability for the week, with a count of how many are free in each slot.",
+        "Click through past and future weeks with the ← → buttons.",
+        "A navy dot shows where someone is already rostered, so you can see availability and commitments together.",
+      ] },
+      { kind: "tip", text: "The number under each slot tells you how many instructors are free then — handy before you start assigning." },
+    ],
+  },
+  {
+    id: "rostering",
+    icon: "✅",
+    label: "Rostering & assigning",
+    blurb: "Assign staff with ratio, safety-cover, fit and conflict checks.",
+    blocks: [
+      { kind: "p", text: "Assign staff from a course (either the card on the Courses page or the course's own page)." },
+      { kind: "steps", items: [
+        "Pick an instructor. The dropdown shows whether they're cleared (and the reason if not) and whether they're available for this course's times.",
+        "Pick their role (e.g. Senior Instructor, Instructor, Safety Boat).",
+        "Assign. We check they're qualified, not double-booked, and that the course meets its ratio and safety-cover requirements.",
+      ] },
+      { kind: "sub", text: "Overrides" },
+      { kind: "p", text: "If someone isn't cleared, is unavailable, or would clash, you can still assign them by ticking “assign anyway” and adding a reason. The override is recorded to the audit log with who did it." },
+      { kind: "tip", text: "When you pick someone who's unavailable for the course's times, a clear amber note tells you before you commit." },
+    ],
+  },
+  {
+    id: "bulk",
+    icon: "⚡",
+    label: "Bulk assign",
+    blurb: "Roster one instructor onto many courses at once.",
+    blocks: [
+      { kind: "p", text: "On the Courses page, open “Bulk assign staff” to roster the same person across a run of courses in one pass." },
+      { kind: "steps", items: [
+        "Pick the instructor and the role.",
+        "Filter the course list (all / youth / adult / needs cover) and tick the courses — or “select all shown”.",
+        "Optionally tick “assign anyway” with a reason to override checks.",
+        "Assign. You get a summary: how many were assigned, how many they were already on, and how many were skipped and why.",
+      ] },
+      { kind: "tip", text: "Bulk assign runs the same safety checks as a single assignment, and never double-books — a course they're already on is left untouched." },
+    ],
+  },
+  {
+    id: "rota",
+    icon: "🖨️",
+    label: "Weekly rota & PDF",
+    blurb: "A clean, printable rota for the wall or the inbox.",
+    blocks: [
+      { kind: "p", text: "The Rota page shows the whole week: each day, each session, who's working, their role, the location/classroom and the times." },
+      { kind: "bullets", items: [
+        "Move between weeks with the navigation.",
+        "Use your browser's print/Save-as-PDF to produce a tidy printable rota — the layout is designed for it.",
+        "Unassigned or under-covered sessions are clearly marked so nothing slips through.",
+      ] },
+    ],
+  },
+  {
+    id: "equipment",
+    icon: "⛵",
+    label: "Equipment & boats",
+    blurb: "Track boats, yachts, engines and kit — and avoid clashes.",
+    blocks: [
+      { kind: "p", text: "If you switched on equipment tracking, the Equipment tab lets you record your fleet and kit by type — dinghies, keelboats, yachts, motor cruisers, coach/safety boats, SUPs and more." },
+      { kind: "bullets", items: [
+        "Assign tracked units to a course; the platform flags if the same unit is booked on two overlapping sessions.",
+        "Bulk (untracked) kit doesn't conflict — use it for consumables and shared gear.",
+      ] },
+      { kind: "tip", text: "Equipment isn't gated — if it's not switched on you'll see a notice on the page with a one-click option to turn it on." },
+    ],
+  },
+  {
+    id: "locations",
+    icon: "📍",
+    label: "Locations & areas",
+    blurb: "Organise your sites, classrooms and operating areas.",
+    blocks: [
+      { kind: "p", text: "The Locations tab lets you add the places you run from and group them into categories (e.g. “On the water”, “Classrooms”, “Off-site”)." },
+      { kind: "steps", items: [
+        "Add a location.",
+        "Put it in a category — or add your own category if none fits.",
+        "Attach locations to courses so they appear on the rota.",
+      ] },
+    ],
+  },
+  {
+    id: "time",
+    icon: "⏱️",
+    label: "Time & attendance",
+    blurb: "Clock in/out and get payroll-ready hours.",
+    blocks: [
+      { kind: "p", text: "Instructors clock in and out from their app. The office sees who's on the water now and the hours logged today." },
+      { kind: "bullets", items: [
+        "Timesheets build automatically from clock events.",
+        "Export payroll-ready hours when you run payroll.",
+      ] },
+    ],
+  },
+  {
+    id: "leave",
+    icon: "🌴",
+    label: "Leave & open shifts",
+    blurb: "Approve leave and offer shifts that need cover.",
+    blocks: [
+      { kind: "p", text: "Staff request leave from their app; you approve or decline from the Leave area, where pending requests are counted on the dashboard." },
+      { kind: "bullets", items: [
+        "Open shifts let you advertise a session that needs cover; available staff can pick it up.",
+        "Approved leave feeds into availability so you don't roster someone who's off.",
+      ] },
+    ],
+  },
+  {
+    id: "notifications",
+    icon: "🔔",
+    label: "Notifications",
+    blurb: "Keep staff informed by email or in-app.",
+    blocks: [
+      { kind: "p", text: "Each instructor can choose whether to receive email notifications. In-app notifications keep them up to date with roster changes, leave decisions and shift offers." },
+      { kind: "tip", text: "Turn an instructor's email notifications off on their profile if they prefer in-app only." },
+    ],
+  },
+  {
+    id: "billing",
+    icon: "💳",
+    label: "Billing & invoices",
+    blurb: "Manage your subscription and get VAT invoices.",
+    blocks: [
+      { kind: "p", text: "Your centre starts with a free month — no card required. When you're ready, choose monthly or annual (annual includes several months free) and enter card details through secure checkout." },
+      { kind: "bullets", items: [
+        "VAT is handled automatically at checkout for business customers.",
+        "After payment you get a proper VAT invoice — downloadable as PDF and emailed to you.",
+        "Manage your subscription and download past invoices from the billing area at any time.",
+      ] },
+    ],
+  },
+  {
+    id: "admin-security",
+    icon: "🔒",
+    label: "Admin & security",
+    blurb: "Roles, the 4-digit PIN and the audit trail.",
+    blocks: [
+      { kind: "p", text: "Access is authorised on every request: we resolve your account, your centre and your role, and deny anyone who isn't a member." },
+      { kind: "sub", text: "Second-factor PIN" },
+      { kind: "steps", items: [
+        "Each admin sets a 4-digit PIN the first time they sign in.",
+        "The PIN is asked for at every login, in addition to the password.",
+        "Too many wrong attempts locks the PIN for a cool-off period.",
+      ] },
+      { kind: "sub", text: "Audit trail" },
+      { kind: "p", text: "Every roster, resource, settings and billing change is written to an audit log — including who made an override and why." },
+    ],
+  },
+  {
+    id: "settings",
+    icon: "⚙️",
+    label: "Settings & configuration",
+    blurb: "Tune courses, roles, checks and how sessions run.",
+    blocks: [
+      { kind: "p", text: "Settings is where you adjust the defaults you set during onboarding." },
+      { kind: "bullets", items: [
+        "Activate or retire course types, qualification/instructor types and compliance checks — retired items keep their history and stop appearing for new records.",
+        "Switch optional features on or off.",
+        "Change how sessions run (slots vs explicit times) and your alert lead time for expiries.",
+      ] },
+      { kind: "tip", text: "Configuration is deactivate-never-delete: old records keep pointing at retired settings and still render correctly." },
+    ],
+  },
+  {
+    id: "data",
+    icon: "🛡️",
+    label: "Data, privacy & export",
+    blurb: "EU-hosted, GDPR-ready, and yours to export.",
+    blocks: [
+      { kind: "p", text: "Your data is pinned to the EU for GDPR, with PII scrubbing on error monitoring. Each centre's data is structurally isolated — it can never be read alongside another centre's." },
+      { kind: "bullets", items: [
+        "Export your centre's data at any time.",
+        "If a centre is ever suspended, it can still export within the retention window before deletion.",
+      ] },
+    ],
+  },
+];
+
+function BlockView({ b }: { b: Block }) {
+  switch (b.kind) {
+    case "p":
+      return <p className="text-sm leading-relaxed text-slate-600">{b.text}</p>;
+    case "sub":
+      return <h3 className="mt-5 font-display text-base font-semibold text-navy">{b.text}</h3>;
+    case "steps":
+      return (
+        <ol className="ml-1 space-y-2">
+          {b.items.map((t, i) => (
+            <li key={i} className="flex gap-3 text-sm text-slate-600">
+              <span className="mt-0.5 flex h-5 w-5 flex-none items-center justify-center rounded-full bg-teal text-[11px] font-bold text-white">{i + 1}</span>
+              <span>{t}</span>
+            </li>
+          ))}
+        </ol>
+      );
+    case "bullets":
+      return (
+        <ul className="space-y-1.5">
+          {b.items.map((t, i) => (
+            <li key={i} className="flex gap-2 text-sm text-slate-600">
+              <span className="mt-1.5 h-1.5 w-1.5 flex-none rounded-full bg-teal" />
+              <span>{t}</span>
+            </li>
+          ))}
+        </ul>
+      );
+    case "tip":
+      return (
+        <div className="rounded-lg border-l-4 border-amber bg-amber/10 px-4 py-2.5 text-sm text-navy">
+          <span className="font-semibold">Tip:</span> {b.text}
+        </div>
+      );
+  }
+}
+
+export function LearningCenter() {
+  const [active, setActive] = useState(SECTIONS[0]!.id);
+  const section = SECTIONS.find((s) => s.id === active) ?? SECTIONS[0]!;
+
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-12">
+      <div className="text-center">
+        <p className="text-sm font-semibold uppercase tracking-wide text-teal">Learning Centre</p>
+        <h1 className="mt-1 font-display text-3xl font-bold text-navy sm:text-4xl">How to use ActivityRoster</h1>
+        <p className="mx-auto mt-3 max-w-2xl text-slate-600">
+          A step-by-step guide to every part of the platform — from first setup to rostering, licences, billing and
+          data. Pick a topic to jump in.
+        </p>
+      </div>
+
+      <div className="mt-10 grid gap-6 lg:grid-cols-[16rem_1fr]">
+        {/* Tab list */}
+        <nav aria-label="Learning topics" className="lg:sticky lg:top-6 lg:self-start">
+          <ul className="flex gap-2 overflow-x-auto pb-2 lg:flex-col lg:gap-1 lg:overflow-visible lg:pb-0">
+            {SECTIONS.map((s) => {
+              const on = s.id === active;
+              return (
+                <li key={s.id} className="flex-none lg:flex-auto">
+                  <button
+                    type="button"
+                    onClick={() => setActive(s.id)}
+                    aria-current={on ? "true" : undefined}
+                    className={`flex w-full items-center gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-left text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-teal ${on ? "bg-navy text-white" : "text-slate-600 hover:bg-slate-100"}`}
+                  >
+                    <span aria-hidden="true">{s.icon}</span>
+                    <span>{s.label}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+
+        {/* Panel */}
+        <article className="rounded-card border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+          <div className="flex items-start gap-3">
+            <span className="text-3xl" aria-hidden="true">{section.icon}</span>
+            <div>
+              <h2 className="font-display text-2xl font-bold text-navy">{section.label}</h2>
+              <p className="mt-1 text-sm text-slate-500">{section.blurb}</p>
+            </div>
+          </div>
+          <div className="mt-6 space-y-3">
+            {section.blocks.map((b, i) => <BlockView key={i} b={b} />)}
+          </div>
+
+          <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-5">
+            <a href="/#get-demo" className="rounded-lg bg-teal px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal-700">Start my free month</a>
+            <span className="text-xs text-slate-400">Every centre gets the whole platform — explore each topic to see what&apos;s included.</span>
+          </div>
+        </article>
+      </div>
+    </div>
+  );
+}

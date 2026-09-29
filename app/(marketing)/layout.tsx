@@ -14,6 +14,12 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
             <Link href="/#features" className="hidden hover:text-navy sm:inline">
               Features
             </Link>
+            <Link href="/compare" className="hidden hover:text-navy sm:inline">
+              Compare
+            </Link>
+            <Link href="/learn" className="hidden hover:text-navy sm:inline">
+              Learn
+            </Link>
             <Link href="/demo" className="hover:text-navy">
               Demo
             </Link>
@@ -32,6 +38,8 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
         <div className="mx-auto max-w-6xl px-4 py-8 text-sm text-slate-500">
           <nav className="mb-3 flex flex-wrap gap-x-5 gap-y-2 font-medium text-slate-600">
             <Link href="/pricing" className="hover:text-navy">Pricing</Link>
+            <Link href="/compare" className="hover:text-navy">Compare</Link>
+            <Link href="/learn" className="hover:text-navy">Learning Centre</Link>
             <Link href="/demo" className="hover:text-navy">Demo</Link>
             <Link href="/privacy" className="hover:text-navy">Privacy</Link>
             <Link href="/terms" className="hover:text-navy">Terms</Link>
