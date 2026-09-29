@@ -11,21 +11,28 @@ export function AssignStaffForm({
   roles,
 }: {
   courseId: string;
-  instructors: { id: string; name: string; fit: boolean; reason?: string }[];
+  instructors: { id: string; name: string; fit: boolean; reason?: string; avail?: "available" | "unavailable" | "partial" | "unset" | "none" }[];
   roles: { id: string; name: string }[];
 }) {
   const [state, action, pending] = useActionState(assignStaffAction, initial);
   const [override, setOverride] = useState(false);
+  const [chosen, setChosen] = useState("");
+
+  const availLabel = (a?: string) =>
+    a === "available" ? "✓ available" : a === "unavailable" ? "✕ not available" : a === "partial" ? "~ partly available" : a === "unset" ? "availability not set" : "";
+  const selected = instructors.find((i) => i.id === chosen);
+  const availWarn = selected && (selected.avail === "unavailable" || selected.avail === "unset" || selected.avail === "partial");
 
   return (
     <form action={action} className="mt-3 grid gap-2 rounded-lg bg-slate-50 p-3 sm:grid-cols-2">
       <input type="hidden" name="courseId" value={courseId} />
-      <select name="instructorId" required className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal">
+      <select name="instructorId" required value={chosen} onChange={(e) => setChosen(e.target.value)} className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal">
         <option value="">Instructor…</option>
         {instructors.map((i) => (
           <option key={i.id} value={i.id}>
             {i.name}
             {i.fit ? "" : ` — ${i.reason || "not cleared"}`}
+            {i.avail && i.avail !== "none" ? ` · ${availLabel(i.avail)}` : ""}
           </option>
         ))}
       </select>
@@ -47,6 +54,11 @@ export function AssignStaffForm({
         disabled={!override}
         className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal disabled:bg-slate-100"
       />
+      {availWarn ? (
+        <p className="sm:col-span-2 rounded-lg bg-amber/10 px-2.5 py-1.5 text-xs text-navy">
+          ⚠ {selected!.name} {selected!.avail === "unavailable" ? "said they're not available" : selected!.avail === "partial" ? "is only partly available" : "hasn't set availability"} for this course&apos;s times — you can still assign them.
+        </p>
+      ) : null}
       <div className="sm:col-span-2">
         <button
           type="submit"

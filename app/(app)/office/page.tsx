@@ -4,12 +4,13 @@ import { redirect } from "next/navigation";
 import { requireTenant } from "@/lib/tenant/require";
 import { ONBOARDED_COOKIE } from "@/lib/onboarding";
 import { listStaffWithFit } from "@/lib/services/staff";
-import { getWeekRota, getWeekSchedule, weekStart } from "@/lib/services/schedule";
+import { addDays, getSessionEvents, getWeekRota, getWeekSchedule, weekStart } from "@/lib/services/schedule";
 import { getAttendanceBoard } from "@/lib/services/timeclock";
 import { listLeave } from "@/lib/services/leave";
 import { listOpenShifts } from "@/lib/services/openshifts";
 import { getSetupStatus } from "@/lib/services/setup";
 import { Card, StatusPill } from "@/components/ui";
+import { WeekCalendarView } from "@/components/office/WeekCalendarView";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +36,7 @@ export default async function DashboardPage() {
   const monday = weekStart(new Date());
   const today = new Date().toISOString().slice(0, 10);
 
-  const [staff, schedule, attendance, leave, shifts, setup, rota] = await Promise.all([
+  const [staff, schedule, attendance, leave, shifts, setup, rota, events] = await Promise.all([
     listStaffWithFit(repos, ctx),
     getWeekSchedule(repos, ctx, monday),
     getAttendanceBoard(repos, ctx, today),
@@ -43,6 +44,7 @@ export default async function DashboardPage() {
     listOpenShifts(repos, ctx, true),
     getSetupStatus(repos, ctx),
     getWeekRota(repos, ctx, monday),
+    getSessionEvents(repos, ctx, addDays(monday, -7), addDays(monday, 7 * 12)),
   ]);
   const { sessions, coverageByCourse } = schedule;
 
@@ -116,6 +118,17 @@ export default async function DashboardPage() {
         <Tile href="/office/courses" label="Courses to cover" value={uncovered} sub="Understaffed / no cover" tone={uncovered > 0 ? "amber" : "navy"} />
         <Tile href="/office/leave" label="Leave to approve" value={pendingLeave} sub="Pending requests" tone={pendingLeave > 0 ? "amber" : "navy"} />
         <Tile href="/office/leave" label="Open shifts" value={openShifts} sub="Need cover" tone={openShifts > 0 ? "amber" : "navy"} />
+      </div>
+
+      {/* Calendar — the visual heart of the week */}
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="font-display text-lg font-semibold text-navy">Calendar</h2>
+        <Link href="/office/courses" className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-navy hover:bg-slate-50">
+          Plan courses →
+        </Link>
+      </div>
+      <div className="mb-8">
+        <WeekCalendarView events={events} addHref="/office/courses" />
       </div>
 
       {/* This week's rota */}

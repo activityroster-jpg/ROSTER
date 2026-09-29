@@ -54,6 +54,7 @@ export default async function AvailabilityPage({ searchParams }: { searchParams:
         <span className="inline-flex items-center gap-1 rounded-full bg-amber/15 px-2.5 py-0.5 font-medium text-amber">~ Maybe</span>
         <span className="inline-flex items-center gap-1 rounded-full bg-port/15 px-2.5 py-0.5 font-medium text-port">✕ Busy</span>
         <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 font-medium text-slate-400">— Not set</span>
+        <span className="inline-flex items-center gap-1 rounded-full bg-navy/10 px-2.5 py-0.5 font-medium text-navy">● Rostered</span>
       </div>
 
       {rows.length === 0 ? (
@@ -87,9 +88,13 @@ export default async function AvailabilityPage({ searchParams }: { searchParams:
                   {days.map((d, di) => SLOTS.map((s, si) => {
                     const status = r.cells[`${d}|${s}`] ?? "none";
                     const cfg = CELL[status] ?? CELL.none;
+                    const rostered = r.assigned[`${d}|${s}`];
                     return (
                       <td key={`${r.instructorId}-${di}-${s}`} className={`p-0 ${si === 0 ? "border-l border-slate-200" : ""}`}>
-                        <span className={`inline-block h-6 w-9 leading-6 font-semibold ${cfg!.cls}`}>{cfg!.label}</span>
+                        <span className={`relative inline-block h-6 w-9 leading-6 font-semibold ${cfg!.cls}`} title={rostered?.length ? `Rostered: ${rostered.join(", ")}` : undefined}>
+                          {cfg!.label}
+                          {rostered?.length ? <span className="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-navy" /> : null}
+                        </span>
                       </td>
                     );
                   }))}

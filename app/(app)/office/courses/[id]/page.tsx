@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { requireTenant } from "@/lib/tenant/require";
 import { fitReason, listStaffWithFit } from "@/lib/services/staff";
+import { getCourseAvailabilityStates } from "@/lib/services/availability";
 import { courseSession as courseSessionTable, courseStaff as courseStaffTable } from "@/lib/db/schema";
 import { Card, StatusPill } from "@/components/ui";
 import { CourseManage } from "@/components/office/CourseManage";
@@ -41,9 +42,10 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
   const nameById = new Map(instructors.map((i) => [i.id, i.name]));
   const roleName = new Map(roles.map((r) => [r.id, r.name]));
   const fitObjById = new Map(staffFit.map((s) => [s.instructor.id, s.fit]));
+  const availForCourse = (await getCourseAvailabilityStates(repos, ctx)).get(id);
   const instructorOptions = instructors.filter((i) => i.status === "active").map((i) => {
     const f = fitObjById.get(i.id);
-    return { id: i.id, name: i.name, fit: f?.fit ?? true, reason: f ? fitReason(f) : "" };
+    return { id: i.id, name: i.name, fit: f?.fit ?? true, reason: f ? fitReason(f) : "", avail: availForCourse?.get(i.id) ?? "none" as const };
   });
   const activeRoles = roles.filter((r) => r.active).map((r) => ({ id: r.id, name: r.name }));
   const aud = AUD[ct?.audience ?? "all"]!;

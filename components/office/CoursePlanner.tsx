@@ -63,37 +63,46 @@ export function CoursePlanner({ courseTypes, events, slotStyle }: { courseTypes:
 
   const audTint = (a: string) => a === "youth" ? "bg-amber/15 text-amber" : a === "adult" ? "bg-teal/15 text-teal" : "bg-slate-100 text-slate-600";
 
+  const isToday = (iso: string) => iso === new Date().toISOString().slice(0, 10);
+
   return (
     <div className="mb-6 space-y-4">
       {/* Calendar */}
-      <div className="rounded-card border border-slate-200 bg-white p-4">
+      <div className="rounded-card border border-slate-200 bg-white p-4 shadow-sm">
         <div className="mb-3 flex flex-wrap items-center gap-2">
-          <button onClick={() => setMonday((m) => addDaysIso(m, -7))} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-navy hover:bg-slate-50">←</button>
+          <h2 className="mr-1 font-display text-lg font-semibold text-navy">Calendar</h2>
+          <button onClick={() => setMonday((m) => addDaysIso(m, -7))} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-navy hover:bg-slate-50" aria-label="Previous week">←</button>
           <span className="rounded-lg bg-navy px-3 py-1.5 text-sm font-semibold text-white">{fmtDay(monday)} – {fmtDay(addDaysIso(monday, 6))}{monday === thisMonday ? " · this week" : ""}</span>
-          <button onClick={() => setMonday((m) => addDaysIso(m, 7))} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-navy hover:bg-slate-50">→</button>
+          <button onClick={() => setMonday((m) => addDaysIso(m, 7))} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-navy hover:bg-slate-50" aria-label="Next week">→</button>
           {monday !== thisMonday ? <button onClick={() => setMonday(thisMonday)} className="text-sm font-medium text-teal hover:underline">This week</button> : null}
-          <span className="ml-auto text-xs text-slate-400">Click a day to add a session to the course you&apos;re building.</span>
+          <span className="ml-auto text-xs text-slate-400">Tap any day to add a session to the course you&apos;re building below.</span>
         </div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
           {days.map((d, i) => {
             const evs = (eventsByDay.get(d) ?? []).sort((a, b) => a.startAt - b.startAt);
             const drafts = draftByDay.get(d) ?? [];
             return (
-              <div key={d} className="min-h-[7rem] rounded-lg border border-slate-100 bg-slate-50/50 p-1.5">
-                <button onClick={() => addRow(d)} className="mb-1 flex w-full items-center justify-between rounded px-1 text-left text-[11px] font-semibold text-slate-500 hover:text-teal" title="Add a session on this day">
-                  <span>{DAY_LABELS[i]} {d.slice(8)}</span><span className="text-teal">＋</span>
+              <div key={d} className={`flex min-h-[11rem] flex-col rounded-lg border p-1.5 ${isToday(d) ? "border-teal bg-teal/5" : "border-slate-100 bg-slate-50/50"}`}>
+                <div className="mb-1.5 text-center">
+                  <div className="text-[11px] font-semibold uppercase text-slate-400">{DAY_LABELS[i]}</div>
+                  <div className={`text-sm font-bold ${isToday(d) ? "text-teal" : "text-navy"}`}>{d.slice(8)}</div>
+                </div>
+                <div className="flex-1 space-y-1">
+                  {evs.map((e) => (
+                    <div key={e.id} className={`rounded border-l-4 px-1.5 py-1 text-[11px] leading-tight ${e.audience === "youth" ? "border-l-amber " : e.audience === "adult" ? "border-l-teal " : "border-l-slate-400 "}${audTint(e.audience)}`}>
+                      <span className="block font-semibold">{fmtTime(e.startAt)}</span>
+                      <span className="block truncate">{e.courseName}</span>
+                    </div>
+                  ))}
+                  {drafts.map((r) => (
+                    <div key={r.key} className="rounded border border-dashed border-teal bg-teal/5 px-1.5 py-1 text-[11px] font-medium text-teal">
+                      new · {slotStyle === "times" ? (r.startTime || "—") : SLOT_LABEL[r.slot]}
+                    </div>
+                  ))}
+                </div>
+                <button onClick={() => addRow(d)} className="mt-1 flex w-full items-center justify-center gap-1 rounded-md border border-teal/40 bg-teal/5 py-1 text-[11px] font-semibold text-teal hover:bg-teal hover:text-white" title="Add a session on this day">
+                  ＋ Add
                 </button>
-                {evs.map((e) => (
-                  <div key={e.id} className={`mb-1 rounded px-1.5 py-1 text-[11px] ${audTint(e.audience)}`}>
-                    <span className="block font-medium leading-tight">{e.courseName}</span>
-                    <span className="opacity-80">{fmtTime(e.startAt)}</span>
-                  </div>
-                ))}
-                {drafts.map((r) => (
-                  <div key={r.key} className="mb-1 rounded border border-dashed border-teal bg-teal/5 px-1.5 py-1 text-[11px] text-teal">
-                    new · {slotStyle === "times" ? (r.startTime || "—") : SLOT_LABEL[r.slot]}
-                  </div>
-                ))}
               </div>
             );
           })}

@@ -69,6 +69,8 @@ export interface AvailabilityMatrixRow {
   instructorId: string;
   name: string;
   cells: Record<string, AvailabilityStatus>; // key `${dateIso}|${slot}`
+  /** Courses this instructor is rostered on, keyed `${dateIso}|${slot}`. */
+  assigned: Record<string, string[]>;
 }
 export interface AvailabilityMatrix {
   days: string[]; // 7 ISO dates, Mon→Sun
@@ -87,9 +89,13 @@ export async function getWeekAvailabilityMatrix(
   ctx: AnyTenantContext,
   mondayIso: string,
 ): Promise<AvailabilityMatrix> {
-  const [instructors, rows] = await Promise.all([
+  const [instructors, rows, sessions, staff, courses, courseTypes] = await Promise.all([
     repos.tenant.instructor.list(ctx),
     repos.tenant.availability.list(ctx),
+    repos.tenant.courseSession.list(ctx),
+    repos.tenant.courseStaff.list(ctx),
+    repos.tenant.course.list(ctx),
+    repos.tenant.courseType.list(ctx),
   ]);
   const sunday = addDays(mondayIso, 7);
   const days: string[] = [];
@@ -106,12 +112,83 @@ export async function getWeekAvailabilityMatrix(
     if (r.status === "available") availableCounts[key] = (availableCounts[key] ?? 0) + 1;
   }
 
+  // Assignments in this week: instructor → "date|slot" → course names.
+  const courseName = new Map(courses.map((c) => [c.id, c.name ?? courseTypes.find((t) => t.id === c.courseTypeId)?.name ?? "Course"]));
+  const instructorsByCourse = new Map<string, string[]>();
+  for (const a of staff) instructorsByCourse.set(a.courseId, [...(instructorsByCourse.get(a.courseId) ?? []), a.instructorId]);
+  const assignedByInstructor = new Map<string, Record<string, string[]>>();
+  for (const s of sessions) {
+    if (s.date < mondayIso || s.date >= sunday) continue;
+    const key = `${s.date}|${s.slot}`;
+    for (const insId of instructorsByCourse.get(s.courseId) ?? []) {
+      const map = assignedByInstructor.get(insId) ?? {};
+      map[key] = [...(map[key] ?? []), courseName.get(s.courseId) ?? "Course"];
+      assignedByInstructor.set(insId, map);
+    }
+  }
+
   const active = instructors.filter((i) => i.status === "active").sort((a, b) => a.name.localeCompare(b.name));
   return {
     days,
-    rows: active.map((i) => ({ instructorId: i.id, name: i.name, cells: byInstructor.get(i.id) ?? {} })),
+    rows: active.map((i) => ({ instructorId: i.id, name: i.name, cells: byInstructor.get(i.id) ?? {}, assigned: assignedByInstructor.get(i.id) ?? {} })),
     availableCounts,
   };
+}
+
+export type CourseAvailState = "available" | "unavailable" | "partial" | "unset" | "none";
+
+/**
+ * For each course, each instructor's availability against that course's session
+ * dates/slots: "available" (all covered & free), "unavailable" (said no to one),
+ * "partial" (some free/tentative, some not set), "unset" (nothing submitted for
+ * those dates), "none" (course has no sessions). Rostering is never blocked by
+ * this — it just makes the picture clear.
+ */
+export async function getCourseAvailabilityStates(
+  repos: Repositories,
+  ctx: AnyTenantContext,
+): Promise<Map<string, Map<string, CourseAvailState>>> {
+  const [sessions, availRows, instructors] = await Promise.all([
+    repos.tenant.courseSession.list(ctx),
+    repos.tenant.availability.list(ctx),
+    repos.tenant.instructor.list(ctx),
+  ]);
+
+  const availByInstructor = new Map<string, Record<string, AvailabilityStatus>>();
+  for (const r of availRows) {
+    if (!r.date) continue;
+    const m = availByInstructor.get(r.instructorId) ?? {};
+    m[`${r.date}|${r.slot}`] = r.status as AvailabilityStatus;
+    availByInstructor.set(r.instructorId, m);
+  }
+
+  const slotsByCourse = new Map<string, string[]>();
+  for (const s of sessions) slotsByCourse.set(s.courseId, [...(slotsByCourse.get(s.courseId) ?? []), `${s.date}|${s.slot}`]);
+
+  const out = new Map<string, Map<string, CourseAvailState>>();
+  for (const [courseId, keys] of slotsByCourse) {
+    const perInstructor = new Map<string, CourseAvailState>();
+    for (const ins of instructors) {
+      const avail = availByInstructor.get(ins.id) ?? {};
+      let anyUnavailable = false, anyFree = false, anySet = false, allCoveredFree = true;
+      for (const k of keys) {
+        const st = avail[k];
+        if (st === undefined) { allCoveredFree = false; continue; }
+        anySet = true;
+        if (st === "unavailable") { anyUnavailable = true; allCoveredFree = false; }
+        else { anyFree = true; if (st !== "available") allCoveredFree = false; }
+      }
+      let state: CourseAvailState;
+      if (anyUnavailable) state = "unavailable";
+      else if (!anySet) state = "unset";
+      else if (allCoveredFree) state = "available";
+      else if (anyFree) state = "partial";
+      else state = "unset";
+      perInstructor.set(ins.id, state);
+    }
+    out.set(courseId, perInstructor);
+  }
+  return out;
 }
 
 export const AVAILABILITY_SLOTS = SLOT_CODES;

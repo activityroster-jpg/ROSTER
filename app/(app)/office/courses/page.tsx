@@ -1,6 +1,7 @@
 import { requireTenant } from "@/lib/tenant/require";
 import { addDays, getSessionEvents, getWeekSchedule, weekStart } from "@/lib/services/schedule";
 import { fitReason, listStaffWithFit } from "@/lib/services/staff";
+import { getCourseAvailabilityStates } from "@/lib/services/availability";
 import { Card, StatusPill } from "@/components/ui";
 import { CoursePlanner } from "@/components/office/CoursePlanner";
 import { AssignStaffForm } from "@/components/office/AssignStaffForm";
@@ -36,6 +37,8 @@ export default async function CoursesPage() {
     });
   const nameById = new Map(instructors.map((i) => [i.id, i.name]));
   const roleName = new Map(roles.map((r) => [r.id, r.name]));
+
+  const courseAvail = await getCourseAvailabilityStates(repos, ctx);
 
   // Session date/time summary per course, for the cards.
   const allSessions = await repos.tenant.courseSession.list(ctx);
@@ -122,7 +125,7 @@ export default async function CoursesPage() {
                   <p className="mt-3 text-xs text-slate-400">No staff assigned yet.</p>
                 )}
 
-                <AssignStaffForm courseId={c.courseId} instructors={instructorOptions} roles={activeRoles} />
+                <AssignStaffForm courseId={c.courseId} instructors={instructorOptions.map((o) => ({ ...o, avail: courseAvail.get(c.courseId)?.get(o.id) ?? "none" }))} roles={activeRoles} />
               </Card>
             );
           })
