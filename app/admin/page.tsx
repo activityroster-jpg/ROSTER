@@ -3,7 +3,11 @@ import { requirePlatformAdmin } from "@/lib/platform/admin";
 import { getDb } from "@/lib/cf/bindings";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { effectivePricing, fmtMoney } from "@/lib/pricing";
+import { getEnv } from "@/lib/cf/bindings";
+import { createStripe } from "@/lib/billing/stripe";
+import { listPromotionCodes, type PromoCodeRow } from "@/lib/billing/coupons";
 import { GlobalPricingForm } from "@/components/admin/GlobalPricingForm";
+import { PromoCodes } from "@/components/admin/PromoCodes";
 import { Card, StatusPill } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
@@ -26,6 +30,15 @@ export default async function AdminOverviewPage() {
   const db = await getDb();
   const platform = new PlatformRepository(db);
   const [orgs, usage, pricing] = await Promise.all([platform.listOrganisations(), platform.usageByOrg(), platform.getPricing()]);
+
+  // Marketing promo codes (best-effort; needs Stripe configured).
+  let promoCodes: PromoCodeRow[] = [];
+  let stripeReady = false;
+  try {
+    const stripe = createStripe(getEnv());
+    stripeReady = true;
+    promoCodes = await listPromotionCodes(stripe);
+  } catch { stripeReady = false; }
 
   const total = orgs.length;
   const active = orgs.filter((o) => o.subscriptionStatus === "active").length;
@@ -51,6 +64,12 @@ export default async function AdminOverviewPage() {
         <h2 className="mb-1 font-semibold text-navy">Default pricing</h2>
         <p className="mb-4 text-xs text-slate-500">Set once here; every centre inherits it unless you give them a discount or custom price on their page.</p>
         <GlobalPricingForm monthlyPrice={pricing.monthlyPrice} annualPrice={pricing.annualPrice} currency={pricing.currency} trialDays={pricing.trialDays} freeFirstMonth={Boolean(pricing.freeFirstMonth)} />
+      </Card>
+
+      <Card className="mb-8">
+        <h2 className="mb-1 font-semibold text-navy">Marketing promo codes</h2>
+        <p className="mb-4 text-xs text-slate-500">Shareable codes centres enter at checkout. Per-centre discounts set on a centre&apos;s page apply automatically without a code.</p>
+        <PromoCodes codes={promoCodes} stripeReady={stripeReady} />
       </Card>
 
       <Card className="overflow-x-auto p-0">

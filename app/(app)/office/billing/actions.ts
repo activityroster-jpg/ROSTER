@@ -20,6 +20,8 @@ export async function startCheckoutAction(interval: string): Promise<CheckoutRes
       ownerEmail: user?.email ?? "",
       interval: interval as BillingInterval,
       stripeCustomerId: organisation.stripeCustomerId,
+      discountPercent: organisation.discountPercent,
+      freeMonths: organisation.freeMonths,
     });
     return { ok: true, url };
   } catch (err) {

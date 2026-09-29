@@ -2,8 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { requirePlatformAdmin } from "@/lib/platform/admin";
-import { getDb, getRepositories } from "@/lib/cf/bindings";
+import { getDb, getEnv, getRepositories } from "@/lib/cf/bindings";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
+import { createStripe } from "@/lib/billing/stripe";
+import { createPromotionCode, type CouponSpec } from "@/lib/billing/coupons";
 import { ORG_STATUSES, SUBSCRIPTION_STATUSES, PLANS, type OrgStatus, type SubscriptionStatus, type Plan } from "@/lib/db/schema";
 
 type Result = { ok: boolean; error?: string };
@@ -35,6 +37,28 @@ export async function setGlobalPricingAction(input: {
   revalidatePath("/admin/pricing");
   revalidatePath("/pricing");
   return { ok: true };
+}
+
+/** Create a shareable marketing promo code (percentage off, or N months free). */
+export async function createPromoCodeAction(input: {
+  code: string; kind: string; value: number; maxRedemptions?: number;
+}): Promise<Result & { code?: string }> {
+  await requirePlatformAdmin();
+  const code = (input.code ?? "").trim().toUpperCase().replace(/\s+/g, "");
+  if (!/^[A-Z0-9]{3,40}$/.test(code)) return { ok: false, error: "Code must be 3–40 letters/numbers." };
+  const value = num(input.value);
+  if (value == null || value <= 0) return { ok: false, error: "Enter a value." };
+  const spec: CouponSpec = input.kind === "free_months"
+    ? { kind: "free_months", months: Math.round(value) }
+    : { kind: "percent", percent: value };
+  try {
+    const stripe = createStripe(getEnv());
+    const res = await createPromotionCode(stripe, { spec, code, maxRedemptions: input.maxRedemptions && input.maxRedemptions > 0 ? Math.round(input.maxRedemptions) : undefined });
+    revalidatePath("/admin");
+    return { ok: true, code: res.code };
+  } catch (err) {
+    return { ok: false, error: (err as Error).message };
+  }
 }
 
 /** Set a single centre's pricing overrides (discount / custom price / free months). */

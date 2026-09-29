@@ -3,6 +3,7 @@ import type { CloudflareEnv } from "@/lib/cf/bindings";
 import type { SignupInput } from "@/lib/validation/signup";
 import { createStripe } from "./stripe";
 import { priceIdForPlan, priceIdForInterval, type BillingInterval } from "./plans";
+import { couponForOrgDiscount } from "./coupons";
 
 /**
  * Create a hosted Stripe Checkout Session for a pending signup.
@@ -63,12 +64,27 @@ export async function createCheckoutSession(
  */
 export async function createSubscriptionCheckout(
   env: CloudflareEnv,
-  opts: { orgId: string; slug: string; ownerEmail: string; interval: BillingInterval; stripeCustomerId?: string | null },
+  opts: {
+    orgId: string;
+    slug: string;
+    ownerEmail: string;
+    interval: BillingInterval;
+    stripeCustomerId?: string | null;
+    discountPercent?: number | null;
+    freeMonths?: number | null;
+  },
 ): Promise<{ url: string }> {
   const stripe = createStripe(env);
   const price = priceIdForInterval(env, opts.interval);
   const base = `https://${opts.slug}.${env.APP_APEX_DOMAIN}`;
   const metadata = { org_id: opts.orgId, slug: opts.slug, interval: opts.interval };
+
+  // Auto-apply the centre's admin-set discount as a Stripe coupon. Stripe forbids
+  // combining an automatic discount with a promo-code box, so it's one or the other.
+  const coupon = await couponForOrgDiscount(stripe, { discountPercent: opts.discountPercent, freeMonths: opts.freeMonths });
+  const discountFields: Pick<Stripe.Checkout.SessionCreateParams, "discounts" | "allow_promotion_codes"> = coupon
+    ? { discounts: [{ coupon }] }
+    : { allow_promotion_codes: true };
 
   const session = await stripe.checkout.sessions.create(
     {
@@ -77,7 +93,7 @@ export async function createSubscriptionCheckout(
       ...(opts.stripeCustomerId
         ? { customer: opts.stripeCustomerId, customer_update: { address: "auto", name: "auto" } }
         : { customer_email: opts.ownerEmail }),
-      allow_promotion_codes: true,
+      ...discountFields,
       billing_address_collection: "required",
       tax_id_collection: { enabled: true },
       automatic_tax: { enabled: true },

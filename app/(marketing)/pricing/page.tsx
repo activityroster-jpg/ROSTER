@@ -20,7 +20,7 @@ const INCLUDED = [
 ];
 
 export default async function PricingPage() {
-  let monthly = 75, annual = 750, currency = "GBP", freeFirstMonth = true;
+  let monthly = 75, annual = 675, currency = "GBP", freeFirstMonth = true;
   try {
     const p = await new PlatformRepository(await getDb()).getPricing();
     monthly = p.monthlyPrice; annual = p.annualPrice; currency = p.currency; freeFirstMonth = Boolean(p.freeFirstMonth);

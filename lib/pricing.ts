@@ -4,7 +4,7 @@ import type { Organisation, PlatformPricing } from "@/lib/db/schema";
 export const DEFAULT_PRICING = {
   id: "default",
   monthlyPrice: 75,
-  annualPrice: 750,
+  annualPrice: 675,
   currency: "GBP",
   freeFirstMonth: true,
   trialDays: 30,
