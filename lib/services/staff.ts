@@ -9,6 +9,19 @@ export interface StaffWithFit {
 }
 
 /**
+ * A short, human reason an instructor isn't fit to roster — the actual gap
+ * (e.g. "DBS missing", "First Aid expired") rather than the word "blocked".
+ * Empty string when they are fit.
+ */
+export function fitReason(fit: FitResult): string {
+  if (fit.fit) return "";
+  const b = fit.blocks;
+  if (b.length === 0) return "not cleared";
+  const first = `${b[0]!.name} ${b[0]!.kind === "missing" ? "missing" : "expired"}`;
+  return b.length > 1 ? `${first} +${b.length - 1}` : first;
+}
+
+/**
  * List instructors with their fit-to-roster status, computed from the org's
  * mandatory compliance requirements and each instructor's held checks. This is
  * the compliance moat surfaced for the Staff screen — all reads are tenant

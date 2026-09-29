@@ -11,7 +11,7 @@ export function AssignStaffForm({
   roles,
 }: {
   courseId: string;
-  instructors: { id: string; name: string; fit: boolean }[];
+  instructors: { id: string; name: string; fit: boolean; reason?: string }[];
   roles: { id: string; name: string }[];
 }) {
   const [state, action, pending] = useActionState(assignStaffAction, initial);
@@ -25,7 +25,7 @@ export function AssignStaffForm({
         {instructors.map((i) => (
           <option key={i.id} value={i.id}>
             {i.name}
-            {i.fit ? "" : " ⚠ blocked"}
+            {i.fit ? "" : ` — ${i.reason || "not cleared"}`}
           </option>
         ))}
       </select>
@@ -39,7 +39,7 @@ export function AssignStaffForm({
       </select>
       <label className="flex items-center gap-2 text-xs text-slate-600">
         <input type="checkbox" name="override" checked={override} onChange={(e) => setOverride(e.target.checked)} />
-        Override block (records a note)
+        Assign anyway despite the gap (records why)
       </label>
       <input
         name="overrideNote"

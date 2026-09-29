@@ -133,11 +133,10 @@ export function StaffTable({ rows }: { rows: StaffRow[] }) {
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    {r.fit ? <StatusPill tone="covered">Fit</StatusPill> : <StatusPill tone="conflict">Blocked</StatusPill>}
+                    {r.fit ? <StatusPill tone="covered">Fit</StatusPill> : <StatusPill tone="conflict">{r.blockText || "Not cleared"}</StatusPill>}
                     {r.warnings > 0 ? (
                       <span className="ml-2"><StatusPill tone="attention">{r.warnings} expiring</StatusPill></span>
                     ) : null}
-                    {!r.fit ? <div className="mt-1 text-xs text-port">{r.blockText}</div> : null}
                   </td>
                   <td className="px-4 py-3">
                     {r.hasEmail ? (

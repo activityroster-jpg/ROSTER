@@ -111,7 +111,7 @@ export default async function DashboardPage() {
       {/* Needs attention */}
       <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Needs attention</p>
       <div className="mb-8 grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        <Tile href="/office/staff" label="Staff blocked" value={blocked} sub="Lapsed checks" tone={blocked > 0 ? "port" : "navy"} />
+        <Tile href="/office/staff" label="Not cleared to roster" value={blocked} sub="Missing / expired checks" tone={blocked > 0 ? "port" : "navy"} />
         <Tile href="/office/staff" label="Checks expiring" value={expiring} sub="Within lead time" tone={expiring > 0 ? "amber" : "navy"} />
         <Tile href="/office/courses" label="Courses to cover" value={uncovered} sub="Understaffed / no cover" tone={uncovered > 0 ? "amber" : "navy"} />
         <Tile href="/office/leave" label="Leave to approve" value={pendingLeave} sub="Pending requests" tone={pendingLeave > 0 ? "amber" : "navy"} />

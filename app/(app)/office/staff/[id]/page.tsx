@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireTenant } from "@/lib/tenant/require";
 import { ensureOnboarding, getStaffProfile } from "@/lib/services/hr";
+import { fitReason } from "@/lib/services/staff";
 import { OnboardingChecklist } from "@/components/office/OnboardingChecklist";
 import { DocumentManager, type DocItem } from "@/components/DocumentManager";
 import { InviteInstructorButton } from "@/components/office/InviteInstructorButton";
@@ -39,7 +40,7 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
         </div>
         <div className="flex items-center gap-3">
           {instructor.email ? <InviteInstructorButton instructorId={instructor.id} linked={Boolean(instructor.userId)} /> : null}
-          {fit.fit ? <StatusPill tone="covered">Fit to roster</StatusPill> : <StatusPill tone="conflict">Blocked</StatusPill>}
+          {fit.fit ? <StatusPill tone="covered">Fit to roster</StatusPill> : <StatusPill tone="conflict">{fitReason(fit) || "Not cleared"}</StatusPill>}
         </div>
       </div>
 

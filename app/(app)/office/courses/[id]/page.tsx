@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { requireTenant } from "@/lib/tenant/require";
-import { listStaffWithFit } from "@/lib/services/staff";
+import { fitReason, listStaffWithFit } from "@/lib/services/staff";
 import { courseSession as courseSessionTable, courseStaff as courseStaffTable } from "@/lib/db/schema";
 import { Card, StatusPill } from "@/components/ui";
 import { CourseManage } from "@/components/office/CourseManage";
@@ -40,8 +40,11 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
   const slotStyle = (settings[0]?.slotStyle ?? "slots") as "slots" | "times";
   const nameById = new Map(instructors.map((i) => [i.id, i.name]));
   const roleName = new Map(roles.map((r) => [r.id, r.name]));
-  const fitByInstructor = new Map(staffFit.map((s) => [s.instructor.id, s.fit.fit]));
-  const instructorOptions = instructors.filter((i) => i.status === "active").map((i) => ({ id: i.id, name: i.name, fit: fitByInstructor.get(i.id) ?? true }));
+  const fitObjById = new Map(staffFit.map((s) => [s.instructor.id, s.fit]));
+  const instructorOptions = instructors.filter((i) => i.status === "active").map((i) => {
+    const f = fitObjById.get(i.id);
+    return { id: i.id, name: i.name, fit: f?.fit ?? true, reason: f ? fitReason(f) : "" };
+  });
   const activeRoles = roles.filter((r) => r.active).map((r) => ({ id: r.id, name: r.name }));
   const aud = AUD[ct?.audience ?? "all"]!;
 

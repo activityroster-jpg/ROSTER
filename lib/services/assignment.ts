@@ -50,10 +50,9 @@ export async function assignStaff(
   ]);
   if (!course) return { ok: false, reason: "invalid", detail: "Course not found" };
 
+  // Staff can be rostered before a course's sessions are finalised; the conflict
+  // check below simply has nothing to compare against until sessions exist.
   const targetSessions = thisCourseSessions.filter((s) => s.courseId === input.courseId);
-  if (targetSessions.length === 0) {
-    return { ok: false, reason: "invalid", detail: "Course has no sessions yet" };
-  }
 
   // --- 1. Fit check --------------------------------------------------------
   const [complianceTypes, complianceItems, settingsRows] = await Promise.all([

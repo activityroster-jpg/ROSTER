@@ -1,6 +1,6 @@
 import { requireTenant } from "@/lib/tenant/require";
 import { addDays, getSessionEvents, getWeekSchedule, weekStart } from "@/lib/services/schedule";
-import { listStaffWithFit } from "@/lib/services/staff";
+import { fitReason, listStaffWithFit } from "@/lib/services/staff";
 import { Card, StatusPill } from "@/components/ui";
 import { CoursePlanner } from "@/components/office/CoursePlanner";
 import { AssignStaffForm } from "@/components/office/AssignStaffForm";
@@ -27,12 +27,33 @@ export default async function CoursesPage() {
     (await repos.tenant.course.list(ctx)).map((c) => [c.id, courseTypes.find((t) => t.id === c.courseTypeId)?.audience ?? "all"]),
   );
   const activeRoles = roles.filter((r) => r.active).map((r) => ({ id: r.id, name: r.name }));
-  const fitByInstructor = new Map(staff.map((s) => [s.instructor.id, s.fit.fit]));
+  const fitById = new Map(staff.map((s) => [s.instructor.id, s.fit]));
   const instructorOptions = instructors
     .filter((i) => i.status === "active")
-    .map((i) => ({ id: i.id, name: i.name, fit: fitByInstructor.get(i.id) ?? true }));
+    .map((i) => {
+      const f = fitById.get(i.id);
+      return { id: i.id, name: i.name, fit: f?.fit ?? true, reason: f ? fitReason(f) : "" };
+    });
   const nameById = new Map(instructors.map((i) => [i.id, i.name]));
   const roleName = new Map(roles.map((r) => [r.id, r.name]));
+
+  // Session date/time summary per course, for the cards.
+  const allSessions = await repos.tenant.courseSession.list(ctx);
+  const sessionsByCourse = new Map<string, { date: string; startAt: number; endAt: number }[]>();
+  for (const s of allSessions) {
+    const arr = sessionsByCourse.get(s.courseId) ?? [];
+    arr.push({ date: s.date, startAt: s.startAt instanceof Date ? s.startAt.getTime() : Number(s.startAt), endAt: s.endAt instanceof Date ? s.endAt.getTime() : Number(s.endAt) });
+    sessionsByCourse.set(s.courseId, arr);
+  }
+  const fmtD = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+  const fmtT = (ms: number) => new Date(ms).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
+  const courseWhen = (courseId: string): string => {
+    const ss = (sessionsByCourse.get(courseId) ?? []).sort((a, b) => a.date.localeCompare(b.date) || a.startAt - b.startAt);
+    if (ss.length === 0) return "No sessions scheduled yet";
+    const first = ss[0]!;
+    const label = `${fmtD(first.date)}, ${fmtT(first.startAt)}–${fmtT(first.endAt)}`;
+    return ss.length > 1 ? `${ss.length} sessions · first ${label}` : label;
+  };
 
   const assignedByCourse = new Map<string, typeof assignments>();
   for (const a of assignments) {
@@ -74,6 +95,7 @@ export default async function CoursesPage() {
                       ); })()}
                       <a href={`/office/courses/${c.courseId}`} className="hover:text-teal hover:underline">{c.courseName}</a>
                     </p>
+                    <p className="mt-0.5 text-sm font-medium text-navy">📅 {courseWhen(c.courseId)}</p>
                     <p className="text-xs text-slate-500">
                       {c.courseTypeName} · <span className="capitalize">{c.status}</span> ·{" "}
                       {c.ratio.ratioCountingStaff}/{c.ratio.requiredStaff} staff ·{" "}
