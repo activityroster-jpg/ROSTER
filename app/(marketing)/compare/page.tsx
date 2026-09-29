@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Check, Minus, X } from "lucide-react";
+import { COMPETITORS } from "@/lib/marketing/competitors";
 
 export const metadata = {
   title: "ActivityRoster vs the alternatives",
@@ -139,6 +140,16 @@ export default function ComparePage() {
             <p className="mt-2 text-sm text-slate-600">{c.p}</p>
           </div>
         ))}
+      </div>
+
+      {/* Head-to-head links */}
+      <div className="mt-10">
+        <p className="mb-2 text-center text-xs font-semibold uppercase tracking-wide text-slate-400">Head-to-head comparisons</p>
+        <div className="flex flex-wrap justify-center gap-2">
+          {COMPETITORS.map((o) => (
+            <Link key={o.slug} href={`/compare/${o.slug}`} className="rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-sm font-medium text-slate-600 hover:border-teal hover:text-navy">vs {o.name}</Link>
+          ))}
+        </div>
       </div>
 
       {/* Matrix */}

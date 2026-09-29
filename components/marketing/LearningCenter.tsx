@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { LearnDiagram } from "./LearnDiagram";
+
+const DIAGRAMS = new Set(["getting-started", "courses", "rostering", "availability", "bulk", "admin-security"]);
 
 /** A block of guide content. */
 type Block =
@@ -396,6 +399,12 @@ export function LearningCenter() {
               <p className="mt-1 text-sm text-slate-500">{section.blurb}</p>
             </div>
           </div>
+          {DIAGRAMS.has(section.id) ? (
+            <div className="mt-6 flex justify-center">
+              <LearnDiagram id={section.id} />
+            </div>
+          ) : null}
+
           <div className="mt-6 space-y-3">
             {section.blocks.map((b, i) => <BlockView key={i} b={b} />)}
           </div>
