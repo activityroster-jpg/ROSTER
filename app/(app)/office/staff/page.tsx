@@ -9,15 +9,23 @@ export const dynamic = "force-dynamic";
 
 export default async function StaffPage() {
   const { ctx, repos } = await requireTenant({ role: "admin" });
-  const [staff, qualTypes, teaching] = await Promise.all([
+  const [staff, qualTypes, teaching, courseTypes, complianceTypes] = await Promise.all([
     listStaffWithFit(repos, ctx),
     repos.tenant.qualificationType.list(ctx),
     getTeachingMatrix(repos, ctx),
+    repos.tenant.courseType.list(ctx),
+    repos.tenant.complianceType.list(ctx),
   ]);
   const qualChoices = qualTypes
     .filter((q) => q.active)
     .sort((a, b) => a.rank - b.rank)
     .map((q) => ({ id: q.id, name: q.name }));
+  const courseChoices = courseTypes
+    .filter((c) => c.active)
+    .map((c) => ({ id: c.id, name: c.name, audience: c.audience }));
+  const checkChoices = complianceTypes
+    .filter((c) => c.active)
+    .map((c) => ({ id: c.id, name: c.name, mandatory: Boolean(c.mandatory) }));
 
   const rows: StaffRow[] = staff.map(({ instructor, fit }) => {
     const teach = teaching.get(instructor.id) ?? [];
@@ -45,8 +53,9 @@ export default async function StaffPage() {
       </div>
 
       <Card className="mb-5">
-        <h2 className="mb-3 font-semibold text-navy">Add an instructor</h2>
-        <AddInstructorForm quals={qualChoices} />
+        <h2 className="mb-1 font-semibold text-navy">Add an instructor</h2>
+        <p className="mb-3 text-xs text-slate-500">Enter their details and what they teach — we email them an invite to set up their account and upload their licences.</p>
+        <AddInstructorForm courses={courseChoices} quals={qualChoices} checks={checkChoices} />
       </Card>
 
       <StaffTable rows={rows} />

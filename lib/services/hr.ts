@@ -5,6 +5,7 @@ import {
   onboardingItem as onboardingTable,
   qualification as qualificationTable,
   complianceItem as complianceItemTable,
+  instructorCourseType as instructorCourseTypeTable,
   type Instructor,
   type OnboardingItem,
 } from "@/lib/db/schema";
@@ -23,18 +24,22 @@ export const DEFAULT_ONBOARDING = [
 
 export interface DocumentRow {
   kind: "qualification" | "compliance";
+  itemId: string;
   name: string;
   reference: string | null;
   issueDate: string | null;
   expiryDate: string | null;
   mandatory: boolean;
   hasFile: boolean;
+  docKey: string | null;
+  verified: boolean;
 }
 
 export interface StaffProfile {
   instructor: Instructor;
   fit: FitResult;
   documents: DocumentRow[];
+  approvedCourses: { id: string; name: string }[];
   onboarding: OnboardingItem[];
   onboardingPct: number;
 }
@@ -76,38 +81,51 @@ export async function getStaffProfile(
   const instructor = await repos.tenant.instructor.findById(ctx, instructorId);
   if (!instructor) return null;
 
-  const [quals, qualTypes, items, complianceTypes, onboarding, settingsRows] = await Promise.all([
+  const [quals, qualTypes, items, complianceTypes, onboarding, settingsRows, approvals, courseTypes] = await Promise.all([
     repos.tenant.qualification.list(ctx, eq(qualificationTable.instructorId, instructorId)),
     repos.tenant.qualificationType.list(ctx),
     repos.tenant.complianceItem.list(ctx, eq(complianceItemTable.instructorId, instructorId)),
     repos.tenant.complianceType.list(ctx),
     repos.tenant.onboardingItem.list(ctx, eq(onboardingTable.instructorId, instructorId)),
     repos.tenant.orgSettings.list(ctx),
+    repos.tenant.instructorCourseType.list(ctx, eq(instructorCourseTypeTable.instructorId, instructorId)),
+    repos.tenant.courseType.list(ctx),
   ]);
 
   const qualTypeById = new Map(qualTypes.map((q) => [q.id, q]));
   const compTypeById = new Map(complianceTypes.map((c) => [c.id, c]));
+  const courseTypeById = new Map(courseTypes.map((c) => [c.id, c]));
 
   const documents: DocumentRow[] = [
     ...quals.map((q) => ({
       kind: "qualification" as const,
+      itemId: q.id,
       name: qualTypeById.get(q.qualificationTypeId)?.name ?? "Qualification",
       reference: q.certNo,
       issueDate: q.issueDate,
       expiryDate: q.expiryDate,
       mandatory: false,
       hasFile: Boolean(q.docKey),
+      docKey: q.docKey ?? null,
+      verified: Boolean(q.verified),
     })),
     ...items.map((it) => ({
       kind: "compliance" as const,
+      itemId: it.id,
       name: compTypeById.get(it.complianceTypeId)?.name ?? "Compliance",
       reference: it.reference,
       issueDate: it.issueDate,
       expiryDate: it.expiryDate,
       mandatory: compTypeById.get(it.complianceTypeId)?.mandatory ?? false,
       hasFile: Boolean(it.docKey),
+      docKey: it.docKey ?? null,
+      verified: Boolean(it.verified),
     })),
   ];
+
+  const approvedCourses = approvals
+    .map((a) => ({ id: a.courseTypeId, name: courseTypeById.get(a.courseTypeId)?.name ?? "Course" }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   const requirements: ComplianceRequirement[] = complianceTypes
     .filter((c) => c.active)
@@ -119,5 +137,5 @@ export async function getStaffProfile(
   const done = sortedOnboarding.filter((o) => o.done).length;
   const onboardingPct = sortedOnboarding.length ? Math.round((done / sortedOnboarding.length) * 100) : 0;
 
-  return { instructor, fit, documents, onboarding: sortedOnboarding, onboardingPct };
+  return { instructor, fit, documents, approvedCourses, onboarding: sortedOnboarding, onboardingPct };
 }

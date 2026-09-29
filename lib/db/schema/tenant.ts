@@ -298,6 +298,26 @@ export const complianceItem = sqliteTable("compliance_item", {
   index("compliance_item_instructor_idx").on(t.instructorId),
 ]);
 
+/**
+ * Course types an instructor is approved to teach — the centre's explicit
+ * "can teach" list, set when the instructor is added. Complements the derived
+ * teaching matrix (held qualifications) with a definitive per-centre override.
+ */
+export const instructorCourseType = sqliteTable("instructor_course_type", {
+  id: id(),
+  organisationId: orgFk(),
+  instructorId: text("instructor_id")
+    .notNull()
+    .references(() => instructor.id, { onDelete: "cascade" }),
+  courseTypeId: text("course_type_id")
+    .notNull()
+    .references(() => courseType.id, { onDelete: "restrict" }),
+  createdAt: createdAt(),
+}, (t) => [
+  index("instructor_course_type_org_idx").on(t.organisationId),
+  index("instructor_course_type_instructor_idx").on(t.instructorId),
+]);
+
 // --- Resources -------------------------------------------------------------
 
 export const equipment = sqliteTable("equipment", {
@@ -623,6 +643,7 @@ export const auditLog = sqliteTable("audit_log", {
 // Handy inferred types used across the app.
 export type Instructor = typeof instructor.$inferSelect;
 export type CourseType = typeof courseType.$inferSelect;
+export type InstructorCourseType = typeof instructorCourseType.$inferSelect;
 export type Course = typeof course.$inferSelect;
 export type CourseSession = typeof courseSession.$inferSelect;
 export type OrgSettings = typeof orgSettings.$inferSelect;

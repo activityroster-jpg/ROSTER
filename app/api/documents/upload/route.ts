@@ -22,6 +22,7 @@ export async function POST(req: Request) {
 
   const kind = String(form.get("kind") ?? "");
   const itemId = String(form.get("itemId") ?? "");
+  const expiryDate = (form.get("expiryDate") as string) || null;
   const file = form.get("file");
 
   if (kind !== "compliance" && kind !== "qualification") {
@@ -48,7 +49,7 @@ export async function POST(req: Request) {
   const result = await attachDocument(
     repos,
     ctx,
-    { kind: kind as DocumentKind, itemId, filename: file.name, contentType: file.type, body: await file.arrayBuffer() },
+    { kind: kind as DocumentKind, itemId, filename: file.name, contentType: file.type, body: await file.arrayBuffer(), expiryDate },
     restrictTo,
   );
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });

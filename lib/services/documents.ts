@@ -11,6 +11,8 @@ export interface AttachDocumentInput {
   filename: string;
   contentType?: string;
   body: ArrayBuffer;
+  /** Optional expiry (YYYY-MM-DD) captured alongside the upload. */
+  expiryDate?: string | null;
 }
 
 export type AttachResult = { ok: true; docKey: string } | { ok: false; error: string };
@@ -48,12 +50,14 @@ export async function attachDocument(
     contentType: input.contentType ?? "application/octet-stream",
   });
 
-  await repo.update(ctx, input.itemId, { docKey });
+  const patch: { docKey: string; expiryDate?: string } = { docKey };
+  if (input.expiryDate && /^\d{4}-\d{2}-\d{2}$/.test(input.expiryDate)) patch.expiryDate = input.expiryDate;
+  await repo.update(ctx, input.itemId, patch);
   await writeAudit(repos, ctx, {
     action: "attach_document",
     entity: input.kind === "compliance" ? "compliance_item" : "qualification",
     entityId: input.itemId,
-    after: { docKey },
+    after: { docKey, expiryDate: patch.expiryDate ?? null },
   });
 
   return { ok: true, docKey };

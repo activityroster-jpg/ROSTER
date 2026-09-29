@@ -42,13 +42,22 @@ export async function getTeachingMatrix(
   ctx: AnyTenantContext,
 ): Promise<Map<string, TeachableCourse[]>> {
   const t = repos.tenant;
-  const [instructors, quals, qualTypes, courseTypes, staffingRules] = await Promise.all([
+  const [instructors, quals, qualTypes, courseTypes, staffingRules, approvals] = await Promise.all([
     t.instructor.list(ctx),
     t.qualification.list(ctx),
     t.qualificationType.list(ctx),
     t.courseType.list(ctx),
     t.courseTypeStaffing.list(ctx),
+    t.instructorCourseType.list(ctx),
   ]);
+
+  // Explicit "can teach" approvals set by the centre (instructorId → courseTypeIds).
+  const approvedByInstructor = new Map<string, Set<string>>();
+  for (const a of approvals) {
+    const s = approvedByInstructor.get(a.instructorId) ?? new Set<string>();
+    s.add(a.courseTypeId);
+    approvedByInstructor.set(a.instructorId, s);
+  }
 
   const disciplineByQualType = new Map(qualTypes.map((q) => [q.id, q.discipline ?? null]));
 
@@ -79,18 +88,26 @@ export async function getTeachingMatrix(
   for (const ins of instructors) {
     const types = heldTypes.get(ins.id) ?? new Set<string>();
     const disc = heldDisc.get(ins.id) ?? new Set<string>();
+    const approved = approvedByInstructor.get(ins.id) ?? new Set<string>();
     const teachable: TeachableCourse[] = [];
 
     for (const ct of activeTypes) {
-      const required = requiredByType.get(ct.id);
+      // A centre's explicit approval always wins; otherwise fall back to staffing
+      // rules, then discipline inference.
       let can = false;
       let explicit = false;
-      if (required && required.length > 0) {
+      if (approved.has(ct.id)) {
+        can = true;
         explicit = true;
-        can = required.every((qid) => types.has(qid));
       } else {
-        const d = schemeDiscipline(ct.scheme);
-        can = d ? disc.has(d) : false;
+        const required = requiredByType.get(ct.id);
+        if (required && required.length > 0) {
+          explicit = true;
+          can = required.every((qid) => types.has(qid));
+        } else {
+          const d = schemeDiscipline(ct.scheme);
+          can = d ? disc.has(d) : false;
+        }
       }
       if (can) {
         teachable.push({ courseTypeId: ct.id, name: ct.name, audience: ct.audience, category: ct.category ?? null, explicit });

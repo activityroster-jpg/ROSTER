@@ -83,6 +83,10 @@ export async function seedFullOrg(
     expiryDate: null,
     verified: true,
   });
+  await t.instructorCourseType.insert(ctx, {
+    instructorId: instructor.id,
+    courseTypeId: courseType.id,
+  });
   // Give the instructor every compliance check the org requires, so the fixture
   // instructor is genuinely fit-to-roster (mandatory checks all current).
   for (const ct of complianceTypes) {
