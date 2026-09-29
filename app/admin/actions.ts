@@ -6,7 +6,7 @@ import { getDb, getEnv, getRepositories } from "@/lib/cf/bindings";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { createStripe } from "@/lib/billing/stripe";
 import { createPromotionCode, type CouponSpec } from "@/lib/billing/coupons";
-import { ORG_STATUSES, SUBSCRIPTION_STATUSES, PLANS, type OrgStatus, type SubscriptionStatus, type Plan } from "@/lib/db/schema";
+import { ORG_STATUSES, SUBSCRIPTION_STATUSES, PLANS, ERROR_REPORT_STATUSES, type OrgStatus, type SubscriptionStatus, type Plan, type ErrorReportStatus } from "@/lib/db/schema";
 
 type Result = { ok: boolean; error?: string };
 
@@ -36,6 +36,16 @@ export async function setGlobalPricingAction(input: {
   revalidatePath("/admin");
   revalidatePath("/admin/pricing");
   revalidatePath("/pricing");
+  return { ok: true };
+}
+
+/** Triage an error report (new → seen → resolved). */
+export async function setErrorStatusAction(id: string, status: string): Promise<Result> {
+  await requirePlatformAdmin();
+  if (!(ERROR_REPORT_STATUSES as readonly string[]).includes(status)) return { ok: false, error: "Invalid status" };
+  const { control } = await getRepositories();
+  await control.setErrorReportStatus(id, status as ErrorReportStatus);
+  revalidatePath("/admin/errors");
   return { ok: true };
 }
 

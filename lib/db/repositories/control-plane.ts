@@ -1,17 +1,21 @@
 import { and, eq, lt } from "drizzle-orm";
 import type { Database } from "@/lib/db/client";
 import {
+  errorReport,
   lead,
   membership,
   organisation,
   slugReservation,
   user,
   webhookEvent,
+  type ErrorReport,
+  type ErrorReportStatus,
   type LeadOrgType,
   type MembershipRole,
   type NewOrganisation,
   type Organisation,
 } from "@/lib/db/schema";
+import { desc } from "drizzle-orm";
 
 /**
  * Control-plane repository: global (non-tenant) reads/writes for organisations,
@@ -188,6 +192,33 @@ export class ControlPlaneRepository {
     } catch {
       return { captured: false }; // already on the list (unique email)
     }
+  }
+
+  // --- Error reports -------------------------------------------------------
+
+  async createErrorReport(values: {
+    organisationId?: string | null; organisationSlug?: string | null; userId?: string | null;
+    userEmail?: string | null; path?: string | null; message: string; digest?: string | null; userAgent?: string | null;
+  }): Promise<ErrorReport> {
+    const rows = await this.db.insert(errorReport).values({
+      organisationId: values.organisationId ?? null,
+      organisationSlug: values.organisationSlug ?? null,
+      userId: values.userId ?? null,
+      userEmail: values.userEmail ?? null,
+      path: values.path ?? null,
+      message: values.message.slice(0, 2000),
+      digest: values.digest ?? null,
+      userAgent: values.userAgent?.slice(0, 500) ?? null,
+    }).returning();
+    return rows[0]!;
+  }
+
+  async listErrorReports(limit = 200): Promise<ErrorReport[]> {
+    return this.db.select().from(errorReport).orderBy(desc(errorReport.createdAt)).limit(limit);
+  }
+
+  async setErrorReportStatus(id: string, status: ErrorReportStatus): Promise<void> {
+    await this.db.update(errorReport).set({ status }).where(eq(errorReport.id, id));
   }
 
   async markWebhookProcessed(stripeEventId: string): Promise<void> {

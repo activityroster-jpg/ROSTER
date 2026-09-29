@@ -8,6 +8,7 @@ import {
   course,
   booking,
   courseSession,
+  auditLog,
   marketingProspect,
   platformPricing,
   type MarketingProspect,
@@ -122,6 +123,26 @@ export class PlatformRepository {
   async countProspects(): Promise<number> {
     const rows = await this.db.select({ id: marketingProspect.id }).from(marketingProspect);
     return rows.length;
+  }
+
+  // --- Cross-centre change log --------------------------------------------
+
+  /** Recent audit-log entries across ALL centres, with the centre's name. */
+  async recentAudit(limit = 200): Promise<{ id: string; org: string; action: string; entity: string; actorUserId: string | null; createdAt: Date }[]> {
+    const rows = await this.db
+      .select({
+        id: auditLog.id,
+        org: organisation.name,
+        action: auditLog.action,
+        entity: auditLog.entity,
+        actorUserId: auditLog.actorUserId,
+        createdAt: auditLog.createdAt,
+      })
+      .from(auditLog)
+      .innerJoin(organisation, eq(organisation.id, auditLog.organisationId))
+      .orderBy(desc(auditLog.createdAt))
+      .limit(limit);
+    return rows;
   }
 
   // --- Global pricing ------------------------------------------------------

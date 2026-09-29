@@ -289,6 +289,33 @@ export const marketingProspect = sqliteTable("marketing_prospect", {
   index("marketing_prospect_region_idx").on(t.region),
 ]);
 
+// --- Error reports (user-reported issues, bucketed by centre) ---------------
+
+export const ERROR_REPORT_STATUSES = ["new", "seen", "resolved"] as const;
+export type ErrorReportStatus = (typeof ERROR_REPORT_STATUSES)[number];
+
+/**
+ * A captured application error a user chose to report (or one auto-logged).
+ * Control-plane so the platform owner can triage across all centres. Holds who
+ * hit it and where, so an issue can be reproduced and attributed to a centre.
+ */
+export const errorReport = sqliteTable("error_report", {
+  id: id(),
+  organisationId: text("organisation_id"),
+  organisationSlug: text("organisation_slug"),
+  userId: text("user_id"),
+  userEmail: text("user_email"),
+  path: text("path"),
+  message: text("message").notNull(),
+  digest: text("digest"),
+  userAgent: text("user_agent"),
+  status: text("status", { enum: ERROR_REPORT_STATUSES }).notNull().default("new"),
+  createdAt: createdAt(),
+}, (t) => [
+  index("error_report_org_idx").on(t.organisationId),
+  index("error_report_status_idx").on(t.status),
+]);
+
 export type Organisation = typeof organisation.$inferSelect;
 export type NewOrganisation = typeof organisation.$inferInsert;
 export type Membership = typeof membership.$inferSelect;
@@ -297,6 +324,7 @@ export type Lead = typeof lead.$inferSelect;
 export type MarketingProspect = typeof marketingProspect.$inferSelect;
 export type NewMarketingProspect = typeof marketingProspect.$inferInsert;
 export type PlatformPricing = typeof platformPricing.$inferSelect;
+export type ErrorReport = typeof errorReport.$inferSelect;
 
 // A tiny re-export so migrations pick up the raw-sql helper if needed.
 export const _sql = sql;
