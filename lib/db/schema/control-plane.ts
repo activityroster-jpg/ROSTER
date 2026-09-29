@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { index, integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { boolCol, createdAt, id, updatedAt } from "./_shared";
 
 /**
@@ -24,6 +24,12 @@ export const user = sqliteTable("user", {
   image: text("image"),
   // twoFactor plugin
   twoFactorEnabled: integer("two_factor_enabled", { mode: "boolean" }),
+  // 4-digit login PIN (a second factor for centre admins + the platform owner).
+  // Stored as a PBKDF2 hash; instructors never set one. Lockout after repeated
+  // wrong attempts via the two counters below.
+  pinHash: text("pin_hash"),
+  pinFailedCount: integer("pin_failed_count").notNull().default(0),
+  pinLockedUntil: integer("pin_locked_until", { mode: "timestamp_ms" }),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 }, (t) => [uniqueIndex("user_email_uq").on(t.email)]);
@@ -133,12 +139,35 @@ export const organisation = sqliteTable("organisation", {
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
   subscriptionStatus: text("subscription_status", { enum: SUBSCRIPTION_STATUSES }),
+  // Per-centre pricing overrides, all set from the platform admin. A custom price
+  // wins over the global default; otherwise the discount % is applied. freeMonths
+  // is a one-off run of free billing periods (e.g. a launch offer).
+  discountPercent: real("discount_percent").notNull().default(0),
+  customMonthlyPrice: real("custom_monthly_price"),
+  customAnnualPrice: real("custom_annual_price"),
+  freeMonths: integer("free_months").notNull().default(0),
+  billingNote: text("billing_note"),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 }, (t) => [
   uniqueIndex("organisation_slug_uq").on(t.slug),
   uniqueIndex("organisation_stripe_customer_uq").on(t.stripeCustomerId),
 ]);
+
+/**
+ * Global default pricing, editable in the platform admin so all price changes,
+ * reductions and offers flow from one place (and, when Stripe is wired, into
+ * checkout). One row; `id` is always "default".
+ */
+export const platformPricing = sqliteTable("platform_pricing", {
+  id: text("id").primaryKey().default("default"),
+  monthlyPrice: real("monthly_price").notNull().default(75),
+  annualPrice: real("annual_price").notNull().default(750),
+  currency: text("currency").notNull().default("GBP"),
+  freeFirstMonth: boolCol("free_first_month").default(true),
+  trialDays: integer("trial_days").notNull().default(30),
+  updatedAt: updatedAt(),
+});
 
 export const MEMBERSHIP_ROLES = ["admin", "instructor"] as const;
 export type MembershipRole = (typeof MEMBERSHIP_ROLES)[number];
@@ -267,6 +296,7 @@ export type User = typeof user.$inferSelect;
 export type Lead = typeof lead.$inferSelect;
 export type MarketingProspect = typeof marketingProspect.$inferSelect;
 export type NewMarketingProspect = typeof marketingProspect.$inferInsert;
+export type PlatformPricing = typeof platformPricing.$inferSelect;
 
 // A tiny re-export so migrations pick up the raw-sql helper if needed.
 export const _sql = sql;

@@ -12,7 +12,7 @@ export type TenantDenial =
   | "not-a-member";
 
 export type TenantResolution =
-  | { ok: true; ctx: TenantContext; organisation: Organisation }
+  | { ok: true; ctx: TenantContext; organisation: Organisation; sessionId?: string }
   | { ok: false; reason: TenantDenial; slug?: string; organisation?: Organisation };
 
 /**
@@ -61,5 +61,5 @@ export async function resolveTenant(headers: Headers): Promise<TenantResolution>
     userId: authSession.user.id,
     role: membership.role,
   };
-  return { ok: true, ctx, organisation };
+  return { ok: true, ctx, organisation, sessionId: authSession.session?.id };
 }

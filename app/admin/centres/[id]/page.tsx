@@ -3,7 +3,9 @@ import { requirePlatformAdmin } from "@/lib/platform/admin";
 import { getDb } from "@/lib/cf/bindings";
 import { apexDomain } from "@/lib/config";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
+import { effectivePricing } from "@/lib/pricing";
 import { CentreControls } from "@/components/admin/CentreControls";
+import { PricingControls } from "@/components/admin/PricingControls";
 import { Card } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
@@ -24,9 +26,10 @@ export default async function CentreDetailPage({ params }: { params: Promise<{ i
     );
   }
 
-  const [usage, members] = await Promise.all([platform.usageByOrg(), platform.membersFor(id)]);
+  const [usage, members, pricing] = await Promise.all([platform.usageByOrg(), platform.membersFor(id), platform.getPricing()]);
   const u = usage.get(id) ?? { instructors: 0, courses: 0, bookings: 0, sessions: 0 };
   const apex = apexDomain();
+  const eff = effectivePricing(org, pricing);
 
   const Row = ({ k, v }: { k: string; v: string }) => (
     <div className="flex justify-between border-t border-slate-100 py-2 text-sm first:border-t-0">
@@ -68,6 +71,21 @@ export default async function CentreDetailPage({ params }: { params: Promise<{ i
       <Card className="mt-6">
         <h2 className="mb-3 font-semibold text-navy">Manage</h2>
         <CentreControls id={org.id} status={org.status} subscriptionStatus={org.subscriptionStatus} plan={org.plan} />
+      </Card>
+
+      <Card className="mt-6">
+        <h2 className="mb-3 font-semibold text-navy">Pricing &amp; discounts</h2>
+        <PricingControls
+          id={org.id}
+          discountPercent={org.discountPercent}
+          customMonthlyPrice={org.customMonthlyPrice}
+          customAnnualPrice={org.customAnnualPrice}
+          freeMonths={org.freeMonths}
+          billingNote={org.billingNote}
+          effMonthly={eff.monthly}
+          effAnnual={eff.annual}
+          currency={eff.currency}
+        />
       </Card>
 
       <Card className="mt-6 p-0">

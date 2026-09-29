@@ -9,11 +9,14 @@ import {
   booking,
   courseSession,
   marketingProspect,
+  platformPricing,
   type MarketingProspect,
   type NewMarketingProspect,
   type Organisation,
+  type PlatformPricing,
   type ProspectStatus,
 } from "@/lib/db/schema";
+import { DEFAULT_PRICING } from "@/lib/pricing";
 
 export interface OrgUsage {
   instructors: number;
@@ -119,5 +122,23 @@ export class PlatformRepository {
   async countProspects(): Promise<number> {
     const rows = await this.db.select({ id: marketingProspect.id }).from(marketingProspect);
     return rows.length;
+  }
+
+  // --- Global pricing ------------------------------------------------------
+
+  async getPricing(): Promise<PlatformPricing> {
+    const rows = await this.db.select().from(platformPricing).where(eq(platformPricing.id, "default")).limit(1);
+    return rows[0] ?? ({ ...DEFAULT_PRICING, updatedAt: new Date() } as PlatformPricing);
+  }
+
+  async upsertPricing(patch: Partial<Omit<PlatformPricing, "id" | "updatedAt">>): Promise<void> {
+    const updated = await this.db
+      .update(platformPricing)
+      .set({ ...patch, updatedAt: new Date() })
+      .where(eq(platformPricing.id, "default"))
+      .returning({ id: platformPricing.id });
+    if (updated.length === 0) {
+      await this.db.insert(platformPricing).values({ ...DEFAULT_PRICING, ...patch, updatedAt: new Date() });
+    }
   }
 }

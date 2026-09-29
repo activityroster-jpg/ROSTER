@@ -196,4 +196,31 @@ export class ControlPlaneRepository {
       .set({ processedAt: new Date() })
       .where(eq(webhookEvent.stripeEventId, stripeEventId));
   }
+
+  // --- Login PIN (second factor) -------------------------------------------
+
+  async getUserSecurity(userId: string): Promise<{ pinHash: string | null; pinFailedCount: number; pinLockedUntil: Date | null } | null> {
+    const rows = await this.db
+      .select({ pinHash: user.pinHash, pinFailedCount: user.pinFailedCount, pinLockedUntil: user.pinLockedUntil })
+      .from(user)
+      .where(eq(user.id, userId))
+      .limit(1);
+    const r = rows[0];
+    if (!r) return null;
+    return { pinHash: r.pinHash ?? null, pinFailedCount: r.pinFailedCount ?? 0, pinLockedUntil: r.pinLockedUntil ?? null };
+  }
+
+  async setUserPin(userId: string, pinHash: string): Promise<void> {
+    await this.db.update(user).set({ pinHash, pinFailedCount: 0, pinLockedUntil: null }).where(eq(user.id, userId));
+  }
+
+  async recordPinFailure(userId: string, lockUntil: Date | null): Promise<void> {
+    const current = await this.getUserSecurity(userId);
+    const count = (current?.pinFailedCount ?? 0) + 1;
+    await this.db.update(user).set({ pinFailedCount: count, pinLockedUntil: lockUntil }).where(eq(user.id, userId));
+  }
+
+  async resetPinFailures(userId: string): Promise<void> {
+    await this.db.update(user).set({ pinFailedCount: 0, pinLockedUntil: null }).where(eq(user.id, userId));
+  }
 }

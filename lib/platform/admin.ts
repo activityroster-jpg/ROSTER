@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getAuth } from "@/lib/auth";
 import { getEnv } from "@/lib/cf/bindings";
+import { enforcePinGate } from "@/lib/auth/pin-gate";
 
 /**
  * Platform-owner (super-admin) access control. This is the ONE surface that
@@ -26,5 +27,7 @@ export async function requirePlatformAdmin(): Promise<{ email: string }> {
   const session = await auth.api.getSession({ headers: h });
   const email = session?.user?.email ?? null;
   if (!(await isPlatformAdminEmail(email))) redirect("/sign-in");
+  // The money-facing admin also requires the 4-digit PIN each session.
+  await enforcePinGate(session!.user.id, session!.session?.id, "/admin");
   return { email: email! };
 }

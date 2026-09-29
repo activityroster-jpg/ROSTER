@@ -2,11 +2,11 @@ import Link from "next/link";
 import { requirePlatformAdmin } from "@/lib/platform/admin";
 import { getDb } from "@/lib/cf/bindings";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
+import { effectivePricing, fmtMoney } from "@/lib/pricing";
+import { GlobalPricingForm } from "@/components/admin/GlobalPricingForm";
 import { Card, StatusPill } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
-
-const MONTHLY_PRICE = 75;
 
 const subTone = (s: string | null): "covered" | "attention" | "conflict" | "neutral" => {
   if (s === "active") return "covered";
@@ -25,13 +25,15 @@ export default async function AdminOverviewPage() {
   await requirePlatformAdmin();
   const db = await getDb();
   const platform = new PlatformRepository(db);
-  const [orgs, usage] = await Promise.all([platform.listOrganisations(), platform.usageByOrg()]);
+  const [orgs, usage, pricing] = await Promise.all([platform.listOrganisations(), platform.usageByOrg(), platform.getPricing()]);
 
   const total = orgs.length;
   const active = orgs.filter((o) => o.subscriptionStatus === "active").length;
   const trialing = orgs.filter((o) => o.subscriptionStatus === "trialing").length;
   const suspended = orgs.filter((o) => o.status === "suspended").length;
-  const mrr = active * MONTHLY_PRICE;
+  const mrr = orgs
+    .filter((o) => o.subscriptionStatus === "active")
+    .reduce((sum, o) => sum + effectivePricing(o, pricing).monthly, 0);
 
   return (
     <div>
@@ -41,9 +43,15 @@ export default async function AdminOverviewPage() {
       <div className="mb-8 grid gap-3 sm:grid-cols-4">
         <Card><p className="text-xs font-semibold text-navy">Centres</p><p className="mt-1 text-2xl font-semibold text-navy">{total}</p></Card>
         <Card><p className="text-xs font-semibold text-navy">Paying</p><p className="mt-1 text-2xl font-semibold text-starboard">{active}</p><p className="text-xs text-slate-400">{trialing} on trial</p></Card>
-        <Card><p className="text-xs font-semibold text-navy">Est. MRR</p><p className="mt-1 text-2xl font-semibold text-navy">£{mrr.toLocaleString()}</p><p className="text-xs text-slate-400">£{(mrr * 12).toLocaleString()}/yr</p></Card>
+        <Card><p className="text-xs font-semibold text-navy">Est. MRR</p><p className="mt-1 text-2xl font-semibold text-navy">{fmtMoney(mrr, pricing.currency)}</p><p className="text-xs text-slate-400">{fmtMoney(mrr * 12, pricing.currency)}/yr</p></Card>
         <Card><p className="text-xs font-semibold text-navy">Suspended</p><p className="mt-1 text-2xl font-semibold text-port">{suspended}</p></Card>
       </div>
+
+      <Card className="mb-8">
+        <h2 className="mb-1 font-semibold text-navy">Default pricing</h2>
+        <p className="mb-4 text-xs text-slate-500">Set once here; every centre inherits it unless you give them a discount or custom price on their page.</p>
+        <GlobalPricingForm monthlyPrice={pricing.monthlyPrice} annualPrice={pricing.annualPrice} currency={pricing.currency} trialDays={pricing.trialDays} freeFirstMonth={Boolean(pricing.freeFirstMonth)} />
+      </Card>
 
       <Card className="overflow-x-auto p-0">
         <table className="w-full min-w-[820px] text-left text-sm">

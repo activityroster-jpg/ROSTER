@@ -71,6 +71,13 @@
       "when": 1790619365694,
       "tag": "0009_marketing_prospect",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1790641868330,
+      "tag": "0010_pricing_and_pin",
+      "breakpoints": true
     }
   ]
 }

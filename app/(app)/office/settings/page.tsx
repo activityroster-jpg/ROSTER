@@ -106,6 +106,9 @@ export default async function SettingsPage() {
           <a href="/security" className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-navy hover:bg-slate-50">
             Security &amp; 2FA
           </a>
+          <a href="/set-pin?next=/office/settings" className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-navy hover:bg-slate-50">
+            Change login PIN
+          </a>
         </div>
         <p className="mt-3 text-xs text-slate-400">
           Your data is stored in the EU. Config is deactivate-never-delete: retiring an item keeps historical records

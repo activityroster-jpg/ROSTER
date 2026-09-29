@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getRepositories } from "@/lib/cf/bindings";
 import type { Organisation } from "@/lib/db/schema";
+import { enforcePinGate } from "@/lib/auth/pin-gate";
 import type { TenantContext } from "./context";
 import { resolveTenant } from "./resolve";
 
@@ -38,6 +39,11 @@ export async function requireTenant(opts?: { role?: "admin"; skipMfaGate?: boole
 
   if (opts?.role === "admin" && res.ctx.role !== "admin") {
     redirect("/portal");
+  }
+
+  // Centre admins must pass the 4-digit PIN gate each session; instructors don't.
+  if (res.ctx.role === "admin") {
+    await enforcePinGate(res.ctx.userId, res.sessionId, "/office");
   }
 
   const repos = await getRepositories();
