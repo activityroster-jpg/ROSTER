@@ -1,0 +1,1 @@
+ALTER TABLE `instructor` ADD `notify_email` integer DEFAULT true NOT NULL;

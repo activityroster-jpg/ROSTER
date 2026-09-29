@@ -3,6 +3,7 @@ import { requireTenant } from "@/lib/tenant/require";
 import { instructor as instructorTable } from "@/lib/db/schema";
 import { listForInstructor } from "@/lib/services/notifications";
 import { NotificationsList, type NotificationUi } from "@/components/portal/NotificationsList";
+import { EmailPref } from "@/components/portal/EmailPref";
 import { Card } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
@@ -31,6 +32,7 @@ export default async function PortalNotificationsPage() {
   return (
     <div>
       <h1 className="mb-4 font-display text-xl font-semibold text-navy">Notifications</h1>
+      <Card className="mb-4"><EmailPref initial={me.notifyEmail !== false} /></Card>
       <NotificationsList items={items} />
     </div>
   );

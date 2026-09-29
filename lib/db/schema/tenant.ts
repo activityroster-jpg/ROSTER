@@ -247,6 +247,8 @@ export const instructor = sqliteTable("instructor", {
   phone: text("phone"),
   employmentType: text("employment_type", { enum: EMPLOYMENT_TYPES }).notNull().default("employed"),
   status: text("status", { enum: INSTRUCTOR_STATUSES }).notNull().default("active"),
+  /** Whether to also email this instructor when they're notified (in-app is always on). */
+  notifyEmail: boolCol("notify_email").default(true),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 }, (t) => [

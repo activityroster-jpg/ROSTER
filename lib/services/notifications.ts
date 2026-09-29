@@ -35,7 +35,7 @@ export async function notifyInstructor(
     sentAt: new Date(),
   });
 
-  if (input.email && instructor.email) {
+  if (input.email && instructor.email && instructor.notifyEmail !== false) {
     try {
       await sendEmail({
         to: instructor.email,

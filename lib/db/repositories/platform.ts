@@ -83,8 +83,8 @@ export class PlatformRepository {
 
   // --- Marketing prospects (platform-owner outreach CRM) -------------------
 
-  async listProspects(): Promise<MarketingProspect[]> {
-    return this.db.select().from(marketingProspect).orderBy(desc(marketingProspect.createdAt));
+  async listProspects(limit = 100, offset = 0): Promise<MarketingProspect[]> {
+    return this.db.select().from(marketingProspect).orderBy(desc(marketingProspect.createdAt)).limit(limit).offset(offset);
   }
 
   async prospectById(id: string): Promise<MarketingProspect | null> {

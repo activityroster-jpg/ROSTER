@@ -32,3 +32,12 @@ export async function markAllReadAction(): Promise<Result> {
   revalidatePath("/portal/notifications");
   return { ok: true };
 }
+
+/** Toggle whether this instructor also receives emails (in-app is always on). */
+export async function setNotifyEmailAction(enabled: boolean): Promise<Result> {
+  const { ctx, repos, m } = await me();
+  if (!m) return { ok: false, error: "No linked instructor profile" };
+  await repos.tenant.instructor.update(ctx, m.id, { notifyEmail: enabled });
+  revalidatePath("/portal/notifications");
+  return { ok: true };
+}

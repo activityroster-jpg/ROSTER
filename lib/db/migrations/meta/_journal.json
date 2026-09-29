@@ -85,6 +85,13 @@
       "when": 1790648059586,
       "tag": "0011_error_report",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1790648575591,
+      "tag": "0012_instructor_notify_email",
+      "breakpoints": true
     }
   ]
 }
