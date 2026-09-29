@@ -59,6 +59,18 @@ export function CreateCourseForm({ courseTypes, slotStyle = "slots" }: { courseT
       )}
 
       <div>
+        <label className="mb-1 block text-xs font-medium text-slate-500">Repeat</label>
+        <select name="repeat" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal">
+          <option value="none">One session</option>
+          <option value="daily">Daily (e.g. 5-day camp)</option>
+          <option value="weekly">Weekly (e.g. club term)</option>
+        </select>
+      </div>
+      <div>
+        <label className="mb-1 block text-xs font-medium text-slate-500">How many</label>
+        <input name="count" type="number" min="1" max="52" defaultValue={1} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal" />
+      </div>
+      <div>
         <button
           type="submit"
           disabled={pending}

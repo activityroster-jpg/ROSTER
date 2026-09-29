@@ -74,11 +74,12 @@ export default async function CoursesPage() {
                       {(() => { const a = audienceByCourse.get(c.courseId) ?? "all"; return (
                         <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${a === "youth" ? "bg-amber/15 text-amber" : a === "adult" ? "bg-teal/15 text-teal" : "bg-slate-100 text-slate-500"}`}>{a === "youth" ? "Youth" : a === "adult" ? "Adult" : "All"}</span>
                       ); })()}
-                      {c.courseName}
+                      <a href={`/office/courses/${c.courseId}`} className="hover:text-teal hover:underline">{c.courseName}</a>
                     </p>
                     <p className="text-xs text-slate-500">
                       {c.courseTypeName} · <span className="capitalize">{c.status}</span> ·{" "}
-                      {c.ratio.ratioCountingStaff}/{c.ratio.requiredStaff} staff
+                      {c.ratio.ratioCountingStaff}/{c.ratio.requiredStaff} staff ·{" "}
+                      <a href={`/office/courses/${c.courseId}`} className="text-teal hover:underline">manage →</a>
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
