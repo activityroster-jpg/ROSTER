@@ -60,12 +60,49 @@ const AUDIENCES = [
   { icon: Waves, title: "Activity centres", body: "Dinghy, windsurf, powerboat and kayak under one roof. One roster, one compliance picture, per-jurisdiction vetting built in." },
 ];
 
-function PhotoBand({ src, alt }: { src: string; alt: string }) {
+function PhotoBand({ src, alt, caption }: { src: string; alt: string; caption?: string }) {
   return (
-    <div className="relative h-36 w-full overflow-hidden md:h-56" aria-hidden>
-      <img src={src} alt={alt} className="h-full w-full object-cover" loading="lazy" />
-      <div className="pointer-events-none absolute inset-0 bg-navy/10" />
+    <div className="relative h-44 w-full overflow-hidden sm:h-60 md:h-72 lg:h-80">
+      <img src={src} alt={alt} className="h-full w-full object-cover object-center" loading="lazy" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-navy/50 via-navy/10 to-transparent" />
+      {caption ? (
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 mx-auto max-w-6xl px-4 pb-5">
+          <p className="font-display text-lg font-semibold text-white drop-shadow sm:text-xl">{caption}</p>
+        </div>
+      ) : null}
     </div>
+  );
+}
+
+const DISCIPLINES = [
+  { src: "/photos/dinghies.jpg", label: "Dinghy sailing", sub: "National & Youth schemes" },
+  { src: "/photos/keelboat.jpg", label: "Keelboat & yacht", sub: "Cruising to Yachtmaster" },
+  { src: "/photos/windsurfing.jpg", label: "Windsurfing", sub: "Start to advanced" },
+  { src: "/photos/kayaks.jpg", label: "Kayaking & SUP", sub: "Paddlesports" },
+  { src: "/photos/catamarans.jpg", label: "Catamarans", sub: "Multihull & performance" },
+  { src: "/photos/instructors.jpg", label: "Instructors & coaching", sub: "Your whole team, one roster" },
+];
+
+function DisciplineGallery() {
+  return (
+    <section className="border-b border-slate-200 bg-white">
+      <div className="mx-auto max-w-6xl px-4 py-16">
+        <h2 className="font-display text-2xl font-semibold text-navy">Every discipline, one platform</h2>
+        <p className="mt-2 max-w-2xl text-slate-600">Sailing, powerboat, windsurf, paddlesports and more — rostered, ratio-checked and compliance-covered under one roof.</p>
+        <div className="mt-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
+          {DISCIPLINES.map((d) => (
+            <div key={d.label} className="group relative aspect-[3/2] overflow-hidden rounded-card">
+              <img src={d.src} alt={d.label} loading="lazy" className="h-full w-full object-cover object-center transition duration-500 group-hover:scale-105" />
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-navy/80 via-navy/20 to-transparent" />
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 p-4">
+                <p className="font-display text-base font-semibold text-white sm:text-lg">{d.label}</p>
+                <p className="text-xs text-white/80">{d.sub}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -167,7 +204,9 @@ export default function MarketingHome() {
         </div>
       </section>
 
-      <PhotoBand src="/photos/catamarans.jpg" alt="Catamarans racing" />
+      <DisciplineGallery />
+
+      <PhotoBand src="/photos/slipway.jpg" alt="Boats and crews on the slipway" caption="Every discipline, one roster" />
 
       {/* How it works */}
       <section className="bg-canvas">
@@ -190,7 +229,7 @@ export default function MarketingHome() {
         </div>
       </section>
 
-      <PhotoBand src="/photos/kayaks.jpg" alt="Sea kayaks" />
+      <PhotoBand src="/photos/deck.jpg" alt="On the water" caption="Compliance built in, not bolted on" />
 
       {/* Who it's for */}
       <section className="border-b border-slate-200 bg-white">
@@ -208,8 +247,6 @@ export default function MarketingHome() {
           </div>
         </div>
       </section>
-
-      <PhotoBand src="/photos/dinghies.jpg" alt="Dinghies on the water" />
 
       {/* Feature detail — the compliance safety net */}
       <section className="border-y border-slate-200 bg-white">
@@ -252,7 +289,7 @@ export default function MarketingHome() {
         </div>
       </section>
 
-      <PhotoBand src="/photos/marina.jpg" alt="Marina at dusk" />
+      <PhotoBand src="/photos/marina.jpg" alt="Marina and moorings" caption="Run the whole centre in one place" />
 
       {/* Final CTA / free month signup */}
       <section id="get-demo" className="bg-navy">
