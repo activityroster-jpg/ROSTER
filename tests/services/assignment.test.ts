@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { createTestDb } from "@/tests/helpers/test-db";
 import { seedFullOrg } from "@/tests/helpers/seed-fixtures";
-import { assignStaff } from "@/lib/services/assignment";
+import { assignStaff, bulkAssignStaff } from "@/lib/services/assignment";
 import type { Repositories } from "@/lib/db/repositories";
 import type { SystemTenantContext } from "@/lib/tenant/context";
 import type { Database as DrizzleDatabase } from "@/lib/db/client";
@@ -106,5 +106,64 @@ describe("assignStaff", () => {
     const res = await assignStaff(repos, ctx, { courseId: other.id, instructorId: fixtureInstructorId, roleTypeId: roleId });
     expect(res.ok).toBe(true);
     if (res.ok) expect(res.overridden).toBe(false);
+  });
+});
+
+describe("bulkAssignStaff", () => {
+  let db: DrizzleDatabase;
+  let repos: Repositories;
+  let ctx: SystemTenantContext;
+  let roleId: string;
+  let fixtureInstructorId: string;
+  let courseTypeId: string;
+
+  beforeEach(async () => {
+    ({ db } = createTestDb());
+    const seeded = await seedFullOrg(db, { name: "Bulk", slug: "bulk", jurisdiction: "england" });
+    repos = seeded.repos;
+    ctx = seeded.ctx;
+    const roles = await repos.tenant.roleType.list(ctx);
+    roleId = (roles.find((r) => r.countsTowardRatio) ?? roles[0]!).id;
+    fixtureInstructorId = (await repos.tenant.instructor.list(ctx))[0]!.id;
+    courseTypeId = (await repos.tenant.courseType.list(ctx))[0]!.id;
+  });
+
+  // Two courses on distinct, non-overlapping days so the fit fixture instructor
+  // clashes with neither.
+  async function twoClearCourses(): Promise<[string, string]> {
+    const mk = async (name: string, day: number) => {
+      const c = await repos.tenant.course.insert(ctx, { courseTypeId, name, capacity: 2, ratio: 2, status: "scheduled" });
+      const start = Date.UTC(2026, 2, day, 9, 0, 0);
+      await repos.tenant.courseSession.insert(ctx, { courseId: c.id, date: `2026-03-${String(day).padStart(2, "0")}`, slot: "AM", startAt: new Date(start), endAt: new Date(start + 3 * H) });
+      return c.id;
+    };
+    return [await mk("Mar A", 2), await mk("Mar B", 9)];
+  }
+
+  it("assigns a fit instructor to several courses at once", async () => {
+    const [a, b] = await twoClearCourses();
+    const res = await bulkAssignStaff(repos, ctx, { courseIds: [a, b], instructorId: fixtureInstructorId, roleTypeId: roleId });
+    expect(res.assigned).toBe(2);
+    expect(res.skipped).toBe(0);
+    expect((await repos.tenant.courseStaff.list(ctx)).filter((s) => s.instructorId === fixtureInstructorId).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("reports courses the instructor is already on as 'already' and never duplicates", async () => {
+    const [a, b] = await twoClearCourses();
+    await bulkAssignStaff(repos, ctx, { courseIds: [a], instructorId: fixtureInstructorId, roleTypeId: roleId });
+    const res = await bulkAssignStaff(repos, ctx, { courseIds: [a, b], instructorId: fixtureInstructorId, roleTypeId: roleId });
+    expect(res.already).toBe(1);
+    expect(res.assigned).toBe(1);
+    const onA = (await repos.tenant.courseStaff.list(ctx)).filter((s) => s.courseId === a && s.instructorId === fixtureInstructorId);
+    expect(onA).toHaveLength(1); // not duplicated
+  });
+
+  it("skips a blocked instructor without override, and reports the reason", async () => {
+    const [a] = await twoClearCourses();
+    const unfit = await repos.tenant.instructor.insert(ctx, { name: "Unchecked", email: "b@a.test", employmentType: "freelance", status: "active" });
+    const res = await bulkAssignStaff(repos, ctx, { courseIds: [a], instructorId: unfit.id, roleTypeId: roleId });
+    expect(res.assigned).toBe(0);
+    expect(res.skipped).toBe(1);
+    expect(res.outcomes[0]?.detail).toBeTruthy();
   });
 });

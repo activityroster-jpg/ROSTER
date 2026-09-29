@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireTenant } from "@/lib/tenant/require";
 import { createCourseWithSessions, type NewCourseSession } from "@/lib/services/courses";
 import { addDays } from "@/lib/services/schedule";
-import { assignStaff } from "@/lib/services/assignment";
+import { assignStaff, bulkAssignStaff } from "@/lib/services/assignment";
 import { writeAudit } from "@/lib/services/audit";
 import { COURSE_STATUSES, SLOT_CODES, type CourseStatus, type SlotCode } from "@/lib/db/schema";
 import { normaliseTime, timeToSlot } from "@/lib/import/parse";
@@ -189,4 +189,44 @@ export async function assignStaffAction(_prev: ActionState, formData: FormData):
   revalidatePath("/office/courses");
   revalidatePath("/office");
   return { ok: true, message: res.overridden ? "Assigned with override (recorded)" : "Assigned" };
+}
+
+/** Assign one instructor (in one role) to several courses at once. */
+export async function bulkAssignStaffAction(input: {
+  courseIds: string[];
+  instructorId: string;
+  roleTypeId: string;
+  override?: boolean;
+  overrideNote?: string;
+}): Promise<ActionState> {
+  const { ctx, repos } = await requireTenant({ role: "admin" });
+  if (!input.instructorId || !input.roleTypeId) return { ok: false, error: "Pick an instructor and a role" };
+  const courseIds = [...new Set(input.courseIds ?? [])].filter(Boolean);
+  if (courseIds.length === 0) return { ok: false, error: "Tick at least one course" };
+  if (input.override && !(input.overrideNote ?? "").trim()) return { ok: false, error: "Add a reason to override the checks" };
+
+  const res = await bulkAssignStaff(repos, ctx, {
+    courseIds,
+    instructorId: input.instructorId,
+    roleTypeId: input.roleTypeId,
+    override: input.override,
+    overrideNote: input.overrideNote?.trim() || undefined,
+  });
+
+  revalidatePath("/office/courses");
+  revalidatePath("/office");
+
+  const done = res.assigned + res.overridden;
+  const parts: string[] = [];
+  if (done) parts.push(`${done} assigned${res.overridden ? ` (${res.overridden} with override)` : ""}`);
+  if (res.already) parts.push(`${res.already} already on`);
+  if (res.skipped) parts.push(`${res.skipped} skipped`);
+  const message = parts.join(" · ") || "Nothing to do";
+
+  // A run that assigned nobody and skipped some is a soft failure worth flagging.
+  if (done === 0 && res.skipped > 0) {
+    const reasons = [...new Set(res.outcomes.filter((o) => o.status === "skipped" && o.detail).map((o) => o.detail!))];
+    return { ok: false, error: `None assigned — ${reasons.join("; ") || "checks not met"}. Tick “assign anyway” to override.` };
+  }
+  return { ok: true, message };
 }

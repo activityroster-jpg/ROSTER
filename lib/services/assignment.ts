@@ -123,3 +123,76 @@ export async function assignStaff(
 
   return { ok: true, courseStaffId: row.id, overridden };
 }
+
+export interface BulkAssignInput {
+  courseIds: string[];
+  instructorId: string;
+  roleTypeId: string;
+  override?: boolean;
+  overrideNote?: string;
+}
+
+export interface BulkAssignOutcome {
+  courseId: string;
+  status: "assigned" | "overridden" | "already" | "skipped";
+  detail?: string;
+}
+
+export interface BulkAssignResult {
+  assigned: number;
+  overridden: number;
+  already: number;
+  skipped: number;
+  outcomes: BulkAssignOutcome[];
+}
+
+/**
+ * Assign one instructor (in one role) to several courses in a single pass.
+ * Each course runs the same fit + conflict moat as {@link assignStaff}; a course
+ * where the instructor already holds that role is reported as "already" and left
+ * untouched (idempotent), and a blocked course without override is "skipped"
+ * with the reason. Nothing is all-or-nothing — every course is attempted and the
+ * per-course outcome is returned so the UI can show exactly what happened.
+ */
+export async function bulkAssignStaff(
+  repos: Repositories,
+  ctx: AnyTenantContext,
+  input: BulkAssignInput,
+): Promise<BulkAssignResult> {
+  const t = repos.tenant;
+  const courseIds = [...new Set(input.courseIds)].filter(Boolean);
+  const existing = await t.courseStaff.list(ctx, eq(courseStaffTable.instructorId, input.instructorId));
+  const alreadyInRole = new Set(
+    existing.filter((a) => a.roleTypeId === input.roleTypeId).map((a) => a.courseId),
+  );
+
+  const outcomes: BulkAssignOutcome[] = [];
+  let assigned = 0;
+  let overridden = 0;
+  let already = 0;
+  let skipped = 0;
+
+  for (const courseId of courseIds) {
+    if (alreadyInRole.has(courseId)) {
+      already++;
+      outcomes.push({ courseId, status: "already" });
+      continue;
+    }
+    const res = await assignStaff(repos, ctx, {
+      courseId,
+      instructorId: input.instructorId,
+      roleTypeId: input.roleTypeId,
+      override: input.override,
+      overrideNote: input.overrideNote,
+    });
+    if (res.ok) {
+      if (res.overridden) { overridden++; outcomes.push({ courseId, status: "overridden" }); }
+      else { assigned++; outcomes.push({ courseId, status: "assigned" }); }
+    } else {
+      skipped++;
+      outcomes.push({ courseId, status: "skipped", detail: res.detail });
+    }
+  }
+
+  return { assigned, overridden, already, skipped, outcomes };
+}

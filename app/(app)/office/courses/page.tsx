@@ -5,6 +5,7 @@ import { getCourseAvailabilityStates } from "@/lib/services/availability";
 import { Card, StatusPill } from "@/components/ui";
 import { CoursePlanner } from "@/components/office/CoursePlanner";
 import { AssignStaffForm } from "@/components/office/AssignStaffForm";
+import { BulkAssignForm } from "@/components/office/BulkAssignForm";
 
 export const dynamic = "force-dynamic";
 
@@ -80,6 +81,13 @@ export default async function CoursesPage() {
       <CoursePlanner courseTypes={activeTypes} events={events} slotStyle={slotStyle} />
 
       <h2 className="mb-3 font-display text-lg font-semibold text-navy">Scheduled courses</h2>
+
+      <BulkAssignForm
+        courses={courses.map((c) => ({ id: c.courseId, name: c.courseName, audience: audienceByCourse.get(c.courseId) ?? "all", covered: c.ratio.ok }))}
+        instructors={instructorOptions}
+        roles={activeRoles}
+      />
+
       <div className="space-y-4">
         {courses.length === 0 ? (
           <Card>
