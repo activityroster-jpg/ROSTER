@@ -1,4 +1,4 @@
-import { desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, lte, sql } from "drizzle-orm";
 import type { Database } from "@/lib/db/client";
 import {
   organisation,
@@ -11,6 +11,9 @@ import {
   auditLog,
   marketingProspect,
   platformPricing,
+  blogPost,
+  type BlogPost,
+  type NewBlogPost,
   type MarketingProspect,
   type NewMarketingProspect,
   type Organisation,
@@ -161,5 +164,70 @@ export class PlatformRepository {
     if (updated.length === 0) {
       await this.db.insert(platformPricing).values({ ...DEFAULT_PRICING, ...patch, updatedAt: new Date() });
     }
+  }
+
+  // --- Blog / CMS ----------------------------------------------------------
+
+  /** Public: published posts whose publishAt has arrived, newest first. */
+  async listPublishedPosts(limit = 50, offset = 0): Promise<BlogPost[]> {
+    return this.db
+      .select()
+      .from(blogPost)
+      .where(and(eq(blogPost.status, "published"), lte(blogPost.publishAt, new Date())))
+      .orderBy(desc(blogPost.publishAt))
+      .limit(limit)
+      .offset(offset);
+  }
+
+  /** Public: count of live posts (for pagination). */
+  async countPublishedPosts(): Promise<number> {
+    const rows = await this.db
+      .select({ id: blogPost.id })
+      .from(blogPost)
+      .where(and(eq(blogPost.status, "published"), lte(blogPost.publishAt, new Date())));
+    return rows.length;
+  }
+
+  /** Public: a single live post by slug (or null if missing/not yet live). */
+  async getPublishedPostBySlug(slug: string): Promise<BlogPost | null> {
+    const rows = await this.db
+      .select()
+      .from(blogPost)
+      .where(and(eq(blogPost.slug, slug), eq(blogPost.status, "published"), lte(blogPost.publishAt, new Date())))
+      .limit(1);
+    return rows[0] ?? null;
+  }
+
+  /** Admin: every post (any status), newest scheduled first. */
+  async listAllPosts(): Promise<BlogPost[]> {
+    return this.db.select().from(blogPost).orderBy(desc(blogPost.publishAt), desc(blogPost.createdAt));
+  }
+
+  async getPostById(id: string): Promise<BlogPost | null> {
+    const rows = await this.db.select().from(blogPost).where(eq(blogPost.id, id)).limit(1);
+    return rows[0] ?? null;
+  }
+
+  async getPostBySlug(slug: string): Promise<BlogPost | null> {
+    const rows = await this.db.select().from(blogPost).where(eq(blogPost.slug, slug)).limit(1);
+    return rows[0] ?? null;
+  }
+
+  async createPost(input: NewBlogPost): Promise<BlogPost> {
+    const rows = await this.db.insert(blogPost).values(input).returning();
+    return rows[0]!;
+  }
+
+  async updatePost(id: string, patch: Partial<Omit<BlogPost, "id" | "createdAt">>): Promise<void> {
+    await this.db.update(blogPost).set({ ...patch, updatedAt: new Date() }).where(eq(blogPost.id, id));
+  }
+
+  async deletePost(id: string): Promise<void> {
+    await this.db.delete(blogPost).where(eq(blogPost.id, id));
+  }
+
+  async countAllPosts(): Promise<number> {
+    const rows = await this.db.select({ id: blogPost.id }).from(blogPost);
+    return rows.length;
   }
 }

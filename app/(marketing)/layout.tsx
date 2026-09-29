@@ -20,6 +20,9 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
             <Link href="/learn" className="hidden hover:text-navy sm:inline">
               Learn
             </Link>
+            <Link href="/blog" className="hidden hover:text-navy sm:inline">
+              Blog
+            </Link>
             <Link href="/demo" className="hover:text-navy">
               Demo
             </Link>
@@ -40,6 +43,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
             <Link href="/pricing" className="hover:text-navy">Pricing</Link>
             <Link href="/compare" className="hover:text-navy">Compare</Link>
             <Link href="/learn" className="hover:text-navy">Learning Centre</Link>
+            <Link href="/blog" className="hover:text-navy">Blog</Link>
             <Link href="/demo" className="hover:text-navy">Demo</Link>
             <Link href="/privacy" className="hover:text-navy">Privacy</Link>
             <Link href="/terms" className="hover:text-navy">Terms</Link>

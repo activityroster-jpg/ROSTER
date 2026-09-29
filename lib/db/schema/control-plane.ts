@@ -316,6 +316,42 @@ export const errorReport = sqliteTable("error_report", {
   index("error_report_status_idx").on(t.status),
 ]);
 
+// --- Blog / CMS (platform-owned marketing content, for SEO) -----------------
+
+export const BLOG_STATUSES = ["draft", "published"] as const;
+export type BlogStatus = (typeof BLOG_STATUSES)[number];
+
+/**
+ * A blog article. Control-plane (global marketing content, not tenant-owned),
+ * managed from the platform admin CMS and served on the public /blog.
+ *
+ * Publishing is time-based: a post is publicly visible when status = "published"
+ * AND publishAt <= now. Scheduling future posts (e.g. two per day) is therefore
+ * just a matter of setting publishAt — no cron job required; the public queries
+ * filter on the clock at read time.
+ */
+export const blogPost = sqliteTable("blog_post", {
+  id: id(),
+  slug: text("slug").notNull(),
+  title: text("title").notNull(),
+  excerpt: text("excerpt").notNull().default(""),
+  body: text("body").notNull().default(""),
+  category: text("category").notNull().default("Guides"),
+  tags: text("tags").notNull().default(""),
+  author: text("author").notNull().default("The ActivityRoster Team"),
+  coverEmoji: text("cover_emoji").notNull().default("⛵"),
+  seoTitle: text("seo_title"),
+  seoDescription: text("seo_description"),
+  status: text("status", { enum: BLOG_STATUSES }).notNull().default("draft"),
+  publishAt: integer("publish_at", { mode: "timestamp_ms" }),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, (t) => [
+  uniqueIndex("blog_post_slug_uq").on(t.slug),
+  index("blog_post_publish_idx").on(t.publishAt),
+  index("blog_post_status_idx").on(t.status),
+]);
+
 export type Organisation = typeof organisation.$inferSelect;
 export type NewOrganisation = typeof organisation.$inferInsert;
 export type Membership = typeof membership.$inferSelect;
@@ -325,6 +361,8 @@ export type MarketingProspect = typeof marketingProspect.$inferSelect;
 export type NewMarketingProspect = typeof marketingProspect.$inferInsert;
 export type PlatformPricing = typeof platformPricing.$inferSelect;
 export type ErrorReport = typeof errorReport.$inferSelect;
+export type BlogPost = typeof blogPost.$inferSelect;
+export type NewBlogPost = typeof blogPost.$inferInsert;
 
 // A tiny re-export so migrations pick up the raw-sql helper if needed.
 export const _sql = sql;
