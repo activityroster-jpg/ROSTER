@@ -11,8 +11,10 @@ import { providerName, providerColor } from "@/lib/integrations/catalogue";
 
 export const dynamic = "force-dynamic";
 
-export default async function CoursesPage() {
+export default async function CoursesPage({ searchParams }: { searchParams: Promise<{ view?: string }> }) {
   const { ctx, repos } = await requireTenant({ role: "admin" });
+  const sp = await searchParams;
+  const view: "upcoming" | "past" = sp.view === "past" ? "past" : "upcoming";
   const monday = weekStart(new Date());
   const [{ coverageByCourse }, courseTypes, staff, roles, assignments, instructors, settings, events] = await Promise.all([
     getWeekSchedule(repos, ctx, monday),
@@ -66,6 +68,73 @@ export default async function CoursesPage() {
     assignedByCourse.set(a.courseId, [...(assignedByCourse.get(a.courseId) ?? []), a]);
   }
 
+  // --- Chronological grouping: sort by first session, group by week, head each
+  //     month/year; unscheduled courses sink to the end. -----------------------
+  type Course = (typeof courses)[number];
+  const earliest = (courseId: string) => sessionsFullByCourse.get(courseId)?.[0] ?? null; // sessions pre-sorted ascending
+  const sortedCourses = [...courses].sort((a, b) => (earliest(a.courseId)?.startMs ?? Infinity) - (earliest(b.courseId)?.startMs ?? Infinity));
+
+  const monthLabelOf = (key: string) => new Date(`${key}-01T00:00:00Z`).toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
+  const weekRangeOf = (mondayIso: string) => {
+    const sun = addDays(mondayIso, 6);
+    const d = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+    return `Week of ${d(mondayIso)} – ${d(sun)}`;
+  };
+
+  // Partition into upcoming vs past by the course's LAST session. Undated
+  //  (no sessions yet) always sits under "upcoming" so it can be scheduled.
+  const now = Date.now();
+  const lastMsOf = (courseId: string) => {
+    const ss = sessionsFullByCourse.get(courseId);
+    return ss && ss.length ? Math.max(...ss.map((s) => s.endMs)) : null;
+  };
+  const undated: Course[] = sortedCourses.filter((c) => earliest(c.courseId) == null);
+  const pastCourses = sortedCourses.filter((c) => { const l = lastMsOf(c.courseId); return l != null && l < now; });
+  const upcomingCourses = sortedCourses.filter((c) => { const l = lastMsOf(c.courseId); return l != null && l >= now; });
+  const upcomingCount = upcomingCourses.length + undated.length;
+
+  // Group the active view by week. Past is shown newest-first.
+  const activeList = view === "past" ? [...pastCourses].reverse() : upcomingCourses;
+  interface WeekGroup { weekStart: string; weekLabel: string; monthKey: string; monthLabel: string; list: Course[] }
+  const weekGroups: WeekGroup[] = [];
+  for (const c of activeList) {
+    const first = earliest(c.courseId)!;
+    const wk = weekStart(new Date(`${first.date}T00:00:00Z`));
+    let g = weekGroups.find((x) => x.weekStart === wk);
+    if (!g) {
+      const monthKey = wk.slice(0, 7);
+      g = { weekStart: wk, weekLabel: weekRangeOf(wk), monthKey, monthLabel: monthLabelOf(monthKey), list: [] };
+      weekGroups.push(g);
+    }
+    g.list.push(c);
+  }
+  // Distinct months, in order, for the jump nav.
+  const monthNav: { key: string; label: string }[] = [];
+  for (const g of weekGroups) if (!monthNav.some((m) => m.key === g.monthKey)) monthNav.push({ key: g.monthKey, label: g.monthLabel });
+
+  const cardFor = (c: Course) => {
+    const assigned = (assignedByCourse.get(c.courseId) ?? []).map((a) => ({
+      id: a.id,
+      instructorName: nameById.get(a.instructorId) ?? "Instructor",
+      roleName: roleName.get(a.roleTypeId) ?? "role",
+      isOverride: Boolean(a.isOverride),
+    }));
+    return (
+      <CourseCard
+        key={c.courseId}
+        course={{ id: c.courseId, name: c.courseName, courseTypeName: c.courseTypeName, status: c.status, staffRequired: staffReqByCourse.get(c.courseId) ?? null }}
+        audience={audienceByCourse.get(c.courseId) ?? "all"}
+        sessions={sessionsFullByCourse.get(c.courseId) ?? []}
+        assigned={assigned}
+        instructors={instructorOptions.map((o) => ({ ...o, avail: courseAvail.get(c.courseId)?.get(o.id) ?? "none" }))}
+        roles={activeRoles}
+        ratioOn={ratioOn}
+        ratio={ratioOn ? { ok: c.ratio.ok, understaffed: c.ratio.understaffed, missingSafetyCover: c.ratio.missingSafetyCover } : undefined}
+        computedRequired={c.ratio.requiredStaff}
+      />
+    );
+  };
+
   return (
     <div>
       <div className="mb-1 flex items-center justify-between">
@@ -90,43 +159,63 @@ export default async function CoursesPage() {
 
       <CoursePlanner courseTypes={activeTypes} events={events} slotStyle={slotStyle} />
 
-      <h2 className="mb-3 font-display text-lg font-semibold text-navy">Scheduled courses</h2>
+      <div className="mb-3 flex items-center gap-2">
+        <h2 className="font-display text-lg font-semibold text-navy">Courses</h2>
+        <div className="ml-2 flex rounded-lg border border-slate-200 p-0.5 text-sm">
+          <a href="/office/courses" className={`rounded-md px-3 py-1 font-medium ${view === "upcoming" ? "bg-navy text-white" : "text-slate-500 hover:text-navy"}`}>Upcoming ({upcomingCount})</a>
+          <a href="/office/courses?view=past" className={`rounded-md px-3 py-1 font-medium ${view === "past" ? "bg-navy text-white" : "text-slate-500 hover:text-navy"}`}>Past ({pastCourses.length})</a>
+        </div>
+      </div>
 
-      <BulkAssignForm
-        courses={courses.map((c) => ({ id: c.courseId, name: c.courseName, audience: audienceByCourse.get(c.courseId) ?? "all", covered: ratioOn ? c.ratio.ok : true }))}
-        instructors={instructorOptions}
-        roles={activeRoles}
-      />
+      {view === "upcoming" ? (
+        <BulkAssignForm
+          courses={upcomingCourses.map((c) => ({ id: c.courseId, name: c.courseName, audience: audienceByCourse.get(c.courseId) ?? "all", covered: ratioOn ? c.ratio.ok : true }))}
+          instructors={instructorOptions}
+          roles={activeRoles}
+        />
+      ) : null}
 
-      <div className="space-y-2">
-        {courses.length === 0 ? (
-          <Card>
-            <p className="text-sm text-slate-400">No courses yet. Add one above to start rostering.</p>
-          </Card>
-        ) : (
-          courses.map((c) => {
-            const assigned = (assignedByCourse.get(c.courseId) ?? []).map((a) => ({
-              id: a.id,
-              instructorName: nameById.get(a.instructorId) ?? "Instructor",
-              roleName: roleName.get(a.roleTypeId) ?? "role",
-              isOverride: Boolean(a.isOverride),
-            }));
-            return (
-              <CourseCard
-                key={c.courseId}
-                course={{ id: c.courseId, name: c.courseName, courseTypeName: c.courseTypeName, status: c.status, staffRequired: staffReqByCourse.get(c.courseId) ?? null }}
-                audience={audienceByCourse.get(c.courseId) ?? "all"}
-                sessions={sessionsFullByCourse.get(c.courseId) ?? []}
-                assigned={assigned}
-                instructors={instructorOptions.map((o) => ({ ...o, avail: courseAvail.get(c.courseId)?.get(o.id) ?? "none" }))}
-                roles={activeRoles}
-                ratioOn={ratioOn}
-                ratio={ratioOn ? { ok: c.ratio.ok, understaffed: c.ratio.understaffed, missingSafetyCover: c.ratio.missingSafetyCover } : undefined}
-                computedRequired={c.ratio.requiredStaff}
-              />
-            );
-          })
-        )}
+      <div className="scroll-smooth lg:grid lg:grid-cols-[1fr_11rem] lg:gap-6">
+        <div className="space-y-5">
+          {weekGroups.length === 0 && (view === "past" || undated.length === 0) ? (
+            <Card>
+              <p className="text-sm text-slate-400">{view === "past" ? "No past courses yet." : "No upcoming courses. Add one above to start rostering."}</p>
+            </Card>
+          ) : (
+            weekGroups.map((g, i) => {
+              const showMonth = i === 0 || weekGroups[i - 1]!.monthKey !== g.monthKey;
+              return (
+                <div key={g.weekStart}>
+                  {showMonth ? <h3 id={`mo-${g.monthKey}`} className="scroll-mt-4 mb-2 border-b border-slate-200 pb-1 font-display text-base font-semibold text-navy">{g.monthLabel}</h3> : null}
+                  <p id={`wk-${g.weekStart}`} className="scroll-mt-4 mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">{g.weekLabel}</p>
+                  <div className="space-y-2">{g.list.map(cardFor)}</div>
+                </div>
+              );
+            })
+          )}
+
+          {view === "upcoming" && undated.length > 0 ? (
+            <div>
+              <h3 id="mo-none" className="scroll-mt-4 mb-2 border-b border-slate-200 pb-1 font-display text-base font-semibold text-navy">No date yet</h3>
+              <div className="space-y-2">{undated.map(cardFor)}</div>
+            </div>
+          ) : null}
+        </div>
+
+        {/* Jump-to nav */}
+        {monthNav.length > 0 || (view === "upcoming" && undated.length > 0) ? (
+          <nav className="mt-4 hidden self-start lg:sticky lg:top-4 lg:mt-0 lg:block">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Jump to</p>
+            <ul className="space-y-1 text-sm">
+              {monthNav.map((m) => (
+                <li key={m.key}><a href={`#mo-${m.key}`} className="text-slate-600 hover:text-navy hover:underline">{m.label}</a></li>
+              ))}
+              {view === "upcoming" && undated.length > 0 ? (
+                <li><a href="#mo-none" className="text-slate-600 hover:text-navy hover:underline">No date yet</a></li>
+              ) : null}
+            </ul>
+          </nav>
+        ) : null}
       </div>
     </div>
   );
