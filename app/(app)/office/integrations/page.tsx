@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireTenant } from "@/lib/tenant/require";
-import { PROVIDERS, providerName } from "@/lib/integrations/catalogue";
+import { PROVIDERS, providerName, providerColor } from "@/lib/integrations/catalogue";
 import { BookingIntegrations } from "@/components/office/BookingIntegrations";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +13,7 @@ export default async function IntegrationsPage() {
     id: r.id,
     provider: r.provider,
     name: providerName(r.provider),
+    color: providerColor(r.provider),
     kind: r.kind,
     feedUrl: r.feedUrl,
     status: r.status,
@@ -20,7 +21,7 @@ export default async function IntegrationsPage() {
     lastResult: r.lastResult,
   }));
 
-  const providers = PROVIDERS.map((p) => ({ id: p.id, name: p.name, category: p.category, blurb: p.blurb, methods: p.methods, apiPlanned: p.apiPlanned, apiAdapter: p.apiAdapter, icsHelp: p.icsHelp, website: p.website }));
+  const providers = PROVIDERS.map((p) => ({ id: p.id, name: p.name, color: providerColor(p.id), category: p.category, blurb: p.blurb, methods: p.methods, apiPlanned: p.apiPlanned, apiAdapter: p.apiAdapter, icsHelp: p.icsHelp, website: p.website }));
 
   return (
     <div>

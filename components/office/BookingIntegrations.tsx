@@ -3,12 +3,31 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { connectIntegrationAction, removeIntegrationAction, previewIntegrationChangesAction, applyIntegrationChangesAction, type PreviewResult } from "@/app/(app)/office/integrations/actions";
+import { providerInitials } from "@/lib/integrations/catalogue";
 import type { FeedDiff } from "@/lib/services/integrations";
 
-interface ProviderUi { id: string; name: string; category: string; blurb: string; methods: string[]; apiPlanned?: boolean; apiAdapter?: boolean; icsHelp?: string; website?: string }
-interface ConnectedUi { id: string; provider: string; name: string; kind: string; feedUrl: string | null; status: string; lastSyncedAt: string | null; lastResult: string | null }
+interface ProviderUi { id: string; name: string; color: string; category: string; blurb: string; methods: string[]; apiPlanned?: boolean; apiAdapter?: boolean; icsHelp?: string; website?: string }
+interface ConnectedUi { id: string; provider: string; name: string; color: string; kind: string; feedUrl: string | null; status: string; lastSyncedAt: string | null; lastResult: string | null }
 
 const fmt = (iso: string | null) => iso ? new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "never";
+
+/** A branded monogram badge for a provider (our own logo stand-in — the vendors'
+ *  real trademarked logos aren't bundled). Drop a file at public/logos/<id>.svg
+ *  and switch this to an <img> if you want the real marks later. */
+function ProviderLogo({ name, color, size = 40 }: { id?: string; name: string; color: string; size?: number }) {
+  return (
+    <span
+      aria-hidden
+      style={{ width: size, height: size, backgroundColor: color }}
+      className="flex flex-none items-center justify-center rounded-lg text-xs font-bold text-white"
+    >
+      {providerInitials(name)}
+    </span>
+  );
+}
+
+/** Deep link to the Learning Centre guide (opens the booking-integrations section). */
+const guideHref = (id: string) => `/learn?topic=integrations&provider=${id}`;
 
 export function BookingIntegrations({ providers, connected }: { providers: ProviderUi[]; connected: ConnectedUi[] }) {
   const router = useRouter();
@@ -58,6 +77,26 @@ export function BookingIntegrations({ providers, connected }: { providers: Provi
 
   return (
     <div className="space-y-6">
+      {/* Top summary — which booking system(s) this centre is connected to */}
+      <div className={`rounded-card border p-4 ${connected.length ? "border-starboard/40 bg-starboard/5" : "border-slate-200 bg-slate-50"}`}>
+        {connected.length ? (
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-sm font-semibold text-navy">{connected.length === 1 ? "Connected to" : "Connected to"}</span>
+            {connected.map((c) => (
+              <span key={c.id} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-2.5 py-1">
+                <ProviderLogo id={c.provider} name={c.name} color={c.color} size={20} />
+                <span className="text-sm font-semibold text-navy">{c.name}</span>
+                <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${c.status === "connected" ? "bg-starboard/15 text-starboard" : c.status === "error" ? "bg-port/15 text-port" : "bg-slate-100 text-slate-500"}`}>{c.status}</span>
+              </span>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-slate-500">
+            <span className="font-semibold text-navy">No booking system connected yet.</span> Pick yours below to feed your courses in automatically.
+          </p>
+        )}
+      </div>
+
       {msg ? <p role="status" className={`text-sm ${msg.ok ? "text-starboard" : "text-port"}`}>{msg.text}</p> : null}
 
       {/* Connected */}
@@ -68,11 +107,15 @@ export function BookingIntegrations({ providers, connected }: { providers: Provi
             {connected.map((c) => (
               <div key={c.id} className="rounded-card border border-slate-200 bg-white p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <p className="font-semibold text-navy">{c.name}
-                      <span className={`ml-2 rounded-full px-2 py-0.5 text-[10px] font-semibold ${c.status === "connected" ? "bg-starboard/15 text-starboard" : c.status === "error" ? "bg-port/15 text-port" : "bg-slate-100 text-slate-500"}`}>{c.status}</span>
-                    </p>
-                    <p className="text-xs text-slate-500">Last updated: {fmt(c.lastSyncedAt)}{c.lastResult ? ` · ${c.lastResult}` : ""}</p>
+                  <div className="flex items-center gap-3">
+                    <ProviderLogo id={c.provider} name={c.name} color={c.color} />
+                    <div>
+                      <p className="font-semibold text-navy">{c.name}
+                        <span className={`ml-2 rounded-full px-2 py-0.5 text-[10px] font-semibold ${c.status === "connected" ? "bg-starboard/15 text-starboard" : c.status === "error" ? "bg-port/15 text-port" : "bg-slate-100 text-slate-500"}`}>{c.status}</span>
+                      </p>
+                      <p className="text-xs text-slate-500">Last updated: {fmt(c.lastSyncedAt)}{c.lastResult ? ` · ${c.lastResult}` : ""}</p>
+                      <a href={guideHref(c.provider)} target="_blank" rel="noreferrer" className="text-xs font-medium text-teal hover:underline">📖 Where to find your feed link</a>
+                    </div>
                   </div>
                   <div className="flex items-center gap-3">
                     <button type="button" onClick={() => check(c.id)} disabled={pending} className="rounded-lg bg-teal px-3 py-1.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{pending && reviewId === c.id ? "Checking…" : "Check for updates"}</button>
@@ -154,13 +197,17 @@ export function BookingIntegrations({ providers, connected }: { providers: Provi
             return (
               <div key={p.id} className={`rounded-card border p-4 ${open ? "border-teal" : "border-slate-200"} bg-white`}>
                 <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="font-semibold text-navy">{p.name}</p>
-                    <p className="text-[11px] uppercase tracking-wide text-slate-400">{p.category}</p>
+                  <div className="flex items-center gap-2.5">
+                    <ProviderLogo id={p.id} name={p.name} color={p.color} size={36} />
+                    <div>
+                      <p className="font-semibold text-navy">{p.name}</p>
+                      <p className="text-[11px] uppercase tracking-wide text-slate-400">{p.category}</p>
+                    </div>
                   </div>
                   {conn ? <span className="rounded-full bg-starboard/15 px-2 py-0.5 text-[10px] font-semibold text-starboard">connected</span> : null}
                 </div>
                 <p className="mt-2 text-sm text-slate-600">{p.blurb}</p>
+                <a href={guideHref(p.id)} target="_blank" rel="noreferrer" className="mt-1 inline-block text-xs font-medium text-teal hover:underline">📖 Where to find your feed link</a>
                 <div className="mt-2 flex flex-wrap gap-1">
                   {p.methods.map((m) => <span key={m} className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium uppercase text-slate-500">{m}</span>)}
                   {p.apiPlanned ? <span className="rounded bg-amber/15 px-1.5 py-0.5 text-[10px] font-medium text-amber">API soon</span> : null}

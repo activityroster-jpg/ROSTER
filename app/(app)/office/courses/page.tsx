@@ -6,6 +6,8 @@ import { Card, StatusPill } from "@/components/ui";
 import { CoursePlanner } from "@/components/office/CoursePlanner";
 import { AssignStaffForm } from "@/components/office/AssignStaffForm";
 import { BulkAssignForm } from "@/components/office/BulkAssignForm";
+import { CourseUpdatesCheck } from "@/components/office/CourseUpdatesCheck";
+import { providerName, providerColor } from "@/lib/integrations/catalogue";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +46,10 @@ export default async function CoursesPage() {
   const roleName = new Map(roles.map((r) => [r.id, r.name]));
 
   const courseAvail = await getCourseAvailabilityStates(repos, ctx);
+
+  // Connected booking systems — so "Check for updates" lives next to the calendar.
+  const integrationRows = await repos.tenant.integration.list(ctx);
+  const connectedIntegrations = integrationRows.map((r) => ({ id: r.id, provider: r.provider, name: providerName(r.provider), color: providerColor(r.provider) }));
 
   // Session date/time summary per course, for the cards.
   const allSessions = await repos.tenant.courseSession.list(ctx);
@@ -87,6 +93,8 @@ export default async function CoursesPage() {
             : " Optional compliance checks (qualifications, ratios, safety cover) can be switched on in Settings.";
         })()}
       </p>
+
+      <CourseUpdatesCheck integrations={connectedIntegrations} />
 
       <CoursePlanner courseTypes={activeTypes} events={events} slotStyle={slotStyle} />
 

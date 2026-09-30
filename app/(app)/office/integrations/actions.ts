@@ -6,6 +6,7 @@ import { requireTenant } from "@/lib/tenant/require";
 import { integration as integrationTable, INTEGRATION_KINDS, type IntegrationKind } from "@/lib/db/schema";
 import { providerById } from "@/lib/integrations/catalogue";
 import { fetchIntegrationDrafts, applyChanges, diffFeed, type FeedDiff } from "@/lib/services/integrations";
+import { assertSafeFeedUrl } from "@/lib/integrations/url-guard";
 import { isSafeFeedUrl } from "@/lib/integrations/url-guard";
 import { writeAudit } from "@/lib/services/audit";
 
@@ -20,10 +21,31 @@ export async function connectIntegrationAction(input: { provider: string; kind?:
   const kind: IntegrationKind = (INTEGRATION_KINDS as readonly string[]).includes(String(input.kind)) ? (input.kind as IntegrationKind) : "ics";
   const feedUrl = (input.feedUrl ?? "").trim();
   const token = (input.token ?? "").trim();
-  if (kind === "ics" && !validFeedUrl(feedUrl)) return { ok: false, error: "Enter a valid calendar feed URL (https://…)" };
+  if (kind === "ics" && !validFeedUrl(feedUrl)) {
+    // Give a specific reason where we can (blocked host, wrong scheme, junk text).
+    let why = "";
+    try { assertSafeFeedUrl(feedUrl); } catch (e) { why = ` — ${(e as Error).message}`; }
+    return { ok: false, error: `That doesn't look like a valid calendar feed URL. Paste the full https:// iCal / calendar link (it usually ends in .ics)${why}.` };
+  }
   if (kind === "api" && !token) return { ok: false, error: "Enter your API key" };
 
-  const patch = { kind, feedUrl: kind === "ics" ? feedUrl : null, token: kind === "api" ? token : null, status: "connected" as const, lastResult: null };
+  // Verify the feed/key actually works BEFORE saving — this catches a wrong URL
+  // or key (unreachable, not a calendar, empty response, bad credentials).
+  let verifiedCount: number | null = null;
+  try {
+    const drafts = await fetchIntegrationDrafts({ kind, provider: input.provider, feedUrl: kind === "ics" ? feedUrl : null, token: kind === "api" ? token : null });
+    verifiedCount = drafts.length;
+  } catch (err) {
+    const detail = (err as Error).message || "we couldn't read it";
+    return {
+      ok: false,
+      error: kind === "api"
+        ? `Couldn't connect with that API key — please double-check it. (${detail})`
+        : `Couldn't read a calendar feed at that URL — check you copied the iCal / calendar feed link, not the booking page address. (${detail})`,
+    };
+  }
+
+  const patch = { kind, feedUrl: kind === "ics" ? feedUrl : null, token: kind === "api" ? token : null, status: "connected" as const, lastResult: verifiedCount != null ? `Verified — ${verifiedCount} upcoming event${verifiedCount === 1 ? "" : "s"} in the feed` : null };
   const existing = (await repos.tenant.integration.list(ctx, eq(integrationTable.provider, input.provider)))[0];
   if (existing) {
     await repos.tenant.integration.update(ctx, existing.id, patch);
@@ -33,7 +55,10 @@ export async function connectIntegrationAction(input: { provider: string; kind?:
   await writeAudit(repos, ctx, { action: "integration_connect", entity: "integration", after: { provider: input.provider, kind } });
   revalidatePath("/office/courses");
   revalidatePath("/office/integrations");
-  return { ok: true, message: `${provider.name} connected` };
+  const suffix = verifiedCount === 0
+    ? " — but no upcoming events were found in the feed. If you expected some, double-check the URL."
+    : verifiedCount != null ? ` — ${verifiedCount} upcoming event${verifiedCount === 1 ? "" : "s"} found. Press “Check for updates” to review them.` : "";
+  return { ok: true, message: `${provider.name} connected${suffix}` };
 }
 
 export async function removeIntegrationAction(id: string): Promise<IntegrationResult> {

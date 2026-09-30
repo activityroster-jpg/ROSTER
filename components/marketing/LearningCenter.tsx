@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { LearnMockup, MOCKUP_IDS } from "./LearnMockup";
+import { PROVIDERS } from "@/lib/integrations/catalogue";
 
 /** A block of guide content. */
 type Block =
@@ -9,7 +10,8 @@ type Block =
   | { kind: "steps"; items: string[] }
   | { kind: "bullets"; items: string[] }
   | { kind: "tip"; text: string }
-  | { kind: "sub"; text: string };
+  | { kind: "sub"; text: string }
+  | { kind: "providerHelp" };
 
 interface Section {
   id: string;
@@ -112,6 +114,9 @@ const SECTIONS: Section[] = [
         "Only future sessions are considered; past events are ignored, and manually-created courses are never touched.",
         "It's manual on purpose — updates happen when you press the button, not on a hidden schedule.",
       ] },
+      { kind: "sub", text: "Where to find your feed link, by system" },
+      { kind: "p", text: "Every booking system keeps its calendar (iCal) feed URL in a slightly different place. Here's exactly where to look in each — copy that link and paste it on the Integrations page." },
+      { kind: "providerHelp" },
       { kind: "tip", text: "No calendar feed? Export a spreadsheet from your system and use “Import from spreadsheet / calendar” instead — same result." },
     ],
   },
@@ -392,6 +397,23 @@ function BlockView({ b }: { b: Block }) {
       return (
         <div className="rounded-lg border-l-4 border-amber bg-amber/10 px-4 py-2.5 text-sm text-navy">
           <span className="font-semibold">Tip:</span> {b.text}
+        </div>
+      );
+    case "providerHelp":
+      return (
+        <div className="space-y-2">
+          {PROVIDERS.filter((p) => p.icsHelp).map((p) => (
+            <div key={p.id} id={`integration-${p.id}`} className="rounded-lg border border-slate-200 bg-white p-3">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-semibold text-navy">{p.name}</p>
+                <div className="flex items-center gap-2">
+                  {p.apiAdapter ? <span className="rounded bg-teal/15 px-1.5 py-0.5 text-[10px] font-semibold text-teal">API key too</span> : null}
+                  {p.website ? <a href={p.website} target="_blank" rel="noreferrer" className="text-xs font-medium text-teal hover:underline">Open {p.name} ↗</a> : null}
+                </div>
+              </div>
+              <p className="mt-1 text-sm text-slate-600">{p.icsHelp}</p>
+            </div>
+          ))}
         </div>
       );
   }

@@ -175,3 +175,38 @@ export function providerById(id: string): Provider | undefined {
 export function providerName(id: string): string {
   return providerById(id)?.name ?? id;
 }
+
+/**
+ * Brand colour per provider, used for the tile logo badge. These are simple
+ * brand-ish accent colours for our own monogram badge — not the vendors'
+ * trademarked logos. If a real logo file is later dropped in at
+ * public/logos/<id>.svg the UI prefers it over the badge.
+ */
+const BRAND_COLORS: Record<string, string> = {
+  webcollect: "#1f6feb",
+  membermojo: "#16a34a",
+  bookwhen: "#0ea5e9",
+  eola: "#7c3aed",
+  class4kids: "#ef4444",
+  checkfront: "#0891b2",
+  fareharbor: "#2563eb",
+  rezdy: "#f59e0b",
+  bokun: "#0d9488",
+  teamup: "#4f46e5",
+  eventbrite: "#f05537",
+  google_calendar: "#4285f4",
+  outlook: "#0078d4",
+  ics_generic: "#334155",
+};
+
+export function providerColor(id: string): string {
+  return BRAND_COLORS[id] ?? "#334155";
+}
+
+/** Up-to-two-letter monogram for the badge, derived from the provider name. */
+export function providerInitials(name: string): string {
+  const words = name.replace(/[^A-Za-z0-9 ]/g, " ").split(/\s+/).filter(Boolean);
+  if (words.length === 0) return "?";
+  if (words.length === 1) return words[0]!.slice(0, 2).toUpperCase();
+  return (words[0]![0]! + words[1]![0]!).toUpperCase();
+}
