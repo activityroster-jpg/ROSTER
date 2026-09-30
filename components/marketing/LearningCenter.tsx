@@ -93,6 +93,51 @@ const SECTIONS: Section[] = [
     ],
   },
   {
+    id: "integrations",
+    icon: "🔌",
+    label: "Booking system integrations",
+    blurb: "Feed your courses in automatically from the booking system you already use.",
+    blocks: [
+      { kind: "p", text: "If you already take bookings in another system, ActivityRoster can pull your courses in automatically so you never re-type them. Open Office → Courses → “Connect a booking system” (or the Integrations page)." },
+      { kind: "sub", text: "How it works" },
+      { kind: "steps", items: [
+        "Pick your booking system from the list (WebCollect, Bookwhen, Eola, Class4Kids, Checkfront and more — or any calendar).",
+        "Paste its calendar (iCal) feed URL — each system shows you where to find this; the page gives per-system hints.",
+        "Hit “Sync now”. We read the feed and create a course + session for each event.",
+        "Roster your staff onto the imported courses as normal.",
+      ] },
+      { kind: "sub", text: "Safe and repeatable" },
+      { kind: "bullets", items: [
+        "It's one-way and read-only — we never change anything in your booking system.",
+        "Re-syncing never duplicates: an event already imported for the same course, date and slot is skipped.",
+        "Only future sessions are brought in; past events are ignored.",
+      ] },
+      { kind: "tip", text: "No calendar feed? Export a spreadsheet from your system and use “Import from spreadsheet / calendar” instead — same result." },
+    ],
+  },
+  {
+    id: "staff-import",
+    icon: "📇",
+    label: "Importing staff",
+    blurb: "Bring your whole team in from a spreadsheet — even a rough, incomplete one.",
+    blocks: [
+      { kind: "p", text: "On the Staff tab use “Import from spreadsheet”. Your list doesn't need to be tidy or complete — the only thing every row needs is a name." },
+      { kind: "steps", items: [
+        "Paste your list or upload a CSV.",
+        "Match your columns — we guess them, you correct any that are wrong. Name is the only required column.",
+        "Review every row: fix names/emails, and see any flags (e.g. missing email means no invite yet).",
+        "Optionally tick “email a portal invite to everyone with an email”, then import.",
+      ] },
+      { kind: "sub", text: "How messy data is handled" },
+      { kind: "bullets", items: [
+        "Rows without a name are skipped, never guessed.",
+        "Qualifications/tickets and courses-they-can-teach are matched to your catalogue by name; anything it doesn't recognise is ignored so you don't get junk — add those on each profile later.",
+        "Employment type is read loosely (e.g. 'casual' → freelance) and defaults to employed.",
+      ] },
+      { kind: "tip", text: "Start simple: a sheet of just names and emails is enough to get everyone in and invited — you can fill in tickets and courses afterwards." },
+    ],
+  },
+  {
     id: "staff",
     icon: "👥",
     label: "Staff & team",
@@ -352,8 +397,9 @@ function BlockView({ b }: { b: Block }) {
   }
 }
 
-export function LearningCenter() {
-  const [active, setActive] = useState(SECTIONS[0]!.id);
+export function LearningCenter({ initialTopic }: { initialTopic?: string }) {
+  const startId = initialTopic && SECTIONS.some((s) => s.id === initialTopic) ? initialTopic : SECTIONS[0]!.id;
+  const [active, setActive] = useState(startId);
   const section = SECTIONS.find((s) => s.id === active) ?? SECTIONS[0]!;
 
   return (

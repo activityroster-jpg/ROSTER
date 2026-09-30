@@ -6,6 +6,8 @@ export const metadata = {
     "Step-by-step guides to every part of ActivityRoster: setup, courses, staff, licences, availability, rostering, rota, billing, admin and data.",
 };
 
-export default function LearnPage() {
-  return <LearningCenter />;
+export default async function LearnPage({ searchParams }: { searchParams: Promise<{ topic?: string }> }) {
+  const sp = await searchParams;
+  const topic = typeof sp.topic === "string" ? sp.topic : undefined;
+  return <LearningCenter initialTopic={topic} />;
 }

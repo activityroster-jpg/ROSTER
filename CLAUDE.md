@@ -47,6 +47,11 @@ centre is identical at provisioning and "branches off" only through
 - Keep Node-heavy libs out (Workers Node-compat is partial); prefer Drizzle +
   `fetch` clients. `better-sqlite3` is **test/dev only**.
 - Small, phase-scoped changes; no new features mid-phase.
+- **Every new user-facing feature ships with a guide.** Add a section to the
+  Learning Centre (`components/marketing/LearningCenter.tsx`, served at `/learn`)
+  and link to it from the feature's own page in the platform via
+  `/learn?topic=<sectionId>` (a "📖 Read the guide" link). The Learning Centre
+  supports deep-linking to any section by its id.
 
 ## Layout
 
