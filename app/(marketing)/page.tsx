@@ -131,12 +131,12 @@ export default function MarketingHome() {
               For RYA yacht clubs, sailing schools &amp; activity centres
             </p>
             <h1 className="font-display text-4xl font-bold leading-tight md:text-5xl" style={{ textWrap: "balance" }}>
-              Run your centre, sorted.
+              The all-in-one platform for RYA sailing &amp; watersports centres.
             </h1>
             <p className="mt-4 max-w-xl text-lg text-white/80">
-              The complete staff platform for RYA centres — scheduling, time &amp; attendance, leave, HR, payroll and
-              reporting in one place. And it&apos;s compliance-aware: it won&apos;t roster an under-qualified instructor,
-              an over-ratio course, or craft afloat without safety cover, and it tracks every ticket so nothing lapses.
+              Scheduling, time &amp; attendance, leave, HR, payroll and reporting in one place — and it&apos;s
+              compliance-aware: it won&apos;t roster an under-qualified instructor, an over-ratio course, or craft afloat
+              without safety cover, and it tracks every ticket so nothing lapses.
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
               <a href="#get-demo" className="rounded-lg bg-[#0C6B74] px-6 py-3 font-semibold text-white shadow-lg transition hover:bg-teal-700">

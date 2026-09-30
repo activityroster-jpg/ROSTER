@@ -21,10 +21,10 @@ const INCLUDED = [
 
 const SETUP_INCLUDED = [
   "A kick-off call to understand exactly how your centre runs",
-  "We configure your courses, sessions, locations and RYA ratios for you",
+  "We tailor the platform to your way of working — your courses, grades, roles, ratios, checks and session times, set up your way",
+  "Custom features and tweaks built around what you actually need — tell us how you want it and we'll make it work like that",
   "We import your existing schedule, staff and tickets from your spreadsheets",
   "We invite your instructors and set up availability & the weekly rota",
-  "Any custom tweaks or extra features you need to fit your way of working",
   "A walk-through so you and your team are confident from day one",
 ];
 
@@ -91,11 +91,12 @@ export default async function PricingPage() {
           <div className="grid gap-0 md:grid-cols-[1.2fr_1fr]">
             <div className="p-7">
               <p className="text-sm font-semibold uppercase tracking-wide text-amber-700">Optional · done for you</p>
-              <h2 className="mt-1 font-display text-2xl font-bold text-navy">We&apos;ll set it all up for you</h2>
+              <h2 className="mt-1 font-display text-2xl font-bold text-navy">We&apos;ll set it up and customise it exactly how you want</h2>
               <p className="mt-2 text-slate-600">
-                Short on time? For a one-off fee we&apos;ll configure the platform around how your centre actually runs,
-                import your data, add any features you need, and hand it over ready to go. After that you simply
-                continue on the normal plan.
+                Short on time, or want it just so? For a one-off fee we&apos;ll build the platform around exactly how your
+                centre runs — tailoring the setup, adding the custom features and tweaks you ask for, importing your data,
+                and handing it over ready to go. Tell us how you want it to work and we&apos;ll make it work like that.
+                After that you simply continue on the normal plan.
               </p>
               <ul className="mt-4 grid gap-2">
                 {SETUP_INCLUDED.map((f) => (

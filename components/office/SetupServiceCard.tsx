@@ -29,9 +29,10 @@ export function SetupServiceCard({
   return (
     <div>
       <p className="mb-3 text-sm text-slate-600">
-        Short on time? For a one-off <span className="font-semibold text-navy">{price}</span> we&apos;ll configure the
-        platform around how your centre runs, import your data, and add any features you need — then hand it over ready
-        to go. You stay on your normal plan afterwards.
+        Short on time, or want it set up just so? For a one-off <span className="font-semibold text-navy">{price}</span> we&apos;ll
+        build the platform around exactly how your centre runs — tailoring the setup, adding the custom features and
+        tweaks you ask for, and importing your data. Tell us how you want it and we&apos;ll make it work like that. You
+        stay on your normal plan afterwards.
       </p>
       <button onClick={buy} disabled={pending} className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-navy hover:bg-amber-400 disabled:opacity-60">
         {pending ? "Starting…" : `Get done-for-you setup — ${price}`}
