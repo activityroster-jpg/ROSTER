@@ -134,6 +134,13 @@
       "when": 1790754304767,
       "tag": "0018_course_source",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1790773245271,
+      "tag": "0019_setup_service",
+      "breakpoints": true
     }
   ]
 }

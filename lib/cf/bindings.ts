@@ -25,6 +25,8 @@ export interface CloudflareEnv {
   // Legacy names (kept as fallbacks for the monthly price).
   STRIPE_PRICE_ROSTERING?: string;
   STRIPE_PRICE_FULL?: string;
+  // One-time price for the "done-for-you" setup & customisation service.
+  STRIPE_PRICE_SETUP?: string;
   SENTRY_DSN?: string;
   RESEND_API_KEY?: string;
   // Comma-separated emails allowed into the platform-owner admin area (/admin).

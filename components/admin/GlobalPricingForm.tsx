@@ -5,8 +5,8 @@ import { useState, useTransition } from "react";
 import { setGlobalPricingAction } from "@/app/admin/actions";
 
 export function GlobalPricingForm({
-  monthlyPrice, annualPrice, currency, trialDays, freeFirstMonth,
-}: { monthlyPrice: number; annualPrice: number; currency: string; trialDays: number; freeFirstMonth: boolean }) {
+  monthlyPrice, annualPrice, currency, trialDays, freeFirstMonth, setupPrice, setupEnabled,
+}: { monthlyPrice: number; annualPrice: number; currency: string; trialDays: number; freeFirstMonth: boolean; setupPrice: number; setupEnabled: boolean }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
@@ -15,11 +15,13 @@ export function GlobalPricingForm({
   const [cur, setCur] = useState(currency);
   const [trial, setTrial] = useState(String(trialDays));
   const [free, setFree] = useState(freeFirstMonth);
+  const [setup, setSetup] = useState(String(setupPrice));
+  const [setupOn, setSetupOn] = useState(setupEnabled);
 
   const save = () => {
     setMsg(null);
     startTransition(async () => {
-      const res = await setGlobalPricingAction({ monthlyPrice: Number(m), annualPrice: Number(a), currency: cur, trialDays: Number(trial), freeFirstMonth: free });
+      const res = await setGlobalPricingAction({ monthlyPrice: Number(m), annualPrice: Number(a), currency: cur, trialDays: Number(trial), freeFirstMonth: free, setupPrice: Number(setup), setupEnabled: setupOn });
       if (res.ok) { setMsg("Saved"); router.refresh(); } else setMsg(res.error ?? "Failed");
     });
   };
@@ -44,6 +46,13 @@ export function GlobalPricingForm({
       <label className="flex items-center gap-2 text-sm text-slate-600 sm:col-span-2">
         <input type="checkbox" checked={free} onChange={(e) => setFree(e.target.checked)} className="h-4 w-4 rounded border-slate-300" />
         First month free
+      </label>
+      <label className="text-xs font-semibold text-slate-500">Setup service (one-off)
+        <input value={setup} onChange={(e) => setSetup(e.target.value)} type="number" min="0" step="0.01" className={field} />
+      </label>
+      <label className="flex items-center gap-2 text-sm text-slate-600 sm:col-span-2">
+        <input type="checkbox" checked={setupOn} onChange={(e) => setSetupOn(e.target.checked)} className="h-4 w-4 rounded border-slate-300" />
+        Offer the done-for-you setup service on the pricing page
       </label>
       <div className="sm:col-span-2 lg:col-span-4">
         <button onClick={save} disabled={pending} className="rounded-lg bg-teal px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-60">

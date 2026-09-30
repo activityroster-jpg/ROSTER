@@ -1,0 +1,42 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { startSetupCheckoutAction } from "@/app/(app)/office/billing/actions";
+
+export function SetupServiceCard({
+  price, purchased,
+}: { price: string; purchased: boolean }) {
+  const [pending, startTransition] = useTransition();
+  const [err, setErr] = useState<string | null>(null);
+
+  const buy = () => {
+    setErr(null);
+    startTransition(async () => {
+      const res = await startSetupCheckoutAction();
+      if (res.ok && res.url) window.location.href = res.url;
+      else setErr(res.error ?? "Could not start checkout");
+    });
+  };
+
+  if (purchased) {
+    return (
+      <p className="text-sm text-slate-600">
+        ✅ You&apos;ve purchased the done-for-you setup service — we&apos;ll be in touch to get everything configured for you.
+      </p>
+    );
+  }
+
+  return (
+    <div>
+      <p className="mb-3 text-sm text-slate-600">
+        Short on time? For a one-off <span className="font-semibold text-navy">{price}</span> we&apos;ll configure the
+        platform around how your centre runs, import your data, and add any features you need — then hand it over ready
+        to go. You stay on your normal plan afterwards.
+      </p>
+      <button onClick={buy} disabled={pending} className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-navy hover:bg-amber-400 disabled:opacity-60">
+        {pending ? "Starting…" : `Get done-for-you setup — ${price}`}
+      </button>
+      {err ? <span className="ml-3 text-sm text-port">{err}</span> : null}
+    </div>
+  );
+}

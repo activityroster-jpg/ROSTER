@@ -33,3 +33,13 @@ export function priceIdForInterval(env: CloudflareEnv, interval: BillingInterval
   if (!priceId) throw new Error(`No Stripe price configured for the ${interval} interval`);
   return priceId;
 }
+
+/**
+ * The Stripe price id for the one-off setup & customisation service, from env
+ * (never the client). It must be a one-time (not recurring) price in Stripe.
+ */
+export function priceIdForSetup(env: CloudflareEnv): string {
+  const priceId = env.STRIPE_PRICE_SETUP;
+  if (!priceId) throw new Error("No Stripe price configured for the setup service (STRIPE_PRICE_SETUP)");
+  return priceId;
+}

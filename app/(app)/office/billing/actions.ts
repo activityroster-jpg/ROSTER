@@ -3,6 +3,7 @@
 import { requireTenant } from "@/lib/tenant/require";
 import { getEnv } from "@/lib/cf/bindings";
 import { createSubscriptionCheckout } from "@/lib/billing/checkout";
+import { createSetupCheckout } from "@/lib/billing/setup";
 import { BILLING_INTERVALS, type BillingInterval } from "@/lib/billing/plans";
 
 export type CheckoutResult = { ok: boolean; url?: string; error?: string };
@@ -22,6 +23,24 @@ export async function startCheckoutAction(interval: string): Promise<CheckoutRes
       stripeCustomerId: organisation.stripeCustomerId,
       discountPercent: organisation.discountPercent,
       freeMonths: organisation.freeMonths,
+    });
+    return { ok: true, url };
+  } catch (err) {
+    return { ok: false, error: (err as Error).message };
+  }
+}
+
+/** Start a Stripe Checkout session for the one-off setup & customisation service. */
+export async function startSetupCheckoutAction(): Promise<CheckoutResult> {
+  const { ctx, organisation, repos } = await requireTenant({ role: "admin" });
+  const user = await repos.control.userById(ctx.userId);
+  try {
+    const { url } = await createSetupCheckout(getEnv(), {
+      orgId: organisation.id,
+      slug: organisation.slug,
+      email: user?.email ?? null,
+      stripeCustomerId: organisation.stripeCustomerId,
+      returnBase: `https://${organisation.slug}.${getEnv().APP_APEX_DOMAIN}`,
     });
     return { ok: true, url };
   } catch (err) {

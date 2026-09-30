@@ -145,6 +145,17 @@ async function provisionFromSession(
 ): Promise<void> {
   const m = session.metadata ?? {};
 
+  // One-off "done-for-you" setup service (mode: payment). Flag the centre as
+  // having paid for concierge setup when we know which org it is. This must be
+  // checked BEFORE the org_id subscription branch: a setup checkout for an
+  // existing centre also carries org_id but must NOT flip its subscription on.
+  if (m.setup_service === "1") {
+    if (m.org_id) {
+      await repos.control.updateOrganisation(m.org_id, { setupPurchasedAt: new Date() });
+    }
+    return;
+  }
+
   // A free-trial centre converting to paid: link the subscription to the org.
   if (m.org_id) {
     await repos.control.updateOrganisation(m.org_id, {

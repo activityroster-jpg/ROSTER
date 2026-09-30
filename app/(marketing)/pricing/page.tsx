@@ -19,11 +19,22 @@ const INCLUDED = [
   "EU-hosted, GDPR-ready, data export any time — data strictly isolated per centre",
 ];
 
+const SETUP_INCLUDED = [
+  "A kick-off call to understand exactly how your centre runs",
+  "We configure your courses, sessions, locations and RYA ratios for you",
+  "We import your existing schedule, staff and tickets from your spreadsheets",
+  "We invite your instructors and set up availability & the weekly rota",
+  "Any custom tweaks or extra features you need to fit your way of working",
+  "A walk-through so you and your team are confident from day one",
+];
+
 export default async function PricingPage() {
   let monthly = 75, annual = 675, currency = "GBP", freeFirstMonth = true;
+  let setupPrice = 850, setupEnabled = true;
   try {
     const p = await new PlatformRepository(await getDb()).getPricing();
     monthly = p.monthlyPrice; annual = p.annualPrice; currency = p.currency; freeFirstMonth = Boolean(p.freeFirstMonth);
+    setupPrice = p.setupPrice; setupEnabled = Boolean(p.setupEnabled);
   } catch {
     // fall back to defaults if pricing can't be read at render time
   }
@@ -75,9 +86,45 @@ export default async function PricingPage() {
         </div>
       </div>
 
+      {setupEnabled ? (
+        <div className="mt-10 overflow-hidden rounded-card border border-amber/60 bg-amber/5 shadow-sm">
+          <div className="grid gap-0 md:grid-cols-[1.2fr_1fr]">
+            <div className="p-7">
+              <p className="text-sm font-semibold uppercase tracking-wide text-amber-700">Optional · done for you</p>
+              <h2 className="mt-1 font-display text-2xl font-bold text-navy">We&apos;ll set it all up for you</h2>
+              <p className="mt-2 text-slate-600">
+                Short on time? For a one-off fee we&apos;ll configure the platform around how your centre actually runs,
+                import your data, add any features you need, and hand it over ready to go. After that you simply
+                continue on the normal plan.
+              </p>
+              <ul className="mt-4 grid gap-2">
+                {SETUP_INCLUDED.map((f) => (
+                  <li key={f} className="flex items-start gap-2 text-sm text-slate-700">
+                    <Check className="mt-0.5 h-4 w-4 flex-none text-amber-600" />
+                    <span>{f}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="flex flex-col justify-center border-t border-amber/40 bg-white p-7 text-center md:border-l md:border-t-0">
+              <p className="text-sm font-semibold uppercase tracking-wide text-slate-400">One-off setup</p>
+              <p className="mt-2"><span className="font-display text-4xl font-bold text-navy">{fmtMoney(setupPrice, currency)}</span></p>
+              <p className="mt-1 text-sm text-slate-500">Single payment · then the normal plan</p>
+              <a href="/api/billing/setup" className="mt-5 block rounded-lg bg-amber-500 px-6 py-3 text-center font-semibold text-navy transition hover:bg-amber-400">
+                Get done-for-you setup
+              </a>
+              <Link href="/#get-demo" className="mt-2 text-xs font-semibold text-teal hover:underline">
+                Questions first? Talk to us
+              </Link>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <p className="mt-8 text-center text-sm text-slate-500">
-        Need help getting set up or migrating your spreadsheets?{" "}
-        <Link href="/#get-demo" className="font-semibold text-teal hover:underline">Talk to us</Link> — onboarding help is available.
+        Prefer to set things up yourself? The platform is designed to be quick to get going, and{" "}
+        <Link href="/learn" className="font-semibold text-teal hover:underline">the Learning Centre</Link> walks you
+        through every step — or <Link href="/#get-demo" className="font-semibold text-teal hover:underline">talk to us</Link>.
       </p>
     </div>
   );

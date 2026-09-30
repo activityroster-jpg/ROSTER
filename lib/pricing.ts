@@ -8,6 +8,8 @@ export const DEFAULT_PRICING = {
   currency: "GBP",
   freeFirstMonth: true,
   trialDays: 30,
+  setupPrice: 850,
+  setupEnabled: true,
 } as const;
 
 export interface EffectivePricing {

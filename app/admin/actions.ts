@@ -19,11 +19,16 @@ const num = (v: unknown): number | null => {
 /** Update the global default pricing (all centres inherit this unless overridden). */
 export async function setGlobalPricingAction(input: {
   monthlyPrice: number; annualPrice: number; currency: string; trialDays: number; freeFirstMonth: boolean;
+  setupPrice?: number; setupEnabled?: boolean;
 }): Promise<Result> {
   await requirePlatformAdmin();
   const monthly = num(input.monthlyPrice), annual = num(input.annualPrice), trial = num(input.trialDays);
   if (monthly == null || monthly < 0 || annual == null || annual < 0 || trial == null || trial < 0) {
     return { ok: false, error: "Enter valid prices and trial length" };
+  }
+  const setup = num(input.setupPrice);
+  if (input.setupPrice !== undefined && (setup == null || setup < 0)) {
+    return { ok: false, error: "Enter a valid setup price" };
   }
   const platform = new PlatformRepository(await getDb());
   await platform.upsertPricing({
@@ -32,6 +37,8 @@ export async function setGlobalPricingAction(input: {
     currency: (input.currency || "GBP").toUpperCase().slice(0, 3),
     trialDays: Math.round(trial),
     freeFirstMonth: Boolean(input.freeFirstMonth),
+    ...(setup != null ? { setupPrice: setup } : {}),
+    ...(input.setupEnabled !== undefined ? { setupEnabled: Boolean(input.setupEnabled) } : {}),
   });
   revalidatePath("/admin");
   revalidatePath("/admin/pricing");

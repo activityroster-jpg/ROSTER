@@ -147,6 +147,9 @@ export const organisation = sqliteTable("organisation", {
   customAnnualPrice: real("custom_annual_price"),
   freeMonths: integer("free_months").notNull().default(0),
   billingNote: text("billing_note"),
+  // Set when a centre buys the one-off "done-for-you" setup & customisation
+  // service, so the platform owner can see who has paid for concierge setup.
+  setupPurchasedAt: integer("setup_purchased_at", { mode: "timestamp_ms" }),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 }, (t) => [
@@ -166,6 +169,12 @@ export const platformPricing = sqliteTable("platform_pricing", {
   currency: text("currency").notNull().default("GBP"),
   freeFirstMonth: boolCol("free_first_month").default(true),
   trialDays: integer("trial_days").notNull().default(30),
+  // One-off "done-for-you" setup & customisation service: we configure the
+  // platform, import their data and add the features they want for a single fee,
+  // after which they continue on the normal plan. Editable in platform admin;
+  // `setupEnabled` toggles the offer without deleting the price.
+  setupPrice: real("setup_price").notNull().default(850),
+  setupEnabled: boolCol("setup_enabled").default(true),
   updatedAt: updatedAt(),
 });
 

@@ -63,7 +63,7 @@ export default async function AdminOverviewPage() {
       <Card className="mb-8">
         <h2 className="mb-1 font-semibold text-navy">Default pricing</h2>
         <p className="mb-4 text-xs text-slate-500">Set once here; every centre inherits it unless you give them a discount or custom price on their page.</p>
-        <GlobalPricingForm monthlyPrice={pricing.monthlyPrice} annualPrice={pricing.annualPrice} currency={pricing.currency} trialDays={pricing.trialDays} freeFirstMonth={Boolean(pricing.freeFirstMonth)} />
+        <GlobalPricingForm monthlyPrice={pricing.monthlyPrice} annualPrice={pricing.annualPrice} currency={pricing.currency} trialDays={pricing.trialDays} freeFirstMonth={Boolean(pricing.freeFirstMonth)} setupPrice={pricing.setupPrice} setupEnabled={Boolean(pricing.setupEnabled)} />
       </Card>
 
       <Card className="mb-8">

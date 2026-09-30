@@ -4,6 +4,7 @@ import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { effectivePricing, fmtMoney } from "@/lib/pricing";
 import { listInvoices, type InvoiceRow } from "@/lib/billing/invoices";
 import { PlanChoice } from "@/components/office/PlanChoice";
+import { SetupServiceCard } from "@/components/office/SetupServiceCard";
 import { Card, StatusPill } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
@@ -57,6 +58,13 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
           <h2 className="mb-1 font-semibold text-navy">{organisation.stripeCustomerId ? "Change your plan" : "Choose your plan"}</h2>
           <p className="mb-4 text-xs text-slate-500">Keep your centre running after the free trial. Cancel anytime.</p>
           <PlanChoice monthly={eff.monthly} annual={eff.annual} currency={eff.currency} monthsFree={monthsFree} active={isPaid} />
+        </Card>
+      ) : null}
+
+      {pricing.setupEnabled || organisation.setupPurchasedAt ? (
+        <Card className="mb-6 border-amber/40 bg-amber/5">
+          <h2 className="mb-2 font-semibold text-navy">Done-for-you setup</h2>
+          <SetupServiceCard price={money(pricing.setupPrice, pricing.currency)} purchased={Boolean(organisation.setupPurchasedAt)} />
         </Card>
       ) : null}
 
