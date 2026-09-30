@@ -1,14 +1,12 @@
 import { eq } from "drizzle-orm";
 import { requireTenant } from "@/lib/tenant/require";
 import { instructor as instructorTable } from "@/lib/db/schema";
-import { getWeekAvailability } from "@/lib/services/availability";
-import { weekStart } from "@/lib/services/schedule";
-import { AvailabilityGrid } from "@/components/portal/AvailabilityGrid";
+import { getAvailabilityRange } from "@/lib/services/availability";
+import { addDays, weekStart } from "@/lib/services/schedule";
+import { AvailabilityWeeks } from "@/components/portal/AvailabilityWeeks";
 import { Card } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
-
-const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export default async function PortalAvailabilityPage() {
   const { ctx, repos } = await requireTenant();
@@ -22,20 +20,18 @@ export default async function PortalAvailabilityPage() {
     );
   }
 
+  const settings = (await repos.tenant.orgSettings.list(ctx))[0];
+  const weeksAhead = Math.max(1, Math.min(26, settings?.availabilityWeeksAhead ?? 4));
   const monday = weekStart(new Date());
-  const initial = await getWeekAvailability(repos, ctx, me.id, monday);
-  const days = DAY_LABELS.map((label, i) => {
-    const d = new Date(`${monday}T00:00:00.000Z`);
-    d.setUTCDate(d.getUTCDate() + i);
-    return { iso: d.toISOString().slice(0, 10), label };
-  });
+  const horizonEnd = addDays(monday, weeksAhead * 7);
+  const initial = await getAvailabilityRange(repos, ctx, me.id, monday, horizonEnd);
 
   return (
     <div>
       <h1 className="mb-1 font-display text-xl font-semibold text-navy">My availability</h1>
-      <p className="mb-4 text-sm text-slate-500">Week of {monday}</p>
+      <p className="mb-4 text-sm text-slate-500">Set when you can work — swipe through the weeks and tap each slot.</p>
       <Card>
-        <AvailabilityGrid days={days} initial={initial} />
+        <AvailabilityWeeks weeksAhead={weeksAhead} initial={initial} />
       </Card>
     </div>
   );

@@ -1,0 +1,1 @@
+ALTER TABLE `org_settings` ADD `availability_weeks_ahead` integer DEFAULT 4 NOT NULL;

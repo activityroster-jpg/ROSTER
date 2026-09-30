@@ -5,9 +5,9 @@ import { PIN_COOKIE, verifyPinCookie } from "./pin";
 
 /**
  * Require that the current user has set, and verified for this session, their
- * 4-digit PIN. Called from requireTenant (for centre admins) and
+ * 4-digit PIN. Called from requireTenant (for every centre member) and
  * requirePlatformAdmin. Redirects to /set-pin if they have no PIN yet, or /pin if
- * this session hasn't verified it. Instructors never reach here.
+ * this session hasn't verified it.
  */
 export async function enforcePinGate(userId: string, sessionId: string | undefined, next: string): Promise<void> {
   if (!sessionId) return; // can't bind a cookie without a session id; fail open to avoid lockout loops

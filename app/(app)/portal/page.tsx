@@ -50,8 +50,8 @@ export default async function PortalSchedulePage() {
           mine.map((s) => (
             <Card key={s.sessionId} className="flex items-center justify-between">
               <div>
-                <p className="font-medium text-navy">{s.courseName}</p>
-                <p className="text-xs text-slate-500">{fmt(s.startAt)}</p>
+                <p className="font-semibold text-navy">{fmt(s.startAt)}</p>
+                <p className="mt-0.5 text-sm text-slate-500">{s.courseName}</p>
               </div>
               <StatusPill tone="neutral">{s.slot}</StatusPill>
             </Card>

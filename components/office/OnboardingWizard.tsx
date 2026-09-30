@@ -40,6 +40,7 @@ export function OnboardingWizard({
   existingStaff,
   initialFeatures,
   initialSlotStyle,
+  initialWeeksAhead,
 }: {
   centreName: string;
   courseTypes: CourseTypeOpt[];
@@ -47,6 +48,7 @@ export function OnboardingWizard({
   existingStaff: TeamMember[];
   initialFeatures: OptionalFeature[];
   initialSlotStyle: string;
+  initialWeeksAhead?: number;
 }) {
   const [quals, setQuals] = useState<QualOpt[]>(initialQuals);
   const router = useRouter();
@@ -57,6 +59,7 @@ export function OnboardingWizard({
   // Step 1 — preferences
   const [features, setFeatures] = useState<Set<OptionalFeature>>(new Set(initialFeatures));
   const [slotStyle, setSlotStyle] = useState(initialSlotStyle || "slots");
+  const [weeksAhead, setWeeksAhead] = useState(initialWeeksAhead ?? 4);
   const toggleFeature = (f: OptionalFeature) => setFeatures((s) => { const n = new Set(s); n.has(f) ? n.delete(f) : n.add(f); return n; });
 
   // Step 2 — courses (local list so custom additions appear immediately)
@@ -120,7 +123,7 @@ export function OnboardingWizard({
   const savePrefsThenNext = () => {
     setMsg(null);
     startTransition(async () => {
-      const res = await setSetupPreferencesAction({ features: [...features], slotStyle });
+      const res = await setSetupPreferencesAction({ features: [...features], slotStyle, availabilityWeeksAhead: weeksAhead });
       if (res.ok) setStep(2); else setMsg(res.error ?? "Could not save");
     });
   };
@@ -227,6 +230,23 @@ export function OnboardingWizard({
                   <span className="text-xs text-slate-400">{o.hint}</span>
                 </button>
               ))}
+            </div>
+          </div>
+
+          <div className="rounded-card border border-slate-200 bg-white p-6">
+            <h2 className="font-display text-lg font-semibold text-navy">How far ahead can instructors set availability?</h2>
+            <p className="mt-1 text-sm text-slate-500">Instructors can submit availability from now up to this many weeks ahead. You can change this in Settings.</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {[2, 4, 6, 8, 12].map((n) => (
+                <button key={n} type="button" onClick={() => setWeeksAhead(n)}
+                  className={`rounded-lg border px-4 py-2 text-sm font-medium transition ${weeksAhead === n ? "border-teal bg-teal/5 text-navy" : "border-slate-200 text-slate-600 hover:border-slate-300"}`}>
+                  {n} weeks
+                </button>
+              ))}
+              <label className="flex items-center gap-2 text-sm text-slate-600">
+                <span className="text-xs">or</span>
+                <input type="number" min={1} max={26} value={weeksAhead} onChange={(e) => setWeeksAhead(Math.max(1, Math.min(26, Number(e.target.value) || 1)))} className="w-16 rounded-lg border border-slate-300 px-2 py-1.5 text-sm" />
+              </label>
             </div>
           </div>
 

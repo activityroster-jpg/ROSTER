@@ -41,10 +41,9 @@ export async function requireTenant(opts?: { role?: "admin"; skipMfaGate?: boole
     redirect("/portal");
   }
 
-  // Centre admins must pass the 4-digit PIN gate each session; instructors don't.
-  if (res.ctx.role === "admin") {
-    await enforcePinGate(res.ctx.userId, res.sessionId, "/office");
-  }
+  // Everyone must set and enter their 4-digit PIN each session — admins land
+  // back in the office, instructors in their portal.
+  await enforcePinGate(res.ctx.userId, res.sessionId, res.ctx.role === "admin" ? "/office" : "/portal");
 
   const repos = await getRepositories();
 

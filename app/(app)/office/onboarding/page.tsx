@@ -31,6 +31,7 @@ export default async function OnboardingPage() {
       existingStaff={staff}
       initialFeatures={parseFeatures(s?.enabledFeatures)}
       initialSlotStyle={s?.slotStyle ?? "slots"}
+      initialWeeksAhead={s?.availabilityWeeksAhead ?? 4}
     />
   );
 }

@@ -27,6 +27,23 @@ export async function getWeekAvailability(
   return out;
 }
 
+/** Map of "date|slot" → status across a date range [fromIso, toIso), one instructor. */
+export async function getAvailabilityRange(
+  repos: Repositories,
+  ctx: AnyTenantContext,
+  instructorId: string,
+  fromIso: string,
+  toIso: string,
+): Promise<Record<string, AvailabilityStatus>> {
+  const rows = await repos.tenant.availability.list(ctx, eq(availabilityTable.instructorId, instructorId));
+  const out: Record<string, AvailabilityStatus> = {};
+  for (const r of rows) {
+    if (!r.date || r.date < fromIso || r.date >= toIso) continue;
+    out[`${r.date}|${r.slot}`] = r.status as AvailabilityStatus;
+  }
+  return out;
+}
+
 /**
  * Set (or clear) an instructor's availability for a specific date + slot.
  * Passing `null` clears it. Idempotent upsert, tenant scoped, audited.

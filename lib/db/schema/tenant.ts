@@ -92,6 +92,8 @@ export const orgSettings = sqliteTable("org_settings", {
   /** JSON string array of enabled OPTIONAL_FEATURES, e.g. ["equipment","payroll"]. */
   enabledFeatures: text("enabled_features").notNull().default("[]"),
   alertLeadDays: integer("alert_lead_days").notNull().default(30),
+  /** How many weeks ahead (incl. this week) instructors may set availability. */
+  availabilityWeeksAhead: integer("availability_weeks_ahead").notNull().default(4),
   currency: text("currency").notNull().default("GBP"),
   timezone: text("timezone").notNull().default("Europe/London"),
   createdAt: createdAt(),

@@ -30,20 +30,22 @@ function toCode(name: string): string {
 export async function setSetupPreferencesAction(input: {
   features: string[];
   slotStyle: string;
+  availabilityWeeksAhead?: number;
 }): Promise<Result> {
   const { ctx, repos } = await requireTenant({ role: "admin" });
   const features = serializeFeatures(input.features as OptionalFeature[]);
   const slotStyle: SlotStyle = (SLOT_STYLES as readonly string[]).includes(input.slotStyle)
     ? (input.slotStyle as SlotStyle)
     : "slots";
+  const availabilityWeeksAhead = Math.max(1, Math.min(26, Math.round(Number(input.availabilityWeeksAhead) || 4)));
 
   const existing = (await repos.tenant.orgSettings.list(ctx))[0];
   if (existing) {
-    await repos.tenant.orgSettings.update(ctx, existing.id, { enabledFeatures: features, slotStyle });
+    await repos.tenant.orgSettings.update(ctx, existing.id, { enabledFeatures: features, slotStyle, availabilityWeeksAhead });
   } else {
-    await repos.tenant.orgSettings.insert(ctx, { enabledFeatures: features, slotStyle });
+    await repos.tenant.orgSettings.insert(ctx, { enabledFeatures: features, slotStyle, availabilityWeeksAhead });
   }
-  await writeAudit(repos, ctx, { action: "onboarding_set_preferences", entity: "org_settings", after: { features: input.features, slotStyle } });
+  await writeAudit(repos, ctx, { action: "onboarding_set_preferences", entity: "org_settings", after: { features: input.features, slotStyle, availabilityWeeksAhead } });
   revalidatePath("/office");
   revalidatePath("/office/onboarding");
   return { ok: true };
