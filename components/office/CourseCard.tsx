@@ -27,7 +27,7 @@ const fmtDate = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString
 const fmtTime = (ms: number) => new Date(ms).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
 
 export function CourseCard({
-  course, audience, sessions, assigned, instructors, roles, ratioOn, ratio, computedRequired,
+  course, audience, sessions, assigned, instructors, roles, ratioOn, ratio, computedRequired, shade,
 }: {
   course: { id: string; name: string; courseTypeName: string; status: string; staffRequired: number | null };
   audience: string;
@@ -38,6 +38,8 @@ export function CourseCard({
   ratioOn: boolean;
   ratio?: CardRatio;
   computedRequired?: number;
+  /** Alternating day shade — true = tinted, false = plain white. */
+  shade?: boolean;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -90,7 +92,7 @@ export function CourseCard({
   const inputCls = "rounded border border-slate-300 px-1.5 py-1 text-sm outline-none focus:border-teal";
 
   return (
-    <div className="rounded-card border border-slate-200 bg-white px-3 py-2.5">
+    <div className={`rounded-card border border-slate-200 px-3 py-2.5 ${shade ? "bg-sky-50/70" : "bg-white"}`}>
       {/* Top row — name · date/time · staff required · status, all editable */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
         <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${aud.cls}`}>{aud.label}</span>

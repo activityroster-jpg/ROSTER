@@ -119,7 +119,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
   }
   const monthNav = monthSections.map((m) => ({ key: m.key, label: m.label }));
 
-  const cardFor = (c: Course) => {
+  const cardFor = (c: Course, shade = false) => {
     const assigned = (assignedByCourse.get(c.courseId) ?? []).map((a) => ({
       id: a.id,
       instructorName: nameById.get(a.instructorId) ?? "Instructor",
@@ -138,8 +138,23 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
         ratioOn={ratioOn}
         ratio={ratioOn ? { ok: c.ratio.ok, understaffed: c.ratio.understaffed, missingSafetyCover: c.ratio.missingSafetyCover } : undefined}
         computedRequired={c.ratio.requiredStaff}
+        shade={shade}
       />
     );
+  };
+
+  /** Render a week's courses grouped by day, alternating a light shade per day. */
+  const renderWeekBody = (list: Course[]) => {
+    const byDay: { date: string; items: Course[] }[] = [];
+    for (const c of list) {
+      const date = earliest(c.courseId)?.date ?? "";
+      let d = byDay.find((x) => x.date === date);
+      if (!d) { d = { date, items: [] }; byDay.push(d); }
+      d.items.push(c);
+    }
+    return byDay.map((d, di) => (
+      <div key={d.date} className="space-y-2">{d.items.map((c) => cardFor(c, di % 2 === 1))}</div>
+    ));
   };
 
   return (
@@ -200,13 +215,12 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
                 <div className="space-y-5">
                   {m.weeks.map((w) => (
                     <div key={w.weekStart} id={`wk-${w.weekStart}`} className="scroll-mt-4">
-                      {/* Week sub-header */}
-                      <div className="mb-2 flex items-center gap-2">
-                        <span className="rounded-full bg-teal/10 px-2.5 py-0.5 text-xs font-semibold text-teal">{w.weekLabel}</span>
-                        <span className="h-px flex-1 bg-slate-100" />
-                        <span className="text-[11px] text-slate-400">{w.list.length}</span>
+                      {/* Week sub-header — prominent band */}
+                      <div className="mb-2 flex items-center justify-between rounded-lg bg-navy px-3 py-1.5">
+                        <span className="font-display text-sm font-bold text-white">{w.weekLabel}</span>
+                        <span className="rounded-full bg-white/15 px-2 py-0.5 text-[11px] font-semibold text-white">{w.list.length} course{w.list.length === 1 ? "" : "s"}</span>
                       </div>
-                      <div className="space-y-2">{w.list.map(cardFor)}</div>
+                      {renderWeekBody(w.list)}
                     </div>
                   ))}
                 </div>
@@ -221,7 +235,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
                 <h3 className="font-display text-xl font-bold text-navy">No date yet</h3>
                 <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500">{undated.length}</span>
               </div>
-              <div className="space-y-2">{undated.map(cardFor)}</div>
+              <div className="space-y-2">{undated.map((c) => cardFor(c))}</div>
             </section>
           ) : null}
         </div>
