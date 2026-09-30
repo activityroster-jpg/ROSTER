@@ -107,9 +107,13 @@ export async function importProspectsAction(csv: string): Promise<ProspectResult
     });
   }
   if (rows.length === 0) return { ok: false, error: "No rows with a name to import." };
-  const count = await repo.insertProspects(rows);
+  const { inserted, skipped } = await repo.insertProspectsUnique(rows);
   revalidatePath("/admin/marketing");
-  return { ok: true, count, message: `Imported ${count} prospect${count === 1 ? "" : "s"}.` };
+  const msg =
+    skipped > 0
+      ? `Imported ${inserted} prospect${inserted === 1 ? "" : "s"}; skipped ${skipped} already on file.`
+      : `Imported ${inserted} prospect${inserted === 1 ? "" : "s"}.`;
+  return { ok: true, count: inserted, message: msg };
 }
 
 /** Seed a few clearly-fictional example prospects so the pipeline isn't empty.

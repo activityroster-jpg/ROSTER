@@ -101,10 +101,51 @@ export class PlatformRepository {
     return rows[0]!;
   }
 
+  /**
+   * Bulk-insert prospects, chunked to stay under Cloudflare D1's hard limit of
+   * 100 bound parameters per query. Each row binds ~17 parameters (14 supplied
+   * columns + the id/created_at/updated_at generated defaults), so a batch of 5
+   * rows (~85 params) is safely inside the ceiling. Without chunking a large
+   * paste (e.g. the 400-row RYA directory) would exceed the cap and fail.
+   */
   async insertProspects(rows: Omit<NewMarketingProspect, "id" | "createdAt" | "updatedAt">[]): Promise<number> {
     if (rows.length === 0) return 0;
-    const inserted = await this.db.insert(marketingProspect).values(rows).returning({ id: marketingProspect.id });
-    return inserted.length;
+    const CHUNK = 5;
+    let total = 0;
+    for (let i = 0; i < rows.length; i += CHUNK) {
+      const batch = rows.slice(i, i + CHUNK);
+      const inserted = await this.db.insert(marketingProspect).values(batch).returning({ id: marketingProspect.id });
+      total += inserted.length;
+    }
+    return total;
+  }
+
+  /**
+   * Idempotent import: skip any incoming row that already exists (matched on
+   * name + postcode, case-insensitive) and de-dupe the incoming batch itself, so
+   * re-pasting the same CSV — or a superset with a few new centres — never
+   * creates duplicates. Returns how many were added vs. skipped.
+   */
+  async insertProspectsUnique(
+    rows: Omit<NewMarketingProspect, "id" | "createdAt" | "updatedAt">[],
+  ): Promise<{ inserted: number; skipped: number }> {
+    if (rows.length === 0) return { inserted: 0, skipped: 0 };
+    const existing = await this.db
+      .select({ name: marketingProspect.name, postcode: marketingProspect.postcode })
+      .from(marketingProspect);
+    const keyOf = (name: string, postcode: string | null | undefined) =>
+      `${name.trim().toLowerCase()}|${(postcode ?? "").trim().toLowerCase()}`;
+    const seen = new Set(existing.map((r) => keyOf(r.name, r.postcode)));
+    const fresh: typeof rows = [];
+    let skipped = 0;
+    for (const r of rows) {
+      const k = keyOf(r.name, r.postcode);
+      if (seen.has(k)) { skipped++; continue; }
+      seen.add(k);
+      fresh.push(r);
+    }
+    const inserted = await this.insertProspects(fresh);
+    return { inserted, skipped };
   }
 
   async updateProspect(id: string, patch: Partial<Omit<NewMarketingProspect, "id" | "createdAt">>): Promise<MarketingProspect | null> {
