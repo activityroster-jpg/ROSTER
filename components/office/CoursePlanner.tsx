@@ -46,6 +46,16 @@ export function CoursePlanner({ courseTypes, events, slotStyle }: { courseTypes:
   }, [rows]);
 
   const addRow = (date: string) => setRows((r) => [...r, { key: `r${seq++}`, date, startTime: slotStyle === "times" ? "09:00" : "", endTime: slotStyle === "times" ? "12:00" : "", slot: "AM" }]);
+  // "Add session" (no specific day): continue the run — day after the last
+  // session, carrying its times/slot forward. Falls back to the current week.
+  const addNextRow = () => setRows((r) => {
+    const last = r[r.length - 1];
+    const date = last ? addDaysIso(last.date, 1) : monday;
+    const startTime = last ? last.startTime : slotStyle === "times" ? "09:00" : "";
+    const endTime = last ? last.endTime : slotStyle === "times" ? "12:00" : "";
+    const slot = last ? last.slot : "AM";
+    return [...r, { key: `r${seq++}`, date, startTime, endTime, slot }];
+  });
   const updateRow = (key: string, patch: Partial<Row>) => setRows((r) => r.map((x) => (x.key === key ? { ...x, ...patch } : x)));
   const removeRow = (key: string) => setRows((r) => r.filter((x) => x.key !== key));
 
@@ -130,13 +140,13 @@ export function CoursePlanner({ courseTypes, events, slotStyle }: { courseTypes:
         <div className="mt-4">
           <div className="mb-1 flex items-center justify-between">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Sessions ({rows.length})</p>
-            <button type="button" onClick={() => addRow(monday)} className="text-xs font-semibold text-teal hover:underline">＋ Add session</button>
+            <button type="button" onClick={addNextRow} className="text-xs font-semibold text-teal hover:underline">＋ Add session</button>
           </div>
           {rows.length === 0 ? (
             <p className="rounded-lg border border-dashed border-slate-200 p-3 text-xs text-slate-400">No sessions yet — click a day above or “Add session”.</p>
           ) : (
             <ul className="space-y-2">
-              {rows.sort((a, b) => a.date.localeCompare(b.date)).map((r) => (
+              {[...rows].sort((a, b) => a.date.localeCompare(b.date)).map((r) => (
                 <li key={r.key} className="flex flex-wrap items-end gap-2 rounded-lg bg-canvas p-2">
                   <div>
                     <label className="mb-0.5 block text-[11px] text-slate-500">Date</label>
