@@ -94,6 +94,17 @@ export const orgSettings = sqliteTable("org_settings", {
   alertLeadDays: integer("alert_lead_days").notNull().default(30),
   /** How many weeks ahead (incl. this week) instructors may set availability. */
   availabilityWeeksAhead: integer("availability_weeks_ahead").notNull().default(4),
+  // --- Optional compliance checks (opt-in; OFF by default to keep it simple) ---
+  // When on, rostering blocks an instructor with a missing/expired mandatory
+  // licence/vetting check (override allowed). Licence expiry is always shown on
+  // the Staff tab regardless of this flag.
+  enforceLicenceChecks: boolCol("enforce_licence_checks").default(false),
+  // When on, courses show ratio & safety-cover flags (Covered / Under-staffed /
+  // No safety cover).
+  enforceRatioChecks: boolCol("enforce_ratio_checks").default(false),
+  // When on, rostering blocks double-booking an instructor across overlapping
+  // sessions (override allowed).
+  enforceConflictChecks: boolCol("enforce_conflict_checks").default(false),
   currency: text("currency").notNull().default("GBP"),
   timezone: text("timezone").notNull().default("Europe/London"),
   createdAt: createdAt(),

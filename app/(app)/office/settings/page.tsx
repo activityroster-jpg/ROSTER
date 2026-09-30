@@ -38,6 +38,9 @@ export default async function SettingsPage() {
           alertLeadDays={s?.alertLeadDays ?? 30}
           currency={s?.currency ?? "GBP"}
           timezone={s?.timezone ?? "Europe/London"}
+          enforceLicenceChecks={Boolean(s?.enforceLicenceChecks)}
+          enforceRatioChecks={Boolean(s?.enforceRatioChecks)}
+          enforceConflictChecks={Boolean(s?.enforceConflictChecks)}
         />
       </Card>
 

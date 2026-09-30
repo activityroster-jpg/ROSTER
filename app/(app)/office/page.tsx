@@ -36,7 +36,7 @@ export default async function DashboardPage() {
   const monday = weekStart(new Date());
   const today = new Date().toISOString().slice(0, 10);
 
-  const [staff, schedule, attendance, leave, shifts, setup, rota, events] = await Promise.all([
+  const [staff, schedule, attendance, leave, shifts, setup, rota, events, settingsRows] = await Promise.all([
     listStaffWithFit(repos, ctx),
     getWeekSchedule(repos, ctx, monday),
     getAttendanceBoard(repos, ctx, today),
@@ -45,8 +45,11 @@ export default async function DashboardPage() {
     getSetupStatus(repos, ctx),
     getWeekRota(repos, ctx, monday),
     getSessionEvents(repos, ctx, addDays(monday, -7), addDays(monday, 7 * 12)),
+    repos.tenant.orgSettings.list(ctx),
   ]);
   const { sessions, coverageByCourse } = schedule;
+  const licenceOn = Boolean(settingsRows[0]?.enforceLicenceChecks);
+  const ratioOn = Boolean(settingsRows[0]?.enforceRatioChecks);
 
   // Brand-new centre with no staff yet → guide them through onboarding first,
   // unless they've chosen to skip it (cookie).
@@ -113,9 +116,9 @@ export default async function DashboardPage() {
       {/* Needs attention */}
       <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Needs attention</p>
       <div className="mb-8 grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        <Tile href="/office/staff" label="Not cleared to roster" value={blocked} sub="Missing / expired checks" tone={blocked > 0 ? "port" : "navy"} />
+        {licenceOn ? <Tile href="/office/staff" label="Not cleared to roster" value={blocked} sub="Missing / expired checks" tone={blocked > 0 ? "port" : "navy"} /> : null}
         <Tile href="/office/staff" label="Checks expiring" value={expiring} sub="Within lead time" tone={expiring > 0 ? "amber" : "navy"} />
-        <Tile href="/office/courses" label="Courses to cover" value={uncovered} sub="Understaffed / no cover" tone={uncovered > 0 ? "amber" : "navy"} />
+        {ratioOn ? <Tile href="/office/courses" label="Courses to cover" value={uncovered} sub="Understaffed / no cover" tone={uncovered > 0 ? "amber" : "navy"} /> : null}
         <Tile href="/office/leave" label="Leave to approve" value={pendingLeave} sub="Pending requests" tone={pendingLeave > 0 ? "amber" : "navy"} />
         <Tile href="/office/leave" label="Open shifts" value={openShifts} sub="Need cover" tone={openShifts > 0 ? "amber" : "navy"} />
       </div>
@@ -168,7 +171,8 @@ export default async function DashboardPage() {
         )}
       </Card>
 
-      {/* Coverage */}
+      {/* Coverage — only when the centre uses ratio & safety-cover checks */}
+      {ratioOn ? (
       <div className="mt-6">
         <h2 className="mb-3 font-display text-lg font-semibold text-navy">Coverage</h2>
         <div className="grid gap-3 sm:grid-cols-2">
@@ -195,6 +199,7 @@ export default async function DashboardPage() {
           ) : null}
         </div>
       </div>
+      ) : null}
     </div>
   );
 }

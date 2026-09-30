@@ -23,6 +23,9 @@ export default async function CoursesPage() {
     getSessionEvents(repos, ctx, addDays(monday, -28), addDays(monday, 7 * 26)),
   ]);
   const slotStyle = settings[0]?.slotStyle ?? "slots";
+  const licenceOn = Boolean(settings[0]?.enforceLicenceChecks);
+  const ratioOn = Boolean(settings[0]?.enforceRatioChecks);
+  const conflictOn = Boolean(settings[0]?.enforceConflictChecks);
   const courses = [...coverageByCourse.values()];
   const activeTypes = courseTypes.filter((c) => c.active).map((c) => ({ id: c.id, name: c.name, audience: c.audience }));
   const audienceByCourse = new Map(
@@ -34,7 +37,8 @@ export default async function CoursesPage() {
     .filter((i) => i.status === "active")
     .map((i) => {
       const f = fitById.get(i.id);
-      return { id: i.id, name: i.name, fit: f?.fit ?? true, reason: f ? fitReason(f) : "" };
+      // Licence "fit" only annotates/gates the picker when the centre opted in.
+      return { id: i.id, name: i.name, fit: licenceOn ? (f?.fit ?? true) : true, reason: licenceOn && f ? fitReason(f) : "" };
     });
   const nameById = new Map(instructors.map((i) => [i.id, i.name]));
   const roleName = new Map(roles.map((r) => [r.id, r.name]));
@@ -75,8 +79,13 @@ export default async function CoursesPage() {
         </div>
       </div>
       <p className="mb-6 text-sm text-slate-500">
-        Add a course, then assign staff to it. We check ratios, safety-boat cover and each instructor&apos;s
-        qualifications as you go — anything short is flagged below. Youth and adult courses are labelled so they never get mixed up.
+        Add a course, then assign staff to it. Youth and adult courses are labelled so they never get mixed up.
+        {(() => {
+          const checks = [licenceOn && "instructor qualifications", ratioOn && "ratios & safety-boat cover", conflictOn && "double-bookings"].filter(Boolean);
+          return checks.length
+            ? ` We check ${checks.join(", ").replace(/, ([^,]*)$/, " and $1")} as you go — anything short is flagged.`
+            : " Optional compliance checks (qualifications, ratios, safety cover) can be switched on in Settings.";
+        })()}
       </p>
 
       <CoursePlanner courseTypes={activeTypes} events={events} slotStyle={slotStyle} />
@@ -84,7 +93,7 @@ export default async function CoursesPage() {
       <h2 className="mb-3 font-display text-lg font-semibold text-navy">Scheduled courses</h2>
 
       <BulkAssignForm
-        courses={courses.map((c) => ({ id: c.courseId, name: c.courseName, audience: audienceByCourse.get(c.courseId) ?? "all", covered: c.ratio.ok }))}
+        courses={courses.map((c) => ({ id: c.courseId, name: c.courseName, audience: audienceByCourse.get(c.courseId) ?? "all", covered: ratioOn ? c.ratio.ok : true }))}
         instructors={instructorOptions}
         roles={activeRoles}
       />
@@ -110,14 +119,18 @@ export default async function CoursesPage() {
                     <p className="mt-0.5 text-sm font-medium text-navy">📅 {courseWhen(c.courseId)}</p>
                     <p className="text-xs text-slate-500">
                       {c.courseTypeName} · <span className="capitalize">{c.status}</span> ·{" "}
-                      {c.ratio.ratioCountingStaff}/{c.ratio.requiredStaff} staff ·{" "}
+                      {ratioOn ? <>{c.ratio.ratioCountingStaff}/{c.ratio.requiredStaff} staff · </> : null}
                       <a href={`/office/courses/${c.courseId}`} className="text-teal hover:underline">manage →</a>
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    {c.ratio.understaffed ? <StatusPill tone="attention">Under-staffed</StatusPill> : null}
-                    {c.ratio.missingSafetyCover ? <StatusPill tone="conflict">No safety cover</StatusPill> : null}
-                    {c.ratio.ok ? <StatusPill tone="covered">Covered</StatusPill> : null}
+                    {ratioOn ? (
+                      <>
+                        {c.ratio.understaffed ? <StatusPill tone="attention">Under-staffed</StatusPill> : null}
+                        {c.ratio.missingSafetyCover ? <StatusPill tone="conflict">No safety cover</StatusPill> : null}
+                        {c.ratio.ok ? <StatusPill tone="covered">Covered</StatusPill> : null}
+                      </>
+                    ) : null}
                   </div>
                 </div>
 

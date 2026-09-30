@@ -41,11 +41,12 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
   const slotStyle = (settings[0]?.slotStyle ?? "slots") as "slots" | "times";
   const nameById = new Map(instructors.map((i) => [i.id, i.name]));
   const roleName = new Map(roles.map((r) => [r.id, r.name]));
+  const licenceOn = Boolean(settings[0]?.enforceLicenceChecks);
   const fitObjById = new Map(staffFit.map((s) => [s.instructor.id, s.fit]));
   const availForCourse = (await getCourseAvailabilityStates(repos, ctx)).get(id);
   const instructorOptions = instructors.filter((i) => i.status === "active").map((i) => {
     const f = fitObjById.get(i.id);
-    return { id: i.id, name: i.name, fit: f?.fit ?? true, reason: f ? fitReason(f) : "", avail: availForCourse?.get(i.id) ?? "none" as const };
+    return { id: i.id, name: i.name, fit: licenceOn ? (f?.fit ?? true) : true, reason: licenceOn && f ? fitReason(f) : "", avail: availForCourse?.get(i.id) ?? "none" as const };
   });
   const activeRoles = roles.filter((r) => r.active).map((r) => ({ id: r.id, name: r.name }));
   const aud = AUD[ct?.audience ?? "all"]!;

@@ -54,19 +54,25 @@ export async function assignStaff(
   // check below simply has nothing to compare against until sessions exist.
   const targetSessions = thisCourseSessions.filter((s) => s.courseId === input.courseId);
 
-  // --- 1. Fit check --------------------------------------------------------
+  // --- 1. Fit check (only when the centre has opted into licence checks) ----
   const [complianceTypes, complianceItems, settingsRows] = await Promise.all([
     t.complianceType.list(ctx),
     t.complianceItem.list(ctx),
     t.orgSettings.list(ctx),
   ]);
+  const settings = settingsRows[0];
+  const licenceChecksOn = settings?.enforceLicenceChecks ?? false;
+  const conflictChecksOn = settings?.enforceConflictChecks ?? false;
+
   const requirements: ComplianceRequirement[] = complianceTypes
     .filter((c) => c.active)
     .map((c) => ({ complianceTypeId: c.id, name: c.name, mandatory: c.mandatory, expiryTracked: c.expiryTracked }));
   const held: HeldCompliance[] = complianceItems
     .filter((c) => c.instructorId === input.instructorId)
     .map((c) => ({ complianceTypeId: c.complianceTypeId, expiryDate: c.expiryDate ?? null }));
-  const fit = evaluateFit(requirements, held, Date.now(), settingsRows[0]?.alertLeadDays ?? 30);
+  const fit = licenceChecksOn
+    ? evaluateFit(requirements, held, Date.now(), settings?.alertLeadDays ?? 30)
+    : { fit: true as const, blocks: [] };
 
   if (!fit.fit && !input.override) {
     return {
@@ -92,12 +98,14 @@ export async function assignStaff(
       courseId: s.courseId,
     }));
 
-  const clashing = targetSessions.find((s) =>
-    hasConflict(
-      { sessionId: s.id, resourceId: input.instructorId, startAt: toMs(s.startAt), endAt: toMs(s.endAt) },
-      existingBookings,
-    ),
-  );
+  const clashing = conflictChecksOn
+    ? targetSessions.find((s) =>
+        hasConflict(
+          { sessionId: s.id, resourceId: input.instructorId, startAt: toMs(s.startAt), endAt: toMs(s.endAt) },
+          existingBookings,
+        ),
+      )
+    : undefined;
   if (clashing && !input.override) {
     return { ok: false, reason: "conflict", detail: `Overlaps another booking on ${clashing.date} ${clashing.slot}` };
   }

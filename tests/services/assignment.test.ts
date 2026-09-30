@@ -25,6 +25,20 @@ describe("assignStaff", () => {
     roleId = (roles.find((r) => r.countsTowardRatio) ?? roles[0]!).id;
     courseId = (await repos.tenant.course.list(ctx))[0]!.id;
     fixtureInstructorId = (await repos.tenant.instructor.list(ctx))[0]!.id;
+    // These checks are opt-in (off by default); enable them for the enforcement tests.
+    const st = (await repos.tenant.orgSettings.list(ctx))[0]!;
+    await repos.tenant.orgSettings.update(ctx, st.id, { enforceLicenceChecks: true, enforceConflictChecks: true });
+  });
+
+  it("does not block an unfit instructor when licence checks are OFF (default)", async () => {
+    const st = (await repos.tenant.orgSettings.list(ctx))[0]!;
+    await repos.tenant.orgSettings.update(ctx, st.id, { enforceLicenceChecks: false });
+    const newInstructor = await repos.tenant.instructor.insert(ctx, {
+      name: "Unchecked-off", email: "off@a.test", employmentType: "freelance", status: "active",
+    });
+    const res = await assignStaff(repos, ctx, { courseId, instructorId: newInstructor.id, roleTypeId: roleId });
+    expect(res.ok).toBe(true);
+    if (res.ok) expect(res.overridden).toBe(false);
   });
 
   it("blocks an instructor missing a mandatory compliance check", async () => {
@@ -126,6 +140,9 @@ describe("bulkAssignStaff", () => {
     roleId = (roles.find((r) => r.countsTowardRatio) ?? roles[0]!).id;
     fixtureInstructorId = (await repos.tenant.instructor.list(ctx))[0]!.id;
     courseTypeId = (await repos.tenant.courseType.list(ctx))[0]!.id;
+    // Opt into the checks (off by default) so the enforcement assertions hold.
+    const st = (await repos.tenant.orgSettings.list(ctx))[0]!;
+    await repos.tenant.orgSettings.update(ctx, st.id, { enforceLicenceChecks: true, enforceConflictChecks: true });
   });
 
   // Two courses on distinct, non-overlapping days so the fit fixture instructor

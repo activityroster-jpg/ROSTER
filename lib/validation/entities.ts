@@ -23,6 +23,9 @@ export const orgSettingsSchema = z.object({
   alertLeadDays: z.number().int().min(0).max(365),
   currency: z.string().length(3),
   timezone: z.string().min(1),
+  enforceLicenceChecks: z.boolean().optional(),
+  enforceRatioChecks: z.boolean().optional(),
+  enforceConflictChecks: z.boolean().optional(),
 });
 
 export const sessionSlotSchema = z.object({

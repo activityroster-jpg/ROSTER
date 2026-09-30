@@ -141,6 +141,13 @@
       "when": 1790773245271,
       "tag": "0019_setup_service",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1790788239277,
+      "tag": "0020_compliance_toggles",
+      "breakpoints": true
     }
   ]
 }
