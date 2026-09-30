@@ -75,11 +75,9 @@ function PhotoBand({ src, alt, caption }: { src: string; alt: string; caption?: 
 }
 
 const DISCIPLINES = [
-  { src: "/photos/dinghies.jpg", label: "Dinghy sailing", sub: "National & Youth schemes" },
   { src: "/photos/keelboat.jpg", label: "Keelboat & yacht", sub: "Cruising to Yachtmaster" },
-  { src: "/photos/windsurfing.jpg", label: "Windsurfing", sub: "Start to advanced" },
+  { src: "/photos/catamarans.jpg", label: "Dinghies & catamarans", sub: "National & Youth schemes" },
   { src: "/photos/kayaks.jpg", label: "Kayaking & SUP", sub: "Paddlesports" },
-  { src: "/photos/catamarans.jpg", label: "Catamarans", sub: "Multihull & performance" },
   { src: "/photos/instructors.jpg", label: "Instructors & coaching", sub: "Your whole team, one roster" },
 ];
 
@@ -89,7 +87,7 @@ function DisciplineGallery() {
       <div className="mx-auto max-w-6xl px-4 py-16">
         <h2 className="font-display text-2xl font-semibold text-navy">Every discipline, one platform</h2>
         <p className="mt-2 max-w-2xl text-slate-600">Sailing, powerboat, windsurf, paddlesports and more — rostered, ratio-checked and compliance-covered under one roof.</p>
-        <div className="mt-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
+        <div className="mt-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           {DISCIPLINES.map((d) => (
             <div key={d.label} className="group relative aspect-[3/2] overflow-hidden rounded-card">
               <img src={d.src} alt={d.label} loading="lazy" className="h-full w-full object-cover object-center transition duration-500 group-hover:scale-105" />
@@ -206,7 +204,7 @@ export default function MarketingHome() {
 
       <DisciplineGallery />
 
-      <PhotoBand src="/photos/slipway.jpg" alt="Boats and crews on the slipway" caption="Every discipline, one roster" />
+      <PhotoBand src="/photos/deck.jpg" alt="A yacht on the water" caption="On the water, every session" />
 
       {/* How it works */}
       <section className="bg-canvas">
@@ -228,8 +226,6 @@ export default function MarketingHome() {
           </div>
         </div>
       </section>
-
-      <PhotoBand src="/photos/deck.jpg" alt="On the water" caption="Compliance built in, not bolted on" />
 
       {/* Who it's for */}
       <section className="border-b border-slate-200 bg-white">
