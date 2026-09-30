@@ -25,10 +25,16 @@ export async function syncIcsFeed(repos: Repositories, ctx: AnyTenantContext, fe
  * duplicates. Only events from today onward are considered. Tenant scoped and
  * audited.
  */
+/** Canonical key for a course event: name|date|slot (lowercased name). */
+export function eventKey(name: string, date: string, slot: string): string {
+  return `${name.trim().toLowerCase()}|${date}|${slot}`;
+}
+
 export async function importDrafts(
   repos: Repositories,
   ctx: AnyTenantContext,
   drafts: DraftRow[],
+  opts?: { source?: string; onlyKeys?: Set<string> },
 ): Promise<SyncOutcome> {
   const t = repos.tenant;
   const today = new Date().toISOString().slice(0, 10);
@@ -63,7 +69,8 @@ export async function importDrafts(
     const startTime = d.startTime || "09:00";
     const endTime = d.endTime || "";
     const slot = timeToSlot(startTime);
-    const key = `${name.toLowerCase()}|${date}|${slot}`;
+    const key = eventKey(name, date, slot);
+    if (opts?.onlyKeys && !opts.onlyKeys.has(key)) { skipped++; continue; }
     if (existing.has(key)) { duplicates++; continue; }
 
     const audience: CourseAudience = (COURSE_AUDIENCES as readonly string[]).includes(d.audience)
@@ -90,6 +97,8 @@ export async function importDrafts(
       capacity: type.defaultCapacity ?? 8,
       ratio: type.studentsPerInstructor ?? 4,
       status: "scheduled",
+      source: opts?.source ?? null,
+      externalRef: opts?.source ? key : null,
     });
     await t.courseSession.insert(ctx, {
       courseId: course.id,
@@ -109,6 +118,94 @@ export async function importDrafts(
   });
 
   return { created, duplicates, skipped, total: drafts.length };
+}
+
+export interface FeedDiff {
+  toAdd: { key: string; name: string; date: string; slot: string; startTime: string; endTime: string; audience: string }[];
+  toRemove: { courseId: string; name: string; date: string; slot: string }[];
+  unchanged: number;
+}
+
+/**
+ * Compare a feed's future events with what's on the platform, WITHOUT changing
+ * anything. Returns new events to add, and courses previously imported from this
+ * source that are no longer in the feed (candidates to remove — never deleted
+ * automatically). Manually-created courses are never proposed for removal.
+ */
+export async function diffFeed(
+  repos: Repositories,
+  ctx: AnyTenantContext,
+  drafts: DraftRow[],
+  source: string,
+): Promise<FeedDiff> {
+  const t = repos.tenant;
+  const today = new Date().toISOString().slice(0, 10);
+  const ISO = /^\d{4}-\d{2}-\d{2}$/;
+  const [types, courses, sessions] = await Promise.all([t.courseType.list(ctx), t.course.list(ctx), t.courseSession.list(ctx)]);
+  const typeById = new Map(types.map((c) => [c.id, c]));
+  const nameOf = (c: (typeof courses)[number]) => (c.name ?? typeById.get(c.courseTypeId)?.name ?? "").trim().toLowerCase();
+  const courseById = new Map(courses.map((c) => [c.id, c]));
+  const firstSession = new Map<string, (typeof sessions)[number]>();
+  const allKeys = new Set<string>();
+  for (const s of sessions) {
+    const c = courseById.get(s.courseId);
+    if (c) allKeys.add(eventKey(nameOf(c), s.date, s.slot));
+    if (!firstSession.has(s.courseId)) firstSession.set(s.courseId, s);
+  }
+
+  const feedKeys = new Set<string>();
+  const toAdd: FeedDiff["toAdd"] = [];
+  for (const d of drafts) {
+    const name = (d.name ?? "").trim();
+    const date = (d.date ?? "").trim();
+    if (!name || !ISO.test(date) || date < today) continue;
+    const startTime = d.startTime || "09:00";
+    const slot = timeToSlot(startTime);
+    const key = eventKey(name, date, slot);
+    feedKeys.add(key);
+    if (!allKeys.has(key)) {
+      const audience = (COURSE_AUDIENCES as readonly string[]).includes(d.audience) ? d.audience : "all";
+      toAdd.push({ key, name, date, slot, startTime, endTime: d.endTime || "", audience });
+    }
+  }
+
+  const toRemove: FeedDiff["toRemove"] = [];
+  for (const c of courses) {
+    if (c.source !== source) continue;
+    const s = firstSession.get(c.id);
+    if (!s || s.date < today) continue;
+    const key = c.externalRef ?? eventKey(nameOf(c), s.date, s.slot);
+    if (!feedKeys.has(key)) toRemove.push({ courseId: c.id, name: c.name ?? nameOf(c), date: s.date, slot: s.slot });
+  }
+
+  return { toAdd, toRemove, unchanged: Math.max(0, feedKeys.size - toAdd.length) };
+}
+
+/** Apply the admin's chosen changes: add selected new events, remove selected courses. Never touches anything not chosen. */
+export async function applyChanges(
+  repos: Repositories,
+  ctx: AnyTenantContext,
+  drafts: DraftRow[],
+  source: string,
+  addKeys: string[],
+  removeCourseIds: string[],
+): Promise<{ added: number; removed: number }> {
+  let added = 0;
+  if (addKeys.length) {
+    const out = await importDrafts(repos, ctx, drafts, { source, onlyKeys: new Set(addKeys) });
+    added = out.created;
+  }
+  let removed = 0;
+  if (removeCourseIds.length) {
+    const courses = await repos.tenant.course.list(ctx);
+    const byId = new Map(courses.map((c) => [c.id, c]));
+    for (const id of removeCourseIds) {
+      const c = byId.get(id);
+      if (c && c.source === source) { await repos.tenant.course.delete(ctx, id); removed++; }
+    }
+  }
+  await writeAudit(repos, ctx, { action: "integration_apply_changes", entity: "integration", after: { source, added, removed } });
+  return { added, removed };
 }
 
 const webcalToHttps = (u: string) => (u.trim().startsWith("webcal://") ? "https://" + u.trim().slice("webcal://".length) : u.trim());
@@ -154,7 +251,7 @@ export async function syncAllIntegrations(repos: Repositories): Promise<CronSync
     const ctx: SystemTenantContext = { organisationId: row.organisationId, slug: row.slug, system: true, reason: "cron-sync-integrations" };
     try {
       const drafts = await fetchIntegrationDrafts(row);
-      const out = await importDrafts(repos, ctx, drafts);
+      const out = await importDrafts(repos, ctx, drafts, { source: `integration:${row.provider}` });
       const result = `${out.created} added · ${out.duplicates} dup · ${out.skipped} skipped`;
       await repos.tenant.integration.update(ctx, row.id, { status: "connected", lastSyncedAt: new Date(), lastResult: result });
       summary.ok++;

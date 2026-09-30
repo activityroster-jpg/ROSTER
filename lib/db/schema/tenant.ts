@@ -363,6 +363,10 @@ export const course = sqliteTable("course", {
   price: real("price"), // per-head price override; falls back to course_type.default_price
   status: text("status", { enum: COURSE_STATUSES }).notNull().default("draft"),
   notes: text("notes"),
+  /** Where this course came from, e.g. "integration:bookwhen". Null = created in-app. */
+  source: text("source"),
+  /** Stable key from the source feed (name|date|slot) for change detection. */
+  externalRef: text("external_ref"),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 }, (t) => [

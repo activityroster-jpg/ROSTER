@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireTenant } from "@/lib/tenant/require";
 import { integration as integrationTable, INTEGRATION_KINDS, type IntegrationKind } from "@/lib/db/schema";
 import { providerById } from "@/lib/integrations/catalogue";
-import { fetchIntegrationDrafts, importDrafts } from "@/lib/services/integrations";
+import { fetchIntegrationDrafts, applyChanges, diffFeed, type FeedDiff } from "@/lib/services/integrations";
 import { writeAudit } from "@/lib/services/audit";
 
 export type IntegrationResult = { ok: boolean; error?: string; message?: string };
@@ -52,25 +52,47 @@ export async function removeIntegrationAction(id: string): Promise<IntegrationRe
   return { ok: true, message: "Disconnected" };
 }
 
-/** Fetch the feed now and import its courses (idempotent — skips duplicates). */
-export async function syncIntegrationAction(id: string): Promise<IntegrationResult> {
+export type PreviewResult = { ok: true; diff: FeedDiff } | { ok: false; error: string };
+
+/**
+ * Check the feed for changes WITHOUT importing anything: returns new events to
+ * add and previously-imported courses no longer in the feed (to review). Nothing
+ * is created or deleted here.
+ */
+export async function previewIntegrationChangesAction(id: string): Promise<PreviewResult> {
   const { ctx, repos } = await requireTenant({ role: "admin" });
   const row = (await repos.tenant.integration.list(ctx, eq(integrationTable.id, id)))[0];
   if (!row) return { ok: false, error: "Not found" };
-
   try {
     const drafts = await fetchIntegrationDrafts(row);
-    const out = await importDrafts(repos, ctx, drafts);
-    const summary = `${out.created} added · ${out.duplicates} already in · ${out.skipped} skipped`;
+    const diff = await diffFeed(repos, ctx, drafts, `integration:${row.provider}`);
+    await repos.tenant.integration.update(ctx, id, { status: "connected", lastResult: `${diff.toAdd.length} new · ${diff.toRemove.length} removed · ${diff.unchanged} unchanged` });
+    return { ok: true, diff };
+  } catch (err) {
+    const msg = (err as Error).message || "Check failed";
+    await repos.tenant.integration.update(ctx, id, { status: "error", lastResult: msg });
+    return { ok: false, error: msg };
+  }
+}
+
+/** Apply the admin's chosen additions/removals. Never changes anything not selected. */
+export async function applyIntegrationChangesAction(id: string, addKeys: string[], removeCourseIds: string[]): Promise<IntegrationResult> {
+  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const row = (await repos.tenant.integration.list(ctx, eq(integrationTable.id, id)))[0];
+  if (!row) return { ok: false, error: "Not found" };
+  if ((addKeys?.length ?? 0) === 0 && (removeCourseIds?.length ?? 0) === 0) return { ok: false, error: "Nothing selected" };
+  try {
+    const drafts = await fetchIntegrationDrafts(row);
+    const out = await applyChanges(repos, ctx, drafts, `integration:${row.provider}`, addKeys ?? [], removeCourseIds ?? []);
+    const summary = `${out.added} added · ${out.removed} removed`;
     await repos.tenant.integration.update(ctx, id, { status: "connected", lastSyncedAt: new Date(), lastResult: summary });
     revalidatePath("/office/courses");
     revalidatePath("/office/integrations");
     revalidatePath("/office");
-    return { ok: true, message: `Synced — ${summary}` };
+    return { ok: true, message: summary };
   } catch (err) {
-    const msg = (err as Error).message || "Sync failed";
+    const msg = (err as Error).message || "Update failed";
     await repos.tenant.integration.update(ctx, id, { status: "error", lastResult: msg });
-    revalidatePath("/office/integrations");
     return { ok: false, error: msg };
   }
 }

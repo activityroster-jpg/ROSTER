@@ -29,8 +29,9 @@ export default async function IntegrationsPage() {
         <Link href="/office/courses" className="text-sm text-teal hover:underline">← Courses</Link>
       </div>
       <p className="mb-4 max-w-2xl text-sm text-slate-500">
-        Feed your courses in automatically from the booking or club system you already use. Connect its calendar feed
-        and ActivityRoster keeps your courses and sessions in sync — you just roster the staff.
+        Feed your courses in from the booking or club system you already use. Connect its calendar feed, then press
+        <span className="font-medium text-navy"> Check for updates</span> whenever you like — you review the new and
+        removed courses and choose what to apply. Nothing is ever imported or deleted without your say-so.
       </p>
       <a href="/learn?topic=integrations" target="_blank" rel="noreferrer" className="mb-6 inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-navy hover:bg-slate-50">
         📖 Read the guide

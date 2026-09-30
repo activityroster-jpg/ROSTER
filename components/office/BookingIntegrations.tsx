@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { connectIntegrationAction, removeIntegrationAction, syncIntegrationAction } from "@/app/(app)/office/integrations/actions";
+import { connectIntegrationAction, removeIntegrationAction, previewIntegrationChangesAction, applyIntegrationChangesAction, type PreviewResult } from "@/app/(app)/office/integrations/actions";
+import type { FeedDiff } from "@/lib/services/integrations";
 
 interface ProviderUi { id: string; name: string; category: string; blurb: string; methods: string[]; apiPlanned?: boolean; apiAdapter?: boolean; icsHelp?: string; website?: string }
 interface ConnectedUi { id: string; provider: string; name: string; kind: string; feedUrl: string | null; status: string; lastSyncedAt: string | null; lastResult: string | null }
@@ -17,6 +18,32 @@ export function BookingIntegrations({ providers, connected }: { providers: Provi
   const [apiKey, setApiKey] = useState("");
   const [mode, setMode] = useState<"ics" | "api">("ics");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  // Review state (per integration being checked)
+  const [reviewId, setReviewId] = useState<string | null>(null);
+  const [diff, setDiff] = useState<FeedDiff | null>(null);
+  const [addSel, setAddSel] = useState<Set<string>>(new Set());
+  const [remSel, setRemSel] = useState<Set<string>>(new Set());
+
+  const check = (id: string) => {
+    setMsg(null); setDiff(null); setReviewId(id);
+    start(async () => {
+      const res: PreviewResult = await previewIntegrationChangesAction(id);
+      if (res.ok) {
+        setDiff(res.diff);
+        setAddSel(new Set(res.diff.toAdd.map((a) => a.key))); // new courses pre-selected to add
+        setRemSel(new Set()); // removals opt-in only — never pre-checked
+      } else { setMsg({ ok: false, text: res.error }); setReviewId(null); }
+    });
+  };
+
+  const apply = (id: string) => {
+    start(async () => {
+      const res = await applyIntegrationChangesAction(id, [...addSel], [...remSel]);
+      setMsg({ ok: res.ok, text: res.ok ? res.message ?? "Done" : res.error ?? "Failed" });
+      if (res.ok) { setReviewId(null); setDiff(null); router.refresh(); }
+    });
+  };
 
   const connectedByProvider = new Map(connected.map((c) => [c.provider, c]));
 
@@ -45,13 +72,67 @@ export function BookingIntegrations({ providers, connected }: { providers: Provi
                     <p className="font-semibold text-navy">{c.name}
                       <span className={`ml-2 rounded-full px-2 py-0.5 text-[10px] font-semibold ${c.status === "connected" ? "bg-starboard/15 text-starboard" : c.status === "error" ? "bg-port/15 text-port" : "bg-slate-100 text-slate-500"}`}>{c.status}</span>
                     </p>
-                    <p className="text-xs text-slate-500">Last sync: {fmt(c.lastSyncedAt)}{c.lastResult ? ` · ${c.lastResult}` : ""}</p>
+                    <p className="text-xs text-slate-500">Last updated: {fmt(c.lastSyncedAt)}{c.lastResult ? ` · ${c.lastResult}` : ""}</p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <button type="button" onClick={() => run(() => syncIntegrationAction(c.id))} disabled={pending} className="rounded-lg bg-teal px-3 py-1.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{pending ? "Syncing…" : "Sync now"}</button>
-                    <button type="button" onClick={() => { if (confirm("Disconnect this booking system?")) run(() => removeIntegrationAction(c.id)); }} disabled={pending} className="text-sm text-port hover:underline">Disconnect</button>
+                    <button type="button" onClick={() => check(c.id)} disabled={pending} className="rounded-lg bg-teal px-3 py-1.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{pending && reviewId === c.id ? "Checking…" : "Check for updates"}</button>
+                    <button type="button" onClick={() => { if (confirm("Disconnect this booking system? (Your courses stay — nothing is deleted.)")) run(() => removeIntegrationAction(c.id)); }} disabled={pending} className="text-sm text-port hover:underline">Disconnect</button>
                   </div>
                 </div>
+
+                {/* Review panel */}
+                {reviewId === c.id && diff ? (
+                  <div className="mt-4 border-t border-slate-100 pt-4">
+                    {diff.toAdd.length === 0 && diff.toRemove.length === 0 ? (
+                      <p className="text-sm text-slate-500">Everything&apos;s up to date — {diff.unchanged} course{diff.unchanged === 1 ? "" : "s"} already match the feed. Nothing to add or remove.</p>
+                    ) : (
+                      <div className="space-y-4">
+                        {diff.toAdd.length > 0 ? (
+                          <div>
+                            <div className="mb-1 flex items-center justify-between">
+                              <p className="text-sm font-semibold text-navy">New in {c.name} <span className="font-normal text-slate-400">({diff.toAdd.length})</span></p>
+                              <button type="button" onClick={() => setAddSel((s) => s.size === diff.toAdd.length ? new Set() : new Set(diff.toAdd.map((a) => a.key)))} className="text-xs font-medium text-teal hover:underline">{addSel.size === diff.toAdd.length ? "Deselect all" : "Select all"}</button>
+                            </div>
+                            <ul className="space-y-1">
+                              {diff.toAdd.map((a) => (
+                                <li key={a.key} className="flex items-center gap-2 rounded-lg bg-starboard/5 px-2 py-1.5 text-sm">
+                                  <input type="checkbox" checked={addSel.has(a.key)} onChange={() => setAddSel((s) => { const n = new Set(s); n.has(a.key) ? n.delete(a.key) : n.add(a.key); return n; })} />
+                                  <span className="font-medium text-navy">{a.name}</span>
+                                  <span className="text-xs text-slate-500">{a.date} · {a.slot}{a.startTime ? ` · ${a.startTime}` : ""}</span>
+                                  <span className={`ml-auto rounded px-1.5 py-0.5 text-[10px] font-semibold ${a.audience === "youth" ? "bg-amber/15 text-amber" : a.audience === "adult" ? "bg-teal/15 text-teal" : "bg-slate-100 text-slate-500"}`}>{a.audience}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ) : null}
+
+                        {diff.toRemove.length > 0 ? (
+                          <div>
+                            <p className="mb-1 text-sm font-semibold text-navy">Removed from {c.name} <span className="font-normal text-slate-400">({diff.toRemove.length})</span></p>
+                            <p className="mb-1 text-xs text-slate-500">These were imported before but are no longer in the feed. Tick to remove them here, or leave unticked to keep them. Nothing is deleted unless you tick it.</p>
+                            <ul className="space-y-1">
+                              {diff.toRemove.map((r) => (
+                                <li key={r.courseId} className="flex items-center gap-2 rounded-lg bg-port/5 px-2 py-1.5 text-sm">
+                                  <input type="checkbox" checked={remSel.has(r.courseId)} onChange={() => setRemSel((s) => { const n = new Set(s); n.has(r.courseId) ? n.delete(r.courseId) : n.add(r.courseId); return n; })} />
+                                  <span className="font-medium text-navy">{r.name}</span>
+                                  <span className="text-xs text-slate-500">{r.date} · {r.slot}</span>
+                                  <a href={`/office/courses/${r.courseId}`} className="ml-auto text-xs font-medium text-teal hover:underline">Edit</a>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ) : null}
+
+                        <div className="flex items-center gap-3">
+                          <button type="button" onClick={() => apply(c.id)} disabled={pending || (addSel.size === 0 && remSel.size === 0)} className="rounded-lg bg-navy px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:opacity-50">
+                            {pending ? "Applying…" : `Apply — add ${addSel.size}, remove ${remSel.size}`}
+                          </button>
+                          <button type="button" onClick={() => { setReviewId(null); setDiff(null); }} className="text-sm text-slate-500 hover:underline">Cancel</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : null}
               </div>
             ))}
           </div>
