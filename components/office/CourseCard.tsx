@@ -27,7 +27,7 @@ const fmtDate = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString
 const fmtTime = (ms: number) => new Date(ms).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
 
 export function CourseCard({
-  course, audience, sessions, assigned, instructors, roles, ratioOn, ratio,
+  course, audience, sessions, assigned, instructors, roles, ratioOn, ratio, computedRequired,
 }: {
   course: { id: string; name: string; courseTypeName: string; status: string; staffRequired: number | null };
   audience: string;
@@ -37,6 +37,7 @@ export function CourseCard({
   roles: CardRole[];
   ratioOn: boolean;
   ratio?: CardRatio;
+  computedRequired?: number;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -131,6 +132,18 @@ export function CourseCard({
             {[1, 2, 3, 4, 5, 6, 8, 10].map((n) => <option key={n} value={n}>{n} staff</option>)}
           </select>
         </label>
+
+        {(() => {
+          const required = course.staffRequired ?? computedRequired ?? null;
+          const n = assigned.length;
+          if (required == null) return n > 0 ? <span className="text-xs text-slate-500">{n} assigned</span> : null;
+          const ok = n >= required;
+          return (
+            <span title={`${n} of ${required} staff assigned`} className={`rounded px-1.5 py-0.5 text-[11px] font-semibold ${ok ? "bg-starboard/15 text-starboard" : "bg-amber/15 text-amber"}`}>
+              {n}/{required}
+            </span>
+          );
+        })()}
 
         <span className="ml-auto flex items-center gap-2">
           {ratioOn && ratio ? (

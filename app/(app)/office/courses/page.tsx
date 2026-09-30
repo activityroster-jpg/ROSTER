@@ -122,6 +122,7 @@ export default async function CoursesPage() {
                 roles={activeRoles}
                 ratioOn={ratioOn}
                 ratio={ratioOn ? { ok: c.ratio.ok, understaffed: c.ratio.understaffed, missingSafetyCover: c.ratio.missingSafetyCover } : undefined}
+                computedRequired={c.ratio.requiredStaff}
               />
             );
           })

@@ -133,13 +133,15 @@ export async function getWeekAvailabilityMatrix(
   const courseName = new Map(courses.map((c) => [c.id, c.name ?? courseTypes.find((t) => t.id === c.courseTypeId)?.name ?? "Course"]));
   const instructorsByCourse = new Map<string, string[]>();
   for (const a of staff) instructorsByCourse.set(a.courseId, [...(instructorsByCourse.get(a.courseId) ?? []), a.instructorId]);
+  const fmtT = (v: Date | number) => new Date(v instanceof Date ? v.getTime() : Number(v)).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
   const assignedByInstructor = new Map<string, Record<string, string[]>>();
   for (const s of sessions) {
     if (s.date < mondayIso || s.date >= sunday) continue;
     const key = `${s.date}|${s.slot}`;
+    const label = `${courseName.get(s.courseId) ?? "Course"} (${fmtT(s.startAt)}–${fmtT(s.endAt)})`;
     for (const insId of instructorsByCourse.get(s.courseId) ?? []) {
       const map = assignedByInstructor.get(insId) ?? {};
-      map[key] = [...(map[key] ?? []), courseName.get(s.courseId) ?? "Course"];
+      map[key] = [...(map[key] ?? []), label];
       assignedByInstructor.set(insId, map);
     }
   }

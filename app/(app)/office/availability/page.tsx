@@ -89,12 +89,18 @@ export default async function AvailabilityPage({ searchParams }: { searchParams:
                     const status = r.cells[`${d}|${s}`] ?? "none";
                     const cfg = CELL[status] ?? CELL.none;
                     const rostered = r.assigned[`${d}|${s}`];
-                    const cellLabel = `${r.name}, ${DAY_LABELS[di]} ${s}: ${cfg!.word}${rostered?.length ? ` · rostered on ${rostered.join(", ")}` : ""}`;
+                    const rosterLabel = rostered?.length ? `Rostered: ${rostered.join(" · ")}` : "";
+                    const cellLabel = `${r.name}, ${DAY_LABELS[di]} ${s}: ${cfg!.word}${rosterLabel ? ` · ${rosterLabel}` : ""}`;
                     return (
                       <td key={`${r.instructorId}-${di}-${s}`} className={`p-0 ${si === 0 ? "border-l border-slate-200" : ""}`}>
-                        <span className={`relative inline-block h-6 w-9 leading-6 font-semibold ${cfg!.cls}`} title={cellLabel} aria-label={cellLabel}>
+                        <span className={`relative flex h-6 w-9 items-center justify-center font-semibold ${cfg!.cls}`} title={cellLabel} aria-label={cellLabel}>
                           <span aria-hidden="true">{cfg!.label}</span>
-                          {rostered?.length ? <span aria-hidden="true" className="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-navy" /> : null}
+                          {rostered?.length ? (
+                            <span
+                              title={rosterLabel}
+                              className="absolute bottom-0.5 left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-navy"
+                            />
+                          ) : null}
                         </span>
                       </td>
                     );
