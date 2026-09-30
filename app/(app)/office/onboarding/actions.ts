@@ -15,6 +15,7 @@ import {
 } from "@/lib/db/schema";
 import { writeAudit } from "@/lib/services/audit";
 import { linkInstructorUser } from "@/lib/services/invite";
+import { apexDomain } from "@/lib/config";
 import { serializeFeatures } from "@/lib/features";
 import { DEFAULT_COURSE_TYPES, DEFAULT_GRADES } from "@/lib/seed/catalogue";
 import { ONBOARDED_COOKIE } from "@/lib/onboarding";
@@ -106,7 +107,7 @@ export async function addTeamMemberAction(input: {
   qualificationTypeIds: string[];
   courseTypeIds?: string[];
 }): Promise<{ ok: boolean; error?: string; invited?: boolean; message?: string }> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos, organisation } = await requireTenant({ role: "admin" });
   const name = (input.name ?? "").trim();
   if (!name) return { ok: false, error: "Name is required" };
   const email = input.email?.trim().toLowerCase() || null;
@@ -155,7 +156,7 @@ export async function addTeamMemberAction(input: {
     if (linked.ok) {
       try {
         const auth = await getAuth();
-        await auth.api.signInMagicLink({ body: { email: linked.email, callbackURL: "/portal/documents" }, headers: new Headers(await headers()) });
+        await auth.api.signInMagicLink({ body: { email: linked.email, callbackURL: `https://${organisation.slug}.${apexDomain()}/portal/welcome` }, headers: new Headers(await headers()) });
         invited = true;
       } catch (err) {
         console.error("[onboarding] invite email failed:", (err as Error).message);

@@ -8,7 +8,13 @@ import { instructorSchema, complianceItemSchema, qualificationSchema } from "@/l
 import { writeAudit } from "@/lib/services/audit";
 import { linkInstructorUser } from "@/lib/services/invite";
 import { toggleOnboarding } from "@/lib/services/hr";
+import { apexDomain } from "@/lib/config";
 import { EMPLOYMENT_TYPES, type EmploymentType } from "@/lib/db/schema";
+
+/** Absolute URL to a centre's own subdomain (magic links must land on it, not the apex). */
+function centreUrl(slug: string, path: string): string {
+  return `https://${slug}.${apexDomain()}${path}`;
+}
 
 export type ActionState = { ok: boolean; error?: string; message?: string };
 
@@ -20,7 +26,7 @@ const ISO = /^\d{4}-\d{2}-\d{2}$/;
  * records to upload against), and email them an invite to set up their account.
  */
 export async function setupInstructorAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos, organisation } = await requireTenant({ role: "admin" });
   const name = String(formData.get("name") ?? "").trim();
   if (!name) return { ok: false, error: "Enter the instructor's name" };
   const email = String(formData.get("email") ?? "").trim().toLowerCase() || null;
@@ -59,7 +65,7 @@ export async function setupInstructorAction(_prev: ActionState, formData: FormDa
     if (linked.ok) {
       try {
         const auth = await getAuth();
-        await auth.api.signInMagicLink({ body: { email: linked.email, callbackURL: "/portal/documents" }, headers: new Headers(await headers()) });
+        await auth.api.signInMagicLink({ body: { email: linked.email, callbackURL: centreUrl(organisation.slug, "/portal/welcome") }, headers: new Headers(await headers()) });
         invited = true;
       } catch (err) {
         console.error("[setup-instructor] invite email failed:", (err as Error).message);
@@ -175,7 +181,7 @@ export async function addComplianceItemAction(_prev: ActionState, formData: Form
 /** Invite an instructor to the portal: link their user + membership, email a
  *  magic sign-in link. */
 export async function inviteInstructorAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos, organisation } = await requireTenant({ role: "admin" });
   const instructorId = String(formData.get("instructorId") ?? "");
   if (!instructorId) return { ok: false, error: "Missing instructor" };
 
@@ -186,7 +192,7 @@ export async function inviteInstructorAction(_prev: ActionState, formData: FormD
   try {
     const auth = await getAuth();
     await auth.api.signInMagicLink({
-      body: { email: linked.email, callbackURL: "/portal" },
+      body: { email: linked.email, callbackURL: centreUrl(organisation.slug, "/portal/welcome") },
       headers: new Headers(await headers()),
     });
   } catch (err) {
