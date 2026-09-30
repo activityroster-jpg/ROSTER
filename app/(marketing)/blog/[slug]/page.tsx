@@ -26,9 +26,21 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const post = await load(slug);
   if (!post) return { title: "Blog — ActivityRoster" };
+  const published = post.publishAt ? new Date(post.publishAt instanceof Date ? post.publishAt.getTime() : Number(post.publishAt)).toISOString() : undefined;
   return {
-    title: post.seoTitle || `${post.title} | ActivityRoster`,
+    title: post.seoTitle || post.title,
     description: post.seoDescription || post.excerpt,
+    alternates: { canonical: `/blog/${post.slug}` },
+    openGraph: {
+      type: "article",
+      title: post.title,
+      description: post.seoDescription || post.excerpt,
+      url: `/blog/${post.slug}`,
+      publishedTime: published,
+      authors: [post.author],
+      tags: post.tags.split(",").map((t) => t.trim()).filter(Boolean),
+    },
+    twitter: { card: "summary_large_image", title: post.title, description: post.seoDescription || post.excerpt },
   };
 }
 
@@ -40,9 +52,23 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   const html = renderMarkdown(post.body);
   const mins = readingMinutes(post.body);
   const tags = post.tags.split(",").map((t) => t.trim()).filter(Boolean);
+  const publishedIso = post.publishAt ? new Date(post.publishAt instanceof Date ? post.publishAt.getTime() : Number(post.publishAt)).toISOString() : undefined;
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: post.title,
+    description: post.seoDescription || post.excerpt,
+    author: { "@type": "Organization", name: post.author },
+    publisher: { "@type": "Organization", name: "ActivityRoster" },
+    datePublished: publishedIso,
+    dateModified: post.updatedAt instanceof Date ? post.updatedAt.toISOString() : publishedIso,
+    articleSection: post.category,
+    keywords: tags.join(", "),
+  };
 
   return (
     <article className="mx-auto max-w-3xl px-4 py-16">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <Link href="/blog" className="text-sm text-slate-400 hover:text-navy">← All articles</Link>
 
       <div className="mt-4 flex items-center gap-3">

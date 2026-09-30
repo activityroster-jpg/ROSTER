@@ -3,8 +3,12 @@ import type { AnyTenantContext, SystemTenantContext } from "@/lib/tenant/context
 import { COURSE_AUDIENCES, type CourseAudience } from "@/lib/db/schema";
 import { draftsFromIcs, timeToSlot, toEpochMs, type DraftRow } from "@/lib/import/parse";
 import { fetchBookwhenDrafts } from "@/lib/integrations/adapters/bookwhen";
+import { assertSafeFeedUrl } from "@/lib/integrations/url-guard";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { writeAudit } from "./audit";
+
+const FEED_TIMEOUT_MS = 12000;
+const FEED_MAX_BYTES = 8 * 1024 * 1024; // 8MB cap
 
 export interface SyncOutcome {
   created: number;
@@ -208,8 +212,6 @@ export async function applyChanges(
   return { added, removed };
 }
 
-const webcalToHttps = (u: string) => (u.trim().startsWith("webcal://") ? "https://" + u.trim().slice("webcal://".length) : u.trim());
-
 /** Fetch the drafts for one integration row, from its ICS feed or API adapter. */
 export async function fetchIntegrationDrafts(row: { kind: string; provider: string; feedUrl: string | null; token: string | null }): Promise<DraftRow[]> {
   if (row.kind === "api") {
@@ -219,11 +221,24 @@ export async function fetchIntegrationDrafts(row: { kind: string; provider: stri
     }
     throw new Error(`No API adapter for ${row.provider}`);
   }
-  // Default: ICS feed
+  // Default: ICS feed — guard against SSRF, cap time + size.
   if (!row.feedUrl) throw new Error("No calendar feed URL set");
-  const res = await fetch(webcalToHttps(row.feedUrl), { headers: { Accept: "text/calendar, text/plain, */*" } });
-  if (!res.ok) throw new Error(`Feed responded ${res.status}`);
-  const text = await res.text();
+  const safeUrl = assertSafeFeedUrl(row.feedUrl);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FEED_TIMEOUT_MS);
+  let text: string;
+  try {
+    const res = await fetch(safeUrl, { headers: { Accept: "text/calendar, text/plain, */*" }, redirect: "follow", signal: controller.signal });
+    if (!res.ok) throw new Error(`Feed responded ${res.status}`);
+    const buf = await res.arrayBuffer();
+    if (buf.byteLength > FEED_MAX_BYTES) throw new Error("Calendar feed is too large");
+    text = new TextDecoder().decode(buf);
+  } catch (err) {
+    if ((err as Error).name === "AbortError") throw new Error("The calendar feed took too long to respond");
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
   if (!/BEGIN:VCALENDAR/i.test(text)) throw new Error("That URL didn't return a calendar (ICS) feed");
   return draftsFromIcs(text);
 }

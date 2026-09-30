@@ -4,6 +4,14 @@ import { syncAllIntegrations } from "@/lib/services/integrations";
 
 export const dynamic = "force-dynamic";
 
+/** Length-safe, constant-time-ish string compare to avoid leaking the secret via timing. */
+function timingSafeEqualStr(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
 /**
  * Scheduled sync of every centre's auto-sync booking integrations.
  *
@@ -19,7 +27,7 @@ async function run(req: Request): Promise<Response> {
 
   const url = new URL(req.url);
   const provided = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? url.searchParams.get("key") ?? "";
-  if (provided !== secret) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  if (!timingSafeEqualStr(provided, secret)) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
 
   const repos = await getRepositories();
   const summary = await syncAllIntegrations(repos);

@@ -106,8 +106,38 @@ function DisciplineGallery() {
 
 export default function MarketingHome() {
   const apex = apexDomain();
+  const site = `https://${apex}`;
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": `${site}/#organization`,
+        name: "ActivityRoster",
+        url: site,
+        description: "Compliance-aware staff rostering and course administration for RYA sailing and watersports centres, schools and clubs.",
+        areaServed: "GB",
+      },
+      {
+        "@type": "WebSite",
+        "@id": `${site}/#website`,
+        url: site,
+        name: "ActivityRoster",
+        publisher: { "@id": `${site}/#organization` },
+      },
+      {
+        "@type": "SoftwareApplication",
+        name: "ActivityRoster",
+        applicationCategory: "BusinessApplication",
+        operatingSystem: "Web",
+        offers: { "@type": "Offer", price: "75", priceCurrency: "GBP" },
+        description: "Staff rostering, qualifications and safety-cover compliance for RYA centres.",
+      },
+    ],
+  };
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       {/* Hero */}
       <section className="relative overflow-hidden bg-navy text-white">
         {/* Subtle watersports photo behind a heavy navy wash */}

@@ -6,18 +6,12 @@ import { requireTenant } from "@/lib/tenant/require";
 import { integration as integrationTable, INTEGRATION_KINDS, type IntegrationKind } from "@/lib/db/schema";
 import { providerById } from "@/lib/integrations/catalogue";
 import { fetchIntegrationDrafts, applyChanges, diffFeed, type FeedDiff } from "@/lib/services/integrations";
+import { isSafeFeedUrl } from "@/lib/integrations/url-guard";
 import { writeAudit } from "@/lib/services/audit";
 
 export type IntegrationResult = { ok: boolean; error?: string; message?: string };
 
-function validFeedUrl(url: string): boolean {
-  try {
-    const u = new URL(url.trim());
-    return (u.protocol === "https:" || u.protocol === "http:" || u.protocol === "webcal:") && !!u.host;
-  } catch {
-    return false;
-  }
-}
+const validFeedUrl = isSafeFeedUrl;
 /** Connect (or update) a booking system via its calendar feed URL, or API key. One row per provider. */
 export async function connectIntegrationAction(input: { provider: string; kind?: string; feedUrl?: string; token?: string }): Promise<IntegrationResult> {
   const { ctx, repos } = await requireTenant({ role: "admin" });
