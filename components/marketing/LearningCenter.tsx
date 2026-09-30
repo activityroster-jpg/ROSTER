@@ -1,9 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { LearnDiagram } from "./LearnDiagram";
-
-const DIAGRAMS = new Set(["getting-started", "courses", "rostering", "availability", "bulk", "admin-security"]);
+import { LearnMockup, MOCKUP_IDS } from "./LearnMockup";
 
 /** A block of guide content. */
 type Block =
@@ -447,9 +445,10 @@ export function LearningCenter({ initialTopic }: { initialTopic?: string }) {
               <p className="mt-1 text-sm text-slate-500">{section.blurb}</p>
             </div>
           </div>
-          {DIAGRAMS.has(section.id) ? (
-            <div className="mt-6 flex justify-center">
-              <LearnDiagram id={section.id} />
+          {MOCKUP_IDS.has(section.id) ? (
+            <div className="mt-6">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">What it looks like</p>
+              <LearnMockup id={section.id} />
             </div>
           ) : null}
 
