@@ -92,6 +92,7 @@ export const TENANT_TABLES = [
 /** Everything a request needs: tenant repos + control-plane repo. */
 export function createRepositories(db: Database) {
   return {
+    db,
     tenant: createTenantRepositories(db),
     control: new ControlPlaneRepository(db),
   };

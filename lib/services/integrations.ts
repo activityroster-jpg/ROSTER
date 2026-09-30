@@ -1,7 +1,9 @@
 import type { Repositories } from "@/lib/db/repositories";
-import type { AnyTenantContext } from "@/lib/tenant/context";
+import type { AnyTenantContext, SystemTenantContext } from "@/lib/tenant/context";
 import { COURSE_AUDIENCES, type CourseAudience } from "@/lib/db/schema";
-import { draftsFromIcs, timeToSlot, toEpochMs } from "@/lib/import/parse";
+import { draftsFromIcs, timeToSlot, toEpochMs, type DraftRow } from "@/lib/import/parse";
+import { fetchBookwhenDrafts } from "@/lib/integrations/adapters/bookwhen";
+import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { writeAudit } from "./audit";
 
 export interface SyncOutcome {
@@ -11,19 +13,24 @@ export interface SyncOutcome {
   total: number;
 }
 
+/** Parse an ICS feed and import it (see importDrafts). */
+export async function syncIcsFeed(repos: Repositories, ctx: AnyTenantContext, feedText: string): Promise<SyncOutcome> {
+  return importDrafts(repos, ctx, draftsFromIcs(feedText));
+}
+
 /**
- * Turn an ICS calendar feed's text into courses + sessions, one-way and
- * idempotent: an event that already maps to a course of the same name on the
- * same date + slot is skipped, so re-syncing the same feed never duplicates.
- * Only events from today onward are considered. Tenant scoped and audited.
+ * Turn draft course events (from an ICS feed or an API adapter) into courses +
+ * sessions, one-way and idempotent: an event that already maps to a course of
+ * the same name on the same date + slot is skipped, so re-syncing never
+ * duplicates. Only events from today onward are considered. Tenant scoped and
+ * audited.
  */
-export async function syncIcsFeed(
+export async function importDrafts(
   repos: Repositories,
   ctx: AnyTenantContext,
-  feedText: string,
+  drafts: DraftRow[],
 ): Promise<SyncOutcome> {
   const t = repos.tenant;
-  const drafts = draftsFromIcs(feedText);
   const today = new Date().toISOString().slice(0, 10);
 
   const [types, courses, sessions] = await Promise.all([
@@ -102,4 +109,63 @@ export async function syncIcsFeed(
   });
 
   return { created, duplicates, skipped, total: drafts.length };
+}
+
+const webcalToHttps = (u: string) => (u.trim().startsWith("webcal://") ? "https://" + u.trim().slice("webcal://".length) : u.trim());
+
+/** Fetch the drafts for one integration row, from its ICS feed or API adapter. */
+export async function fetchIntegrationDrafts(row: { kind: string; provider: string; feedUrl: string | null; token: string | null }): Promise<DraftRow[]> {
+  if (row.kind === "api") {
+    if (row.provider === "bookwhen") {
+      if (!row.token) throw new Error("No API key set");
+      return fetchBookwhenDrafts(row.token);
+    }
+    throw new Error(`No API adapter for ${row.provider}`);
+  }
+  // Default: ICS feed
+  if (!row.feedUrl) throw new Error("No calendar feed URL set");
+  const res = await fetch(webcalToHttps(row.feedUrl), { headers: { Accept: "text/calendar, text/plain, */*" } });
+  if (!res.ok) throw new Error(`Feed responded ${res.status}`);
+  const text = await res.text();
+  if (!/BEGIN:VCALENDAR/i.test(text)) throw new Error("That URL didn't return a calendar (ICS) feed");
+  return draftsFromIcs(text);
+}
+
+export interface CronSyncSummary {
+  ran: number;
+  ok: number;
+  failed: number;
+  created: number;
+  details: { org: string; provider: string; result: string }[];
+}
+
+/**
+ * The scheduled job: sync every auto-sync integration across all centres.
+ * Runs per-org with a system context (attributed to the cron in the audit log).
+ * Errors on one integration never stop the others.
+ */
+export async function syncAllIntegrations(repos: Repositories): Promise<CronSyncSummary> {
+  const platform = new PlatformRepository(repos.db);
+  const rows = await platform.listAutoSyncIntegrations();
+  const summary: CronSyncSummary = { ran: 0, ok: 0, failed: 0, created: 0, details: [] };
+
+  for (const row of rows) {
+    summary.ran++;
+    const ctx: SystemTenantContext = { organisationId: row.organisationId, slug: row.slug, system: true, reason: "cron-sync-integrations" };
+    try {
+      const drafts = await fetchIntegrationDrafts(row);
+      const out = await importDrafts(repos, ctx, drafts);
+      const result = `${out.created} added · ${out.duplicates} dup · ${out.skipped} skipped`;
+      await repos.tenant.integration.update(ctx, row.id, { status: "connected", lastSyncedAt: new Date(), lastResult: result });
+      summary.ok++;
+      summary.created += out.created;
+      summary.details.push({ org: row.slug, provider: row.provider, result });
+    } catch (err) {
+      const msg = (err as Error).message || "sync failed";
+      await repos.tenant.integration.update(ctx, row.id, { status: "error", lastResult: msg });
+      summary.failed++;
+      summary.details.push({ org: row.slug, provider: row.provider, result: `ERROR: ${msg}` });
+    }
+  }
+  return summary;
 }

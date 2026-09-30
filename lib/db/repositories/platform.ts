@@ -12,6 +12,7 @@ import {
   marketingProspect,
   platformPricing,
   blogPost,
+  integration,
   type BlogPost,
   type NewBlogPost,
   type MarketingProspect,
@@ -229,5 +230,24 @@ export class PlatformRepository {
   async countAllPosts(): Promise<number> {
     const rows = await this.db.select({ id: blogPost.id }).from(blogPost);
     return rows.length;
+  }
+
+  // --- Integrations (cross-org, for the scheduled sync job) ----------------
+
+  /** Every auto-sync integration across all centres, with the centre's slug. */
+  async listAutoSyncIntegrations(): Promise<{ id: string; organisationId: string; slug: string; provider: string; kind: string; feedUrl: string | null; token: string | null }[]> {
+    return this.db
+      .select({
+        id: integration.id,
+        organisationId: integration.organisationId,
+        slug: organisation.slug,
+        provider: integration.provider,
+        kind: integration.kind,
+        feedUrl: integration.feedUrl,
+        token: integration.token,
+      })
+      .from(integration)
+      .innerJoin(organisation, eq(organisation.id, integration.organisationId))
+      .where(and(eq(integration.autoSync, true), eq(integration.status, "connected")));
   }
 }

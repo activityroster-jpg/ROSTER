@@ -29,6 +29,8 @@ export interface CloudflareEnv {
   RESEND_API_KEY?: string;
   // Comma-separated emails allowed into the platform-owner admin area (/admin).
   PLATFORM_ADMIN_EMAILS?: string;
+  /** Shared secret for the scheduled integration-sync endpoint. */
+  CRON_SECRET?: string;
 }
 
 export function getEnv(): CloudflareEnv {

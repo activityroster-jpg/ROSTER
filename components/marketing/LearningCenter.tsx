@@ -111,6 +111,8 @@ const SECTIONS: Section[] = [
         "It's one-way and read-only — we never change anything in your booking system.",
         "Re-syncing never duplicates: an event already imported for the same course, date and slot is skipped.",
         "Only future sessions are brought in; past events are ignored.",
+        "Once connected, feeds sync automatically every day — or hit “Sync now” any time.",
+        "Some systems (e.g. Bookwhen) can also connect with an API key instead of a calendar URL.",
       ] },
       { kind: "tip", text: "No calendar feed? Export a spreadsheet from your system and use “Import from spreadsheet / calendar” instead — same result." },
     ],

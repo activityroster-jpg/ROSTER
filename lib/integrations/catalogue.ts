@@ -24,6 +24,8 @@ export interface Provider {
   methods: IntegrationMethod[];
   /** A public API exists but our adapter isn't built yet. */
   apiPlanned?: boolean;
+  /** A live API adapter is available now (connect with an API key). */
+  apiAdapter?: boolean;
   /** Short help on where the centre finds their calendar feed URL. */
   icsHelp?: string;
   website?: string;
@@ -54,9 +56,9 @@ export const PROVIDERS: Provider[] = [
     name: "Bookwhen",
     category: "Classes & course booking",
     blurb: "Widely used for courses, classes and taster sessions.",
-    methods: ["ics", "csv"],
-    apiPlanned: true,
-    icsHelp: "In Bookwhen, each schedule page has an iCal feed — copy that URL and paste it here.",
+    methods: ["api", "ics", "csv"],
+    apiAdapter: true,
+    icsHelp: "In Bookwhen, each schedule page has an iCal feed — copy that URL and paste it here. Or connect with your Bookwhen API key (Account → API).",
     website: "https://bookwhen.com",
   },
   {

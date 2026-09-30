@@ -20,7 +20,7 @@ export default async function IntegrationsPage() {
     lastResult: r.lastResult,
   }));
 
-  const providers = PROVIDERS.map((p) => ({ id: p.id, name: p.name, category: p.category, blurb: p.blurb, methods: p.methods, apiPlanned: p.apiPlanned, icsHelp: p.icsHelp, website: p.website }));
+  const providers = PROVIDERS.map((p) => ({ id: p.id, name: p.name, category: p.category, blurb: p.blurb, methods: p.methods, apiPlanned: p.apiPlanned, apiAdapter: p.apiAdapter, icsHelp: p.icsHelp, website: p.website }));
 
   return (
     <div>

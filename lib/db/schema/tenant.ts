@@ -661,6 +661,8 @@ export const integration = sqliteTable("integration", {
   provider: text("provider").notNull(), // catalogue id, e.g. "bookwhen", "ics_generic"
   kind: text("kind", { enum: INTEGRATION_KINDS }).notNull().default("ics"),
   feedUrl: text("feed_url"),
+  /** API key / token for kind = "api" adapters. Stored server-side only. */
+  token: text("token"),
   status: text("status", { enum: INTEGRATION_STATUSES }).notNull().default("connected"),
   autoSync: boolCol("auto_sync").default(true),
   lastSyncedAt: integer("last_synced_at", { mode: "timestamp_ms" }),

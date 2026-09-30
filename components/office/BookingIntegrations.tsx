@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { connectIntegrationAction, removeIntegrationAction, syncIntegrationAction } from "@/app/(app)/office/integrations/actions";
 
-interface ProviderUi { id: string; name: string; category: string; blurb: string; methods: string[]; apiPlanned?: boolean; icsHelp?: string; website?: string }
+interface ProviderUi { id: string; name: string; category: string; blurb: string; methods: string[]; apiPlanned?: boolean; apiAdapter?: boolean; icsHelp?: string; website?: string }
 interface ConnectedUi { id: string; provider: string; name: string; kind: string; feedUrl: string | null; status: string; lastSyncedAt: string | null; lastResult: string | null }
 
 const fmt = (iso: string | null) => iso ? new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "never";
@@ -14,6 +14,8 @@ export function BookingIntegrations({ providers, connected }: { providers: Provi
   const [pending, start] = useTransition();
   const [openId, setOpenId] = useState<string | null>(null);
   const [feedUrl, setFeedUrl] = useState("");
+  const [apiKey, setApiKey] = useState("");
+  const [mode, setMode] = useState<"ics" | "api">("ics");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const connectedByProvider = new Map(connected.map((c) => [c.provider, c]));
@@ -85,15 +87,33 @@ export function BookingIntegrations({ providers, connected }: { providers: Provi
 
                 {open ? (
                   <div className="mt-3 space-y-2">
+                    {p.apiAdapter ? (
+                      <div className="flex gap-1 rounded-lg bg-slate-100 p-0.5 text-xs">
+                        <button type="button" onClick={() => setMode("ics")} className={`flex-1 rounded-md px-2 py-1 font-medium ${mode === "ics" ? "bg-white text-navy shadow-sm" : "text-slate-500"}`}>Calendar feed</button>
+                        <button type="button" onClick={() => setMode("api")} className={`flex-1 rounded-md px-2 py-1 font-medium ${mode === "api" ? "bg-white text-navy shadow-sm" : "text-slate-500"}`}>API key</button>
+                      </div>
+                    ) : null}
                     {p.icsHelp ? <p className="rounded-lg bg-canvas p-2 text-xs text-slate-600">{p.icsHelp}</p> : null}
-                    <input value={feedUrl} onChange={(e) => setFeedUrl(e.target.value)} placeholder="https://…/calendar.ics" className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal" />
-                    <div className="flex items-center gap-2">
-                      <button type="button" onClick={() => run(() => connectIntegrationAction({ provider: p.id, kind: "ics", feedUrl }))} disabled={pending || !feedUrl.trim()} className="rounded-lg bg-navy px-3 py-1.5 text-sm font-semibold text-white hover:bg-navy-700 disabled:opacity-50">{conn ? "Update feed" : "Connect"}</button>
-                      <button type="button" onClick={() => { setOpenId(null); setFeedUrl(""); }} className="text-sm text-slate-500 hover:underline">Cancel</button>
-                    </div>
+                    {p.apiAdapter && mode === "api" ? (
+                      <>
+                        <input value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="API key" className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal" />
+                        <div className="flex items-center gap-2">
+                          <button type="button" onClick={() => run(() => connectIntegrationAction({ provider: p.id, kind: "api", token: apiKey }))} disabled={pending || !apiKey.trim()} className="rounded-lg bg-navy px-3 py-1.5 text-sm font-semibold text-white hover:bg-navy-700 disabled:opacity-50">Connect with API key</button>
+                          <button type="button" onClick={() => { setOpenId(null); setApiKey(""); }} className="text-sm text-slate-500 hover:underline">Cancel</button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <input value={feedUrl} onChange={(e) => setFeedUrl(e.target.value)} placeholder="https://…/calendar.ics" className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal" />
+                        <div className="flex items-center gap-2">
+                          <button type="button" onClick={() => run(() => connectIntegrationAction({ provider: p.id, kind: "ics", feedUrl }))} disabled={pending || !feedUrl.trim()} className="rounded-lg bg-navy px-3 py-1.5 text-sm font-semibold text-white hover:bg-navy-700 disabled:opacity-50">{conn ? "Update feed" : "Connect"}</button>
+                          <button type="button" onClick={() => { setOpenId(null); setFeedUrl(""); }} className="text-sm text-slate-500 hover:underline">Cancel</button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 ) : (
-                  <button type="button" onClick={() => { setOpenId(p.id); setFeedUrl(conn?.feedUrl ?? ""); setMsg(null); }} className="mt-3 text-sm font-semibold text-teal hover:underline">
+                  <button type="button" onClick={() => { setOpenId(p.id); setFeedUrl(conn?.feedUrl ?? ""); setApiKey(""); setMode(conn?.kind === "api" ? "api" : "ics"); setMsg(null); }} className="mt-3 text-sm font-semibold text-teal hover:underline">
                     {conn ? "Update connection" : p.methods.includes("ics") ? "Connect calendar feed →" : "Connect →"}
                   </button>
                 )}
