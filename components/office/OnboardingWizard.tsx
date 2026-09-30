@@ -414,6 +414,13 @@ export function OnboardingWizard({
             {selectedCourses.size} course type{selectedCourses.size === 1 ? "" : "s"} and {team.length} team member{team.length === 1 ? "" : "s"} set up.
           </p>
 
+          {/* Promote booking-system integration */}
+          <div className="mx-auto mt-6 max-w-md rounded-lg border border-teal/40 bg-teal/5 p-4">
+            <p className="font-semibold text-navy">Already take bookings elsewhere?</p>
+            <p className="mt-1 text-sm text-slate-600">Connect WebCollect, Bookwhen, Eola, Class4Kids and more to feed your courses in automatically — no re-typing.</p>
+            <a href="/office/integrations" className="mt-3 inline-block rounded-lg bg-navy px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700">Connect a booking system →</a>
+          </div>
+
           {features.size > 0 ? (
             <div className="mx-auto mt-6 max-w-md">
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Finish setting up your extras</p>

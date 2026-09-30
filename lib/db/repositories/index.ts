@@ -45,6 +45,7 @@ export function createTenantRepositories(db: Database) {
     openShift: repo(t.openShift),
     onboardingItem: repo(t.onboardingItem),
     booking: repo(t.booking),
+    integration: repo(t.integration),
     notification: repo(t.notification),
     auditLog: repo(t.auditLog),
   } as const;
@@ -83,6 +84,7 @@ export const TENANT_TABLES = [
   t.openShift,
   t.onboardingItem,
   t.booking,
+  t.integration,
   t.notification,
   t.auditLog,
 ] as const;

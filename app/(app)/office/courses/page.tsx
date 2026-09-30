@@ -70,6 +70,7 @@ export default async function CoursesPage() {
         <h1 className="font-display text-2xl font-semibold text-navy">Courses</h1>
         <div className="flex items-center gap-3">
           <span className="text-sm text-slate-500">{courses.length} scheduled</span>
+          <a href="/office/integrations" className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-navy hover:bg-slate-50">Connect a booking system</a>
           <a href="/office/import" className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-navy hover:bg-slate-50">Import from spreadsheet / calendar</a>
         </div>
       </div>

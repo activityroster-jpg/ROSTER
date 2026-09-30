@@ -642,7 +642,36 @@ export const auditLog = sqliteTable("audit_log", {
   index("audit_log_entity_idx").on(t.organisationId, t.entity, t.entityId),
 ]);
 
+// --- Booking-system integrations -------------------------------------------
+
+export const INTEGRATION_KINDS = ["ics", "csv", "api"] as const;
+export type IntegrationKind = (typeof INTEGRATION_KINDS)[number];
+export const INTEGRATION_STATUSES = ["connected", "error", "paused"] as const;
+export type IntegrationStatus = (typeof INTEGRATION_STATUSES)[number];
+
+/**
+ * A connection to an external booking/management system that feeds courses in.
+ * The universal path is a calendar (ICS) feed URL the provider exposes; named
+ * API adapters can be added later against the same row (kind = "api"). One-way,
+ * read-only into ActivityRoster: we never write back to the booking system.
+ */
+export const integration = sqliteTable("integration", {
+  id: id(),
+  organisationId: orgFk(),
+  provider: text("provider").notNull(), // catalogue id, e.g. "bookwhen", "ics_generic"
+  kind: text("kind", { enum: INTEGRATION_KINDS }).notNull().default("ics"),
+  feedUrl: text("feed_url"),
+  status: text("status", { enum: INTEGRATION_STATUSES }).notNull().default("connected"),
+  autoSync: boolCol("auto_sync").default(true),
+  lastSyncedAt: integer("last_synced_at", { mode: "timestamp_ms" }),
+  lastResult: text("last_result"),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, (t) => [index("integration_org_idx").on(t.organisationId)]);
+
 // Handy inferred types used across the app.
+export type Integration = typeof integration.$inferSelect;
+export type NewIntegration = typeof integration.$inferInsert;
 export type Instructor = typeof instructor.$inferSelect;
 export type CourseType = typeof courseType.$inferSelect;
 export type InstructorCourseType = typeof instructorCourseType.$inferSelect;

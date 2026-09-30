@@ -192,6 +192,12 @@ export async function seedFullOrg(
     amount: 120,
     status: "confirmed",
   });
+  await t.integration.insert(ctx, {
+    provider: "ics_generic",
+    kind: "ics",
+    feedUrl: `https://calendar.example.com/${opts.slug}.ics`,
+    status: "connected",
+  });
   await t.notification.insert(ctx, {
     instructorId: instructor.id,
     channel: "in_app",
