@@ -108,9 +108,16 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
     }
     g.list.push(c);
   }
-  // Distinct months, in order, for the jump nav.
-  const monthNav: { key: string; label: string }[] = [];
-  for (const g of weekGroups) if (!monthNav.some((m) => m.key === g.monthKey)) monthNav.push({ key: g.monthKey, label: g.monthLabel });
+  // Roll weeks up into month sections for a clear month → week → courses layout.
+  interface MonthSection { key: string; label: string; weeks: WeekGroup[]; count: number }
+  const monthSections: MonthSection[] = [];
+  for (const g of weekGroups) {
+    let m = monthSections.find((x) => x.key === g.monthKey);
+    if (!m) { m = { key: g.monthKey, label: g.monthLabel, weeks: [], count: 0 }; monthSections.push(m); }
+    m.weeks.push(g);
+    m.count += g.list.length;
+  }
+  const monthNav = monthSections.map((m) => ({ key: m.key, label: m.label }));
 
   const cardFor = (c: Course) => {
     const assigned = (assignedByCourse.get(c.courseId) ?? []).map((a) => ({
@@ -176,29 +183,46 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
       ) : null}
 
       <div className="scroll-smooth lg:grid lg:grid-cols-[1fr_11rem] lg:gap-6">
-        <div className="space-y-5">
-          {weekGroups.length === 0 && (view === "past" || undated.length === 0) ? (
+        <div className="space-y-8">
+          {monthSections.length === 0 && (view === "past" || undated.length === 0) ? (
             <Card>
               <p className="text-sm text-slate-400">{view === "past" ? "No past courses yet." : "No upcoming courses. Add one above to start rostering."}</p>
             </Card>
           ) : (
-            weekGroups.map((g, i) => {
-              const showMonth = i === 0 || weekGroups[i - 1]!.monthKey !== g.monthKey;
-              return (
-                <div key={g.weekStart}>
-                  {showMonth ? <h3 id={`mo-${g.monthKey}`} className="scroll-mt-4 mb-2 border-b border-slate-200 pb-1 font-display text-base font-semibold text-navy">{g.monthLabel}</h3> : null}
-                  <p id={`wk-${g.weekStart}`} className="scroll-mt-4 mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">{g.weekLabel}</p>
-                  <div className="space-y-2">{g.list.map(cardFor)}</div>
+            monthSections.map((m) => (
+              <section key={m.key} id={`mo-${m.key}`} className="scroll-mt-4">
+                {/* Month header */}
+                <div className="mb-3 flex items-center gap-3 border-b-2 border-navy/10 pb-2">
+                  <span className="h-6 w-1.5 flex-none rounded-full bg-teal" />
+                  <h3 className="font-display text-xl font-bold text-navy">{m.label}</h3>
+                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500">{m.count} course{m.count === 1 ? "" : "s"}</span>
                 </div>
-              );
-            })
+                <div className="space-y-5">
+                  {m.weeks.map((w) => (
+                    <div key={w.weekStart} id={`wk-${w.weekStart}`} className="scroll-mt-4">
+                      {/* Week sub-header */}
+                      <div className="mb-2 flex items-center gap-2">
+                        <span className="rounded-full bg-teal/10 px-2.5 py-0.5 text-xs font-semibold text-teal">{w.weekLabel}</span>
+                        <span className="h-px flex-1 bg-slate-100" />
+                        <span className="text-[11px] text-slate-400">{w.list.length}</span>
+                      </div>
+                      <div className="space-y-2">{w.list.map(cardFor)}</div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ))
           )}
 
           {view === "upcoming" && undated.length > 0 ? (
-            <div>
-              <h3 id="mo-none" className="scroll-mt-4 mb-2 border-b border-slate-200 pb-1 font-display text-base font-semibold text-navy">No date yet</h3>
+            <section id="mo-none" className="scroll-mt-4">
+              <div className="mb-3 flex items-center gap-3 border-b-2 border-amber/20 pb-2">
+                <span className="h-6 w-1.5 flex-none rounded-full bg-amber" />
+                <h3 className="font-display text-xl font-bold text-navy">No date yet</h3>
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500">{undated.length}</span>
+              </div>
               <div className="space-y-2">{undated.map(cardFor)}</div>
-            </div>
+            </section>
           ) : null}
         </div>
 
