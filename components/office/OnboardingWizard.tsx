@@ -33,6 +33,22 @@ const AUDIENCE_ORDER: { key: CourseAudience; label: string; hint: string }[] = [
 
 const STEP_LABELS = ["How you run", "Courses", "Team", "Finish"];
 
+/**
+ * Best-effort discipline for a course, derived from its scheme/category/name.
+ * Used to auto-suggest the courses an instructor can teach from the RYA
+ * tickets/licences they hold (which carry a matching `discipline`).
+ */
+function courseDiscipline(c: { scheme: string | null; category: string | null; name: string }): string {
+  const s = `${c.scheme ?? ""} ${c.category ?? ""} ${c.name}`.toLowerCase();
+  if (/windsurf/.test(s)) return "windsurf";
+  if (/paddle|\bsup\b/.test(s)) return "sup";
+  if (/powerboat|safety boat|pwc|jet ski|personal watercraft/.test(s)) return "powerboat";
+  if (/keelboat/.test(s)) return "keelboat";
+  if (/cruis|yacht|skipper|competent crew/.test(s)) return "cruising";
+  if (/shorebased|theory|navigation|radio|vhf|src|diesel|sea survival|first aid/.test(s)) return "shorebased";
+  return "dinghy"; // National/Youth Sailing, OnBoard, Sailability, Racing
+}
+
 export function OnboardingWizard({
   centreName,
   courseTypes,
@@ -64,7 +80,8 @@ export function OnboardingWizard({
 
   // Step 2 — courses (local list so custom additions appear immediately)
   const [allCourses, setAllCourses] = useState<CourseTypeOpt[]>(courseTypes);
-  const [selectedCourses, setSelectedCourses] = useState<Set<string>>(new Set(courseTypes.filter((c) => c.active).map((c) => c.id)));
+  // Start with nothing ticked — the centre picks only the courses they run.
+  const [selectedCourses, setSelectedCourses] = useState<Set<string>>(new Set());
   const toggleCourse = (id: string) => setSelectedCourses((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const [ccName, setCcName] = useState("");
   const [ccAudience, setCcAudience] = useState<CourseAudience>("youth");
@@ -87,13 +104,36 @@ export function OnboardingWizard({
   const [email, setEmail] = useState("");
   const [employment, setEmployment] = useState("employed");
   const [chosenQuals, setChosenQuals] = useState<Set<string>>(new Set());
-  const toggleQual = (id: string) => setChosenQuals((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const [chosenTeach, setChosenTeach] = useState<Set<string>>(new Set());
   const toggleTeach = (id: string) => setChosenTeach((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const [newType, setNewType] = useState("");
 
   // Courses this instructor can teach are picked from the ones the centre runs.
   const runCourses = useMemo(() => allCourses.filter((c) => selectedCourses.has(c.id)), [allCourses, selectedCourses]);
+
+  // Selecting a licence auto-ticks the courses they can teach (matched by
+  // discipline). Deselecting a licence removes those courses again, unless
+  // another still-held licence covers the same discipline.
+  const toggleQual = (id: string) => {
+    const qual = quals.find((q) => q.id === id);
+    const turningOn = !chosenQuals.has(id);
+    const nextQuals = new Set(chosenQuals);
+    turningOn ? nextQuals.add(id) : nextQuals.delete(id);
+    setChosenQuals(nextQuals);
+
+    const d = qual?.discipline;
+    if (!d) return;
+    setChosenTeach((teach) => {
+      const n = new Set(teach);
+      const matches = runCourses.filter((c) => courseDiscipline(c) === d);
+      if (turningOn) {
+        for (const c of matches) n.add(c.id);
+      } else if (!quals.some((q) => q.discipline === d && nextQuals.has(q.id))) {
+        for (const c of matches) n.delete(c.id);
+      }
+      return n;
+    });
+  };
 
   const addType = () => {
     const name = newType.trim();
@@ -276,16 +316,15 @@ export function OnboardingWizard({
                   <span className="text-xs text-slate-400">{a.hint}</span>
                 </div>
                 {[...(grouped.get(a.key) ?? new Map()).entries()].map(([cat, list]) => (
-                  <div key={cat} className="mb-3">
+                  <div key={cat} className="mb-2.5">
                     <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">{cat}</p>
-                    <div className="grid gap-2 sm:grid-cols-2">
+                    <div className="flex flex-wrap gap-1.5">
                       {(list as CourseTypeOpt[]).map((c) => {
                         const on = selectedCourses.has(c.id);
                         return (
                           <button key={c.id} type="button" onClick={() => toggleCourse(c.id)}
-                            className={`flex items-center gap-2.5 rounded-lg border p-2.5 text-left transition ${on ? "border-teal bg-teal/5" : "border-slate-200 hover:border-slate-300"}`}>
-                            <span className={`flex h-5 w-5 flex-none items-center justify-center rounded border text-xs ${on ? "border-teal bg-teal text-white" : "border-slate-300"}`}>{on ? "✓" : ""}</span>
-                            <span className="text-sm font-medium text-navy">{c.name}</span>
+                            className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${on ? "border-teal bg-teal text-white" : "border-slate-300 text-slate-600 hover:border-slate-400"}`}>
+                            {on ? "✓ " : ""}{c.name}
                           </button>
                         );
                       })}
