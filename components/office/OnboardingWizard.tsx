@@ -14,6 +14,7 @@ import {
 } from "@/app/(app)/office/onboarding/actions";
 import { FEATURE_META } from "@/lib/features";
 import { OPTIONAL_FEATURES, type CourseAudience, type OptionalFeature } from "@/lib/db/schema";
+import { qualTeachDiscipline, courseTeachDiscipline } from "@/lib/rya/teaching-map";
 
 export interface CourseTypeOpt { id: string; name: string; scheme: string | null; audience: CourseAudience; category: string | null; active: boolean }
 export interface QualOpt { id: string; name: string; discipline: string | null }
@@ -32,22 +33,6 @@ const AUDIENCE_ORDER: { key: CourseAudience; label: string; hint: string }[] = [
 ];
 
 const STEP_LABELS = ["How you run", "Courses", "Team", "Finish"];
-
-/**
- * Best-effort discipline for a course, derived from its scheme/category/name.
- * Used to auto-suggest the courses an instructor can teach from the RYA
- * tickets/licences they hold (which carry a matching `discipline`).
- */
-function courseDiscipline(c: { scheme: string | null; category: string | null; name: string }): string {
-  const s = `${c.scheme ?? ""} ${c.category ?? ""} ${c.name}`.toLowerCase();
-  if (/windsurf/.test(s)) return "windsurf";
-  if (/paddle|\bsup\b/.test(s)) return "sup";
-  if (/powerboat|safety boat|pwc|jet ski|personal watercraft/.test(s)) return "powerboat";
-  if (/keelboat/.test(s)) return "keelboat";
-  if (/cruis|yacht|skipper|competent crew/.test(s)) return "cruising";
-  if (/shorebased|theory|navigation|radio|vhf|src|diesel|sea survival|first aid/.test(s)) return "shorebased";
-  return "dinghy"; // National/Youth Sailing, OnBoard, Sailability, Racing
-}
 
 export function OnboardingWizard({
   centreName,
@@ -121,14 +106,14 @@ export function OnboardingWizard({
     turningOn ? nextQuals.add(id) : nextQuals.delete(id);
     setChosenQuals(nextQuals);
 
-    const d = qual?.discipline;
+    const d = qual ? qualTeachDiscipline(qual.name) : null;
     if (!d) return;
     setChosenTeach((teach) => {
       const n = new Set(teach);
-      const matches = runCourses.filter((c) => courseDiscipline(c) === d);
+      const matches = runCourses.filter((c) => courseTeachDiscipline(c) === d);
       if (turningOn) {
         for (const c of matches) n.add(c.id);
-      } else if (!quals.some((q) => q.discipline === d && nextQuals.has(q.id))) {
+      } else if (!quals.some((q) => nextQuals.has(q.id) && qualTeachDiscipline(q.name) === d)) {
         for (const c of matches) n.delete(c.id);
       }
       return n;

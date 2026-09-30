@@ -3,10 +3,11 @@
 import { useActionState, useState } from "react";
 import { setupInstructorAction, type ActionState } from "@/app/(app)/office/staff/actions";
 import { MultiSelect } from "@/components/MultiSelect";
+import { qualTeachDiscipline, courseTeachDiscipline } from "@/lib/rya/teaching-map";
 
 const initial: ActionState = { ok: false };
 
-export interface CourseChoice { id: string; name: string; audience: "youth" | "adult" | "all" }
+export interface CourseChoice { id: string; name: string; audience: "youth" | "adult" | "all"; scheme?: string | null; category?: string | null }
 export interface Choice { id: string; name: string; mandatory?: boolean }
 
 export function AddInstructorForm({ courses, quals, checks }: { courses: CourseChoice[]; quals: Choice[]; checks: Choice[] }) {
@@ -17,6 +18,26 @@ export function AddInstructorForm({ courses, quals, checks }: { courses: CourseC
 
   const toggler = (set: React.Dispatch<React.SetStateAction<Set<string>>>) => (id: string) =>
     set((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+
+  // Selecting a licence auto-ticks the courses it lets them teach (conservative
+  // map — see lib/rya/teaching-map). Deselecting removes them unless another held
+  // licence still covers that discipline.
+  const toggleQual = (id: string) => {
+    const q = quals.find((x) => x.id === id);
+    const turningOn = !selQuals.has(id);
+    const nextQuals = new Set(selQuals);
+    turningOn ? nextQuals.add(id) : nextQuals.delete(id);
+    setSelQuals(nextQuals);
+    const d = q ? qualTeachDiscipline(q.name) : null;
+    if (!d) return;
+    setSelCourses((cur) => {
+      const n = new Set(cur);
+      const matches = courses.filter((c) => courseTeachDiscipline(c) === d);
+      if (turningOn) matches.forEach((c) => n.add(c.id));
+      else if (!quals.some((x) => nextQuals.has(x.id) && qualTeachDiscipline(x.name) === d)) matches.forEach((c) => n.delete(c.id));
+      return n;
+    });
+  };
   const allOf = (opts: { id: string }[], set: React.Dispatch<React.SetStateAction<Set<string>>>) => () => set(new Set(opts.map((o) => o.id)));
   const clear = (set: React.Dispatch<React.SetStateAction<Set<string>>>) => () => set(new Set());
 
@@ -47,12 +68,12 @@ export function AddInstructorForm({ courses, quals, checks }: { courses: CourseC
         </div>
       </div>
 
-      <Field title="Courses this instructor can teach" hint="Tick every course they're approved to run.">
-        <MultiSelect placeholder="Select courses…" options={courses} selected={selCourses} onToggle={toggler(setSelCourses)} onSelectAll={allOf(courses, setSelCourses)} onClear={clear(setSelCourses)} />
+      <Field title="RYA tickets / licences they hold" hint="Pick the licences they hold — we'll suggest the courses they can teach below. They upload a photo of each for you to verify.">
+        <MultiSelect placeholder="Select licences…" options={quals} selected={selQuals} onToggle={toggleQual} onSelectAll={allOf(quals, setSelQuals)} onClear={clear(setSelQuals)} />
       </Field>
 
-      <Field title="RYA tickets / licences they need on file" hint="They'll upload a photo of each for you to verify.">
-        <MultiSelect placeholder="Select licences…" options={quals} selected={selQuals} onToggle={toggler(setSelQuals)} onSelectAll={allOf(quals, setSelQuals)} onClear={clear(setSelQuals)} />
+      <Field title="Courses this instructor can teach" hint="Pre-filled from the licences above — add or remove any.">
+        <MultiSelect placeholder="Select courses…" options={courses} selected={selCourses} onToggle={toggler(setSelCourses)} onSelectAll={allOf(courses, setSelCourses)} onClear={clear(setSelCourses)} />
       </Field>
 
       <Field title="Background checks they need" hint="DBS, first aid, safeguarding — the mandatory ones are already ticked.">

@@ -22,7 +22,7 @@ export default async function StaffPage() {
     .map((q) => ({ id: q.id, name: q.name }));
   const courseChoices = courseTypes
     .filter((c) => c.active)
-    .map((c) => ({ id: c.id, name: c.name, audience: c.audience }));
+    .map((c) => ({ id: c.id, name: c.name, audience: c.audience, scheme: c.scheme, category: c.category }));
   const checkChoices = complianceTypes
     .filter((c) => c.active)
     .map((c) => ({ id: c.id, name: c.name, mandatory: Boolean(c.mandatory) }));
