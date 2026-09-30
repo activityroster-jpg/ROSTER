@@ -76,6 +76,24 @@ export class PlatformRepository {
     return map;
   }
 
+  /** The signup/owner email per organisation (the earliest admin member). */
+  async ownerEmailByOrg(): Promise<Map<string, string>> {
+    const rows = await this.db
+      .select({ org: membership.organisationId, email: user.email, created: membership.createdAt })
+      .from(membership)
+      .innerJoin(user, eq(user.id, membership.userId))
+      .where(eq(membership.role, "admin"));
+    const best = new Map<string, { email: string; created: number }>();
+    for (const r of rows) {
+      const created = r.created instanceof Date ? r.created.getTime() : Number(r.created ?? 0);
+      const cur = best.get(r.org);
+      if (!cur || created < cur.created) best.set(r.org, { email: r.email, created });
+    }
+    const out = new Map<string, string>();
+    for (const [org, v] of best) out.set(org, v.email);
+    return out;
+  }
+
   async membersFor(orgId: string): Promise<OrgMember[]> {
     const rows = await this.db
       .select({ name: user.name, email: user.email, role: membership.role, status: membership.status })

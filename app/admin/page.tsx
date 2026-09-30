@@ -29,7 +29,7 @@ export default async function AdminOverviewPage() {
   await requirePlatformAdmin();
   const db = await getDb();
   const platform = new PlatformRepository(db);
-  const [orgs, usage, pricing] = await Promise.all([platform.listOrganisations(), platform.usageByOrg(), platform.getPricing()]);
+  const [orgs, usage, pricing, owners] = await Promise.all([platform.listOrganisations(), platform.usageByOrg(), platform.getPricing(), platform.ownerEmailByOrg()]);
 
   // Marketing promo codes (best-effort; needs Stripe configured).
   let promoCodes: PromoCodeRow[] = [];
@@ -77,6 +77,7 @@ export default async function AdminOverviewPage() {
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
             <tr>
               <th className="px-4 py-3">Centre</th>
+              <th className="px-4 py-3">Signup email</th>
               <th className="px-4 py-3">Plan</th>
               <th className="px-4 py-3">Billing</th>
               <th className="px-4 py-3">Status</th>
@@ -88,7 +89,7 @@ export default async function AdminOverviewPage() {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {orgs.length === 0 ? (
-              <tr><td colSpan={8} className="px-4 py-10 text-center text-slate-400">No centres yet.</td></tr>
+              <tr><td colSpan={9} className="px-4 py-10 text-center text-slate-400">No centres yet.</td></tr>
             ) : (
               orgs.map((o) => {
                 const u = usage.get(o.id) ?? { instructors: 0, courses: 0, bookings: 0, sessions: 0 };
@@ -97,6 +98,11 @@ export default async function AdminOverviewPage() {
                     <td className="px-4 py-3">
                       <Link href={`/admin/centres/${o.id}`} className="font-medium text-teal hover:underline">{o.name}</Link>
                       <span className="block text-xs text-slate-400">{o.slug} · {o.jurisdiction}</span>
+                    </td>
+                    <td className="px-4 py-3 text-slate-600">
+                      {owners.get(o.id)
+                        ? <a href={`mailto:${owners.get(o.id)}`} className="text-teal hover:underline">{owners.get(o.id)}</a>
+                        : <span className="text-slate-400">—</span>}
                     </td>
                     <td className="px-4 py-3 capitalize text-slate-600">{o.plan}</td>
                     <td className="px-4 py-3"><StatusPill tone={subTone(o.subscriptionStatus)}>{o.subscriptionStatus ?? "—"}</StatusPill></td>
