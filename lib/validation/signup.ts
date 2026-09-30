@@ -38,6 +38,9 @@ export const trialSignupSchema = z.object({
   password: z.string().min(8, "Use at least 8 characters").max(200),
   jurisdiction: z.enum(JURISDICTIONS),
   setupMode: z.enum(SETUP_MODES),
+  acceptedTerms: z.literal(true, {
+    errorMap: () => ({ message: "Please agree to the Terms and Privacy Policy to continue." }),
+  }),
 });
 
 export type TrialSignupInput = z.infer<typeof trialSignupSchema>;

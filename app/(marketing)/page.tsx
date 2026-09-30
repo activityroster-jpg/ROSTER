@@ -2,32 +2,10 @@ import Link from "next/link";
 import {
   AlertTriangle, Anchor, CalendarCheck, LifeBuoy, ShieldCheck, Ship, Users, Waves, Wallet, FileCheck,
   Clock, CalendarOff, Repeat, BarChart3, FolderLock, UserPlus, Smartphone, ClipboardCheck,
+  GitCompare, BookOpen, Newspaper, Tag, ArrowRight,
 } from "lucide-react";
 import { LeadCapture } from "@/components/marketing/LeadCapture";
 import { apexDomain } from "@/lib/config";
-
-const PILLARS = [
-  {
-    icon: CalendarCheck,
-    title: "Schedule & attendance",
-    body: "Build the week in minutes, then let staff clock in at the boat park. Actual hours are captured the moment they step off the water.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Compliance & licences",
-    body: "It won't schedule an under-qualified instructor, an over-ratio course, or craft afloat without safety cover — and it tracks every ticket so nothing lapses.",
-  },
-  {
-    icon: CalendarOff,
-    title: "Leave, cover & HR",
-    body: "Approve leave, broadcast open shifts for volunteers to claim, and keep every staff record, contract and certificate in one place.",
-  },
-  {
-    icon: BarChart3,
-    title: "Cost, pay & reporting",
-    body: "See wage cost against course revenue, track instructor and boat utilisation, and export payroll in one click.",
-  },
-];
 
 // The full platform — workforce management, built for the water.
 const PLATFORM = [
@@ -168,7 +146,10 @@ export default function MarketingHome() {
                 Explore the demo
               </Link>
             </div>
-            <p className="mt-3 text-sm text-white/50">No card required · your own address at yourclub.{apex}</p>
+            <p className="mt-3 text-sm text-white/60">
+              No card required · one simple plan ·{" "}
+              <Link href="/pricing" className="font-semibold text-white/90 underline decoration-white/30 underline-offset-2 hover:decoration-white">See pricing</Link>
+            </p>
           </div>
           <div className="flex justify-center md:justify-end">
             <div className="w-full max-w-md">
@@ -195,29 +176,15 @@ export default function MarketingHome() {
         </div>
       </section>
 
-      {/* Four pillars — what it does for owners */}
-      <section id="features" className="mx-auto max-w-6xl px-4 py-16">
-        <h2 className="font-display text-2xl font-semibold text-navy">The complete staff platform — built for the water</h2>
-        <p className="mt-2 max-w-2xl text-slate-600">
-          Scheduling, time &amp; attendance, leave, HR, compliance, payroll and reporting in one place — so you can
-          stop stitching together spreadsheets, WhatsApp groups and a folder of certificates.
-        </p>
-        <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {PILLARS.map((p) => (
-            <div key={p.title} className="rounded-card border border-slate-200 bg-white p-5">
-              <p.icon className="h-8 w-8 text-teal" />
-              <h3 className="mt-3 font-semibold text-navy">{p.title}</h3>
-              <p className="mt-1 text-sm text-slate-600">{p.body}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
       {/* Full platform grid — the breadth */}
-      <section className="border-y border-slate-200 bg-white">
+      <section id="features" className="border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-6xl px-4 py-16">
-          <h2 className="font-display text-2xl font-semibold text-navy">Everything you need to run the staff side of a centre</h2>
-          <p className="mt-2 max-w-2xl text-slate-600">A full workforce-management suite — with the RYA rules and the realities of a busy slipway built in.</p>
+          <h2 className="font-display text-2xl font-semibold text-navy">The complete staff platform — built for the water</h2>
+          <p className="mt-2 max-w-2xl text-slate-600">
+            Scheduling, time &amp; attendance, leave, HR, compliance, payroll and reporting in one place — with the RYA
+            rules and the realities of a busy slipway built in. Stop stitching together spreadsheets, WhatsApp groups
+            and a folder of certificates.
+          </p>
           <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {PLATFORM.map((f) => (
               <div key={f.title} className="flex gap-3 rounded-card border border-slate-200 p-4">
@@ -229,6 +196,10 @@ export default function MarketingHome() {
               </div>
             ))}
           </div>
+          <p className="mt-8 text-sm text-slate-600">
+            Wondering how it stacks up against what you use today?{" "}
+            <Link href="/compare" className="font-semibold text-teal hover:underline">See how ActivityRoster compares →</Link>
+          </p>
         </div>
       </section>
 
@@ -254,6 +225,12 @@ export default function MarketingHome() {
               </div>
             ))}
           </div>
+          <p className="mt-8 text-sm text-slate-600">
+            Prefer a hand? Follow the step-by-step{" "}
+            <Link href="/learn" className="font-semibold text-teal hover:underline">guides in the Learning Centre</Link>, or
+            let us do it for you with{" "}
+            <Link href="/pricing" className="font-semibold text-teal hover:underline">done-for-you setup</Link>.
+          </p>
         </div>
       </section>
 
@@ -288,6 +265,10 @@ export default function MarketingHome() {
               </div>
             ))}
           </div>
+          <p className="mt-8 text-sm text-slate-600">
+            See exactly how each check works, with real screenshots, in the{" "}
+            <Link href="/learn?topic=rostering" className="font-semibold text-teal hover:underline">Learning Centre →</Link>
+          </p>
         </div>
       </section>
 
@@ -312,6 +293,31 @@ export default function MarketingHome() {
             &ldquo;The Saturday morning scramble to check who&apos;s ticketed and who&apos;s on safety boat just… stopped.
             It tells us before we get to the water.&rdquo;
           </p>
+        </div>
+      </section>
+
+      {/* Explore more — surfaces the deeper pages */}
+      <section className="bg-canvas">
+        <div className="mx-auto max-w-6xl px-4 py-16">
+          <h2 className="font-display text-2xl font-semibold text-navy">Take a closer look</h2>
+          <p className="mt-2 max-w-2xl text-slate-600">Everything you need to decide — compare the options, learn how it works, and read up on running a centre.</p>
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              { href: "/compare", icon: GitCompare, title: "Compare", body: "How we stack up against the tools centres use today." },
+              { href: "/learn", icon: BookOpen, title: "Learning Centre", body: "Step-by-step guides to every part of the platform, with screenshots." },
+              { href: "/blog", icon: Newspaper, title: "Blog", body: "Guides on running, filling and promoting RYA courses and clubs." },
+              { href: "/pricing", icon: Tag, title: "Pricing", body: "One simple plan — or done-for-you setup. First month free." },
+            ].map((c) => (
+              <Link key={c.href} href={c.href} className="group rounded-card border border-slate-200 bg-white p-5 transition hover:border-teal hover:shadow-md">
+                <c.icon className="h-7 w-7 text-teal" />
+                <h3 className="mt-3 flex items-center gap-1 font-semibold text-navy">
+                  {c.title}
+                  <ArrowRight className="h-4 w-4 opacity-0 transition group-hover:translate-x-0.5 group-hover:opacity-100" />
+                </h3>
+                <p className="mt-1 text-sm text-slate-600">{c.body}</p>
+              </Link>
+            ))}
+          </div>
         </div>
       </section>
 

@@ -31,6 +31,7 @@ export function LeadCapture({
   const [slugEdited, setSlugEdited] = useState(false);
   const [jurisdiction, setJurisdiction] = useState<(typeof JURISDICTIONS)[number]["value"]>("england");
   const [setupMode, setSetupMode] = useState<"basic" | "full">("basic");
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [status, setStatus] = useState<"idle" | "busy" | "done" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{ url: string; emailSent: boolean } | null>(null);
@@ -45,12 +46,13 @@ export function LeadCapture({
     setError(null);
     if (slug.length < 3) { setError("Choose a web address of at least 3 characters."); return; }
     if (password.length < 8) { setError("Choose a password of at least 8 characters."); return; }
+    if (!acceptedTerms) { setError("Please agree to the Terms and Privacy Policy to continue."); return; }
     setStatus("busy");
     try {
       const res = await fetch("/api/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ownerEmail: email, password, centreName, slug, jurisdiction, setupMode, source }),
+        body: JSON.stringify({ ownerEmail: email, password, centreName, slug, jurisdiction, setupMode, acceptedTerms, source }),
       });
       const data = (await res.json()) as { ok?: boolean; error?: string; url?: string; emailSent?: boolean };
       if (!res.ok || !data.ok) {
@@ -143,10 +145,26 @@ export function LeadCapture({
         </div>
       </div>
 
+      <label className="mt-4 flex items-start gap-2 text-xs text-slate-600">
+        <input
+          type="checkbox"
+          checked={acceptedTerms}
+          onChange={(e) => setAcceptedTerms(e.target.checked)}
+          className="mt-0.5 h-4 w-4 flex-none rounded border-slate-300 text-teal focus:ring-teal"
+          aria-label="Agree to the Terms and Privacy Policy"
+        />
+        <span>
+          I agree to the{" "}
+          <Link href="/terms" target="_blank" className="font-semibold text-teal hover:underline">Terms of Service</Link>{" "}
+          and{" "}
+          <Link href="/privacy" target="_blank" className="font-semibold text-teal hover:underline">Privacy Policy</Link>.
+        </span>
+      </label>
+
       {error ? <p className="mt-3 text-sm text-port">{error}</p> : null}
 
       <div className="mt-4 flex flex-wrap gap-3">
-        <button type="submit" disabled={status === "busy"} className="rounded-lg bg-teal px-5 py-3 font-semibold text-white transition hover:bg-teal-700 disabled:opacity-50">
+        <button type="submit" disabled={status === "busy" || !acceptedTerms} className="rounded-lg bg-teal px-5 py-3 font-semibold text-white transition hover:bg-teal-700 disabled:opacity-50">
           {status === "busy" ? "Setting up…" : "Start my free month"}
         </button>
         <Link href="/demo" className="rounded-lg border border-slate-300 px-5 py-3 font-semibold text-navy hover:bg-slate-50">
