@@ -1,0 +1,1 @@
+ALTER TABLE `course` ADD `staff_required` integer;

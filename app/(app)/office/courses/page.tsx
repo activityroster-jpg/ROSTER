@@ -2,9 +2,9 @@ import { requireTenant } from "@/lib/tenant/require";
 import { addDays, getSessionEvents, getWeekSchedule, weekStart } from "@/lib/services/schedule";
 import { fitReason, listStaffWithFit } from "@/lib/services/staff";
 import { getCourseAvailabilityStates } from "@/lib/services/availability";
-import { Card, StatusPill } from "@/components/ui";
+import { Card } from "@/components/ui";
 import { CoursePlanner } from "@/components/office/CoursePlanner";
-import { AssignStaffForm } from "@/components/office/AssignStaffForm";
+import { CourseCard } from "@/components/office/CourseCard";
 import { BulkAssignForm } from "@/components/office/BulkAssignForm";
 import { CourseUpdatesCheck } from "@/components/office/CourseUpdatesCheck";
 import { providerName, providerColor } from "@/lib/integrations/catalogue";
@@ -30,9 +30,9 @@ export default async function CoursesPage() {
   const conflictOn = Boolean(settings[0]?.enforceConflictChecks);
   const courses = [...coverageByCourse.values()];
   const activeTypes = courseTypes.filter((c) => c.active).map((c) => ({ id: c.id, name: c.name, audience: c.audience }));
-  const audienceByCourse = new Map(
-    (await repos.tenant.course.list(ctx)).map((c) => [c.id, courseTypes.find((t) => t.id === c.courseTypeId)?.audience ?? "all"]),
-  );
+  const courseRows = await repos.tenant.course.list(ctx);
+  const audienceByCourse = new Map(courseRows.map((c) => [c.id, courseTypes.find((t) => t.id === c.courseTypeId)?.audience ?? "all"]));
+  const staffReqByCourse = new Map(courseRows.map((c) => [c.id, c.staffRequired ?? null]));
   const activeRoles = roles.filter((r) => r.active).map((r) => ({ id: r.id, name: r.name }));
   const fitById = new Map(staff.map((s) => [s.instructor.id, s.fit]));
   const instructorOptions = instructors
@@ -51,23 +51,15 @@ export default async function CoursesPage() {
   const integrationRows = await repos.tenant.integration.list(ctx);
   const connectedIntegrations = integrationRows.map((r) => ({ id: r.id, provider: r.provider, name: providerName(r.provider), color: providerColor(r.provider) }));
 
-  // Session date/time summary per course, for the cards.
+  // Sessions per course (with ids), so the card can edit date/time inline.
   const allSessions = await repos.tenant.courseSession.list(ctx);
-  const sessionsByCourse = new Map<string, { date: string; startAt: number; endAt: number }[]>();
+  const sessionsFullByCourse = new Map<string, { id: string; date: string; startMs: number; endMs: number }[]>();
   for (const s of allSessions) {
-    const arr = sessionsByCourse.get(s.courseId) ?? [];
-    arr.push({ date: s.date, startAt: s.startAt instanceof Date ? s.startAt.getTime() : Number(s.startAt), endAt: s.endAt instanceof Date ? s.endAt.getTime() : Number(s.endAt) });
-    sessionsByCourse.set(s.courseId, arr);
+    const arr = sessionsFullByCourse.get(s.courseId) ?? [];
+    arr.push({ id: s.id, date: s.date, startMs: s.startAt instanceof Date ? s.startAt.getTime() : Number(s.startAt), endMs: s.endAt instanceof Date ? s.endAt.getTime() : Number(s.endAt) });
+    sessionsFullByCourse.set(s.courseId, arr);
   }
-  const fmtD = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
-  const fmtT = (ms: number) => new Date(ms).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
-  const courseWhen = (courseId: string): string => {
-    const ss = (sessionsByCourse.get(courseId) ?? []).sort((a, b) => a.date.localeCompare(b.date) || a.startAt - b.startAt);
-    if (ss.length === 0) return "No sessions scheduled yet";
-    const first = ss[0]!;
-    const label = `${fmtD(first.date)}, ${fmtT(first.startAt)}–${fmtT(first.endAt)}`;
-    return ss.length > 1 ? `${ss.length} sessions · first ${label}` : label;
-  };
+  for (const arr of sessionsFullByCourse.values()) arr.sort((a, b) => a.date.localeCompare(b.date) || a.startMs - b.startMs);
 
   const assignedByCourse = new Map<string, typeof assignments>();
   for (const a of assignments) {
@@ -106,57 +98,31 @@ export default async function CoursesPage() {
         roles={activeRoles}
       />
 
-      <div className="space-y-4">
+      <div className="space-y-2">
         {courses.length === 0 ? (
           <Card>
             <p className="text-sm text-slate-400">No courses yet. Add one above to start rostering.</p>
           </Card>
         ) : (
           courses.map((c) => {
-            const assigned = assignedByCourse.get(c.courseId) ?? [];
+            const assigned = (assignedByCourse.get(c.courseId) ?? []).map((a) => ({
+              id: a.id,
+              instructorName: nameById.get(a.instructorId) ?? "Instructor",
+              roleName: roleName.get(a.roleTypeId) ?? "role",
+              isOverride: Boolean(a.isOverride),
+            }));
             return (
-              <Card key={c.courseId}>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="flex items-center gap-2 font-medium text-navy">
-                      {(() => { const a = audienceByCourse.get(c.courseId) ?? "all"; return (
-                        <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${a === "youth" ? "bg-amber/15 text-amber" : a === "adult" ? "bg-teal/15 text-teal" : "bg-slate-100 text-slate-500"}`}>{a === "youth" ? "Youth" : a === "adult" ? "Adult" : "All"}</span>
-                      ); })()}
-                      <a href={`/office/courses/${c.courseId}`} className="hover:text-teal hover:underline">{c.courseName}</a>
-                    </p>
-                    <p className="mt-0.5 text-sm font-medium text-navy">📅 {courseWhen(c.courseId)}</p>
-                    <p className="text-xs text-slate-500">
-                      {c.courseTypeName} · <span className="capitalize">{c.status}</span> ·{" "}
-                      {ratioOn ? <>{c.ratio.ratioCountingStaff}/{c.ratio.requiredStaff} staff · </> : null}
-                      <a href={`/office/courses/${c.courseId}`} className="text-teal hover:underline">manage →</a>
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {ratioOn ? (
-                      <>
-                        {c.ratio.understaffed ? <StatusPill tone="attention">Under-staffed</StatusPill> : null}
-                        {c.ratio.missingSafetyCover ? <StatusPill tone="conflict">No safety cover</StatusPill> : null}
-                        {c.ratio.ok ? <StatusPill tone="covered">Covered</StatusPill> : null}
-                      </>
-                    ) : null}
-                  </div>
-                </div>
-
-                {assigned.length > 0 ? (
-                  <ul className="mt-3 flex flex-wrap gap-2">
-                    {assigned.map((a) => (
-                      <li key={a.id} className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-700">
-                        {nameById.get(a.instructorId) ?? "Instructor"} · {roleName.get(a.roleTypeId) ?? "role"}
-                        {a.isOverride ? <span className="ml-1 text-amber">(override)</span> : null}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="mt-3 text-xs text-slate-400">No staff assigned yet.</p>
-                )}
-
-                <AssignStaffForm courseId={c.courseId} instructors={instructorOptions.map((o) => ({ ...o, avail: courseAvail.get(c.courseId)?.get(o.id) ?? "none" }))} roles={activeRoles} />
-              </Card>
+              <CourseCard
+                key={c.courseId}
+                course={{ id: c.courseId, name: c.courseName, courseTypeName: c.courseTypeName, status: c.status, staffRequired: staffReqByCourse.get(c.courseId) ?? null }}
+                audience={audienceByCourse.get(c.courseId) ?? "all"}
+                sessions={sessionsFullByCourse.get(c.courseId) ?? []}
+                assigned={assigned}
+                instructors={instructorOptions.map((o) => ({ ...o, avail: courseAvail.get(c.courseId)?.get(o.id) ?? "none" }))}
+                roles={activeRoles}
+                ratioOn={ratioOn}
+                ratio={ratioOn ? { ok: c.ratio.ok, understaffed: c.ratio.understaffed, missingSafetyCover: c.ratio.missingSafetyCover } : undefined}
+              />
             );
           })
         )}

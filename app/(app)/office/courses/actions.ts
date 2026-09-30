@@ -125,6 +125,49 @@ export async function deleteCourseAction(courseId: string): Promise<ActionState>
   return { ok: true, message: "Course deleted" };
 }
 
+/** Set how many staff a course needs (0/blank clears back to the ratio default). */
+export async function setStaffRequiredAction(courseId: string, count: number | null): Promise<ActionState> {
+  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const n = count == null || !Number.isFinite(count) || count < 0 ? null : Math.min(50, Math.round(count));
+  const updated = await repos.tenant.course.update(ctx, courseId, { staffRequired: n });
+  if (!updated) return { ok: false, error: "Course not found" };
+  revalidatePath("/office/courses");
+  revalidatePath(`/office/courses/${courseId}`);
+  revalidatePath("/office");
+  return { ok: true, message: "Saved" };
+}
+
+/** Edit a single session's date and time inline from the course card. */
+export async function updateSessionTimesAction(
+  courseId: string,
+  sessionId: string,
+  input: { date: string; startTime?: string; endTime?: string },
+): Promise<ActionState> {
+  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const date = String(input.date ?? "");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return { ok: false, error: "Pick a valid date" };
+  const start = normaliseTime(input.startTime ?? "");
+  const end = normaliseTime(input.endTime ?? "");
+  if (start && end && end <= start) return { ok: false, error: "End must be after start" };
+
+  const slots = await repos.tenant.sessionSlot.list(ctx);
+  const slot = start ? timeToSlot(start) : "AM";
+  const cfg = slots.find((s) => s.code === slot);
+  const startTime = start || cfg?.startTime || "09:00";
+  const endTime = end || cfg?.endTime || "12:00";
+  const at = (time: string) => new Date(Date.parse(`${date}T${time}:00.000Z`));
+
+  const updated = await repos.tenant.courseSession.update(ctx, sessionId, {
+    date, slot, startAt: at(startTime), endAt: at(endTime),
+  });
+  if (!updated) return { ok: false, error: "Session not found" };
+  await writeAudit(repos, ctx, { action: "update_session", entity: "course", entityId: courseId, after: { sessionId, date, startTime, endTime } });
+  revalidatePath("/office/courses");
+  revalidatePath(`/office/courses/${courseId}`);
+  revalidatePath("/office");
+  return { ok: true, message: "Session updated" };
+}
+
 /** Add one session to an existing course. */
 export async function addSessionAction(courseId: string, formData: FormData): Promise<ActionState> {
   const { ctx, repos } = await requireTenant({ role: "admin" });

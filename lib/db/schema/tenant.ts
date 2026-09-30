@@ -371,6 +371,9 @@ export const course = sqliteTable("course", {
   name: text("name"),
   capacity: integer("capacity").notNull().default(1),
   ratio: integer("ratio").notNull().default(1), // students per instructor
+  /** How many staff this course needs (set directly on the course card). Null
+   *  falls back to the ratio/course-type calculation. */
+  staffRequired: integer("staff_required"),
   price: real("price"), // per-head price override; falls back to course_type.default_price
   status: text("status", { enum: COURSE_STATUSES }).notNull().default("draft"),
   notes: text("notes"),

@@ -46,14 +46,8 @@ export function AssignStaffForm({
       </select>
       <label className="flex items-center gap-2 text-xs text-slate-600">
         <input type="checkbox" name="override" checked={override} onChange={(e) => setOverride(e.target.checked)} />
-        Assign anyway despite the gap (records why)
+        Assign anyway (override checks)
       </label>
-      <input
-        name="overrideNote"
-        placeholder="Override reason"
-        disabled={!override}
-        className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal disabled:bg-slate-100"
-      />
       {availWarn ? (
         <p className="sm:col-span-2 rounded-lg bg-amber/10 px-2.5 py-1.5 text-xs text-navy">
           ⚠ {selected!.name} {selected!.avail === "unavailable" ? "said they're not available" : selected!.avail === "partial" ? "is only partly available" : "hasn't set availability"} for this course&apos;s times — you can still assign them.

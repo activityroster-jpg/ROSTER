@@ -148,6 +148,13 @@
       "when": 1790788239277,
       "tag": "0020_compliance_toggles",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "6",
+      "when": 1790805975859,
+      "tag": "0021_course_staff_required",
+      "breakpoints": true
     }
   ]
 }
