@@ -19,6 +19,7 @@ export default async function BookCallPage() {
     slotsIso = openSlots(
       windows.map((w) => ({ dayOfWeek: w.dayOfWeek, startMinute: w.startMinute, endMinute: w.endMinute, active: w.active })),
       booked,
+      { maxWorkingDays: 7 },
     ).map((d) => d.toISOString());
   } catch {
     slotsIso = [];

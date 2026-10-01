@@ -30,7 +30,7 @@ export async function bookCallAction(input: { startAtIso: string; name: string; 
   // Re-validate the slot server-side: it must be a genuine open slot and still free.
   const windows = await repo.listAvailability();
   const booked = await repo.bookedSlotsFrom(new Date());
-  const open = openSlots(windowsFor(windows), booked);
+  const open = openSlots(windowsFor(windows), booked, { maxWorkingDays: 7 });
   if (!open.some((s) => s.getTime() === startAt.getTime())) {
     return { ok: false, error: "Sorry, that slot is no longer available — please pick another." };
   }

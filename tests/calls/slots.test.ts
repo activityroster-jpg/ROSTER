@@ -34,6 +34,20 @@ describe("openSlots", () => {
     expect(slots[0]!.toISOString()).toBe("2025-01-01T02:00:00.000Z");
   });
 
+  it("limits to the next N working days and skips weekends", () => {
+    // Availability every day 09:00–09:30 (one slot/day).
+    const windows: AvailabilityWindow[] = Array.from({ length: 7 }, (_, dow) => ({
+      dayOfWeek: dow, startMinute: 9 * 60, endMinute: 9 * 60 + 30, active: true,
+    }));
+    // NOW = Wed 1 Jan 2025. Next 5 working days: Wed, Thu, Fri, Mon, Tue.
+    const slots = openSlots(windows, [], { now: NOW, leadMinutes: 0, maxWorkingDays: 5 });
+    expect(slots.length).toBe(5);
+    // No weekend (Sat=6, Sun=0) days present.
+    expect(slots.every((s) => s.getUTCDay() !== 0 && s.getUTCDay() !== 6)).toBe(true);
+    // Last one is the following Tuesday.
+    expect(slots[4]!.toISOString().slice(0, 10)).toBe("2025-01-07");
+  });
+
   it("ignores inactive windows", () => {
     const windows: AvailabilityWindow[] = [
       { dayOfWeek: 3, startMinute: 9 * 60, endMinute: 11 * 60, active: false },

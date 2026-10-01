@@ -13,10 +13,15 @@ export interface AvailabilityWindow {
 
 export interface SlotOptions {
   now?: Date;
-  horizonDays?: number; // how many days ahead to offer (default 21)
+  horizonDays?: number; // how many days ahead to scan (default 21)
   leadMinutes?: number; // minimum notice before a slot can be booked (default 120)
   slotMinutes?: number; // slot length (default 30)
+  // When set, only offer slots falling on the next N working days (Mon–Fri),
+  // skipping weekends entirely. Used by the public booking page.
+  maxWorkingDays?: number;
 }
+
+const isWeekend = (dow: number) => dow === 0 || dow === 6;
 
 const DAY_MS = 86_400_000;
 
@@ -41,10 +46,19 @@ export function openSlots(
 
   const startDay = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
   const out: Date[] = [];
+  let workingDaysSeen = 0;
 
   for (let d = 0; d <= horizon; d++) {
     const dayStart = startDay + d * DAY_MS;
     const dow = new Date(dayStart).getUTCDay();
+
+    // Restrict to the next N working days (Mon–Fri) when asked.
+    if (opts.maxWorkingDays != null) {
+      if (isWeekend(dow)) continue;
+      workingDaysSeen++;
+      if (workingDaysSeen > opts.maxWorkingDays) break;
+    }
+
     for (const w of active) {
       if (w.dayOfWeek !== dow) continue;
       for (let m = w.startMinute; m + slot <= w.endMinute; m += slot) {
