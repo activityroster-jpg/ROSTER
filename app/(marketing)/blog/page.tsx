@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getDb } from "@/lib/cf/bindings";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
+import { coverImageFor } from "@/lib/blog/images";
 
 export const dynamic = "force-dynamic";
 
@@ -49,12 +50,18 @@ export default async function BlogIndex({ searchParams }: { searchParams: Promis
         <>
           <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {posts.map((p) => (
-              <Link key={p.id} href={`/blog/${p.slug}`} className="group flex flex-col rounded-card border border-slate-200 bg-white p-5 shadow-sm transition hover:border-teal hover:shadow">
-                <div className="mb-3 flex h-24 items-center justify-center rounded-lg bg-gradient-to-br from-teal/10 to-navy/10 text-5xl">{p.coverEmoji}</div>
-                <span className="text-xs font-semibold uppercase tracking-wide text-teal">{p.category}</span>
-                <h2 className="mt-1 font-display text-lg font-semibold text-navy group-hover:text-teal">{p.title}</h2>
-                <p className="mt-2 flex-1 text-sm text-slate-600 line-clamp-3">{p.excerpt}</p>
-                <span className="mt-3 text-xs text-slate-400">{fmtDate(p.publishAt)}</span>
+              <Link key={p.id} href={`/blog/${p.slug}`} className="group flex flex-col overflow-hidden rounded-card border border-slate-200 bg-white shadow-sm transition hover:border-teal hover:shadow">
+                <div className="relative h-36 w-full overflow-hidden">
+                  <img src={coverImageFor(p.slug, p.category)} alt="" loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-navy/30 to-transparent" />
+                  <span className="absolute left-3 top-3 flex h-9 w-9 items-center justify-center rounded-lg bg-white/90 text-xl shadow">{p.coverEmoji}</span>
+                </div>
+                <div className="flex flex-1 flex-col p-5">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-teal">{p.category}</span>
+                  <h2 className="mt-1 font-display text-lg font-semibold text-navy group-hover:text-teal">{p.title}</h2>
+                  <p className="mt-2 flex-1 text-sm text-slate-600 line-clamp-3">{p.excerpt}</p>
+                  <span className="mt-3 text-xs text-slate-400">{fmtDate(p.publishAt)}</span>
+                </div>
               </Link>
             ))}
           </div>

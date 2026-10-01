@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { getDb } from "@/lib/cf/bindings";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { renderMarkdown, readingMinutes } from "@/lib/blog/markdown";
+import { coverImageFor } from "@/lib/blog/images";
 
 export const dynamic = "force-dynamic";
 
@@ -72,13 +73,18 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
       <Link href="/blog" className="text-sm text-slate-400 hover:text-navy">← All articles</Link>
 
       <div className="mt-4 flex items-center gap-3">
-        <span className="flex h-14 w-14 items-center justify-center rounded-lg bg-gradient-to-br from-teal/10 to-navy/10 text-3xl">{post.coverEmoji}</span>
+        <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-to-br from-teal/10 to-navy/10 text-2xl">{post.coverEmoji}</span>
         <span className="text-xs font-semibold uppercase tracking-wide text-teal">{post.category}</span>
       </div>
 
       <h1 className="mt-4 font-display text-3xl font-bold leading-tight text-navy sm:text-4xl">{post.title}</h1>
       <p className="mt-3 text-lg text-slate-600">{post.excerpt}</p>
       <p className="mt-3 text-sm text-slate-400">{post.author} · {fmtDate(post.publishAt)} · {mins} min read</p>
+
+      <div className="relative mt-6 h-56 w-full overflow-hidden rounded-card sm:h-80">
+        <img src={coverImageFor(post.slug, post.category)} alt="" className="h-full w-full object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-t from-navy/25 to-transparent" />
+      </div>
 
       <div className="mt-8 space-y-4 border-t border-slate-100 pt-8" dangerouslySetInnerHTML={{ __html: html }} />
 

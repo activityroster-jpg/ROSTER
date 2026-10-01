@@ -15,6 +15,10 @@ function escapeHtml(s: string): string {
 
 function inline(s: string): string {
   let out = escapeHtml(s);
+  // images ![alt](url) — must run before links. Only http(s) and relative paths.
+  out = out.replace(/!\[([^\]]*)\]\((https?:\/\/[^\s)]+|\/[^\s)]*)\)/g, (_m, alt: string, src: string) => {
+    return `<img src="${src}" alt="${alt}" loading="lazy" class="my-6 w-full rounded-card border border-slate-200 object-cover" />`;
+  });
   // links [text](http...) — only http(s) and relative paths
   out = out.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+|\/[^\s)]*)\)/g, (_m, text: string, href: string) => {
     const rel = href.startsWith("http") ? ' target="_blank" rel="noopener noreferrer nofollow"' : "";
