@@ -47,7 +47,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 // `left` is the fixed X where the address STARTS (it is left-aligned, not centred,
 // so every prospect's address begins at the same place regardless of how long the
 // name/address is — otherwise short and long addresses land in different spots).
-const WINDOW = { left: 15, top: 48, width: 90, height: 45 };
+const WINDOW = { left: 18, top: 48, width: 90, height: 45 };
 const SHEET_PAD = 16; // mm padding inside the A4 sheet (acts as the page margin)
 // The body is in normal flow, so its margin-top sits INSIDE the sheet padding.
 // Offset it so the text clears the bottom of the window with a small gap, measured
