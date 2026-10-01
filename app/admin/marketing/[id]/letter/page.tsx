@@ -44,7 +44,10 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
  *   • vertical slack:   (45 − address height)/2 — ~10mm for a 5-line address
  * so a healthy shift either way still leaves the whole address showing.
  */
-const WINDOW = { left: -5, top: 48, width: 90, height: 45 };
+// `left` is the fixed X where the address STARTS (it is left-aligned, not centred,
+// so every prospect's address begins at the same place regardless of how long the
+// name/address is — otherwise short and long addresses land in different spots).
+const WINDOW = { left: 15, top: 48, width: 90, height: 45 };
 const SHEET_PAD = 16; // mm padding inside the A4 sheet (acts as the page margin)
 // The body is in normal flow, so its margin-top sits INSIDE the sheet padding.
 // Offset it so the text clears the bottom of the window with a small gap, measured
@@ -94,11 +97,13 @@ export default async function ProspectLetterPage({ params }: { params: Promise<{
           position: absolute;
           top: ${WINDOW.top}mm; left: ${WINDOW.left}mm;
           width: ${WINDOW.width}mm; height: ${WINDOW.height}mm;
-          display: flex; align-items: center; justify-content: center;
+          /* Left-aligned so the address always STARTS at the same X (consistent across
+             prospects); vertically centred within the window. */
+          display: flex; align-items: center; justify-content: flex-start;
         }
         .window-guide { outline: 1px dashed #c7d2e0; outline-offset: 0; }
-        /* Compact, centred address — the margin around it absorbs ~15mm of letter shift each way. */
-        .window-address { font-size: 11pt; line-height: 1.3; text-align: left; max-width: ${WINDOW.width - 24}mm; }
+        /* Fixed-start address — consistent position regardless of address length. */
+        .window-address { font-size: 11pt; line-height: 1.3; text-align: left; max-width: ${WINDOW.width}mm; }
         .letter-body { margin-top: ${BODY_TOP}mm; font-size: 11pt; line-height: 1.4; color: #111; }
         .sign-line { width: 65mm; border-bottom: 1px solid #111; }
       `}</style>
@@ -106,7 +111,7 @@ export default async function ProspectLetterPage({ params }: { params: Promise<{
       <div className="no-print mx-auto mb-4 flex max-w-[210mm] items-center justify-between gap-3 px-2">
         <div>
           <p className="text-sm font-semibold text-navy">Letter to {p.name}</p>
-          <p className="text-xs text-slate-500">Prints on A4 · the recipient address is centred in a standard DL/C5 window so it stays visible even if the folded letter shifts ~1.5cm inside the envelope. The dashed window guide is screen-only and won&apos;t print. Use &ldquo;Save as PDF&rdquo; to keep a copy.</p>
+          <p className="text-xs text-slate-500">Prints on A4 · the recipient address starts at a fixed position for a standard DL/C5 window, so every letter is positioned identically. The dashed window guide is screen-only and won&apos;t print. Use &ldquo;Save as PDF&rdquo; to keep a copy.</p>
         </div>
         <PrintButton label="Print / save as PDF" downloadName={letterFileName(p.name, id)} />
       </div>
