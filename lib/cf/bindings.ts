@@ -29,6 +29,10 @@ export interface CloudflareEnv {
   STRIPE_PRICE_SETUP?: string;
   SENTRY_DSN?: string;
   RESEND_API_KEY?: string;
+  // Shown in the legal footer of every email (optional — set for compliance).
+  COMPANY_LEGAL_NAME?: string;
+  COMPANY_ADDRESS?: string;
+  SUPPORT_EMAIL?: string;
   // Comma-separated emails allowed into the platform-owner admin area (/admin).
   PLATFORM_ADMIN_EMAILS?: string;
   /** Shared secret for the scheduled integration-sync endpoint. */
