@@ -57,6 +57,16 @@ export async function setPinAction(pin: string, confirm: string, next: string): 
   redirect(safeNext(next));
 }
 
+/** Forgot PIN: clear the signed-in user's PIN so they set a fresh one. Only works
+ *  for an authenticated session (reaching the PIN screen already proves sign-in). */
+export async function resetMyPinAction(next: string): Promise<PinResult> {
+  const info = await sessionInfo();
+  if (!info) return { ok: false, error: "Please sign in again." };
+  const { control } = await getRepositories();
+  await control.clearUserPin(info.userId);
+  redirect(`/set-pin?next=${encodeURIComponent(safeNext(next))}`);
+}
+
 /** Verify the PIN for this session (with lockout), then continue. */
 export async function verifyPinAction(pin: string, next: string): Promise<PinResult> {
   const info = await sessionInfo();

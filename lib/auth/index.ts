@@ -31,6 +31,18 @@ export function createAuth(db: Database, env: CloudflareEnv) {
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: true,
+      sendResetPassword: async ({ user, url }) => {
+        await sendEmail({
+          to: user.email,
+          subject: "Reset your ActivityRoster password",
+          html: `
+            <p>We received a request to reset your ActivityRoster password.</p>
+            <p><a href="${url}" style="display:inline-block;background:#0C6B74;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none">Choose a new password</a></p>
+            <p style="color:#64748b;font-size:12px">If you didn't ask for this, you can safely ignore this email. The link expires shortly.</p>
+            <p style="color:#64748b;font-size:12px">Or paste this into your browser:<br>${url}</p>
+          `,
+        });
+      },
     },
     // New owners must confirm their email before they can get into their centre.
     // Better Auth sends the link on sign-up and signs them in once confirmed.
@@ -70,7 +82,13 @@ export function createAuth(db: Database, env: CloudflareEnv) {
           await sendEmail({
             to: email,
             subject: "Your ActivityRoster sign-in link",
-            html: `<p>Click to sign in:</p><p><a href="${url}">${url}</a></p>`,
+            html: `
+              <p>Here's your secure link to sign in to ActivityRoster.</p>
+              <p>If this is your first time, it'll take you straight in to set up your account (your password &amp; PIN).</p>
+              <p><a href="${url}" style="display:inline-block;background:#0C6B74;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none">Sign in to ActivityRoster</a></p>
+              <p style="color:#64748b;font-size:12px">This link works once and expires shortly. If you didn't request it, you can ignore this email.</p>
+              <p style="color:#64748b;font-size:12px">Or paste this into your browser:<br>${url}</p>
+            `,
           });
         },
       }),

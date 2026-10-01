@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Logo } from "@/components/Logo";
-import { setPinAction, verifyPinAction } from "@/app/pin/actions";
+import { setPinAction, verifyPinAction, resetMyPinAction } from "@/app/pin/actions";
 
 export function PinForm({ mode, next }: { mode: "enter" | "set"; next: string }) {
   const [pin, setPin] = useState("");
@@ -60,6 +60,17 @@ export function PinForm({ mode, next }: { mode: "enter" | "set"; next: string })
             {pending ? "Please wait…" : mode === "set" ? "Set PIN & continue" : "Continue"}
           </button>
         </form>
+
+        {mode === "enter" ? (
+          <button
+            type="button"
+            onClick={() => { setErr(null); startTransition(async () => { const r = await resetMyPinAction(next); if (r && !r.ok) setErr(r.error ?? "Couldn't reset PIN"); }); }}
+            disabled={pending}
+            className="mt-4 w-full text-center text-sm font-medium text-slate-500 hover:text-navy disabled:opacity-50"
+          >
+            Forgot your PIN? Reset it
+          </button>
+        ) : null}
       </div>
     </div>
   );

@@ -5,6 +5,7 @@ import { requireTenant } from "@/lib/tenant/require";
 import { instructor as instructorTable } from "@/lib/db/schema";
 import { getStaffProfile } from "@/lib/services/hr";
 import { DocumentManager, type DocItem } from "@/components/DocumentManager";
+import { SetPasswordCard } from "@/components/portal/SetPasswordCard";
 import { Card } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
@@ -47,6 +48,8 @@ export default async function PortalWelcomePage() {
       {/* First steps */}
       <div className="mt-5 space-y-3">
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Get started</p>
+
+        <SetPasswordCard />
 
         <div className="flex items-start gap-3 rounded-card border border-slate-200 bg-white p-4">
           <span className="mt-0.5 flex h-9 w-9 flex-none items-center justify-center rounded-full bg-teal/15 text-teal"><FileCheck className="h-5 w-5" /></span>

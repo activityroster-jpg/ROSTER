@@ -245,6 +245,11 @@ export class ControlPlaneRepository {
     await this.db.update(user).set({ pinHash, pinFailedCount: 0, pinLockedUntil: null }).where(eq(user.id, userId));
   }
 
+  /** Clear a user's PIN so they're prompted to set a new one (forgot-PIN flow). */
+  async clearUserPin(userId: string): Promise<void> {
+    await this.db.update(user).set({ pinHash: null, pinFailedCount: 0, pinLockedUntil: null }).where(eq(user.id, userId));
+  }
+
   async recordPinFailure(userId: string, lockUntil: Date | null): Promise<void> {
     const current = await this.getUserSecurity(userId);
     const count = (current?.pinFailedCount ?? 0) + 1;
