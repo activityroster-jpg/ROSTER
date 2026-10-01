@@ -1,4 +1,4 @@
-import { and, desc, eq, lte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, lte, sql } from "drizzle-orm";
 import type { Database } from "@/lib/db/client";
 import {
   organisation,
@@ -13,12 +13,16 @@ import {
   platformPricing,
   blogPost,
   integration,
+  platformTask,
   type BlogPost,
   type NewBlogPost,
   type MarketingProspect,
   type NewMarketingProspect,
   type Organisation,
   type PlatformPricing,
+  type PlatformTask,
+  type NewPlatformTask,
+  type TaskStatus,
   type ProspectStatus,
 } from "@/lib/db/schema";
 import { DEFAULT_PRICING } from "@/lib/pricing";
@@ -308,5 +312,36 @@ export class PlatformRepository {
       .from(integration)
       .innerJoin(organisation, eq(organisation.id, integration.organisationId))
       .where(and(eq(integration.autoSync, true), eq(integration.status, "connected")));
+  }
+
+  // --- Platform owner's task planner --------------------------------------
+
+  async listTasks(): Promise<PlatformTask[]> {
+    return this.db
+      .select()
+      .from(platformTask)
+      .orderBy(asc(platformTask.sortOrder), asc(platformTask.dueDate), desc(platformTask.createdAt));
+  }
+
+  async createTask(values: Omit<NewPlatformTask, "id" | "createdAt" | "updatedAt">): Promise<PlatformTask> {
+    const rows = await this.db.insert(platformTask).values(values).returning();
+    return rows[0]!;
+  }
+
+  async updateTask(id: string, patch: Partial<Omit<NewPlatformTask, "id" | "createdAt">>): Promise<PlatformTask | null> {
+    const rows = await this.db
+      .update(platformTask)
+      .set({ ...patch, updatedAt: new Date() })
+      .where(eq(platformTask.id, id))
+      .returning();
+    return rows[0] ?? null;
+  }
+
+  async setTaskStatus(id: string, status: TaskStatus): Promise<PlatformTask | null> {
+    return this.updateTask(id, { status });
+  }
+
+  async deleteTask(id: string): Promise<void> {
+    await this.db.delete(platformTask).where(eq(platformTask.id, id));
   }
 }

@@ -361,6 +361,27 @@ export const blogPost = sqliteTable("blog_post", {
   index("blog_post_status_idx").on(t.status),
 ]);
 
+// --- Platform owner's task planner (control-plane, admin-only) --------------
+
+export const TASK_STATUSES = ["upcoming", "working", "complete"] as const;
+export type TaskStatus = (typeof TASK_STATUSES)[number];
+export const TASK_PRIORITIES = ["low", "medium", "high", "urgent"] as const;
+export type TaskPriority = (typeof TASK_PRIORITIES)[number];
+
+/** The platform owner's personal task board (not tenant data). */
+export const platformTask = sqliteTable("platform_task", {
+  id: id(),
+  title: text("title").notNull(),
+  category: text("category"),
+  priority: text("priority", { enum: TASK_PRIORITIES }).notNull().default("medium"),
+  dueDate: text("due_date"), // "YYYY-MM-DD"
+  status: text("status", { enum: TASK_STATUSES }).notNull().default("upcoming"),
+  notes: text("notes"),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, (t) => [index("platform_task_status_idx").on(t.status)]);
+
 export type Organisation = typeof organisation.$inferSelect;
 export type NewOrganisation = typeof organisation.$inferInsert;
 export type Membership = typeof membership.$inferSelect;
@@ -372,6 +393,8 @@ export type PlatformPricing = typeof platformPricing.$inferSelect;
 export type ErrorReport = typeof errorReport.$inferSelect;
 export type BlogPost = typeof blogPost.$inferSelect;
 export type NewBlogPost = typeof blogPost.$inferInsert;
+export type PlatformTask = typeof platformTask.$inferSelect;
+export type NewPlatformTask = typeof platformTask.$inferInsert;
 
 // A tiny re-export so migrations pick up the raw-sql helper if needed.
 export const _sql = sql;
