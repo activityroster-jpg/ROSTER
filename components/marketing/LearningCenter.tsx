@@ -354,7 +354,7 @@ const SECTIONS: Section[] = [
     id: "data",
     icon: "🛡️",
     label: "Data, privacy & export",
-    blurb: "EU-hosted, GDPR-ready, and yours to export.",
+    blurb: "Hosted on Cloudflare in the EU, UK GDPR-ready, and yours to export.",
     blocks: [
       { kind: "p", text: "Your data is pinned to the EU for GDPR, with PII scrubbing on error monitoring. Each centre's data is structurally isolated — it can never be read alongside another centre's." },
       { kind: "bullets", items: [

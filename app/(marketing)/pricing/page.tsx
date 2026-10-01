@@ -16,7 +16,7 @@ const INCLUDED = [
   "Printable weekly rota (PDF) & payroll-ready hours export",
   "Import your existing courses from a spreadsheet or calendar",
   "Instructor app with clock-in, leave & notifications",
-  "EU-hosted, GDPR-ready, data export any time — data strictly isolated per centre",
+  "Hosted on Cloudflare (EU), UK GDPR-ready, export any time — strictly isolated per centre",
 ];
 
 const SETUP_INCLUDED = [

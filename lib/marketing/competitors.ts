@@ -153,7 +153,7 @@ export const COMPETITORS: Competitor[] = [
     weWin: [
       "Spreadsheets don't warn you: no ratio checks, no expiry alerts, no double-booking guard, no audit trail.",
       "ActivityRoster keeps the flexibility (any pattern of sessions) while enforcing the safety rules automatically.",
-      "Data is isolated per centre, EU-hosted and exportable — not scattered across tabs and inboxes.",
+      "Data is isolated per centre, hosted on Cloudflare in the EU and exportable — not scattered across tabs and inboxes.",
     ],
     migration: "This is the easiest move of all — paste your spreadsheet straight into the importer and we build your courses and sessions.",
     rows: RYA_ROWS({ "Printable weekly rota (PDF)": "yes", "Instructor availability collection": "no", "Clock in/out & payroll-ready hours": "no", "Visual week calendar & planner": "no", "Bulk assign one instructor to many courses": "partial", "Course-based multi-session scheduling": "partial", "Per-centre data isolation": "no", "Licence & ticket tracking with expiry alerts": "partial" }),

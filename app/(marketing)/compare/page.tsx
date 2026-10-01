@@ -98,7 +98,7 @@ const ROWS: Row[] = [
     us: "yes", general: "partial", club: "partial", sheets: "no",
   },
   {
-    feature: "EU-hosted, GDPR-ready, export any time",
+    feature: "Hosted on Cloudflare (EU), UK GDPR-ready, export any time",
     detail: "Data pinned to the EU with PII scrubbing and a full export on demand.",
     us: "yes", general: "partial", club: "partial", sheets: "no",
   },

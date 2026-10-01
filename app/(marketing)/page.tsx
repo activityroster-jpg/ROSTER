@@ -169,7 +169,7 @@ export default function MarketingHome() {
         <div className="mx-auto grid max-w-6xl grid-cols-2 gap-4 px-4 py-6 text-center md:grid-cols-4">
           {[
             ["Compliance-first", "RYA rules enforced, not remembered"],
-            ["EU-hosted", "GDPR-ready, data export any time"],
+            ["Cloudflare-hosted", "Cloudflare's EU network · UK GDPR-ready"],
             ["Fully isolated", "Each centre's data proven separate"],
             ["Free for a month", "No card required to start"],
           ].map(([h, s]) => (
@@ -339,7 +339,7 @@ export default function MarketingHome() {
             </p>
             <ul className="mt-5 space-y-2 text-white/80">
               <li>• Free for a month, then simple monthly pricing</li>
-              <li>• EU-hosted, GDPR-ready, data export any time</li>
+              <li>• Hosted on Cloudflare (EU), UK GDPR-ready, export any time</li>
               <li>• Your data is strictly isolated from every other centre</li>
             </ul>
           </div>
