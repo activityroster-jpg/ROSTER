@@ -353,6 +353,12 @@ export const blogPost = sqliteTable("blog_post", {
   tags: text("tags").notNull().default(""),
   author: text("author").notNull().default("The ActivityRoster Team"),
   coverEmoji: text("cover_emoji").notNull().default("⛵"),
+  // Self-hosted cover image sourced via the Pexels API and stored in R2 under
+  // blog/<slug>.jpg (served from our own domain for SEO). Credit fields satisfy
+  // the Pexels attribution guideline.
+  coverImageKey: text("cover_image_key"),
+  coverImageCredit: text("cover_image_credit"),
+  coverImageCreditUrl: text("cover_image_credit_url"),
   seoTitle: text("seo_title"),
   seoDescription: text("seo_description"),
   status: text("status", { enum: BLOG_STATUSES }).notNull().default("draft"),

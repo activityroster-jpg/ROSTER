@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { getDb } from "@/lib/cf/bindings";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { renderMarkdown, readingMinutes } from "@/lib/blog/markdown";
-import { coverImageFor } from "@/lib/blog/images";
+import { blogCoverUrl } from "@/lib/blog/images";
 
 export const dynamic = "force-dynamic";
 
@@ -81,10 +81,21 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
       <p className="mt-3 text-lg text-slate-600">{post.excerpt}</p>
       <p className="mt-3 text-sm text-slate-400">{post.author} · {fmtDate(post.publishAt)} · {mins} min read</p>
 
-      <div className="relative mt-6 h-56 w-full overflow-hidden rounded-card sm:h-80">
-        <img src={coverImageFor(post.slug, post.category)} alt="" className="h-full w-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-t from-navy/25 to-transparent" />
-      </div>
+      <figure className="mt-6">
+        <div className="relative h-56 w-full overflow-hidden rounded-card sm:h-80">
+          <img src={blogCoverUrl(post.coverImageKey, post.slug, post.category)} alt={post.title} className="h-full w-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-t from-navy/25 to-transparent" />
+        </div>
+        {post.coverImageCredit ? (
+          <figcaption className="mt-1.5 text-right text-xs text-slate-400">
+            Photo:{" "}
+            {post.coverImageCreditUrl
+              ? <a href={post.coverImageCreditUrl} target="_blank" rel="noopener noreferrer nofollow" className="hover:text-teal">{post.coverImageCredit}</a>
+              : post.coverImageCredit}
+            {" "}on <a href="https://www.pexels.com" target="_blank" rel="noopener noreferrer nofollow" className="hover:text-teal">Pexels</a>
+          </figcaption>
+        ) : null}
+      </figure>
 
       <div className="mt-8 space-y-4 border-t border-slate-100 pt-8" dangerouslySetInnerHTML={{ __html: html }} />
 

@@ -20,6 +20,7 @@ export default async function AdminBlogPage() {
       status: p.status,
       publishAt: at ? new Date(at).toISOString() : null,
       live: p.status === "published" && at !== null && at <= now,
+      hasCover: Boolean(p.coverImageKey),
     };
   });
 

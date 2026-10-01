@@ -39,3 +39,12 @@ export function coverImageFor(slug: string, category?: string): string {
   const pool = hint ? hint.photos : (POOL as readonly string[]);
   return pool[hash(slug) % pool.length]!;
 }
+
+/**
+ * The cover image URL for a post: the self-hosted Pexels image from R2 when one
+ * has been fetched, otherwise the category-matched local fallback photo.
+ */
+export function blogCoverUrl(coverImageKey: string | null | undefined, slug: string, category?: string): string {
+  if (coverImageKey) return `/api/blog-image/${coverImageKey.replace(/^blog\//, "")}`;
+  return coverImageFor(slug, category);
+}

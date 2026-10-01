@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getDb } from "@/lib/cf/bindings";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
-import { coverImageFor } from "@/lib/blog/images";
+import { blogCoverUrl } from "@/lib/blog/images";
 
 export const dynamic = "force-dynamic";
 
@@ -52,7 +52,7 @@ export default async function BlogIndex({ searchParams }: { searchParams: Promis
             {posts.map((p) => (
               <Link key={p.id} href={`/blog/${p.slug}`} className="group flex flex-col overflow-hidden rounded-card border border-slate-200 bg-white shadow-sm transition hover:border-teal hover:shadow">
                 <div className="relative h-36 w-full overflow-hidden">
-                  <img src={coverImageFor(p.slug, p.category)} alt="" loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+                  <img src={blogCoverUrl(p.coverImageKey, p.slug, p.category)} alt="" loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
                   <div className="absolute inset-0 bg-gradient-to-t from-navy/30 to-transparent" />
                   <span className="absolute left-3 top-3 flex h-9 w-9 items-center justify-center rounded-lg bg-white/90 text-xl shadow">{p.coverEmoji}</span>
                 </div>

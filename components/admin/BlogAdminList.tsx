@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { seedArticlesAction, resyncArticlesAction, setPostStatusAction, deletePostAction } from "@/app/admin/blog/actions";
+import { seedArticlesAction, resyncArticlesAction, fetchCoverImageAction, fetchMissingCoversAction, setPostStatusAction, deletePostAction } from "@/app/admin/blog/actions";
 
 export interface PostRow {
   id: string;
@@ -13,6 +13,7 @@ export interface PostRow {
   status: string;
   publishAt: string | null; // ISO
   live: boolean;
+  hasCover: boolean;
 }
 
 const fmt = (iso: string | null) => iso ? new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
@@ -48,6 +49,9 @@ export function BlogAdminList({ posts }: { posts: PostRow[] }) {
               <button type="button" onClick={() => run(resyncArticlesAction)} disabled={pending} title="Update existing articles' content from the latest starter text (keeps their publish dates)" className="text-sm font-medium text-teal hover:underline disabled:opacity-50">
                 {pending ? "Working…" : "Re-sync article content"}
               </button>
+              <button type="button" onClick={() => run(() => fetchMissingCoversAction(10))} disabled={pending} title="Fetch self-hosted cover images from Pexels for articles that don't have one (10 at a time)" className="text-sm font-medium text-teal hover:underline disabled:opacity-50">
+                {pending ? "Working…" : "Fetch cover images (10)"}
+              </button>
             </>
           )}
         </div>
@@ -66,6 +70,7 @@ export function BlogAdminList({ posts }: { posts: PostRow[] }) {
               <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                 <th className="p-3">Title</th>
                 <th className="p-3">Category</th>
+                <th className="p-3">Cover</th>
                 <th className="p-3">Status</th>
                 <th className="p-3">Publish date</th>
                 <th className="p-3 text-right">Actions</th>
@@ -76,6 +81,11 @@ export function BlogAdminList({ posts }: { posts: PostRow[] }) {
                 <tr key={p.id} className="hover:bg-slate-50/60">
                   <td className="p-3"><Link href={`/admin/blog/${p.id}`} className="font-medium text-navy hover:text-teal hover:underline">{p.title}</Link></td>
                   <td className="p-3 text-slate-500">{p.category}</td>
+                  <td className="p-3">
+                    {p.hasCover
+                      ? <span className="rounded-full bg-starboard/15 px-2 py-0.5 text-xs font-semibold text-starboard">✓ Image</span>
+                      : <button type="button" onClick={() => run(() => fetchCoverImageAction(p.id))} disabled={pending} className="rounded-lg border border-slate-200 px-2 py-0.5 text-xs font-medium text-teal hover:border-teal disabled:opacity-50">Fetch image</button>}
+                  </td>
                   <td className="p-3">
                     {p.status === "published" && p.live ? <span className="rounded-full bg-starboard/15 px-2 py-0.5 text-xs font-semibold text-starboard">Live</span>
                       : p.status === "published" ? <span className="rounded-full bg-amber/15 px-2 py-0.5 text-xs font-semibold text-amber">Scheduled</span>
