@@ -152,8 +152,13 @@ export default function MarketingHome() {
             </p>
           </div>
           <div className="flex justify-center md:justify-end">
-            <div className="w-full max-w-md">
-              <LeadCapture source="hero" apex={apex} />
+            <div className="w-full max-w-md rounded-card bg-white/5 p-8 text-center ring-1 ring-white/15 backdrop-blur">
+              <p className="font-display text-2xl font-bold text-white">Start your free month</p>
+              <p className="mt-2 text-sm text-white/70">No card required. Your centre is created instantly.</p>
+              <a href="#get-demo" className="mt-6 inline-flex w-full items-center justify-center rounded-lg bg-[#0C6B74] px-6 py-3 font-semibold text-white shadow-lg transition hover:bg-teal-700">
+                Start your free month →
+              </a>
+              <p className="mt-3 text-xs text-white/60">Takes under a minute</p>
             </div>
           </div>
         </div>
