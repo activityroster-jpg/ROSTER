@@ -288,7 +288,11 @@ export const marketingProspect = sqliteTable("marketing_prospect", {
   linkedinUrl: text("linkedin_url"),
   contactName: text("contact_name"),
   contactRole: text("contact_role"),
+  // Primary/most-advanced stage (kept for the index + summary counts).
   status: text("status", { enum: PROSPECT_STATUSES }).notNull().default("new"),
+  // Multi-select outreach touchpoints as a JSON array of ProspectStatus. A single
+  // prospect can be e.g. letter_sent AND emailed AND called. Null => derive [status].
+  statuses: text("statuses"),
   notes: text("notes"),
   source: text("source").notNull().default("manual"),
   createdAt: createdAt(),

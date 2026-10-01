@@ -5,7 +5,7 @@ import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { Card } from "@/components/ui";
 import { ProspectsTable, type ProspectRow } from "@/components/admin/ProspectsTable";
 import { ProspectTools } from "@/components/admin/ProspectTools";
-import { PROSPECT_STATUS_META, PROSPECT_STATUS_ORDER } from "@/lib/marketing";
+import { PROSPECT_STATUS_META, PROSPECT_STATUS_ORDER, parseProspectStatuses } from "@/lib/marketing";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +26,7 @@ export default async function AdminMarketingPage({ searchParams }: { searchParam
     id: p.id,
     name: p.name,
     region: p.region ?? "",
+    addressLine1: p.addressLine1 ?? "",
     city: p.city ?? "",
     postcode: p.postcode ?? "",
     email: p.email ?? "",
@@ -33,11 +34,11 @@ export default async function AdminMarketingPage({ searchParams }: { searchParam
     linkedinUrl: p.linkedinUrl ?? "",
     contactName: p.contactName ?? "",
     contactRole: p.contactRole ?? "",
-    status: p.status,
+    statuses: parseProspectStatuses(p.statuses, p.status),
     source: p.source,
   }));
 
-  const counts = PROSPECT_STATUS_ORDER.map((s) => ({ s, n: rows.filter((r) => r.status === s).length }));
+  const counts = PROSPECT_STATUS_ORDER.map((s) => ({ s, n: rows.filter((r) => r.statuses.includes(s)).length }));
 
   return (
     <div>

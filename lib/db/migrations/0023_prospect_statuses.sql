@@ -1,0 +1,1 @@
+ALTER TABLE `marketing_prospect` ADD `statuses` text;

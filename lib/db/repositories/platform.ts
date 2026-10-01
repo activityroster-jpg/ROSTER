@@ -183,6 +183,11 @@ export class PlatformRepository {
     return this.updateProspect(id, { status });
   }
 
+  /** Set the multi-select outreach statuses; keeps the single `status` column in sync as the primary. */
+  async setProspectStatuses(id: string, statuses: ProspectStatus[], primary: ProspectStatus): Promise<MarketingProspect | null> {
+    return this.updateProspect(id, { statuses: JSON.stringify(statuses), status: primary });
+  }
+
   async deleteProspect(id: string): Promise<void> {
     await this.db.delete(marketingProspect).where(eq(marketingProspect.id, id));
   }

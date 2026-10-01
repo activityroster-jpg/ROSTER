@@ -5,6 +5,7 @@ import { requirePlatformAdmin } from "@/lib/platform/admin";
 import { getDb } from "@/lib/cf/bindings";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { PROSPECT_STATUSES, type NewMarketingProspect, type ProspectStatus } from "@/lib/db/schema";
+import { primaryProspectStatus } from "@/lib/marketing";
 import { parseCsv } from "@/lib/import/parse";
 
 export type ProspectResult = { ok: boolean; error?: string; message?: string; count?: number };
@@ -44,6 +45,16 @@ export async function setProspectStatusAction(id: string, status: string): Promi
   const repo = await platform();
   if (!(PROSPECT_STATUSES as readonly string[]).includes(status)) return { ok: false, error: "Unknown status" };
   const updated = await repo.setProspectStatus(id, status as ProspectStatus);
+  if (!updated) return { ok: false, error: "Not found" };
+  revalidatePath("/admin/marketing");
+  return { ok: true };
+}
+
+/** Set the multi-select outreach statuses (the checkbox list). */
+export async function setProspectStatusesAction(id: string, statuses: string[]): Promise<ProspectResult> {
+  const repo = await platform();
+  const clean = (statuses ?? []).filter((s): s is ProspectStatus => (PROSPECT_STATUSES as readonly string[]).includes(s));
+  const updated = await repo.setProspectStatuses(id, clean, primaryProspectStatus(clean));
   if (!updated) return { ok: false, error: "Not found" };
   revalidatePath("/admin/marketing");
   return { ok: true };
