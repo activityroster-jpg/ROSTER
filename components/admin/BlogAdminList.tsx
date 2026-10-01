@@ -14,6 +14,7 @@ export interface PostRow {
   publishAt: string | null; // ISO
   live: boolean;
   hasCover: boolean;
+  coverUrl: string | null;
 }
 
 const fmt = (iso: string | null) => iso ? new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
@@ -82,9 +83,14 @@ export function BlogAdminList({ posts }: { posts: PostRow[] }) {
                   <td className="p-3"><Link href={`/admin/blog/${p.id}`} className="font-medium text-navy hover:text-teal hover:underline">{p.title}</Link></td>
                   <td className="p-3 text-slate-500">{p.category}</td>
                   <td className="p-3">
-                    {p.hasCover
-                      ? <span className="rounded-full bg-starboard/15 px-2 py-0.5 text-xs font-semibold text-starboard">✓ Image</span>
-                      : <button type="button" onClick={() => run(() => fetchCoverImageAction(p.id))} disabled={pending} className="rounded-lg border border-slate-200 px-2 py-0.5 text-xs font-medium text-teal hover:border-teal disabled:opacity-50">Fetch image</button>}
+                    {p.hasCover && p.coverUrl ? (
+                      <div className="flex items-center gap-2">
+                        <img src={p.coverUrl} alt="" className="h-9 w-14 flex-none rounded border border-slate-200 object-cover" />
+                        <button type="button" onClick={() => run(() => fetchCoverImageAction(p.id))} disabled={pending} title="Fetch a different photo" className="rounded-lg border border-slate-200 px-2 py-0.5 text-xs font-medium text-teal hover:border-teal disabled:opacity-50">↻ Re-fetch</button>
+                      </div>
+                    ) : (
+                      <button type="button" onClick={() => run(() => fetchCoverImageAction(p.id))} disabled={pending} className="rounded-lg border border-slate-200 px-2 py-0.5 text-xs font-medium text-teal hover:border-teal disabled:opacity-50">Fetch image</button>
+                    )}
                   </td>
                   <td className="p-3">
                     {p.status === "published" && p.live ? <span className="rounded-full bg-starboard/15 px-2 py-0.5 text-xs font-semibold text-starboard">Live</span>

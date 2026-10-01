@@ -22,17 +22,29 @@ export function hasStockKey(env: CloudflareEnv): boolean {
   return Boolean(env.PIXABAY_API_KEY || env.PEXELS_API_KEY);
 }
 
-/** Find a cover candidate for a query, trying Pixabay first, then Pexels. */
-export async function findCover(env: CloudflareEnv, query: string): Promise<StockCandidate | null> {
+const pick = <T>(arr: T[]): T | undefined => (arr.length ? arr[Math.floor(Math.random() * arr.length)] : undefined);
+
+/**
+ * Find a cover candidate for a query, trying Pixabay first, then Pexels. Picks a
+ * RANDOM match from the top results so re-fetching swaps to a different photo, and
+ * avoids any whose creditUrl is in `exclude` (photos already used on other
+ * articles) so the blog doesn't repeat the same image everywhere.
+ */
+export async function findCover(env: CloudflareEnv, query: string, exclude?: Set<string>): Promise<StockCandidate | null> {
+  const choose = (cands: StockCandidate[]): StockCandidate | undefined => {
+    const fresh = exclude ? cands.filter((c) => !exclude.has(c.creditUrl)) : cands;
+    return pick(fresh.length ? fresh : cands);
+  };
+
   if (env.PIXABAY_API_KEY) {
-    const hits = await searchPixabay(env.PIXABAY_API_KEY, query);
-    const h = hits[0];
-    if (h) return { downloadUrl: h.largeImageURL, credit: h.user, creditUrl: h.pageURL };
+    const hits = await searchPixabay(env.PIXABAY_API_KEY, query, 30);
+    const chosen = choose(hits.map((h) => ({ downloadUrl: h.largeImageURL, credit: h.user, creditUrl: h.pageURL })));
+    if (chosen) return chosen;
   }
   if (env.PEXELS_API_KEY) {
-    const photos = await searchPexels(env.PEXELS_API_KEY, query);
-    const p = photos[0];
-    if (p) return { downloadUrl: p.src.large2x || p.src.large || p.src.original, credit: p.photographer, creditUrl: p.url };
+    const photos = await searchPexels(env.PEXELS_API_KEY, query, 30);
+    const chosen = choose(photos.map((p) => ({ downloadUrl: p.src.large2x || p.src.large || p.src.original, credit: p.photographer, creditUrl: p.url })));
+    if (chosen) return chosen;
   }
   return null;
 }

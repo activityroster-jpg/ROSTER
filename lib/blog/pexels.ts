@@ -53,14 +53,29 @@ export async function downloadPexelsImage(photo: PexelsPhoto): Promise<{ body: A
 }
 
 /**
- * Build a watersports-biased search query from an article so results stay on
- * theme (Pexels has lots of generic imagery). Uses the first tag or the category,
- * nudged toward sailing/watersports.
+ * Build an ON-TOPIC search query for an article. We deliberately do NOT feed the
+ * article's tags into the image search — tags like "first aid", "GDPR" or
+ * "safeguarding" return wildly off-theme stock (surgery photos, padlocks, etc.).
+ * Instead we map the category to a set of reliably marine queries and pick one by
+ * a hash of the title, so covers stay varied but always sailing/watersports.
  */
+const MARINE_BY_CATEGORY: { match: RegExp; queries: string[] }[] = [
+  { match: /instructor|staff|team|coach/i, queries: ["sailing instructor", "sailing coach", "dinghy sailing lesson", "sailing crew"] },
+  { match: /complian|safe|risk/i, queries: ["sailing safety boat", "rib safety boat sea", "dinghy sailing", "sailboat sea"] },
+  { match: /course|teach|learn|junior|youth/i, queries: ["learn to sail dinghy", "youth sailing", "sailing lesson", "dinghy sailing"] },
+  { match: /market|grow|sales|member/i, queries: ["marina yachts", "sailing boats harbour", "yacht marina", "sailboats sea"] },
+  { match: /operation|digital|admin|running|starting/i, queries: ["sailing club marina", "harbour sailing boats", "yacht marina", "sailing dinghies"] },
+];
+const GENERAL_MARINE = ["sailing dinghy", "sailboat sea", "yacht sailing", "sailing boat", "sailing regatta", "watersports sailing"];
+
+function hashStr(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h;
+}
+
 export function queryForArticle(a: { title: string; category: string; tags: string }): string {
-  const firstTag = a.tags.split(",").map((t) => t.trim()).filter(Boolean)[0];
-  const seed = (firstTag || a.category || "sailing").toLowerCase();
-  // Keep it on the water unless the seed already implies it.
-  const marine = /sail|boat|yacht|water|marina|dinghy|kayak|paddle|wind|surf|rya/.test(seed);
-  return marine ? `${seed} sailing` : `${seed} sailing watersports`;
+  const hint = MARINE_BY_CATEGORY.find((h) => h.match.test(a.category));
+  const pool = hint ? hint.queries : GENERAL_MARINE;
+  return pool[hashStr(a.title) % pool.length]!;
 }

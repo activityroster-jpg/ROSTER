@@ -180,10 +180,15 @@ export async function resyncArticlesAction(): Promise<BlogResult> {
 
 const NO_KEY = "Set a PIXABAY_API_KEY (instant free key at pixabay.com/api/docs) or PEXELS_API_KEY Worker secret first.";
 
+// Timestamped R2 key per fetch so a re-fetch gets a fresh URL (busts the CDN /
+// browser cache) rather than silently showing the old cached image.
+const newCoverKey = (slug: string) => `blog/${slug}-${Date.now().toString(36)}.jpg`;
+
 /**
- * Fetch a relevant cover image for one post from a free stock API (Pixabay or
- * Pexels), store it in R2 under blog/<slug>.jpg (self-hosted for SEO), and save
- * the credit. Returns the credited photographer on success.
+ * Fetch (or re-fetch) a relevant cover image for one post from a free stock API,
+ * store it in R2 self-hosted, and save the credit. Avoids photos already used on
+ * other articles, and on a re-fetch avoids the article's current photo and deletes
+ * the old R2 object. Works as both "fetch" and "re-fetch".
  */
 export async function fetchCoverImageAction(postId: string): Promise<BlogResult> {
   const repo = await platform();
@@ -192,55 +197,69 @@ export async function fetchCoverImageAction(postId: string): Promise<BlogResult>
   const post = await repo.getPostById(postId);
   if (!post) return { ok: false, error: "Post not found" };
 
+  // Exclude photos already used elsewhere, plus this post's current one (so a
+  // re-fetch actually changes the image).
+  const all = await repo.listAllPosts();
+  const exclude = new Set(all.filter((p) => p.id !== post.id).map((p) => p.coverImageCreditUrl).filter(Boolean) as string[]);
+  if (post.coverImageCreditUrl) exclude.add(post.coverImageCreditUrl);
+
   let candidate;
   try {
-    candidate = await findCover(env, queryForArticle(post));
+    candidate = await findCover(env, queryForArticle(post), exclude);
   } catch (e) {
     return { ok: false, error: `Image search failed: ${(e as Error).message}` };
   }
-  if (!candidate) return { ok: false, error: "No matching photo found — try a different title/tag." };
+  if (!candidate) return { ok: false, error: "No matching photo found — try again." };
 
+  const key = newCoverKey(post.slug);
   try {
     const { body, contentType } = await downloadImage(candidate.downloadUrl);
-    await env.DOCS.put(`blog/${post.slug}.jpg`, body, { httpMetadata: { contentType } });
+    await env.DOCS.put(key, body, { httpMetadata: { contentType } });
   } catch (e) {
     return { ok: false, error: `Image download/store failed: ${(e as Error).message}` };
   }
+  // Best-effort delete of the previous image so R2 doesn't accumulate orphans.
+  if (post.coverImageKey && post.coverImageKey !== key) {
+    try { await env.DOCS.delete(post.coverImageKey); } catch { /* ignore */ }
+  }
 
   await repo.updatePost(post.id, {
-    coverImageKey: `blog/${post.slug}.jpg`,
+    coverImageKey: key,
     coverImageCredit: candidate.credit,
     coverImageCreditUrl: candidate.creditUrl,
   });
   revalidatePath("/admin/blog");
   revalidatePath("/blog");
   revalidatePath(`/blog/${post.slug}`);
-  return { ok: true, message: `Cover set — photo by ${candidate.credit}` };
+  return { ok: true, message: `Cover updated — photo by ${candidate.credit}` };
 }
 
 /**
  * Fetch covers for up to `limit` posts that don't yet have one. Batched to stay
  * within the provider's rate limit and the Worker's per-request subrequest budget
- * — run it a few times to cover the whole blog.
+ * — run it a few times to cover the whole blog. Avoids repeating photos.
  */
 export async function fetchMissingCoversAction(limit = 10): Promise<BlogResult> {
   const repo = await platform();
   const env = getEnv();
   if (!hasStockKey(env)) return { ok: false, error: NO_KEY };
   const all = await repo.listAllPosts();
+  const used = new Set(all.map((p) => p.coverImageCreditUrl).filter(Boolean) as string[]);
   const missing = all.filter((p) => !p.coverImageKey).slice(0, limit);
   let done = 0;
   for (const post of missing) {
     try {
-      const candidate = await findCover(env, queryForArticle(post));
+      const candidate = await findCover(env, queryForArticle(post), used);
       if (!candidate) continue;
+      const key = newCoverKey(post.slug);
       const { body, contentType } = await downloadImage(candidate.downloadUrl);
-      await env.DOCS.put(`blog/${post.slug}.jpg`, body, { httpMetadata: { contentType } });
+      await env.DOCS.put(key, body, { httpMetadata: { contentType } });
       await repo.updatePost(post.id, {
-        coverImageKey: `blog/${post.slug}.jpg`,
+        coverImageKey: key,
         coverImageCredit: candidate.credit,
         coverImageCreditUrl: candidate.creditUrl,
       });
+      used.add(candidate.creditUrl); // don't reuse it on the next post in this run
       done++;
     } catch {
       // skip this one; the next run will retry it
