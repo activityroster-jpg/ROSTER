@@ -29,5 +29,5 @@ export const LETTER_SENDER = {
   postcode: "",
   email: "hello@activityroster.com",
   website: "activityroster.com",
-  signOffName: "The ActivityRoster team",
+  signOffName: "Conor",
 };
