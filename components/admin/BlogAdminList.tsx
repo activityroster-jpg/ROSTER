@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { seedArticlesAction, setPostStatusAction, deletePostAction } from "@/app/admin/blog/actions";
+import { seedArticlesAction, resyncArticlesAction, setPostStatusAction, deletePostAction } from "@/app/admin/blog/actions";
 
 export interface PostRow {
   id: string;
@@ -41,9 +41,14 @@ export function BlogAdminList({ posts }: { posts: PostRow[] }) {
               {pending ? "Seeding…" : "Seed 100 starter articles"}
             </button>
           ) : (
-            <button type="button" onClick={() => run(seedArticlesAction)} disabled={pending} className="text-sm font-medium text-teal hover:underline disabled:opacity-50">
-              {pending ? "Seeding…" : "Add any missing starter articles"}
-            </button>
+            <>
+              <button type="button" onClick={() => run(seedArticlesAction)} disabled={pending} className="text-sm font-medium text-teal hover:underline disabled:opacity-50">
+                {pending ? "Working…" : "Add any missing starter articles"}
+              </button>
+              <button type="button" onClick={() => run(resyncArticlesAction)} disabled={pending} title="Update existing articles' content from the latest starter text (keeps their publish dates)" className="text-sm font-medium text-teal hover:underline disabled:opacity-50">
+                {pending ? "Working…" : "Re-sync article content"}
+              </button>
+            </>
           )}
         </div>
         <span className="text-sm text-slate-500">{posts.length} post{posts.length === 1 ? "" : "s"}</span>

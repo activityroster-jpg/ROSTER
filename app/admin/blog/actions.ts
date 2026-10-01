@@ -140,3 +140,38 @@ export async function seedArticlesAction(): Promise<BlogResult> {
   revalidatePath("/blog");
   return { ok: true, message: created ? `Seeded ${created} articles (10 live now, the rest publish 2/day)` : "All articles already present — nothing to seed" };
 }
+
+/**
+ * Re-sync article CONTENT from the seed into existing posts (body, excerpt,
+ * title, category, tags, cover) while preserving each post's publish date and
+ * status. Use this after the starter articles are rewritten/expanded so the live
+ * blog picks up the new content. Creates any missing article too.
+ */
+export async function resyncArticlesAction(): Promise<BlogResult> {
+  const repo = await platform();
+  const rows = buildSeedRows({ liveNow: 10, perDay: 2 });
+  let updated = 0;
+  let created = 0;
+  for (const row of rows) {
+    const existing = await repo.getPostBySlug(row.slug);
+    if (existing) {
+      await repo.updatePost(existing.id, {
+        title: row.title,
+        excerpt: row.excerpt,
+        body: row.body,
+        category: row.category,
+        tags: row.tags,
+        coverEmoji: row.coverEmoji,
+        seoTitle: row.seoTitle,
+        seoDescription: row.seoDescription,
+      });
+      updated++;
+    } else {
+      await repo.createPost(row);
+      created++;
+    }
+  }
+  revalidatePath("/admin/blog");
+  revalidatePath("/blog");
+  return { ok: true, message: `Re-synced content — ${updated} updated${created ? `, ${created} added` : ""}.` };
+}
