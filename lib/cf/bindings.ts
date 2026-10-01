@@ -37,8 +37,10 @@ export interface CloudflareEnv {
   PLATFORM_ADMIN_EMAILS?: string;
   /** Shared secret for the scheduled integration-sync endpoint. */
   CRON_SECRET?: string;
-  /** Free Pexels API key — used to source self-hosted blog cover images. */
+  /** Free stock-photo API keys for self-hosted blog cover images. Either works;
+   *  Pixabay keys are issued instantly, Pexels keys are sometimes paused. */
   PEXELS_API_KEY?: string;
+  PIXABAY_API_KEY?: string;
 }
 
 export function getEnv(): CloudflareEnv {

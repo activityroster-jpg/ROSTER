@@ -7,7 +7,7 @@ import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { BLOG_STATUSES, type BlogStatus } from "@/lib/db/schema";
 import { buildSeedRows } from "@/lib/blog/seed";
 import { getEnv } from "@/lib/cf/bindings";
-import { searchPexels, downloadPexelsImage, queryForArticle, type PexelsPhoto } from "@/lib/blog/pexels";
+import { findCover, downloadImage, queryForArticle, hasStockKey } from "@/lib/blog/stock";
 
 export type BlogResult = { ok: boolean; error?: string; message?: string; id?: string };
 
@@ -178,29 +178,30 @@ export async function resyncArticlesAction(): Promise<BlogResult> {
   return { ok: true, message: `Re-synced content — ${updated} updated${created ? `, ${created} added` : ""}.` };
 }
 
+const NO_KEY = "Set a PIXABAY_API_KEY (instant free key at pixabay.com/api/docs) or PEXELS_API_KEY Worker secret first.";
+
 /**
- * Fetch a relevant cover image for one post from the free Pexels API, store it in
- * R2 under blog/<slug>.jpg (self-hosted for SEO), and save the credit. Requires
- * PEXELS_API_KEY. Returns the credited photographer on success.
+ * Fetch a relevant cover image for one post from a free stock API (Pixabay or
+ * Pexels), store it in R2 under blog/<slug>.jpg (self-hosted for SEO), and save
+ * the credit. Returns the credited photographer on success.
  */
 export async function fetchCoverImageAction(postId: string): Promise<BlogResult> {
   const repo = await platform();
   const env = getEnv();
-  if (!env.PEXELS_API_KEY) return { ok: false, error: "Set the PEXELS_API_KEY Worker secret first (free at pexels.com/api)." };
+  if (!hasStockKey(env)) return { ok: false, error: NO_KEY };
   const post = await repo.getPostById(postId);
   if (!post) return { ok: false, error: "Post not found" };
 
-  let photos: PexelsPhoto[];
+  let candidate;
   try {
-    photos = await searchPexels(env.PEXELS_API_KEY, queryForArticle(post));
+    candidate = await findCover(env, queryForArticle(post));
   } catch (e) {
-    return { ok: false, error: `Pexels search failed: ${(e as Error).message}` };
+    return { ok: false, error: `Image search failed: ${(e as Error).message}` };
   }
-  const photo = photos[0];
-  if (!photo) return { ok: false, error: "No matching photo found — try a different title/tag." };
+  if (!candidate) return { ok: false, error: "No matching photo found — try a different title/tag." };
 
   try {
-    const { body, contentType } = await downloadPexelsImage(photo);
+    const { body, contentType } = await downloadImage(candidate.downloadUrl);
     await env.DOCS.put(`blog/${post.slug}.jpg`, body, { httpMetadata: { contentType } });
   } catch (e) {
     return { ok: false, error: `Image download/store failed: ${(e as Error).message}` };
@@ -208,38 +209,37 @@ export async function fetchCoverImageAction(postId: string): Promise<BlogResult>
 
   await repo.updatePost(post.id, {
     coverImageKey: `blog/${post.slug}.jpg`,
-    coverImageCredit: photo.photographer,
-    coverImageCreditUrl: photo.url,
+    coverImageCredit: candidate.credit,
+    coverImageCreditUrl: candidate.creditUrl,
   });
   revalidatePath("/admin/blog");
   revalidatePath("/blog");
   revalidatePath(`/blog/${post.slug}`);
-  return { ok: true, message: `Cover set — photo by ${photo.photographer}` };
+  return { ok: true, message: `Cover set — photo by ${candidate.credit}` };
 }
 
 /**
  * Fetch covers for up to `limit` posts that don't yet have one. Batched to stay
- * within Pexels' rate limit and the Worker's per-request subrequest budget — run
- * it a few times to cover the whole blog.
+ * within the provider's rate limit and the Worker's per-request subrequest budget
+ * — run it a few times to cover the whole blog.
  */
 export async function fetchMissingCoversAction(limit = 10): Promise<BlogResult> {
   const repo = await platform();
   const env = getEnv();
-  if (!env.PEXELS_API_KEY) return { ok: false, error: "Set the PEXELS_API_KEY Worker secret first (free at pexels.com/api)." };
+  if (!hasStockKey(env)) return { ok: false, error: NO_KEY };
   const all = await repo.listAllPosts();
   const missing = all.filter((p) => !p.coverImageKey).slice(0, limit);
   let done = 0;
   for (const post of missing) {
     try {
-      const photos = await searchPexels(env.PEXELS_API_KEY, queryForArticle(post), 5);
-      const photo = photos[0];
-      if (!photo) continue;
-      const { body, contentType } = await downloadPexelsImage(photo);
+      const candidate = await findCover(env, queryForArticle(post));
+      if (!candidate) continue;
+      const { body, contentType } = await downloadImage(candidate.downloadUrl);
       await env.DOCS.put(`blog/${post.slug}.jpg`, body, { httpMetadata: { contentType } });
       await repo.updatePost(post.id, {
         coverImageKey: `blog/${post.slug}.jpg`,
-        coverImageCredit: photo.photographer,
-        coverImageCreditUrl: photo.url,
+        coverImageCredit: candidate.credit,
+        coverImageCreditUrl: candidate.creditUrl,
       });
       done++;
     } catch {

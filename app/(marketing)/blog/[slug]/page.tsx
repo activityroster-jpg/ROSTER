@@ -92,7 +92,6 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             {post.coverImageCreditUrl
               ? <a href={post.coverImageCreditUrl} target="_blank" rel="noopener noreferrer nofollow" className="hover:text-teal">{post.coverImageCredit}</a>
               : post.coverImageCredit}
-            {" "}on <a href="https://www.pexels.com" target="_blank" rel="noopener noreferrer nofollow" className="hover:text-teal">Pexels</a>
           </figcaption>
         ) : null}
       </figure>
