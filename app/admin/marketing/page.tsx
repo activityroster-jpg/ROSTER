@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requirePlatformAdmin } from "@/lib/platform/admin";
 import { getDb } from "@/lib/cf/bindings";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
+import { Card } from "@/components/ui";
 import { ProspectsTable, type ProspectRow } from "@/components/admin/ProspectsTable";
 import { ProspectTools } from "@/components/admin/ProspectTools";
 import { PROSPECT_STATUS_META, PROSPECT_STATUS_ORDER, parseProspectStatuses } from "@/lib/marketing";
