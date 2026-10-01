@@ -8,6 +8,7 @@ import { instructorSchema, complianceItemSchema, qualificationSchema } from "@/l
 import { writeAudit } from "@/lib/services/audit";
 import { linkInstructorUser } from "@/lib/services/invite";
 import { toggleOnboarding } from "@/lib/services/hr";
+import { instructorCapState, capUpgradeMessage } from "@/lib/tenant/limits";
 import { apexDomain } from "@/lib/config";
 import { EMPLOYMENT_TYPES, type EmploymentType } from "@/lib/db/schema";
 
@@ -29,6 +30,11 @@ export async function setupInstructorAction(_prev: ActionState, formData: FormDa
   const { ctx, repos, organisation } = await requireTenant({ role: "admin" });
   const name = String(formData.get("name") ?? "").trim();
   if (!name) return { ok: false, error: "Enter the instructor's name" };
+
+  // Hard tier cap: block adding past the Small Club limit (volunteers included).
+  if ((await instructorCapState(repos, ctx, organisation)).full) {
+    return { ok: false, error: capUpgradeMessage(organisation) };
+  }
   const email = String(formData.get("email") ?? "").trim().toLowerCase() || null;
   const employmentType: EmploymentType = (EMPLOYMENT_TYPES as readonly string[]).includes(String(formData.get("employmentType")))
     ? (String(formData.get("employmentType")) as EmploymentType)
@@ -113,7 +119,7 @@ export async function toggleOnboardingAction(itemId: string, done: boolean): Pro
 
 /** Add an instructor. Authed (admin), Zod-validated, audited. */
 export async function createInstructorAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos, organisation } = await requireTenant({ role: "admin" });
   const parsed = instructorSchema.safeParse({
     name: formData.get("name"),
     email: formData.get("email") || undefined,
@@ -122,6 +128,11 @@ export async function createInstructorAction(_prev: ActionState, formData: FormD
     status: "active",
   });
   if (!parsed.success) return { ok: false, error: "Please check the instructor details" };
+
+  // Hard tier cap: block adding past the Small Club limit (volunteers included).
+  if ((await instructorCapState(repos, ctx, organisation)).full) {
+    return { ok: false, error: capUpgradeMessage(organisation) };
+  }
 
   const created = await repos.tenant.instructor.insert(ctx, {
     name: parsed.data.name,

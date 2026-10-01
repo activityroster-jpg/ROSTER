@@ -9,6 +9,7 @@ import { writeAudit } from "@/lib/services/audit";
 import { apexDomain } from "@/lib/config";
 import { EMPLOYMENT_TYPES, type EmploymentType } from "@/lib/db/schema";
 import { splitList } from "@/lib/import/staff";
+import { instructorCapState, capUpgradeMessage } from "@/lib/tenant/limits";
 
 export interface ConfirmedStaff {
   name: string;
@@ -47,11 +48,17 @@ export async function importInstructorsAction(rows: ConfirmedStaff[], opts?: { s
   const qualByName = new Map(qualTypes.map((q) => [q.name.trim().toLowerCase(), q]));
   const courseByName = new Map(courseTypes.map((c) => [c.name.trim().toLowerCase(), c]));
 
+  // Hard tier cap: fill up to the Small Club limit, then stop (volunteers
+  // included). `remaining` is null when the tier is unlimited.
+  let remaining = (await instructorCapState(repos, ctx, organisation)).remaining;
+  let limitReached = false;
+
   let created = 0, skipped = 0, invited = 0, qualsLinked = 0, coursesLinked = 0;
 
   for (const raw of rows) {
     const name = (raw.name ?? "").trim();
     if (!name) { skipped++; continue; }
+    if (remaining !== null && remaining <= 0) { skipped++; limitReached = true; continue; }
     const email = (raw.email ?? "").trim().toLowerCase() || null;
     const employmentType: EmploymentType = (EMPLOYMENT_TYPES as readonly string[]).includes(raw.employment)
       ? (raw.employment as EmploymentType)
@@ -65,6 +72,7 @@ export async function importInstructorsAction(rows: ConfirmedStaff[], opts?: { s
       status: "active",
     });
     created++;
+    if (remaining !== null) remaining--;
 
     // Qualifications → placeholder rows for the tickets we recognise.
     for (const q of splitList(raw.quals)) {
@@ -104,5 +112,6 @@ export async function importInstructorsAction(rows: ConfirmedStaff[], opts?: { s
   if (qualsLinked) parts.push(`${qualsLinked} tickets matched`);
   if (coursesLinked) parts.push(`${coursesLinked} course approvals`);
   if (skipped) parts.push(`${skipped} skipped`);
-  return { ok: true, created, skipped, invited, qualsLinked, coursesLinked, message: parts.join(" · ") };
+  const message = limitReached ? `${parts.join(" · ")} — ${capUpgradeMessage(organisation)}` : parts.join(" · ");
+  return { ok: true, created, skipped, invited, qualsLinked, coursesLinked, message };
 }

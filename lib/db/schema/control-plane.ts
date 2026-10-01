@@ -125,6 +125,16 @@ export const PLANS = ["rostering", "full"] as const;
 export type Plan = (typeof PLANS)[number];
 
 /**
+ * Pricing tier. `small_club` is a lower flat price capped at a small team
+ * (enforced as a hard limit on instructor headcount — see lib/tiers.ts);
+ * `standard` is the unlimited-team flat price. Existing centres default to
+ * `standard` so the cap never retroactively bites anyone — a centre is only
+ * capped once it is explicitly placed on `small_club`.
+ */
+export const ORG_TIERS = ["small_club", "standard"] as const;
+export type OrgTier = (typeof ORG_TIERS)[number];
+
+/**
  * A centre. `slug` is the subdomain ({slug}.activityroster.com) and is unique.
  * `jurisdiction` drives which vetting checks are mandatory (DBS/PVG/AccessNI/
  * Garda). Stripe identifiers are stored but never card data.
@@ -135,6 +145,9 @@ export const organisation = sqliteTable("organisation", {
   slug: text("slug").notNull(),
   jurisdiction: text("jurisdiction", { enum: JURISDICTIONS }).notNull(),
   plan: text("plan", { enum: PLANS }).notNull().default("rostering"),
+  // Pricing tier. Defaults to `standard` (unlimited) so no existing centre is
+  // ever retroactively capped; a centre is only limited once put on `small_club`.
+  tier: text("tier", { enum: ORG_TIERS }).notNull().default("standard"),
   status: text("status", { enum: ORG_STATUSES }).notNull().default("pending"),
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),

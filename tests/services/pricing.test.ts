@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { effectivePricing, fmtMoney } from "@/lib/pricing";
+import { effectivePricing, fmtMoney, competitorMonthly, tierSaving, PER_USER_BENCHMARK } from "@/lib/pricing";
 
 const base = { monthlyPrice: 75, annualPrice: 675, currency: "GBP" } as const;
 const org = (over: Partial<{ discountPercent: number; customMonthlyPrice: number | null; customAnnualPrice: number | null; freeMonths: number }>) => ({
@@ -29,6 +29,33 @@ describe("effectivePricing", () => {
     expect(effectivePricing(org({ discountPercent: 150 }), base).monthly).toBe(0);
     expect(effectivePricing(org({ discountPercent: -10 }), base).monthly).toBe(75);
     expect(effectivePricing(org({ freeMonths: 2 }), base).freeMonths).toBe(2);
+  });
+  it("uses the tier price as the base when the centre has a tier", () => {
+    expect(effectivePricing({ ...org({}), tier: "small_club" }, base).monthly).toBe(35);
+    expect(effectivePricing({ ...org({}), tier: "standard" }, base).monthly).toBe(65);
+  });
+  it("applies a discount to the tier base, and a custom price still wins", () => {
+    expect(effectivePricing({ ...org({ discountPercent: 20 }), tier: "standard" }, base).monthly).toBe(52);
+    expect(effectivePricing({ ...org({ customMonthlyPrice: 40 }), tier: "standard" }, base).monthly).toBe(40);
+  });
+});
+
+describe("competitor comparison", () => {
+  it("prices per seat at the benchmark", () => {
+    expect(competitorMonthly(20)).toBe(20 * PER_USER_BENCHMARK);
+    expect(competitorMonthly(0)).toBe(0);
+  });
+  it("computes our saving vs a per-seat tool", () => {
+    const s = tierSaving(30, 65); // 30 × £4 = £120 vs £65 flat
+    expect(s.theirs).toBe(120);
+    expect(s.ours).toBe(65);
+    expect(s.save).toBe(55);
+    expect(s.pct).toBe(46);
+  });
+  it("never reports a negative saving", () => {
+    const s = tierSaving(5, 65); // tiny team: flat price is dearer
+    expect(s.save).toBeLessThan(0);
+    expect(s.pct).toBe(0);
   });
 });
 

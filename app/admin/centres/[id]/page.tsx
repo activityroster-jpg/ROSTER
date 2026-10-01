@@ -4,6 +4,7 @@ import { getDb } from "@/lib/cf/bindings";
 import { apexDomain } from "@/lib/config";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { effectivePricing } from "@/lib/pricing";
+import { tierMeta } from "@/lib/tiers";
 import { CentreControls } from "@/components/admin/CentreControls";
 import { PricingControls } from "@/components/admin/PricingControls";
 import { Card } from "@/components/ui";
@@ -50,6 +51,7 @@ export default async function CentreDetailPage({ params }: { params: Promise<{ i
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <h2 className="mb-2 font-semibold text-navy">Billing &amp; subscription</h2>
+          <Row k="Tier" v={`${tierMeta(org.tier).name}${tierMeta(org.tier).userCap ? ` (≤${tierMeta(org.tier).userCap})` : " (unlimited)"}`} />
           <Row k="Plan" v={org.plan} />
           <Row k="Subscription" v={org.subscriptionStatus ?? "—"} />
           <Row k="Centre status" v={org.status} />
@@ -60,7 +62,7 @@ export default async function CentreDetailPage({ params }: { params: Promise<{ i
 
         <Card>
           <h2 className="mb-2 font-semibold text-navy">Usage</h2>
-          <Row k="Instructors" v={String(u.instructors)} />
+          <Row k="Instructors" v={tierMeta(org.tier).userCap ? `${u.instructors} / ${tierMeta(org.tier).userCap}` : String(u.instructors)} />
           <Row k="Courses" v={String(u.courses)} />
           <Row k="Sessions" v={String(u.sessions)} />
           <Row k="Bookings" v={String(u.bookings)} />
@@ -70,7 +72,7 @@ export default async function CentreDetailPage({ params }: { params: Promise<{ i
 
       <Card className="mt-6">
         <h2 className="mb-3 font-semibold text-navy">Manage</h2>
-        <CentreControls id={org.id} status={org.status} subscriptionStatus={org.subscriptionStatus} plan={org.plan} />
+        <CentreControls id={org.id} status={org.status} subscriptionStatus={org.subscriptionStatus} plan={org.plan} tier={org.tier} />
       </Card>
 
       <Card className="mt-6">

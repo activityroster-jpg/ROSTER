@@ -2,7 +2,8 @@ import Link from "next/link";
 import { Check } from "lucide-react";
 import { getDb } from "@/lib/cf/bindings";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
-import { fmtMoney } from "@/lib/pricing";
+import { fmtMoney, tierSaving, PER_USER_BENCHMARK } from "@/lib/pricing";
+import { TIERS, TIER_ORDER } from "@/lib/tiers";
 
 export const dynamic = "force-dynamic";
 
@@ -28,49 +29,90 @@ const SETUP_INCLUDED = [
   "A walk-through so you and your team are confident from day one",
 ];
 
+// Team sizes (volunteers included) where a flat price clearly beats per-seat
+// pricing. RYA centres roster everyone who runs sessions, so real headcount sits
+// well above the paid core — and a per-user tool bills every one of them.
+const COMPARE_HEADCOUNTS = [15, 20, 25, 30, 40];
+
 export default async function PricingPage() {
-  let monthly = 75, annual = 675, currency = "GBP", freeFirstMonth = true;
+  let currency = "GBP", freeFirstMonth = true;
   let setupPrice = 850, setupEnabled = true;
   try {
     const p = await new PlatformRepository(await getDb()).getPricing();
-    monthly = p.monthlyPrice; annual = p.annualPrice; currency = p.currency; freeFirstMonth = Boolean(p.freeFirstMonth);
+    currency = p.currency; freeFirstMonth = Boolean(p.freeFirstMonth);
     setupPrice = p.setupPrice; setupEnabled = Boolean(p.setupEnabled);
   } catch {
     // fall back to defaults if pricing can't be read at render time
   }
-  const savings = Math.max(0, monthly * 12 - annual);
-  const monthsFree = monthly > 0 ? Math.round(savings / monthly) : 0;
+
+  const standard = TIERS.standard;
+  const rows = COMPARE_HEADCOUNTS.map((n) => tierSaving(n, standard.monthlyPrice));
+  const biggest = rows[rows.length - 1]!; // COMPARE_HEADCOUNTS is non-empty
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-16">
+    <div className="mx-auto max-w-4xl px-4 py-16">
       <div className="text-center">
         <p className="text-sm font-semibold uppercase tracking-wide text-teal">Pricing</p>
-        <h1 className="mt-1 font-display text-3xl font-bold text-navy">One simple plan</h1>
+        <h1 className="mt-1 font-display text-3xl font-bold text-navy">One flat price for your whole centre</h1>
         <p className="mx-auto mt-2 max-w-xl text-slate-600">
-          Everything in the platform, for your whole centre. {freeFirstMonth ? "Start with a free month — no card required — then keep it only if it's earning its place." : "Cancel anytime."}
+          No per-user fees. Add every instructor and volunteer for one simple price.{" "}
+          {freeFirstMonth ? "Start with a free month — no card required." : "Cancel anytime."}
         </p>
       </div>
 
-      <div className="mt-10 overflow-hidden rounded-card border border-teal shadow-lg">
+      {/* Two tiers */}
+      <div className="mt-10 grid gap-6 md:grid-cols-2">
+        {TIER_ORDER.map((tid) => {
+          const t = TIERS[tid];
+          const popular = tid === "standard";
+          const annualSaving = Math.max(0, t.monthlyPrice * 12 - t.annualPrice);
+          const monthsFree = t.monthlyPrice > 0 ? Math.round(annualSaving / t.monthlyPrice) : 0;
+          return (
+            <div
+              key={tid}
+              className={`relative overflow-hidden rounded-card border shadow-sm ${popular ? "border-teal shadow-lg" : "border-slate-200"}`}
+            >
+              {popular ? (
+                <div className="bg-navy px-6 py-2 text-center text-xs font-semibold uppercase tracking-wide text-white">
+                  Most popular · unlimited team
+                </div>
+              ) : null}
+              <div className="p-7">
+                <h2 className="font-display text-xl font-bold text-navy">{t.name}</h2>
+                <p className="mt-1 text-sm text-slate-500">{t.tagline}</p>
+                <p className="mt-4">
+                  <span className="font-display text-4xl font-bold text-navy">{fmtMoney(t.monthlyPrice, currency)}</span>
+                  <span className="ml-1 text-slate-500">/month</span>
+                </p>
+                <p className="mt-1 text-sm text-slate-500">
+                  or {fmtMoney(t.annualPrice, currency)}/year{monthsFree > 0 ? ` — ${monthsFree} months free` : ""}
+                </p>
+                <p className="mt-3 inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                  {t.userCap ? `Up to ${t.userCap} people on your team` : "Unlimited instructors & volunteers"}
+                </p>
+                <a
+                  href="/#get-demo"
+                  className={`mt-6 block rounded-lg px-6 py-3 text-center font-semibold transition ${popular ? "bg-teal text-white hover:bg-teal-700" : "border border-teal text-teal hover:bg-teal/5"}`}
+                >
+                  {freeFirstMonth ? "Start my free month" : "Get started"}
+                </a>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <p className="mt-3 text-center text-xs text-slate-500">
+        Both plans include everything below. On Small Club you can add up to {TIERS.small_club.userCap} people;
+        when your team grows, upgrade to Standard for unlimited instructors and volunteers in a click.
+      </p>
+
+      {/* Everything included (shared) */}
+      <div className="mt-10 overflow-hidden rounded-card border border-slate-200 shadow-sm">
         {freeFirstMonth ? (
           <div className="bg-navy px-6 py-3 text-center text-sm font-semibold text-white">🎉 First month free · no card required</div>
         ) : null}
-        <div className="grid gap-0 sm:grid-cols-2">
-          <div className="border-b border-slate-200 p-7 text-center sm:border-b-0 sm:border-r">
-            <p className="text-sm font-semibold uppercase tracking-wide text-slate-400">Monthly</p>
-            <p className="mt-2"><span className="font-display text-4xl font-bold text-navy">{fmtMoney(monthly, currency)}</span><span className="ml-1 text-slate-500">/month</span></p>
-            <p className="mt-1 text-sm text-slate-500">Billed monthly · cancel anytime</p>
-          </div>
-          <div className="relative p-7 text-center">
-            {monthsFree > 0 ? <span className="absolute right-4 top-4 rounded-full bg-starboard/15 px-2.5 py-0.5 text-xs font-semibold text-starboard">{monthsFree} month{monthsFree === 1 ? "" : "s"} free</span> : null}
-            <p className="text-sm font-semibold uppercase tracking-wide text-slate-400">Yearly</p>
-            <p className="mt-2"><span className="font-display text-4xl font-bold text-navy">{fmtMoney(annual, currency)}</span><span className="ml-1 text-slate-500">/year</span></p>
-            <p className="mt-1 text-sm text-slate-500">{savings > 0 ? `Save ${fmtMoney(savings, currency)}${monthsFree > 0 ? ` — that's ${monthsFree} month${monthsFree === 1 ? "" : "s"} free` : ""}` : "Billed annually"}</p>
-          </div>
-        </div>
-
-        <div className="border-t border-slate-200 p-7">
-          <p className="mb-3 text-sm font-semibold text-navy">Everything included:</p>
+        <div className="p-7">
+          <p className="mb-3 text-sm font-semibold text-navy">Everything included, on both plans:</p>
           <ul className="grid gap-2 sm:grid-cols-2">
             {INCLUDED.map((f) => (
               <li key={f} className="flex items-start gap-2 text-sm text-slate-700">
@@ -79,10 +121,55 @@ export default async function PricingPage() {
               </li>
             ))}
           </ul>
-          <a href="/#get-demo" className="mt-7 block rounded-lg bg-teal px-6 py-3 text-center font-semibold text-white transition hover:bg-teal-700">
-            Start my free month
-          </a>
-          <p className="mt-2 text-center text-xs text-slate-500">No card required · cancel anytime · your own address at yourclub.activityroster.com</p>
+          <p className="mt-4 text-center text-xs text-slate-500">
+            No card required · cancel anytime · your own address at yourclub.activityroster.com ·{" "}
+            <Link href="/learn?topic=plans" className="font-semibold text-teal hover:underline">📖 Read the guide</Link>
+          </p>
+        </div>
+      </div>
+
+      {/* Competitor savings */}
+      <div className="mt-12 overflow-hidden rounded-card border border-starboard/40 bg-starboard/5 shadow-sm">
+        <div className="p-7">
+          <p className="text-sm font-semibold uppercase tracking-wide text-starboard">Flat price vs per-user tools</p>
+          <h2 className="mt-1 font-display text-2xl font-bold text-navy">The bigger your team, the more you save</h2>
+          <p className="mt-2 max-w-2xl text-slate-600">
+            Most rostering tools charge per user, around {fmtMoney(PER_USER_BENCHMARK, currency)} a head every month. RYA
+            centres roster everyone who runs sessions — senior and assistant instructors, powerboat cover, shore crew and
+            volunteers — so per-seat tools bill for your whole volunteer base. Our Standard plan is{" "}
+            <strong className="text-navy">{fmtMoney(standard.monthlyPrice, currency)} flat</strong>, however many people you add.
+          </p>
+
+          <div className="mt-5 overflow-hidden rounded-lg border border-slate-200 bg-white">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                <tr>
+                  <th className="px-4 py-3">Team size (incl. volunteers)</th>
+                  <th className="px-4 py-3">Per-user tools (~{fmtMoney(PER_USER_BENCHMARK, currency)}/head)</th>
+                  <th className="px-4 py-3">ActivityRoster (flat)</th>
+                  <th className="px-4 py-3">You save</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {rows.map((r) => (
+                  <tr key={r.people}>
+                    <td className="px-4 py-3 font-medium text-navy">{r.people} people</td>
+                    <td className="px-4 py-3 text-slate-600">{fmtMoney(r.theirs, currency)}/mo</td>
+                    <td className="px-4 py-3 text-slate-600">{fmtMoney(r.ours, currency)}/mo</td>
+                    <td className="px-4 py-3 font-semibold text-starboard">
+                      {r.save > 0 ? `${fmtMoney(r.save, currency)}/mo (${r.pct}% less)` : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-3 text-xs text-slate-500">
+            Illustrative, based on a typical per-user price of {fmtMoney(PER_USER_BENCHMARK, currency)}/user/month (tools vary ≈ £2–£6).
+            A {biggest.people}-person centre would pay{" "}
+            {fmtMoney(biggest.theirs, currency)} a month on a per-seat tool — with us it&apos;s still just{" "}
+            {fmtMoney(standard.monthlyPrice, currency)}.
+          </p>
         </div>
       </div>
 

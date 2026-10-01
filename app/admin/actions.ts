@@ -6,7 +6,7 @@ import { getDb, getEnv, getRepositories } from "@/lib/cf/bindings";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { createStripe } from "@/lib/billing/stripe";
 import { createPromotionCode, type CouponSpec } from "@/lib/billing/coupons";
-import { ORG_STATUSES, SUBSCRIPTION_STATUSES, PLANS, ERROR_REPORT_STATUSES, type OrgStatus, type SubscriptionStatus, type Plan, type ErrorReportStatus } from "@/lib/db/schema";
+import { ORG_STATUSES, SUBSCRIPTION_STATUSES, PLANS, ORG_TIERS, ERROR_REPORT_STATUSES, type OrgStatus, type SubscriptionStatus, type Plan, type OrgTier, type ErrorReportStatus } from "@/lib/db/schema";
 
 type Result = { ok: boolean; error?: string };
 
@@ -115,6 +115,17 @@ export async function setSubscriptionStatusAction(id: string, sub: string): Prom
   if (!(SUBSCRIPTION_STATUSES as readonly string[]).includes(sub)) return { ok: false, error: "Invalid subscription status" };
   const { control } = await getRepositories();
   const updated = await control.updateOrganisation(id, { subscriptionStatus: sub as SubscriptionStatus });
+  if (!updated) return { ok: false, error: "Not found" };
+  revalidatePath("/admin");
+  revalidatePath(`/admin/centres/${id}`);
+  return { ok: true };
+}
+
+export async function setOrgTierAction(id: string, tier: string): Promise<Result> {
+  await requirePlatformAdmin();
+  if (!(ORG_TIERS as readonly string[]).includes(tier)) return { ok: false, error: "Invalid tier" };
+  const { control } = await getRepositories();
+  const updated = await control.updateOrganisation(id, { tier: tier as OrgTier });
   if (!updated) return { ok: false, error: "Not found" };
   revalidatePath("/admin");
   revalidatePath(`/admin/centres/${id}`);

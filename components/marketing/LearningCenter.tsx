@@ -305,6 +305,23 @@ const SECTIONS: Section[] = [
     ],
   },
   {
+    id: "plans",
+    icon: "🏷️",
+    label: "Plans & team size",
+    blurb: "Flat pricing per centre, and how the team-size limit works.",
+    blocks: [
+      { kind: "p", text: "ActivityRoster is priced per centre, not per user — one flat price however many people you roster. There are two plans, and you can move between them whenever you like." },
+      { kind: "sub", text: "The two plans" },
+      { kind: "bullets", items: [
+        "Small Club — £35/month. Designed for smaller centres: up to 10 people on your team.",
+        "Standard — £65/month. Unlimited instructors and volunteers.",
+      ] },
+      { kind: "sub", text: "How the Small Club limit works" },
+      { kind: "p", text: "On Small Club you can add up to 10 people in total. Everyone counts towards the 10 — paid instructors and volunteers alike. When you try to add the 11th person, we'll let you know you've reached the limit and prompt you to upgrade to Standard for unlimited team members." },
+      { kind: "tip", text: "Upgrading is instant and keeps everything you've set up — your courses, staff, tickets and rota all stay exactly as they are. Because competitors charge per user, a volunteer-heavy centre usually pays far less with our flat price." },
+    ],
+  },
+  {
     id: "billing",
     icon: "💳",
     label: "Billing & invoices",

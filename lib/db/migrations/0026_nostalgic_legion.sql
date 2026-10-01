@@ -1,0 +1,1 @@
+ALTER TABLE `organisation` ADD `tier` text DEFAULT 'standard' NOT NULL;
