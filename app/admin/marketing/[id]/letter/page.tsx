@@ -7,9 +7,14 @@ import { LETTER_SENDER } from "@/lib/marketing";
 
 export const dynamic = "force-dynamic";
 
-// The browser derives the "Save as PDF" filename from the page <title>, so give
-// each prospect's letter a unique, filename-friendly title. That way you can save
-// 20 letters without them all landing as the same name and prompting to replace.
+// A unique, filename-friendly name per prospect so saving 20 letters doesn't land
+// them all as the same name. Used for both the page <title> and the client-side
+// document.title set at print time (which is what the save dialog actually reads).
+function letterFileName(name: string | null | undefined, id: string) {
+  const safe = (name ?? "").replace(/[^\w\s-]/g, "").trim().replace(/\s+/g, "-");
+  return `ActivityRoster-letter-${safe ? `${safe}-` : ""}${id.slice(0, 8)}`;
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   let name = "";
@@ -19,9 +24,8 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   } catch {
     // fall back to the id below
   }
-  const safe = name.replace(/[^\w\s-]/g, "").trim().replace(/\s+/g, "-");
   // `absolute` bypasses the root "%s | ActivityRoster" template so the filename stays clean.
-  return { title: { absolute: `ActivityRoster-letter-${safe ? `${safe}-` : ""}${id.slice(0, 8)}` } };
+  return { title: { absolute: letterFileName(name, id) } };
 }
 
 /*
@@ -104,7 +108,7 @@ export default async function ProspectLetterPage({ params }: { params: Promise<{
           <p className="text-sm font-semibold text-navy">Letter to {p.name}</p>
           <p className="text-xs text-slate-500">Prints on A4 · the recipient address is centred in a standard DL/C5 window so it stays visible even if the folded letter shifts ~1.5cm inside the envelope. The dashed window guide is screen-only and won&apos;t print. Use &ldquo;Save as PDF&rdquo; to keep a copy.</p>
         </div>
-        <PrintButton label="Print / save as PDF" />
+        <PrintButton label="Print / save as PDF" downloadName={letterFileName(p.name, id)} />
       </div>
 
       <div className="letter-sheet text-[11pt] text-slate-900 shadow-lg">
