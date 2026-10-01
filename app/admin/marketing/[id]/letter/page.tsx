@@ -24,7 +24,7 @@ export const dynamic = "force-dynamic";
  * so a healthy shift either way still leaves the whole address showing.
  */
 const WINDOW = { left: 20, top: 48, width: 90, height: 45 };
-const SHEET_PAD = 18; // mm padding inside the A4 sheet (acts as the page margin)
+const SHEET_PAD = 16; // mm padding inside the A4 sheet (acts as the page margin)
 // The body is in normal flow, so its margin-top sits INSIDE the sheet padding.
 // Offset it so the text clears the bottom of the window with a small gap, measured
 // from the top of the padded content box (hence the − SHEET_PAD).
@@ -47,12 +47,15 @@ export default async function ProspectLetterPage({ params }: { params: Promise<{
       <style>{`
         @page { size: A4; margin: 0; }
         @media print {
-          html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; }
+          html, body { margin: 0 !important; padding: 0 !important; min-height: 0 !important; height: auto !important; background: #fff !important; }
           .no-print { display: none !important; }
           /* This page lives inside the admin layout, so a browser "Save as PDF"
              would otherwise drag in the nav header, page padding and the toolbar
              and reflow the A4 sheet. Print ONLY the letter sheet, as a single page. */
-          body * { visibility: hidden !important; }
+          /* Collapse any full-viewport-height ancestor (the admin layout's
+             min-h-screen). In print 100vh == one whole page, and an invisible
+             page-tall wrapper in the flow tips the output onto a blank 2nd page. */
+          body * { min-height: 0 !important; visibility: hidden !important; }
           .letter-sheet, .letter-sheet * { visibility: visible !important; }
           .letter-sheet {
             position: absolute !important; top: 0 !important; left: 0 !important;
@@ -75,7 +78,7 @@ export default async function ProspectLetterPage({ params }: { params: Promise<{
         .window-guide { outline: 1px dashed #c7d2e0; outline-offset: 0; }
         /* Compact, centred address — the margin around it absorbs ~15mm of letter shift each way. */
         .window-address { font-size: 11pt; line-height: 1.3; text-align: left; max-width: ${WINDOW.width - 24}mm; }
-        .letter-body { margin-top: ${BODY_TOP}mm; font-size: 11pt; line-height: 1.45; color: #111; }
+        .letter-body { margin-top: ${BODY_TOP}mm; font-size: 11pt; line-height: 1.4; color: #111; }
         .sign-line { width: 65mm; border-bottom: 1px solid #111; }
       `}</style>
 
@@ -136,11 +139,11 @@ export default async function ProspectLetterPage({ params }: { params: Promise<{
 
           <p style={{ marginTop: "6mm" }}>Kind regards,</p>
           {/* Space to sign by hand, with a line to sign on */}
-          <div style={{ marginTop: "12mm" }} className="sign-line" />
+          <div style={{ marginTop: "10mm" }} className="sign-line" />
           <p style={{ marginTop: "2mm", fontWeight: 600 }}>{LETTER_SENDER.signOffName}</p>
           <p style={{ fontSize: "9pt", color: "#555" }}>{LETTER_SENDER.name}</p>
 
-          <p style={{ marginTop: "8mm", fontWeight: 700 }}>{LETTER_SENDER.website}</p>
+          <p style={{ marginTop: "6mm", fontWeight: 700 }}>{LETTER_SENDER.website}</p>
         </div>
       </div>
     </>
