@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { effectivePricing, fmtMoney, competitorMonthly, tierSaving, PER_USER_BENCHMARK } from "@/lib/pricing";
+import { effectivePricing, fmtMoney, competitorMonthly, tierSaving, comparisonRow, COMPETITOR_PRICING, PER_USER_BENCHMARK } from "@/lib/pricing";
 
 const base = { monthlyPrice: 75, annualPrice: 675, currency: "GBP" } as const;
 const org = (over: Partial<{ discountPercent: number; customMonthlyPrice: number | null; customAnnualPrice: number | null; freeMonths: number }>) => ({
@@ -56,6 +56,21 @@ describe("competitor comparison", () => {
     const s = tierSaving(5, 65); // tiny team: flat price is dearer
     expect(s.save).toBeLessThan(0);
     expect(s.pct).toBe(0);
+  });
+  it("builds a per-platform comparison row with a column per competitor", () => {
+    const r = comparisonRow(20, 65, "Standard");
+    expect(r.competitors.map((c) => c.name)).toEqual(COMPETITOR_PRICING.map((c) => c.name));
+    // cheapestRival is the minimum of the per-platform monthlies
+    expect(r.cheapestRival).toBe(Math.min(...r.competitors.map((c) => c.monthly)));
+    expect(r.save).toBe(r.cheapestRival - 65);
+    expect(r.save).toBeGreaterThan(0); // we beat even the cheapest at 20 people
+  });
+  it("Small Club (£35) is still cheapest at its 10-person cap", () => {
+    const r = comparisonRow(10, 35, "Small Club");
+    // every competitor charges more than our flat £35 at 10 people
+    for (const c of r.competitors) expect(c.monthly).toBeGreaterThan(35);
+    expect(r.save).toBeGreaterThan(0);
+    expect(r.pct).toBeGreaterThan(0);
   });
 });
 

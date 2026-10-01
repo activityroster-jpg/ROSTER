@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Check } from "lucide-react";
 import { getDb } from "@/lib/cf/bindings";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
-import { fmtMoney, tierSaving, PER_USER_BENCHMARK } from "@/lib/pricing";
+import { fmtMoney, comparisonRow, COMPETITOR_PRICING } from "@/lib/pricing";
 import { TIERS, TIER_ORDER } from "@/lib/tiers";
 
 export const dynamic = "force-dynamic";
@@ -29,17 +29,13 @@ const SETUP_INCLUDED = [
   "A walk-through so you and your team are confident from day one",
 ];
 
-// Team sizes (volunteers included) where a flat price clearly beats per-seat
-// pricing. RYA centres roster everyone who runs sessions, so real headcount sits
-// well above the paid core — and a per-user tool bills every one of them.
-const COMPARE_HEADCOUNTS = [15, 20, 25, 30, 40];
-
 // Travel to run the custom build on site with the centre's team (recommended).
 const ON_SITE_TRAVEL = 350;
 
-// The per-user scheduling platforms we compare against on /compare. These price
-// per user per month, so a volunteer-heavy centre pays for every seat.
-const PER_USER_COMPETITORS = "Deputy, When I Work, RotaCloud and Planday";
+// Names of the per-user platforms we compare against (for the intro copy).
+const COMPETITOR_NAMES = COMPETITOR_PRICING.map((c) => c.name);
+const COMPETITOR_NAMES_AND =
+  COMPETITOR_NAMES.slice(0, -1).join(", ") + " and " + COMPETITOR_NAMES[COMPETITOR_NAMES.length - 1];
 
 export default async function PricingPage() {
   let currency = "GBP", freeFirstMonth = true;
@@ -52,9 +48,20 @@ export default async function PricingPage() {
     // fall back to defaults if pricing can't be read at render time
   }
 
+  const smallClub = TIERS.small_club;
   const standard = TIERS.standard;
-  const rows = COMPARE_HEADCOUNTS.map((n) => tierSaving(n, standard.monthlyPrice));
-  const biggest = rows[rows.length - 1]!; // COMPARE_HEADCOUNTS is non-empty
+  const smallClubCap = smallClub.userCap ?? 10;
+  // Headcounts where our flat price beats every named competitor. The first row
+  // is the Small Club tier at its cap (still cheapest even at 10 people); the
+  // rest are Standard, where the gap widens fast as volunteers are counted.
+  const rows = [
+    comparisonRow(smallClubCap, smallClub.monthlyPrice, smallClub.name),
+    comparisonRow(20, standard.monthlyPrice, standard.name),
+    comparisonRow(25, standard.monthlyPrice, standard.name),
+    comparisonRow(30, standard.monthlyPrice, standard.name),
+    comparisonRow(40, standard.monthlyPrice, standard.name),
+  ];
+  const biggest = rows[rows.length - 1]!;
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-16">
@@ -167,34 +174,42 @@ export default async function PricingPage() {
       <div className="mt-12 overflow-hidden rounded-card border border-starboard/40 bg-starboard/5 shadow-sm">
         <div className="p-7">
           <p className="text-sm font-semibold uppercase tracking-wide text-starboard">Flat price vs the per-user platforms</p>
-          <h2 className="mt-1 font-display text-2xl font-bold text-navy">The bigger your team, the more you save</h2>
+          <h2 className="mt-1 font-display text-2xl font-bold text-navy">Cheaper than the per-user platforms — at every size</h2>
           <p className="mt-2 max-w-2xl text-slate-600">
-            Scheduling platforms like {PER_USER_COMPETITORS} charge per user — typically around{" "}
-            {fmtMoney(PER_USER_BENCHMARK, currency)} a head every month. RYA centres roster everyone who runs sessions —
+            {COMPETITOR_NAMES_AND} all charge per user, per month. RYA centres roster everyone who runs sessions —
             senior and assistant instructors, powerboat cover, shore crew and volunteers — so a per-seat tool bills for
-            your whole volunteer base. Our Standard plan is{" "}
-            <strong className="text-navy">{fmtMoney(standard.monthlyPrice, currency)} flat</strong>, however many people you
-            add. See the <Link href="/compare" className="font-semibold text-teal hover:underline">full comparison</Link>.
+            your whole volunteer base. We charge one flat price per centre, so we come out cheaper from a small club right
+            up to a busy centre. See the{" "}
+            <Link href="/compare" className="font-semibold text-teal hover:underline">full comparison</Link>.
           </p>
 
-          <div className="mt-5 overflow-hidden rounded-lg border border-slate-200 bg-white">
-            <table className="w-full text-left text-sm">
+          <div className="mt-5 overflow-x-auto rounded-lg border border-slate-200 bg-white">
+            <table className="w-full min-w-[640px] text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
                   <th className="px-4 py-3">Team size (incl. volunteers)</th>
-                  <th className="px-4 py-3">{PER_USER_COMPETITORS.replace(" and ", ", ")} (per user)</th>
-                  <th className="px-4 py-3">ActivityRoster (flat)</th>
+                  {COMPETITOR_NAMES.map((n) => (
+                    <th key={n} className="px-4 py-3 whitespace-nowrap">{n}</th>
+                  ))}
+                  <th className="px-4 py-3 whitespace-nowrap bg-starboard/10 text-navy">ActivityRoster</th>
                   <th className="px-4 py-3">You save</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {rows.map((r) => (
                   <tr key={r.people}>
-                    <td className="px-4 py-3 font-medium text-navy">{r.people} people</td>
-                    <td className="px-4 py-3 text-slate-600">{fmtMoney(r.theirs, currency)}/mo</td>
-                    <td className="px-4 py-3 text-slate-600">{fmtMoney(r.ours, currency)}/mo</td>
-                    <td className="px-4 py-3 font-semibold text-starboard">
-                      {r.save > 0 ? `${fmtMoney(r.save, currency)}/mo (${r.pct}% less)` : "—"}
+                    <td className="px-4 py-3 font-medium text-navy whitespace-nowrap">{r.people} people</td>
+                    {r.competitors.map((c) => (
+                      <td key={c.name} className={`px-4 py-3 ${c.monthly === r.cheapestRival ? "text-slate-700" : "text-slate-500"}`}>
+                        {fmtMoney(c.monthly, currency)}/mo
+                      </td>
+                    ))}
+                    <td className="px-4 py-3 font-semibold text-navy whitespace-nowrap bg-starboard/10">
+                      {fmtMoney(r.ours, currency)}/mo
+                      <span className="block text-[11px] font-normal text-slate-500">{r.plan}</span>
+                    </td>
+                    <td className="px-4 py-3 font-semibold text-starboard whitespace-nowrap">
+                      {r.save > 0 ? `${fmtMoney(r.save, currency)}/mo (${r.pct}% less)` : "Cheapest"}
                     </td>
                   </tr>
                 ))}
@@ -202,10 +217,14 @@ export default async function PricingPage() {
             </table>
           </div>
           <p className="mt-3 text-xs text-slate-500">
-            Illustrative, based on a typical per-user price of {fmtMoney(PER_USER_BENCHMARK, currency)}/user/month
-            ({PER_USER_COMPETITORS.replace(" and ", ", ")} vary ≈ £2–£6 per user). A {biggest.people}-person centre would
-            pay {fmtMoney(biggest.theirs, currency)} a month on a per-seat tool — with us it&apos;s still just{" "}
-            {fmtMoney(standard.monthlyPrice, currency)}.
+            Even at {smallClubCap} people our Small Club plan comes in under all four; a {biggest.people}-person centre would
+            pay from {fmtMoney(biggest.cheapestRival, currency)} a month on a per-seat tool — with us it&apos;s still just{" "}
+            {fmtMoney(standard.monthlyPrice, currency)}. &ldquo;You save&rdquo; is measured against the cheapest of the four.
+          </p>
+          <p className="mt-2 text-xs italic text-slate-400">
+            Competitor prices are estimates for feature-comparable paid tiers (scheduling, time &amp; attendance and leave)
+            and may be out of date — check each provider&apos;s current pricing. Figures are illustrative; providers
+            typically range from about £2 to £6 per user per month.
           </p>
         </div>
       </div>

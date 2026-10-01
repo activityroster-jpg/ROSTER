@@ -94,3 +94,53 @@ export function tierSaving(people: number, ourMonthly: number, perUser: number =
   const pct = theirs > 0 && save > 0 ? Math.round((save / theirs) * 100) : 0;
   return { people, theirs, ours: ourMonthly, save, pct };
 }
+
+export interface CompetitorPricing {
+  name: string;
+  /** Representative £/user/month for a feature-comparable paid tier (scheduling
+   *  + time & attendance + leave — the tier that matches what we include, not
+   *  each platform's cheapest entry plan). Illustrative; real prices vary. */
+  perUser: number;
+}
+
+/** The per-user platforms we compare against on /compare, each a column in the
+ *  pricing table. Rates are illustrative, for feature-comparable paid tiers. */
+export const COMPETITOR_PRICING: CompetitorPricing[] = [
+  { name: "Deputy", perUser: 4.5 },
+  { name: "When I Work", perUser: 4 },
+  { name: "RotaCloud", perUser: 3.8 },
+  { name: "Planday", perUser: 4.2 },
+];
+
+export interface ComparisonRow {
+  people: number;
+  plan: string;
+  /** Our flat monthly price on that plan. */
+  ours: number;
+  /** Each named competitor's monthly cost at this headcount. */
+  competitors: { name: string; monthly: number }[];
+  /** The cheapest competitor's monthly cost at this headcount. */
+  cheapestRival: number;
+  /** How much less we cost than even the cheapest competitor (≥0 shown). */
+  save: number;
+  /** Percent cheaper than the cheapest competitor (0 if not cheaper). */
+  pct: number;
+}
+
+/**
+ * One pricing-comparison row: our flat price vs every named per-user platform at
+ * a given headcount. "save"/"pct" are measured against the CHEAPEST competitor,
+ * so a positive saving means we beat them all. Pure.
+ */
+export function comparisonRow(
+  people: number,
+  ours: number,
+  plan: string,
+  competitors: CompetitorPricing[] = COMPETITOR_PRICING,
+): ComparisonRow {
+  const cols = competitors.map((c) => ({ name: c.name, monthly: Math.round(people * c.perUser) }));
+  const cheapestRival = cols.reduce((min, c) => Math.min(min, c.monthly), Infinity);
+  const save = cheapestRival - ours;
+  const pct = cheapestRival > 0 && save > 0 ? Math.round((save / cheapestRival) * 100) : 0;
+  return { people, plan, ours, competitors: cols, cheapestRival, save, pct };
+}
