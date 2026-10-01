@@ -1,4 +1,5 @@
 import { getEnv } from "@/lib/cf/bindings";
+import { COMPANY } from "@/lib/config";
 
 /**
  * Minimal transactional mailer. Uses Resend's HTTP API (fetch-only, no Node
@@ -21,10 +22,11 @@ export function renderEmail(bodyHtml: string): string {
   const env = getEnv();
   const apex = env.APP_APEX_DOMAIN || "activityroster.com";
   const site = `https://${apex}`;
-  const legalName = env.COMPANY_LEGAL_NAME || "ActivityRoster";
+  const legalName = env.COMPANY_LEGAL_NAME || COMPANY.legalName;
   const support = env.SUPPORT_EMAIL || `support@${apex}`;
   const year = new Date().getFullYear();
-  const address = env.COMPANY_ADDRESS ? `<div style="margin-top:4px">${env.COMPANY_ADDRESS}</div>` : "";
+  const addressText = env.COMPANY_ADDRESS || COMPANY.addressInline;
+  const address = addressText ? `<div style="margin-top:4px">${addressText}</div>` : "";
 
   return `
   <div style="margin:0;padding:0;background:#f1f5f9">

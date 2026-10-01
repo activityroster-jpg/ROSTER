@@ -8,7 +8,7 @@ export default function PrivacyPage() {
       <P>This policy explains what personal data ActivityRoster (&ldquo;we&rdquo;) processes, why, and your rights under the UK GDPR and the EU GDPR. It covers the ActivityRoster website and the rostering platform used by sailing &amp; watersports centres.</P>
 
       <H2>Who is the data controller</H2>
-      <P>For personal data you give us as a customer or visitor (your account, billing, enquiries), ActivityRoster is the data controller. For data a centre stores about its own staff and operations inside the platform, the centre is the controller and ActivityRoster is the processor acting on the centre&apos;s instructions (see our Data Processing terms).</P>
+      <P>ActivityRoster is a product of <strong>ActiveRoster Ltd</strong>, registered in England &amp; Wales, 71-75 Shelton Street, London WC2H 9JQ, United Kingdom. For personal data you give us as a customer or visitor (your account, billing, enquiries), ActiveRoster Ltd is the data controller. For data a centre stores about its own staff and operations inside the platform, the centre is the controller and ActiveRoster Ltd is the processor acting on the centre&apos;s instructions (see our Data Processing terms).</P>
 
       <H2>What we collect</H2>
       <UL items={[
@@ -43,7 +43,7 @@ export default function PrivacyPage() {
       <P>Passwords and PINs are stored only as salted hashes; documents are held in a private, per-centre file store; each centre&apos;s data is strictly isolated; and access is authorised on every request. We use TLS in transit and apply security headers and rate limiting.</P>
 
       <H2>Contact</H2>
-      <P>Questions about this policy: <a className="text-teal hover:underline" href="mailto:privacy@activityroster.com">privacy@activityroster.com</a>.</P>
+      <P>Questions about this policy: <a className="text-teal hover:underline" href="mailto:privacy@activityroster.com">privacy@activityroster.com</a>. Or write to us at ActiveRoster Ltd, 71-75 Shelton Street, London WC2H 9JQ, United Kingdom.</P>
     </LegalPage>
   );
 }

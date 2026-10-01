@@ -5,7 +5,7 @@ export const metadata = { title: "Terms of Service · ActivityRoster" };
 export default function TermsPage() {
   return (
     <LegalPage title="Terms of Service" updated="29 September 2026">
-      <P>These terms govern your use of ActivityRoster. By creating an account or using the service, you agree to them.</P>
+      <P>These terms govern your use of ActivityRoster, a product operated by <strong>ActiveRoster Ltd</strong>, a company registered in England &amp; Wales with its registered office at 71-75 Shelton Street, London WC2H 9JQ, United Kingdom (&ldquo;we&rdquo;, &ldquo;us&rdquo;). By creating an account or using the service, you agree to them.</P>
 
       <H2>The service</H2>
       <P>ActivityRoster is a subscription tool for staff rostering, compliance tracking and course administration for sailing &amp; watersports centres. We may improve or change features over time; we won&apos;t materially reduce the core service you pay for without notice.</P>

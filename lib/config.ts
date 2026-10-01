@@ -8,3 +8,17 @@ export const DEFAULT_APEX = "activityroster.com";
 export function apexDomain(): string {
   return process.env.NEXT_PUBLIC_APEX_DOMAIN || DEFAULT_APEX;
 }
+
+/**
+ * The legal company behind the ActivityRoster product. Single source of truth for
+ * the site footer, legal pages and email templates. `name` is the trading/product
+ * name; `legalName` is the registered company shown where the law requires it.
+ */
+export const COMPANY = {
+  name: "ActivityRoster",
+  legalName: "ActiveRoster Ltd",
+  addressLines: ["71-75 Shelton Street", "London", "WC2H 9JQ", "United Kingdom"],
+  get addressInline() {
+    return this.addressLines.join(", ");
+  },
+};
