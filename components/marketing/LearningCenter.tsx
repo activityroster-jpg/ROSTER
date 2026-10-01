@@ -310,11 +310,12 @@ const SECTIONS: Section[] = [
     label: "Plans & team size",
     blurb: "Flat pricing per centre, and how the team-size limit works.",
     blocks: [
-      { kind: "p", text: "ActivityRoster is priced per centre, not per user — one flat price however many people you roster. There are two plans, and you can move between them whenever you like." },
-      { kind: "sub", text: "The two plans" },
+      { kind: "p", text: "ActivityRoster is priced per centre, not per user — one flat price however many people you roster. Pick a plan and move between them whenever you like." },
+      { kind: "sub", text: "The plans" },
       { kind: "bullets", items: [
         "Small Club — £35/month. Designed for smaller centres: up to 10 people on your team.",
         "Standard — £65/month. Unlimited instructors and volunteers.",
+        "Custom platform (recommended) — from £850 setup, plus £350 travel if we work with your team on site, then £65/month. We build and tailor the whole thing around exactly how your centre runs and hand it over ready to go.",
       ] },
       { kind: "sub", text: "How the Small Club limit works" },
       { kind: "p", text: "On Small Club you can add up to 10 people in total. Everyone counts towards the 10 — paid instructors and volunteers alike. When you try to add the 11th person, we'll let you know you've reached the limit and prompt you to upgrade to Standard for unlimited team members." },

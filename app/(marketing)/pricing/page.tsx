@@ -34,6 +34,13 @@ const SETUP_INCLUDED = [
 // well above the paid core — and a per-user tool bills every one of them.
 const COMPARE_HEADCOUNTS = [15, 20, 25, 30, 40];
 
+// Travel to run the custom build on site with the centre's team (recommended).
+const ON_SITE_TRAVEL = 350;
+
+// The per-user scheduling platforms we compare against on /compare. These price
+// per user per month, so a volunteer-heavy centre pays for every seat.
+const PER_USER_COMPETITORS = "Deputy, When I Work, RotaCloud and Planday";
+
 export default async function PricingPage() {
   let currency = "GBP", freeFirstMonth = true;
   let setupPrice = 850, setupEnabled = true;
@@ -50,7 +57,7 @@ export default async function PricingPage() {
   const biggest = rows[rows.length - 1]!; // COMPARE_HEADCOUNTS is non-empty
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-16">
+    <div className="mx-auto max-w-5xl px-4 py-16">
       <div className="text-center">
         <p className="text-sm font-semibold uppercase tracking-wide text-teal">Pricing</p>
         <h1 className="mt-1 font-display text-3xl font-bold text-navy">One flat price for your whole centre</h1>
@@ -60,8 +67,8 @@ export default async function PricingPage() {
         </p>
       </div>
 
-      {/* Two tiers */}
-      <div className="mt-10 grid gap-6 md:grid-cols-2">
+      {/* Plans */}
+      <div className={`mt-10 grid gap-6 ${setupEnabled ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
         {TIER_ORDER.map((tid) => {
           const t = TIERS[tid];
           const popular = tid === "standard";
@@ -100,9 +107,37 @@ export default async function PricingPage() {
             </div>
           );
         })}
+
+        {/* Custom platform — done-for-you build (replaces the standalone setup offer) */}
+        {setupEnabled ? (
+          <div className="relative overflow-hidden rounded-card border border-amber/60 shadow-sm">
+            <div className="bg-amber-500 px-6 py-2 text-center text-xs font-semibold uppercase tracking-wide text-navy">
+              Done for you · recommended
+            </div>
+            <div className="p-7">
+              <h2 className="font-display text-xl font-bold text-navy">Custom platform</h2>
+              <p className="mt-1 text-sm text-slate-500">We build and tailor it around exactly how your centre runs.</p>
+              <p className="mt-4">
+                <span className="font-display text-4xl font-bold text-navy">from {fmtMoney(setupPrice, currency)}</span>
+                <span className="ml-1 text-slate-500">setup</span>
+              </p>
+              <p className="mt-1 text-sm text-slate-500">+ {fmtMoney(ON_SITE_TRAVEL, currency)} travel to work with your team on site (recommended)</p>
+              <p className="mt-1 text-sm text-slate-500">then {fmtMoney(standard.monthlyPrice, currency)}/month</p>
+              <p className="mt-3 inline-flex rounded-full bg-amber/15 px-3 py-1 text-xs font-semibold text-amber-700">
+                Unlimited team · everything set up for you
+              </p>
+              <a
+                href="/#get-demo"
+                className="mt-6 block rounded-lg bg-amber-500 px-6 py-3 text-center font-semibold text-navy transition hover:bg-amber-400"
+              >
+                Talk to us about custom
+              </a>
+            </div>
+          </div>
+        ) : null}
       </div>
       <p className="mt-3 text-center text-xs text-slate-500">
-        Both plans include everything below. On Small Club you can add up to {TIERS.small_club.userCap} people;
+        Every plan includes everything below. On Small Club you can add up to {TIERS.small_club.userCap} people;
         when your team grows, upgrade to Standard for unlimited instructors and volunteers in a click.
       </p>
 
@@ -131,13 +166,15 @@ export default async function PricingPage() {
       {/* Competitor savings */}
       <div className="mt-12 overflow-hidden rounded-card border border-starboard/40 bg-starboard/5 shadow-sm">
         <div className="p-7">
-          <p className="text-sm font-semibold uppercase tracking-wide text-starboard">Flat price vs per-user tools</p>
+          <p className="text-sm font-semibold uppercase tracking-wide text-starboard">Flat price vs the per-user platforms</p>
           <h2 className="mt-1 font-display text-2xl font-bold text-navy">The bigger your team, the more you save</h2>
           <p className="mt-2 max-w-2xl text-slate-600">
-            Most rostering tools charge per user, around {fmtMoney(PER_USER_BENCHMARK, currency)} a head every month. RYA
-            centres roster everyone who runs sessions — senior and assistant instructors, powerboat cover, shore crew and
-            volunteers — so per-seat tools bill for your whole volunteer base. Our Standard plan is{" "}
-            <strong className="text-navy">{fmtMoney(standard.monthlyPrice, currency)} flat</strong>, however many people you add.
+            Scheduling platforms like {PER_USER_COMPETITORS} charge per user — typically around{" "}
+            {fmtMoney(PER_USER_BENCHMARK, currency)} a head every month. RYA centres roster everyone who runs sessions —
+            senior and assistant instructors, powerboat cover, shore crew and volunteers — so a per-seat tool bills for
+            your whole volunteer base. Our Standard plan is{" "}
+            <strong className="text-navy">{fmtMoney(standard.monthlyPrice, currency)} flat</strong>, however many people you
+            add. See the <Link href="/compare" className="font-semibold text-teal hover:underline">full comparison</Link>.
           </p>
 
           <div className="mt-5 overflow-hidden rounded-lg border border-slate-200 bg-white">
@@ -145,7 +182,7 @@ export default async function PricingPage() {
               <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
                   <th className="px-4 py-3">Team size (incl. volunteers)</th>
-                  <th className="px-4 py-3">Per-user tools (~{fmtMoney(PER_USER_BENCHMARK, currency)}/head)</th>
+                  <th className="px-4 py-3">{PER_USER_COMPETITORS.replace(" and ", ", ")} (per user)</th>
                   <th className="px-4 py-3">ActivityRoster (flat)</th>
                   <th className="px-4 py-3">You save</th>
                 </tr>
@@ -165,9 +202,9 @@ export default async function PricingPage() {
             </table>
           </div>
           <p className="mt-3 text-xs text-slate-500">
-            Illustrative, based on a typical per-user price of {fmtMoney(PER_USER_BENCHMARK, currency)}/user/month (tools vary ≈ £2–£6).
-            A {biggest.people}-person centre would pay{" "}
-            {fmtMoney(biggest.theirs, currency)} a month on a per-seat tool — with us it&apos;s still just{" "}
+            Illustrative, based on a typical per-user price of {fmtMoney(PER_USER_BENCHMARK, currency)}/user/month
+            ({PER_USER_COMPETITORS.replace(" and ", ", ")} vary ≈ £2–£6 per user). A {biggest.people}-person centre would
+            pay {fmtMoney(biggest.theirs, currency)} a month on a per-seat tool — with us it&apos;s still just{" "}
             {fmtMoney(standard.monthlyPrice, currency)}.
           </p>
         </div>
@@ -175,36 +212,27 @@ export default async function PricingPage() {
 
       {setupEnabled ? (
         <div className="mt-10 overflow-hidden rounded-card border border-amber/60 bg-amber/5 shadow-sm">
-          <div className="grid gap-0 md:grid-cols-[1.2fr_1fr]">
-            <div className="p-7">
-              <p className="text-sm font-semibold uppercase tracking-wide text-amber-700">Optional · done for you</p>
-              <h2 className="mt-1 font-display text-2xl font-bold text-navy">We&apos;ll set it up and customise it exactly how you want</h2>
-              <p className="mt-2 text-slate-600">
-                Short on time, or want it just so? For a one-off fee we&apos;ll build the platform around exactly how your
-                centre runs — tailoring the setup, adding the custom features and tweaks you ask for, importing your data,
-                and handing it over ready to go. Tell us how you want it to work and we&apos;ll make it work like that.
-                After that you simply continue on the normal plan.
-              </p>
-              <ul className="mt-4 grid gap-2">
-                {SETUP_INCLUDED.map((f) => (
-                  <li key={f} className="flex items-start gap-2 text-sm text-slate-700">
-                    <Check className="mt-0.5 h-4 w-4 flex-none text-amber-600" />
-                    <span>{f}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="flex flex-col justify-center border-t border-amber/40 bg-white p-7 text-center md:border-l md:border-t-0">
-              <p className="text-sm font-semibold uppercase tracking-wide text-slate-400">One-off setup</p>
-              <p className="mt-2"><span className="font-display text-4xl font-bold text-navy">{fmtMoney(setupPrice, currency)}</span></p>
-              <p className="mt-1 text-sm text-slate-500">Single payment · then the normal plan</p>
-              <a href="/api/billing/setup" className="mt-5 block rounded-lg bg-amber-500 px-6 py-3 text-center font-semibold text-navy transition hover:bg-amber-400">
-                Get done-for-you setup
-              </a>
-              <Link href="/#get-demo" className="mt-2 text-xs font-semibold text-teal hover:underline">
-                Questions first? Talk to us
-              </Link>
-            </div>
+          <div className="p-7">
+            <p className="text-sm font-semibold uppercase tracking-wide text-amber-700">Custom platform · recommended</p>
+            <h2 className="mt-1 font-display text-2xl font-bold text-navy">What the done-for-you build includes</h2>
+            <p className="mt-2 max-w-2xl text-slate-600">
+              Want it just so? We&apos;ll build the platform around exactly how your centre runs. It&apos;s{" "}
+              <strong className="text-navy">from {fmtMoney(setupPrice, currency)} setup</strong>, plus{" "}
+              <strong className="text-navy">{fmtMoney(ON_SITE_TRAVEL, currency)} travel</strong> if we come and work with
+              your team on site (recommended) — then you continue on the normal{" "}
+              {fmtMoney(standard.monthlyPrice, currency)}/month plan with an unlimited team.
+            </p>
+            <ul className="mt-4 grid gap-2 sm:grid-cols-2">
+              {SETUP_INCLUDED.map((f) => (
+                <li key={f} className="flex items-start gap-2 text-sm text-slate-700">
+                  <Check className="mt-0.5 h-4 w-4 flex-none text-amber-600" />
+                  <span>{f}</span>
+                </li>
+              ))}
+            </ul>
+            <a href="/#get-demo" className="mt-6 inline-block rounded-lg bg-amber-500 px-6 py-3 text-center font-semibold text-navy transition hover:bg-amber-400">
+              Talk to us about a custom build
+            </a>
           </div>
         </div>
       ) : null}
