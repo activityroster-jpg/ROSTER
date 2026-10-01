@@ -139,9 +139,9 @@ export default function MarketingHome() {
               without safety cover, and it tracks every ticket so nothing lapses.
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
-              <a href="#get-demo" className="rounded-lg bg-[#0C6B74] px-6 py-3 font-semibold text-white shadow-lg transition hover:bg-teal-700">
-                Try free for a month →
-              </a>
+              <Link href="/book" className="rounded-lg bg-[#0C6B74] px-6 py-3 font-semibold text-white shadow-lg transition hover:bg-teal-700">
+                Schedule a call →
+              </Link>
               <Link href="/demo" className="rounded-lg border border-white/25 px-6 py-3 font-semibold text-white hover:bg-white/10">
                 Explore the demo
               </Link>

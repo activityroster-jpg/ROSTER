@@ -386,6 +386,44 @@ export const platformTask = sqliteTable("platform_task", {
   updatedAt: updatedAt(),
 }, (t) => [index("platform_task_status_idx").on(t.status)]);
 
+// --- Discovery-call scheduling (control-plane, admin-only) ------------------
+
+/**
+ * A recurring weekly availability window for discovery calls, in UTC/GMT.
+ * The admin sets these; the public booking page turns them into 30-minute slots
+ * and removes any that are already booked or in the past.
+ */
+export const callAvailability = sqliteTable("call_availability", {
+  id: id(),
+  dayOfWeek: integer("day_of_week").notNull(), // 0 = Sunday … 6 = Saturday (UTC)
+  startMinute: integer("start_minute").notNull(), // minutes from 00:00 UTC
+  endMinute: integer("end_minute").notNull(),
+  active: boolCol("active").notNull().default(true),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, (t) => [index("call_availability_day_idx").on(t.dayOfWeek)]);
+
+export const CALL_BOOKING_STATUSES = ["booked", "cancelled", "completed"] as const;
+export type CallBookingStatus = (typeof CALL_BOOKING_STATUSES)[number];
+
+/** A booked 30-minute discovery call. `startAt` is the slot start in UTC. */
+export const callBooking = sqliteTable("call_booking", {
+  id: id(),
+  startAt: integer("start_at", { mode: "timestamp_ms" }).notNull(),
+  durationMin: integer("duration_min").notNull().default(30),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  centre: text("centre"),
+  notes: text("notes"),
+  status: text("status", { enum: CALL_BOOKING_STATUSES }).notNull().default("booked"),
+  createdAt: createdAt(),
+}, (t) => [index("call_booking_start_idx").on(t.startAt)]);
+
+export type CallAvailability = typeof callAvailability.$inferSelect;
+export type NewCallAvailability = typeof callAvailability.$inferInsert;
+export type CallBooking = typeof callBooking.$inferSelect;
+export type NewCallBooking = typeof callBooking.$inferInsert;
+
 export type Organisation = typeof organisation.$inferSelect;
 export type NewOrganisation = typeof organisation.$inferInsert;
 export type Membership = typeof membership.$inferSelect;

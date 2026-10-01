@@ -169,6 +169,13 @@
       "when": 1790866957272,
       "tag": "0023_prospect_statuses",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1790874563013,
+      "tag": "0024_call_scheduling",
+      "breakpoints": true
     }
   ]
 }

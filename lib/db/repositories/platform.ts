@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, lte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, lte, sql } from "drizzle-orm";
 import type { Database } from "@/lib/db/client";
 import {
   organisation,
@@ -14,6 +14,13 @@ import {
   blogPost,
   integration,
   platformTask,
+  callAvailability,
+  callBooking,
+  type CallAvailability,
+  type NewCallAvailability,
+  type CallBooking,
+  type NewCallBooking,
+  type CallBookingStatus,
   type BlogPost,
   type NewBlogPost,
   type MarketingProspect,
@@ -195,6 +202,57 @@ export class PlatformRepository {
   async countProspects(): Promise<number> {
     const rows = await this.db.select({ id: marketingProspect.id }).from(marketingProspect);
     return rows.length;
+  }
+
+  // --- Discovery-call scheduling ------------------------------------------
+
+  async listAvailability(): Promise<CallAvailability[]> {
+    return this.db.select().from(callAvailability).orderBy(asc(callAvailability.dayOfWeek), asc(callAvailability.startMinute));
+  }
+
+  async addAvailability(w: Omit<NewCallAvailability, "id" | "createdAt" | "updatedAt">): Promise<CallAvailability> {
+    const rows = await this.db.insert(callAvailability).values(w).returning();
+    return rows[0]!;
+  }
+
+  async deleteAvailability(id: string): Promise<void> {
+    await this.db.delete(callAvailability).where(eq(callAvailability.id, id));
+  }
+
+  /** Booked (non-cancelled) call start times from `from` onward — used to remove taken slots. */
+  async bookedSlotsFrom(from: Date): Promise<Date[]> {
+    const rows = await this.db
+      .select({ startAt: callBooking.startAt, status: callBooking.status })
+      .from(callBooking)
+      .where(gte(callBooking.startAt, from));
+    return rows.filter((r) => r.status !== "cancelled").map((r) => r.startAt);
+  }
+
+  /** Is this exact slot still free? (guards against a double-booking race) */
+  async isSlotFree(startAt: Date): Promise<boolean> {
+    const rows = await this.db
+      .select({ id: callBooking.id, status: callBooking.status })
+      .from(callBooking)
+      .where(eq(callBooking.startAt, startAt));
+    return rows.every((r) => r.status === "cancelled");
+  }
+
+  async createBooking(b: Omit<NewCallBooking, "id" | "createdAt">): Promise<CallBooking> {
+    const rows = await this.db.insert(callBooking).values(b).returning();
+    return rows[0]!;
+  }
+
+  async listBookings(from?: Date): Promise<CallBooking[]> {
+    const base = this.db.select().from(callBooking);
+    const rows = from
+      ? await base.where(gte(callBooking.startAt, from)).orderBy(asc(callBooking.startAt))
+      : await base.orderBy(asc(callBooking.startAt));
+    return rows;
+  }
+
+  async setBookingStatus(id: string, status: CallBookingStatus): Promise<CallBooking | null> {
+    const rows = await this.db.update(callBooking).set({ status }).where(eq(callBooking.id, id)).returning();
+    return rows[0] ?? null;
   }
 
   // --- Cross-centre change log --------------------------------------------
