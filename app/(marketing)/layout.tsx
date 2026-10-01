@@ -35,7 +35,8 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
             </a>
           </div>
           <p>© {new Date().getFullYear()} ActiveRoster Ltd. EU-hosted. GDPR-ready.</p>
-          <p className="mt-1">ActivityRoster is a product of ActiveRoster Ltd, 71-75 Shelton Street, London WC2H 9JQ · Built for RYA sailing &amp; watersports centres.</p>
+          <p className="mt-1">ActivityRoster is a product of ActiveRoster Ltd, a company registered in England &amp; Wales. Registered office: 71-75 Shelton Street, London WC2H 9JQ.</p>
+          <p className="mt-1">Built for RYA sailing &amp; watersports centres.</p>
         </div>
       </footer>
       <CookieNotice />
