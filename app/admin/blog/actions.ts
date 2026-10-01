@@ -239,7 +239,7 @@ export async function fetchCoverImageAction(postId: string): Promise<BlogResult>
  * within the provider's rate limit and the Worker's per-request subrequest budget
  * — run it a few times to cover the whole blog. Avoids repeating photos.
  */
-export async function fetchMissingCoversAction(limit = 10): Promise<BlogResult> {
+export async function fetchMissingCoversAction(limit = 6): Promise<BlogResult> {
   const repo = await platform();
   const env = getEnv();
   if (!hasStockKey(env)) return { ok: false, error: NO_KEY };
@@ -247,8 +247,10 @@ export async function fetchMissingCoversAction(limit = 10): Promise<BlogResult> 
   const used = new Set(all.map((p) => p.coverImageCreditUrl).filter(Boolean) as string[]);
   const missing = all.filter((p) => !p.coverImageKey).slice(0, limit);
   let done = 0;
-  for (const post of missing) {
+  let rateLimited = false;
+  for (const [i, post] of missing.entries()) {
     try {
+      if (i > 0) await new Promise((r) => setTimeout(r, 500)); // gentle spacing to avoid 429s
       const candidate = await findCover(env, queryForArticle(post), used);
       if (!candidate) continue;
       const key = newCoverKey(post.slug);
@@ -261,12 +263,16 @@ export async function fetchMissingCoversAction(limit = 10): Promise<BlogResult> 
       });
       used.add(candidate.creditUrl); // don't reuse it on the next post in this run
       done++;
-    } catch {
-      // skip this one; the next run will retry it
+    } catch (e) {
+      if ((e as Error).message?.includes("429")) { rateLimited = true; break; } // stop; let the limit reset
+      // otherwise skip this one; the next run will retry it
     }
   }
   const remaining = all.filter((p) => !p.coverImageKey).length - done;
   revalidatePath("/admin/blog");
   revalidatePath("/blog");
-  return { ok: true, message: `Fetched ${done} cover image${done === 1 ? "" : "s"}${remaining > 0 ? ` — ${remaining} still to do, run again` : " — all done"}.` };
+  const suffix = rateLimited
+    ? ` — hit the Pixabay rate limit, wait a minute then run again (${remaining} to do)`
+    : remaining > 0 ? ` — ${remaining} still to do, run again` : " — all done";
+  return { ok: true, message: `Fetched ${done} cover image${done === 1 ? "" : "s"}${suffix}.` };
 }
