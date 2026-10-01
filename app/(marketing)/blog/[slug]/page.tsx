@@ -4,7 +4,8 @@ import type { Metadata } from "next";
 import { getDb } from "@/lib/cf/bindings";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { renderMarkdown, readingMinutes } from "@/lib/blog/markdown";
-import { blogCoverUrl } from "@/lib/blog/images";
+import { blogCoverUrl, coverImageFor } from "@/lib/blog/images";
+import { SmartImg } from "@/components/blog/SmartImg";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +54,10 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   const html = renderMarkdown(post.body);
   const mins = readingMinutes(post.body);
   const tags = post.tags.split(",").map((t) => t.trim()).filter(Boolean);
+  // Only show a credit for a real self-hosted cover with a genuine-looking name
+  // (reject placeholder/column-name values like "cover_image_credit").
+  const rawCredit = (post.coverImageCredit ?? "").trim();
+  const credit = post.coverImageKey && /[A-Z ]/.test(rawCredit) ? rawCredit : null;
   const publishedIso = post.publishAt ? new Date(post.publishAt instanceof Date ? post.publishAt.getTime() : Number(post.publishAt)).toISOString() : undefined;
   const jsonLd = {
     "@context": "https://schema.org",
@@ -83,15 +88,15 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
 
       <figure className="mt-6">
         <div className="relative h-56 w-full overflow-hidden rounded-card sm:h-80">
-          <img src={blogCoverUrl(post.coverImageKey, post.slug, post.category)} alt={post.title} className="h-full w-full object-cover" />
+          <SmartImg src={blogCoverUrl(post.coverImageKey, post.slug, post.category)} fallback={coverImageFor(post.slug, post.category)} alt={post.title} loading="eager" className="h-full w-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-navy/25 to-transparent" />
         </div>
-        {post.coverImageCredit ? (
+        {credit ? (
           <figcaption className="mt-1.5 text-right text-xs text-slate-400">
             Photo:{" "}
             {post.coverImageCreditUrl
-              ? <a href={post.coverImageCreditUrl} target="_blank" rel="noopener noreferrer nofollow" className="hover:text-teal">{post.coverImageCredit}</a>
-              : post.coverImageCredit}
+              ? <a href={post.coverImageCreditUrl} target="_blank" rel="noopener noreferrer nofollow" className="hover:text-teal">{credit}</a>
+              : credit}
           </figcaption>
         ) : null}
       </figure>
