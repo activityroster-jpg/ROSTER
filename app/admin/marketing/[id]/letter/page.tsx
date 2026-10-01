@@ -45,8 +45,17 @@ export default async function ProspectLetterPage({ params }: { params: Promise<{
         @media print {
           html, body { background: #fff !important; }
           .no-print { display: none !important; }
-          .letter-sheet { box-shadow: none !important; margin: 0 !important; }
-          .window-guide { display: none !important; }
+          /* This page lives inside the admin layout, so a browser "Save as PDF"
+             would otherwise drag in the nav header, page padding and the toolbar
+             and reflow the A4 sheet. Print ONLY the letter sheet. */
+          body * { visibility: hidden !important; }
+          .letter-sheet, .letter-sheet * { visibility: visible !important; }
+          .letter-sheet {
+            position: absolute !important; top: 0 !important; left: 0 !important;
+            margin: 0 !important; box-shadow: none !important;
+          }
+          /* Keep the address visible — only drop the on-screen dashed guide. */
+          .window-guide { outline: none !important; }
         }
         .letter-sheet { width: 210mm; min-height: 297mm; margin: 0 auto; background: #fff; position: relative; padding: 20mm; }
         /* The physical window aperture. On screen we draw a faint dashed guide so you can eyeball the fit; it never prints. */
@@ -123,6 +132,8 @@ export default async function ProspectLetterPage({ params }: { params: Promise<{
           <div style={{ marginTop: "16mm" }} className="sign-line" />
           <p style={{ marginTop: "2mm", fontWeight: 600 }}>{LETTER_SENDER.signOffName}</p>
           <p style={{ fontSize: "9pt", color: "#555" }}>{LETTER_SENDER.name}</p>
+
+          <p style={{ marginTop: "10mm", fontWeight: 700 }}>{LETTER_SENDER.website}</p>
         </div>
       </div>
     </>
