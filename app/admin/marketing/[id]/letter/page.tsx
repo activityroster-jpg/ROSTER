@@ -33,8 +33,7 @@ export default async function ProspectLetterPage({ params }: { params: Promise<{
   const p = await platform.prospectById(id);
   if (!p) notFound();
 
-  const today = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
-  const addressLines = [p.name, p.addressLine1, p.addressLine2, p.city, p.postcode, p.country].filter(Boolean) as string[];
+  const addressLines =[p.name, p.addressLine1, p.addressLine2, p.city, p.postcode, p.country].filter(Boolean) as string[];
   const greetingName = p.contactName || (p.contactRole ? `${p.contactRole}` : "Principal");
   const senderAddr = [LETTER_SENDER.line1, LETTER_SENDER.line2, LETTER_SENDER.city, LETTER_SENDER.postcode].filter(Boolean);
 
@@ -90,8 +89,7 @@ export default async function ProspectLetterPage({ params }: { params: Promise<{
         </div>
 
         <div className="letter-body">
-          <p>{today}</p>
-          <p style={{ marginTop: "8mm" }}>Dear {greetingName},</p>
+          <p>Dear {greetingName},</p>
 
           <p style={{ marginTop: "6mm" }}>
             I&apos;m writing to introduce <strong>ActivityRoster</strong>, a staff-rostering and compliance tool built
@@ -111,10 +109,13 @@ export default async function ProspectLetterPage({ params }: { params: Promise<{
           </p>
           <p style={{ marginTop: "4mm" }}>
             Centres are up and running in a weekend — you can even import your existing courses straight from a
-            spreadsheet or calendar. It&apos;s a single, simple subscription, and the first month is free.
+            spreadsheet or calendar. It&apos;s a single, simple subscription, and the best way to see if it fits is
+            to try it: the first month is completely free, with no card required, so you can set up {p.name} and run a
+            real week before you decide.
           </p>
           <p style={{ marginTop: "4mm" }}>
-            If this sounds useful, I&apos;d welcome a short call, or you can see it for yourself at {LETTER_SENDER.website}.
+            If this sounds useful, I&apos;d welcome a short call, or you can start your free month and look around for
+            yourself at {LETTER_SENDER.website}.
           </p>
 
           <p style={{ marginTop: "8mm" }}>Kind regards,</p>
