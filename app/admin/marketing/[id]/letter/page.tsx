@@ -7,6 +7,23 @@ import { LETTER_SENDER } from "@/lib/marketing";
 
 export const dynamic = "force-dynamic";
 
+// The browser derives the "Save as PDF" filename from the page <title>, so give
+// each prospect's letter a unique, filename-friendly title. That way you can save
+// 20 letters without them all landing as the same name and prompting to replace.
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  let name = "";
+  try {
+    const p = await new PlatformRepository(await getDb()).prospectById(id);
+    name = p?.name ?? "";
+  } catch {
+    // fall back to the id below
+  }
+  const safe = name.replace(/[^\w\s-]/g, "").trim().replace(/\s+/g, "-");
+  // `absolute` bypasses the root "%s | ActivityRoster" template so the filename stays clean.
+  return { title: { absolute: `ActivityRoster-letter-${safe ? `${safe}-` : ""}${id.slice(0, 8)}` } };
+}
+
 /*
  * Envelope window geometry, in millimetres from the top-left of the A4 sheet.
  * Measured against a standard DL/C5 window envelope. If your envelopes differ,
