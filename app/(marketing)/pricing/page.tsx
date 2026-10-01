@@ -133,12 +133,12 @@ export default async function PricingPage() {
               <p className="mt-3 inline-flex rounded-full bg-amber/15 px-3 py-1 text-xs font-semibold text-amber-700">
                 Unlimited team · everything set up for you
               </p>
-              <a
-                href="/#get-demo"
+              <Link
+                href="/contact"
                 className="mt-6 block rounded-lg bg-amber-500 px-6 py-3 text-center font-semibold text-navy transition hover:bg-amber-400"
               >
                 Talk to us about custom
-              </a>
+              </Link>
             </div>
           </div>
         ) : null}
@@ -249,9 +249,9 @@ export default async function PricingPage() {
                 </li>
               ))}
             </ul>
-            <a href="/#get-demo" className="mt-6 inline-block rounded-lg bg-amber-500 px-6 py-3 text-center font-semibold text-navy transition hover:bg-amber-400">
+            <Link href="/contact" className="mt-6 inline-block rounded-lg bg-amber-500 px-6 py-3 text-center font-semibold text-navy transition hover:bg-amber-400">
               Talk to us about a custom build
-            </a>
+            </Link>
           </div>
         </div>
       ) : null}
@@ -259,7 +259,7 @@ export default async function PricingPage() {
       <p className="mt-8 text-center text-sm text-slate-500">
         Prefer to set things up yourself? The platform is designed to be quick to get going, and{" "}
         <Link href="/learn" className="font-semibold text-teal hover:underline">the Learning Centre</Link> walks you
-        through every step — or <Link href="/#get-demo" className="font-semibold text-teal hover:underline">talk to us</Link>.
+        through every step — or <Link href="/contact" className="font-semibold text-teal hover:underline">talk to us</Link>.
       </p>
     </div>
   );

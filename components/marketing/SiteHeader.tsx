@@ -11,6 +11,7 @@ const PRIMARY = [
   { href: "/pricing", label: "Pricing" },
   { href: "/learn", label: "Learn" },
   { href: "/demo", label: "Demo" },
+  { href: "/contact", label: "Contact" },
 ];
 
 /** The full set, shown in the mobile menu (includes the secondary pages). */
@@ -21,6 +22,7 @@ const ALL = [
   { href: "/learn", label: "Learning Centre" },
   { href: "/blog", label: "Blog" },
   { href: "/demo", label: "Demo" },
+  { href: "/contact", label: "Contact" },
 ];
 
 export function SiteHeader() {
