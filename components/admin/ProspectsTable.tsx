@@ -184,6 +184,10 @@ export function ProspectsTable({ rows }: { rows: ProspectRow[] }) {
                       onClick={(e) => { if (!complete) e.preventDefault(); }}>
                       Letter
                     </a>
+                    <a href={`/admin/marketing/${r.id}/mockup`} target="_blank" rel="noreferrer" title="A personalised mock-up of their platform — print or save as PDF"
+                      className="rounded-lg bg-violet-700 px-2.5 py-1 text-center text-xs font-semibold text-white hover:bg-violet-800">
+                      Mock-up PDF
+                    </a>
                     {r.email
                       ? <a href={mailtoHref(r)} title="Draft an email in your mail app" className="rounded-lg border border-slate-300 px-2.5 py-1 text-center text-xs font-semibold text-navy hover:border-teal hover:text-teal">Email</a>
                       : <span title="No email on file" className="cursor-not-allowed rounded-lg border border-slate-200 px-2.5 py-1 text-center text-xs font-semibold text-slate-300">Email</span>}
