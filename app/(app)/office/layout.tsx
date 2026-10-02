@@ -15,9 +15,10 @@ import {
   CreditCard,
 } from "lucide-react";
 import { requireTenant } from "@/lib/tenant/require";
-import { getDb } from "@/lib/cf/bindings";
+import { getDb, getRepositories } from "@/lib/cf/bindings";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { Logo } from "@/components/Logo";
+import { TwoFactorNudge } from "@/components/office/TwoFactorNudge";
 
 const NAV = [
   {
@@ -51,7 +52,17 @@ const NAV = [
 ];
 
 export default async function OfficeLayout({ children }: { children: React.ReactNode }) {
-  const { organisation } = await requireTenant({ role: "admin" });
+  const { ctx, organisation } = await requireTenant({ role: "admin" });
+
+  // Nudge the admin to turn on 2FA once they've added staff (dismissible).
+  let show2fa = false;
+  try {
+    const { control, tenant } = await getRepositories();
+    const me = await control.userById(ctx.userId);
+    if (me && !me.twoFactorEnabled) {
+      show2fa = (await tenant.instructor.count(ctx)) >= 1;
+    }
+  } catch { show2fa = false; }
 
   // Billing nudge: distinguish an active free trial from a failed payment.
   const sub = organisation.subscriptionStatus;
@@ -103,6 +114,7 @@ export default async function OfficeLayout({ children }: { children: React.React
         </div>
       </aside>
       <div className="flex-1 overflow-x-hidden">
+        {show2fa ? <TwoFactorNudge /> : null}
         {banner?.kind === "pastdue" ? (
           <Link href="/office/billing" className="block bg-port/15 px-6 py-2 text-center text-sm font-medium text-port hover:bg-port/20">
             Your last payment failed — update your card to keep your centre active →

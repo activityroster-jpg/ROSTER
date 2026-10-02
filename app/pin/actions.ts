@@ -9,6 +9,7 @@ import {
   pinCookieValue,
   verifyPin,
   PIN_COOKIE,
+  PIN_IDLE_MAX_AGE_S,
   PIN_LOCK_MS,
   PIN_MAX_FAILS,
   PIN_REGEX,
@@ -40,7 +41,7 @@ async function setVerifiedCookie(sessionId: string) {
     sameSite: "lax",
     path: "/",
     domain: `.${env.APP_APEX_DOMAIN}`,
-    maxAge: 60 * 60 * 24 * 7,
+    maxAge: PIN_IDLE_MAX_AGE_S,
   });
 }
 

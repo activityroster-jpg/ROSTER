@@ -9,6 +9,10 @@
  */
 
 export const PIN_COOKIE = "ar_pin";
+// The "PIN verified" cookie is an idle timeout: it lives 30 minutes and is slid
+// forward on each app request (see middleware), so 30 minutes of inactivity
+// re-prompts for the PIN.
+export const PIN_IDLE_MAX_AGE_S = 30 * 60;
 export const PIN_MAX_FAILS = 5;
 export const PIN_LOCK_MS = 15 * 60 * 1000; // 15 minutes
 export const PIN_ITERATIONS = 100_000;

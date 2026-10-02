@@ -1,5 +1,25 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { resolveHost } from "@/lib/tenant/host";
+import { PIN_COOKIE, PIN_IDLE_MAX_AGE_S } from "@/lib/auth/pin";
+
+/**
+ * Slide the "PIN verified" cookie forward on each authenticated app request, so
+ * it expires only after a stretch of inactivity (idle timeout). Re-sets the same
+ * signed value with a fresh 30-minute Max-Age; no re-signing needed.
+ */
+function slidePinCookie(req: NextRequest, res: NextResponse): NextResponse {
+  const pin = req.cookies.get(PIN_COOKIE)?.value;
+  if (pin) {
+    res.cookies.set(PIN_COOKIE, pin, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "lax",
+      path: "/",
+      maxAge: PIN_IDLE_MAX_AGE_S,
+    });
+  }
+  return res;
+}
 
 /**
  * Host-based routing only. The subdomain decides which surface is reachable:
@@ -33,7 +53,8 @@ export function middleware(req: NextRequest) {
       to.pathname = "/office";
       return NextResponse.redirect(to);
     }
-    return NextResponse.next();
+    // Keep the PIN session alive while the admin/instructor is active.
+    return isAppPath ? slidePinCookie(req, NextResponse.next()) : NextResponse.next();
   }
 
   // Apex / reserved / unknown: the app surfaces are not served here.
@@ -44,7 +65,8 @@ export function middleware(req: NextRequest) {
     return NextResponse.redirect(to);
   }
 
-  return NextResponse.next();
+  // The platform admin area lives on the apex — slide its PIN session too.
+  return path.startsWith("/admin") ? slidePinCookie(req, NextResponse.next()) : NextResponse.next();
 }
 
 export const config = {
