@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { getEnv, getRepositories } from "@/lib/cf/bindings";
+import { getRepositories } from "@/lib/cf/bindings";
+import { authSecret } from "@/lib/security/secrets";
 import { PIN_COOKIE, verifyPinCookie } from "./pin";
 
 /**
@@ -10,14 +11,14 @@ import { PIN_COOKIE, verifyPinCookie } from "./pin";
  * this session hasn't verified it.
  */
 export async function enforcePinGate(userId: string, sessionId: string | undefined, next: string): Promise<void> {
-  if (!sessionId) return; // can't bind a cookie without a session id; fail open to avoid lockout loops
+  if (!sessionId) redirect("/sign-in"); // no session id to bind the PIN cookie to → treat as signed out
   const { control } = await getRepositories();
   const sec = await control.getUserSecurity(userId);
   const nextParam = `?next=${encodeURIComponent(next)}`;
   if (!sec?.pinHash) redirect(`/set-pin${nextParam}`);
 
   const jar = await cookies();
-  const secret = getEnv().BETTER_AUTH_SECRET ?? "dev-insecure-secret-change-me";
+  const secret = authSecret();
   const ok = await verifyPinCookie(secret, sessionId, jar.get(PIN_COOKIE)?.value);
   if (!ok) redirect(`/pin${nextParam}`);
 }

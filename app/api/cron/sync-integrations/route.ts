@@ -17,7 +17,7 @@ function timingSafeEqualStr(a: string, b: string): boolean {
  *
  * Trigger it daily with a Cloudflare Cron Trigger (or any scheduler / GitHub
  * Action) that calls this URL with the shared secret:
- *   Authorization: Bearer <CRON_SECRET>     (or ?key=<CRON_SECRET>)
+ *   Authorization: Bearer <CRON_SECRET>     (header only — never the query string, which gets logged)
  * Set CRON_SECRET as a Worker secret. If it's unset the endpoint is disabled.
  */
 async function run(req: Request): Promise<Response> {
@@ -25,8 +25,7 @@ async function run(req: Request): Promise<Response> {
   const secret = env.CRON_SECRET;
   if (!secret) return NextResponse.json({ ok: false, error: "CRON_SECRET not configured" }, { status: 503 });
 
-  const url = new URL(req.url);
-  const provided = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? url.searchParams.get("key") ?? "";
+  const provided = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? "";
   if (!timingSafeEqualStr(provided, secret)) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
 
   const repos = await getRepositories();

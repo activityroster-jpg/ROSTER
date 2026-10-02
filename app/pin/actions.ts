@@ -18,6 +18,7 @@ import { checkCode, issueCode } from "@/lib/security/reset-code";
 import { notifySecurityChange, recordSecurityEvent } from "@/lib/security/events";
 import { rateLimit } from "@/lib/security/rate-limit";
 import { sendEmail } from "@/lib/mail";
+import { authSecret } from "@/lib/security/secrets";
 
 export type PinResult = { ok: boolean; error?: string; message?: string };
 
@@ -37,7 +38,7 @@ async function sessionInfo() {
 
 async function setVerifiedCookie(sessionId: string) {
   const env = getEnv();
-  const value = await pinCookieValue(env.BETTER_AUTH_SECRET ?? "dev-insecure-secret-change-me", sessionId);
+  const value = await pinCookieValue(authSecret(env), sessionId);
   const jar = await cookies();
   jar.set(PIN_COOKIE, value, {
     httpOnly: true,

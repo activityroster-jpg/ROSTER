@@ -6,6 +6,7 @@ import { account, session, twoFactor as twoFactorTable, user, verification } fro
 import { getDb, getEnv, type CloudflareEnv } from "@/lib/cf/bindings";
 import { sendEmail } from "@/lib/mail";
 import { notifySecurityChange, recordSecurityEvent } from "@/lib/security/events";
+import { authSecret } from "@/lib/security/secrets";
 
 /**
  * Better Auth is the source of truth for authentication (email/password, magic
@@ -18,7 +19,8 @@ import { notifySecurityChange, recordSecurityEvent } from "@/lib/security/events
 export function createAuth(db: Database, env: CloudflareEnv) {
   return betterAuth({
     baseURL: env.BETTER_AUTH_URL ?? `https://${env.APP_APEX_DOMAIN}`,
-    secret: env.BETTER_AUTH_SECRET ?? "dev-insecure-secret-change-me",
+    // Hard-fails in production when the secret is missing (see lib/security/secrets).
+    secret: authSecret(env),
     // Every centre lives on its own subdomain, so redirects/callbacks to any
     // {slug}.apex must be trusted (Better Auth only trusts the baseURL by default).
     trustedOrigins: [
