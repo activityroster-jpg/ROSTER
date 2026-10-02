@@ -8,14 +8,12 @@ export const dynamic = "force-dynamic";
 export default async function SettingsPage() {
   const { ctx, repos } = await requireTenant({ role: "admin" });
   const t = repos.tenant;
-  const [settings, slots, roles, grades, compliance, equipmentTypes, locationTypes] = await Promise.all([
+  const [settings, slots, roles, grades, compliance] = await Promise.all([
     t.orgSettings.list(ctx),
     t.sessionSlot.list(ctx),
     t.roleType.list(ctx),
     t.qualificationType.list(ctx),
     t.complianceType.list(ctx),
-    t.equipmentType.list(ctx),
-    t.locationType.list(ctx),
   ]);
   const s = settings[0];
 
@@ -84,18 +82,12 @@ export default async function SettingsPage() {
             { name: "expiryTracked", label: "Expiry", type: "checkbox" },
           ]}
         />
-        <ConfigManager
-          title="Equipment types"
-          kind="equipmentType"
-          items={toItems(equipmentTypes, (e) => e.name, (e) => (e.inventoryTracked ? "tracked" : "bulk"))}
-          extraFields={[{ name: "inventoryTracked", label: "Tracked", type: "checkbox" }]}
-        />
-        <ConfigManager
-          title="Location types"
-          kind="locationType"
-          items={toItems(locationTypes, (l) => l.name)}
-        />
       </div>
+      <p className="mt-3 text-xs text-slate-400">
+        Equipment types and location categories are managed on the{" "}
+        <a href="/office/equipment" className="font-medium text-teal hover:underline">Equipment</a> and{" "}
+        <a href="/office/locations" className="font-medium text-teal hover:underline">Locations</a> tabs.
+      </p>
 
       <Card className="mt-8">
         <h2 className="mb-1 font-semibold text-navy">More settings</h2>
@@ -103,8 +95,8 @@ export default async function SettingsPage() {
         <div className="grid gap-2 sm:grid-cols-2">
           {[
             { href: "/office/integrations", label: "Integrations & import", desc: "Booking-system feeds & spreadsheet import" },
-            { href: "/office/equipment", label: "Equipment & boats", desc: "Your fleet and kit" },
-            { href: "/office/locations", label: "Locations", desc: "Sites & operating areas" },
+            { href: "/office/equipment", label: "Equipment & boats", desc: "Equipment types, quantities & your fleet" },
+            { href: "/office/locations", label: "Locations", desc: "Location categories, sites & operating areas" },
             { href: "/office/course-setup", label: "Course setup", desc: "Course types, ratios & defaults" },
             { href: "/office/staff", label: "Staff & pay rates", desc: "Instructors, qualifications & pay rates" },
           ].map((l) => (

@@ -1,6 +1,7 @@
 import { requireTenant } from "@/lib/tenant/require";
 import { Card, StatusPill } from "@/components/ui";
 import { AddEquipmentForm } from "@/components/office/AddEquipmentForm";
+import { EquipmentTypeManager, type EquipmentTypeRow } from "@/components/office/EquipmentTypeManager";
 import { FeatureNotice } from "@/components/office/FeatureNotice";
 import { hasFeature } from "@/lib/features";
 
@@ -16,11 +17,18 @@ export default async function EquipmentPage() {
   const typeName = new Map(types.map((t) => [t.id, t.name]));
   const activeTypes = types.filter((t) => t.active).map((t) => ({ id: t.id, name: t.name }));
   const enabled = hasFeature(settings[0]?.enabledFeatures, "equipment");
+  const typeRows: EquipmentTypeRow[] = types
+    .map((t) => ({ id: t.id, name: t.name, quantity: t.quantity ?? null, inventoryTracked: Boolean(t.inventoryTracked), active: Boolean(t.active) }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   return (
     <div>
       <h1 className="mb-6 font-display text-2xl font-semibold text-navy">Equipment</h1>
       <FeatureNotice feature="equipment" enabled={enabled} />
+
+      <h2 className="mb-1 font-semibold text-navy">Equipment types</h2>
+      <p className="mb-3 text-xs text-slate-500">Your kinds of kit and how many of each you have. Tracked types are booked unit by unit and clash-checked; bulk types are shared.</p>
+      <div className="mb-8"><EquipmentTypeManager rows={typeRows} /></div>
 
       <Card className="mb-6">
         <h2 className="mb-3 font-semibold text-navy">Add equipment</h2>

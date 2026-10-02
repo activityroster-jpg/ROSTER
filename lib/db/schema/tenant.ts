@@ -181,6 +181,8 @@ export const equipmentType = sqliteTable("equipment_type", {
   organisationId: orgFk(),
   name: text("name").notNull(),
   inventoryTracked: boolCol("inventory_tracked").default(true),
+  /** How many of this type the centre has (e.g. 12 Pico dinghies). Nullable. */
+  quantity: integer("quantity"),
   active: boolCol("active").default(true),
   createdAt: createdAt(),
   updatedAt: updatedAt(),

@@ -3,6 +3,7 @@ import { Card } from "@/components/ui";
 import { AddLocationForm } from "@/components/office/AddLocationForm";
 import { AddLocationCategoryForm } from "@/components/office/AddLocationCategoryForm";
 import { LocationItem } from "@/components/office/LocationItem";
+import { LocationCategoryHeader, RetiredLocationCategory } from "@/components/office/LocationCategoryControls";
 import { FeatureNotice } from "@/components/office/FeatureNotice";
 import { hasFeature } from "@/lib/features";
 
@@ -16,6 +17,7 @@ export default async function LocationsPage() {
     repos.tenant.orgSettings.list(ctx),
   ]);
   const activeTypes = types.filter((t) => t.active).map((t) => ({ id: t.id, name: t.name }));
+  const retiredTypes = types.filter((t) => !t.active).map((t) => ({ id: t.id, name: t.name }));
   const locationsEnabled = hasFeature(settings[0]?.enabledFeatures, "locations") || hasFeature(settings[0]?.enabledFeatures, "operatingAreas");
 
   // Bucket locations under each active category, preserving category order, plus
@@ -51,7 +53,7 @@ export default async function LocationsPage() {
         </Card>
       </div>
 
-      {boxes.every((b) => b.items.length === 0) && locations.length === 0 ? (
+      {boxes.length === 0 ? (
         <Card>
           <p className="text-sm text-slate-400">No locations yet. Add your first above — categories keep them tidy.</p>
         </Card>
@@ -59,10 +61,14 @@ export default async function LocationsPage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {boxes.map((box) => (
             <Card key={box.id}>
-              <div className="mb-2 flex items-center justify-between">
-                <h3 className="font-semibold text-navy">{box.name}</h3>
-                <span className="text-xs text-slate-400">{box.items.length}</span>
-              </div>
+              {box.id === "__none" ? (
+                <div className="mb-2 flex items-center justify-between">
+                  <h3 className="font-semibold text-navy">{box.name}</h3>
+                  <span className="text-xs text-slate-400">{box.items.length}</span>
+                </div>
+              ) : (
+                <LocationCategoryHeader id={box.id} name={box.name} count={box.items.length} />
+              )}
               {box.items.length === 0 ? (
                 <p className="text-xs text-slate-400">No locations in this category yet.</p>
               ) : (
@@ -76,6 +82,15 @@ export default async function LocationsPage() {
           ))}
         </div>
       )}
+
+      {retiredTypes.length > 0 ? (
+        <Card className="mt-6">
+          <h2 className="mb-1 font-semibold text-navy">Retired categories</h2>
+          <ul className="divide-y divide-slate-100">
+            {retiredTypes.map((t) => <RetiredLocationCategory key={t.id} id={t.id} name={t.name} />)}
+          </ul>
+        </Card>
+      ) : null}
     </div>
   );
 }

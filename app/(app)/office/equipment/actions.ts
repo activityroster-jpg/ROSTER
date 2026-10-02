@@ -35,6 +35,43 @@ export async function createEquipmentAction(_prev: ActionState, formData: FormDa
   return { ok: true, message: "Equipment added" };
 }
 
+const typeSchema = z.object({
+  name: z.string().trim().min(1, "Give the type a name").max(120),
+  quantity: z.union([z.literal(""), z.coerce.number().int().min(0).max(100000)]).transform((v) => (v === "" ? null : v)),
+  inventoryTracked: z.boolean(),
+});
+
+export interface EquipmentTypeInput { name: string; quantity: number | string | null; inventoryTracked: boolean }
+
+/** Add (id = null) or edit an equipment type — name, quantity and tracked/bulk. */
+export async function saveEquipmentTypeAction(id: string | null, input: EquipmentTypeInput): Promise<ActionState> {
+  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const parsed = typeSchema.safeParse({ ...input, quantity: input.quantity ?? "" });
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Please check the values" };
+  const t = repos.tenant.equipmentType;
+  if (id) {
+    const updated = await t.update(ctx, id, parsed.data);
+    if (!updated) return { ok: false, error: "Not found" };
+    await writeAudit(repos, ctx, { action: "update", entity: "equipment_type", entityId: id, after: parsed.data });
+  } else {
+    const created = await t.insert(ctx, { ...parsed.data, active: true });
+    await writeAudit(repos, ctx, { action: "create", entity: "equipment_type", entityId: created.id, after: parsed.data });
+  }
+  revalidatePath("/office/equipment");
+  revalidatePath("/office/settings");
+  return { ok: true, message: id ? "Saved" : `${parsed.data.name} added` };
+}
+
+/** Retire / bring back an equipment type (deactivate-never-delete). */
+export async function setEquipmentTypeActiveAction(id: string, active: boolean): Promise<ActionState> {
+  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const updated = await repos.tenant.equipmentType.update(ctx, id, { active });
+  if (!updated) return { ok: false, error: "Not found" };
+  await writeAudit(repos, ctx, { action: active ? "reactivate" : "deactivate", entity: "equipment_type", entityId: id });
+  revalidatePath("/office/equipment");
+  return { ok: true };
+}
+
 /** Change an equipment item's status (available / maintenance / retired). */
 export async function setEquipmentStatusAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const { ctx, repos } = await requireTenant({ role: "admin" });

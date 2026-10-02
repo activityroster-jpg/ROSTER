@@ -42,6 +42,28 @@ export async function createLocationCategoryAction(_prev: ActionState, formData:
   return { ok: true, message: `“${name}” category added` };
 }
 
+/** Rename a location category (moved here from Settings). */
+export async function renameLocationCategoryAction(id: string, name: string): Promise<ActionState> {
+  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const clean = (name ?? "").trim();
+  if (!clean) return { ok: false, error: "Give the category a name" };
+  const updated = await repos.tenant.locationType.update(ctx, id, { name: clean.slice(0, 120) });
+  if (!updated) return { ok: false, error: "Not found" };
+  await writeAudit(repos, ctx, { action: "rename", entity: "location_type", entityId: id, after: { name: clean } });
+  revalidatePath("/office/locations");
+  return { ok: true };
+}
+
+/** Retire / bring back a location category (deactivate-never-delete). */
+export async function setLocationCategoryActiveAction(id: string, active: boolean): Promise<ActionState> {
+  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const updated = await repos.tenant.locationType.update(ctx, id, { active });
+  if (!updated) return { ok: false, error: "Not found" };
+  await writeAudit(repos, ctx, { action: active ? "reactivate" : "deactivate", entity: "location_type", entityId: id });
+  revalidatePath("/office/locations");
+  return { ok: true };
+}
+
 /** Deactivate/reactivate a location (deactivate-never-delete). */
 export async function setLocationActiveAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const { ctx, repos } = await requireTenant({ role: "admin" });

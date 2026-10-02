@@ -249,6 +249,7 @@ const SECTIONS: Section[] = [
     blocks: [
       { kind: "p", text: "If you switched on equipment tracking, the Equipment tab lets you record your fleet and kit by type — dinghies, keelboats, yachts, motor cruisers, coach/safety boats, SUPs and more." },
       { kind: "bullets", items: [
+        "Manage your equipment types at the top of the Equipment tab — rename them, set how many of each you have (e.g. 12 Pico dinghies), and mark each as tracked or bulk.",
         "Assign tracked units to a course; the platform flags if the same unit is booked on two overlapping sessions.",
         "Bulk (untracked) kit doesn't conflict — use it for consumables and shared gear.",
       ] },
@@ -266,6 +267,7 @@ const SECTIONS: Section[] = [
         "Add a location.",
         "Put it in a category — or add your own category if none fits.",
         "Attach locations to courses so they appear on the rota.",
+        "Rename or retire a category from its box header; retired categories can be brought back from the list at the bottom.",
       ] },
     ],
   },
