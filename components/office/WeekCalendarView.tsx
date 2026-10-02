@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { CourseEditorModal } from "@/components/office/CourseEditorModal";
 
 interface EventUi { id: string; courseId: string; date: string; slot: string; startAt: number; endAt: number; courseName: string; audience: string }
 
@@ -20,6 +21,7 @@ const tint = (a: string) => a === "youth" ? "border-l-amber bg-amber/10 text-amb
 export function WeekCalendarView({ events, addHref }: { events: EventUi[]; addHref?: string }) {
   const thisMonday = mondayOf(new Date());
   const [monday, setMonday] = useState(thisMonday);
+  const [editing, setEditing] = useState<string | null>(null);
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDaysIso(monday, i)), [monday]);
   const byDay = useMemo(() => {
     const m = new Map<string, EventUi[]>();
@@ -48,15 +50,16 @@ export function WeekCalendarView({ events, addHref }: { events: EventUi[]; addHr
                 <div className={`text-sm font-bold ${isToday(d) ? "text-teal" : "text-navy"}`}>{d.slice(8)}</div>
               </div>
               {evs.length === 0 ? <p className="text-center text-[10px] text-slate-300">—</p> : evs.map((e) => (
-                <a key={e.id} href={`/office/courses/${e.courseId}`} aria-label={`${e.courseName}, ${e.audience} course at ${fmtTime(e.startAt)} on ${fmtDay(e.date)}`} className={`mb-1 block rounded border-l-4 px-1.5 py-1 text-[11px] leading-tight hover:brightness-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal ${tint(e.audience)}`}>
+                <button key={e.id} type="button" onClick={() => setEditing(e.courseId)} aria-label={`Edit ${e.courseName}, ${e.audience} course at ${fmtTime(e.startAt)} on ${fmtDay(e.date)}`} className={`mb-1 block w-full rounded border-l-4 px-1.5 py-1 text-left text-[11px] leading-tight hover:brightness-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal ${tint(e.audience)}`}>
                   <span className="block font-semibold">{fmtTime(e.startAt)}</span>
                   <span className="block truncate">{e.courseName}</span>
-                </a>
+                </button>
               ))}
             </div>
           );
         })}
       </div>
+      {editing ? <CourseEditorModal courseId={editing} onClose={() => setEditing(null)} /> : null}
     </div>
   );
 }

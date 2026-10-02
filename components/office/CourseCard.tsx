@@ -27,7 +27,7 @@ const fmtDate = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString
 const fmtTime = (ms: number) => new Date(ms).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
 
 export function CourseCard({
-  course, audience, sessions, assigned, instructors, roles, ratioOn, ratio, computedRequired, shade,
+  course, audience, sessions, assigned, instructors, roles, ratioOn, ratio, computedRequired, shade, defaultOpen = false, onChanged,
 }: {
   course: { id: string; name: string; courseTypeName: string; status: string; staffRequired: number | null };
   audience: string;
@@ -40,12 +40,16 @@ export function CourseCard({
   computedRequired?: number;
   /** Alternating day shade — true = tinted, false = plain white. */
   shade?: boolean;
+  /** Start expanded (e.g. when opened from a calendar tile). */
+  defaultOpen?: boolean;
+  /** Called after any successful edit, so a host (modal) can reload. */
+  onChanged?: () => void;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [err, setErr] = useState<string | null>(null);
   // Rows stay tight until clicked; clicking the header expands the full options.
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
 
   const [editingName, setEditingName] = useState(false);
   const [name, setName] = useState(course.name);
@@ -66,7 +70,7 @@ export function CourseCard({
     start(async () => {
       const res = await fn();
       if (!res.ok) setErr(res.error ?? "Something went wrong");
-      else router.refresh();
+      else { router.refresh(); onChanged?.(); }
     });
   };
 

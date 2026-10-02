@@ -3,8 +3,9 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createCourseFlexibleAction, type FlexSession } from "@/app/(app)/office/courses/actions";
+import { CourseEditorModal } from "@/components/office/CourseEditorModal";
 
-interface EventUi { id: string; date: string; slot: string; startAt: number; endAt: number; courseName: string; audience: string }
+interface EventUi { id: string; courseId: string; date: string; slot: string; startAt: number; endAt: number; courseName: string; audience: string }
 interface CourseTypeUi { id: string; name: string; audience: "youth" | "adult" | "all" }
 interface Row { key: string; date: string; startTime: string; endTime: string; slot: string }
 
@@ -32,6 +33,7 @@ export function CoursePlanner({ courseTypes, events, slotStyle }: { courseTypes:
   const [name, setName] = useState("");
   const [rows, setRows] = useState<Row[]>([]);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [editing, setEditing] = useState<string | null>(null);
 
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDaysIso(monday, i)), [monday]);
   const eventsByDay = useMemo(() => {
@@ -99,10 +101,10 @@ export function CoursePlanner({ courseTypes, events, slotStyle }: { courseTypes:
                 </div>
                 <div className="flex-1 space-y-1">
                   {evs.map((e) => (
-                    <div key={e.id} className={`rounded border-l-4 px-1.5 py-1 text-[11px] leading-tight ${e.audience === "youth" ? "border-l-amber " : e.audience === "adult" ? "border-l-teal " : "border-l-slate-400 "}${audTint(e.audience)}`}>
+                    <button key={e.id} type="button" onClick={() => setEditing(e.courseId)} aria-label={`Edit ${e.courseName}`} className={`block w-full rounded border-l-4 px-1.5 py-1 text-left text-[11px] leading-tight hover:brightness-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal ${e.audience === "youth" ? "border-l-amber " : e.audience === "adult" ? "border-l-teal " : "border-l-slate-400 "}${audTint(e.audience)}`}>
                       <span className="block font-semibold">{fmtTime(e.startAt)}</span>
                       <span className="block truncate">{e.courseName}</span>
-                    </div>
+                    </button>
                   ))}
                   {drafts.map((r) => (
                     <div key={r.key} className="rounded border border-dashed border-teal bg-teal/5 px-1.5 py-1 text-[11px] font-medium text-teal">
@@ -179,6 +181,7 @@ export function CoursePlanner({ courseTypes, events, slotStyle }: { courseTypes:
           {msg ? <span className={`text-sm ${msg.ok ? "text-starboard" : "text-port"}`} role="status">{msg.text}</span> : null}
         </div>
       </div>
+      {editing ? <CourseEditorModal courseId={editing} onClose={() => setEditing(null)} /> : null}
     </div>
   );
 }

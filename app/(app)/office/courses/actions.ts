@@ -8,8 +8,18 @@ import { assignStaff, bulkAssignStaff } from "@/lib/services/assignment";
 import { writeAudit } from "@/lib/services/audit";
 import { COURSE_STATUSES, SLOT_CODES, type CourseStatus, type SlotCode } from "@/lib/db/schema";
 import { normaliseTime, timeToSlot } from "@/lib/import/parse";
+import { getCourseEditorData, type CourseEditorData } from "@/lib/services/course-editor";
 
 export type ActionState = { ok: boolean; error?: string; message?: string };
+
+/** Load the editable course box for a calendar tile. Admin, tenant scoped. */
+export async function loadCourseEditorAction(courseId: string): Promise<{ ok: true; data: CourseEditorData } | { ok: false; error: string }> {
+  const { ctx, repos } = await requireTenant({ role: "admin" });
+  if (typeof courseId !== "string" || !courseId) return { ok: false, error: "Missing course" };
+  const data = await getCourseEditorData(repos, ctx, courseId);
+  if (!data) return { ok: false, error: "Course not found" };
+  return { ok: true, data };
+}
 
 function isSlot(v: unknown): v is SlotCode {
   return typeof v === "string" && (SLOT_CODES as readonly string[]).includes(v);
