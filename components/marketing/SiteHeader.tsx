@@ -14,14 +14,13 @@ const PRIMARY = [
   { href: "/contact", label: "Contact" },
 ];
 
-/** The full set, shown in the mobile menu (includes the secondary pages). */
+/** The full set, shown in the mobile menu (secondary pages too; no Demo — it's a desktop experience). */
 const ALL = [
   { href: "/#features", label: "Features" },
   { href: "/pricing", label: "Pricing" },
   { href: "/compare", label: "Compare" },
   { href: "/learn", label: "Learning Centre" },
   { href: "/blog", label: "Blog" },
-  { href: "/demo", label: "Demo" },
   { href: "/contact", label: "Contact" },
 ];
 

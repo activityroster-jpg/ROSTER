@@ -76,7 +76,7 @@ export default async function PricingPage() {
         <p className="text-sm font-semibold uppercase tracking-wide text-teal">Pricing</p>
         <h1 className="mt-1 font-display text-3xl font-bold text-navy">One flat price for your whole centre</h1>
         <p className="mx-auto mt-2 max-w-xl text-slate-600">
-          No per-user fees. Add every instructor and volunteer for one simple price.{" "}
+          No per-user fees — every instructor and volunteer included.{" "}
           {freeFirstMonth ? "Start with a free month — no card required." : "Cancel anytime."}
         </p>
       </div>
@@ -183,11 +183,10 @@ export default async function PricingPage() {
           <p className="text-sm font-semibold uppercase tracking-wide text-starboard">Flat price vs the per-user platforms</p>
           <h2 className="mt-1 font-display text-2xl font-bold text-navy">Cheaper than the per-user platforms — at every size</h2>
           <p className="mt-2 max-w-2xl text-slate-600">
-            {COMPETITOR_NAMES_AND} all charge per user, per month. RYA centres roster everyone who runs sessions —
-            senior and assistant instructors, powerboat cover, shore crew and volunteers — so a per-seat tool bills for
-            your whole volunteer base. We charge one flat price per centre, so we come out cheaper from a small club right
-            up to a busy centre. See the{" "}
-            <Link href="/compare" className="font-semibold text-teal hover:underline">full comparison</Link>.
+            {COMPETITOR_NAMES_AND} charge per user. A centre rosters everyone — instructors, safety-boat cover, shore
+            crew, volunteers — so per-seat pricing bills your whole volunteer base. One flat price per centre comes out
+            cheaper at every size.{" "}
+            <Link href="/compare" className="font-semibold text-teal hover:underline">Full comparison →</Link>
           </p>
 
           <div className="mt-5 overflow-x-auto rounded-lg border border-slate-200 bg-white">
@@ -242,11 +241,10 @@ export default async function PricingPage() {
             <p className="text-sm font-semibold uppercase tracking-wide text-amber-700">Custom platform · recommended</p>
             <h2 className="mt-1 font-display text-2xl font-bold text-navy">What the done-for-you build includes</h2>
             <p className="mt-2 max-w-2xl text-slate-600">
-              Want it just so? We&apos;ll build the platform around exactly how your centre runs. It&apos;s{" "}
+              We build the platform around how your centre runs:{" "}
               <strong className="text-navy">from {fmtMoney(setupPrice, currency)} setup</strong>, plus{" "}
-              <strong className="text-navy">{fmtMoney(ON_SITE_TRAVEL, currency)} travel</strong> if we come and work with
-              your team on site (recommended) — then you continue on the normal{" "}
-              {fmtMoney(standard.monthlyPrice, currency)}/month plan with an unlimited team.
+              <strong className="text-navy">{fmtMoney(ON_SITE_TRAVEL, currency)} travel</strong> to work with your team
+              on site (recommended), then {fmtMoney(standard.monthlyPrice, currency)}/month.
             </p>
             <ul className="mt-4 grid gap-2 sm:grid-cols-2">
               {SETUP_INCLUDED.map((f) => (

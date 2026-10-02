@@ -35,9 +35,8 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
               LinkedIn
             </a>
           </div>
-          <p>© {new Date().getFullYear()} ActiveRoster Ltd. Built for UK &amp; Irish RYA centres · Hosted on Cloudflare (EU) · UK GDPR-ready.</p>
-          <p className="mt-1">ActivityRoster is a product of ActiveRoster Ltd, a company registered in England &amp; Wales. Registered office: 71-75 Shelton Street, London WC2H 9JQ.</p>
-          <p className="mt-1">Built for RYA sailing &amp; watersports centres.</p>
+          <p>© {new Date().getFullYear()} ActiveRoster Ltd · Built for UK &amp; Irish RYA centres · Hosted in the EU · UK GDPR-ready.</p>
+          <p className="mt-1">ActiveRoster Ltd is registered in England &amp; Wales. Registered office: 71-75 Shelton Street, London WC2H 9JQ.</p>
         </div>
       </footer>
       <CookieNotice />

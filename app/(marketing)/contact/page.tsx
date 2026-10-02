@@ -20,8 +20,7 @@ export default function ContactPage() {
         <p className="text-sm font-semibold uppercase tracking-wide text-teal">Contact</p>
         <h1 className="mt-1 font-display text-3xl font-bold text-navy sm:text-4xl">Talk to us</h1>
         <p className="mx-auto mt-3 max-w-xl text-slate-600">
-          However you&apos;d like to reach us, we&apos;re happy to help — whether you want a proper walkthrough, a quick
-          question answered, or to get started straight away.
+          A walkthrough, a quick question, or straight to a free month — pick whichever suits.
         </p>
       </div>
 
@@ -35,9 +34,8 @@ export default function ContactPage() {
             </div>
             <h2 className="mt-1 font-display text-2xl font-bold text-navy">Schedule a call</h2>
             <p className="mt-2 text-slate-600">
-              Book a free, no-pressure 30-minute call and we&apos;ll walk you through exactly how ActivityRoster handles
-              rostering, qualifications and safety-cover compliance for your centre. Pick any slot that suits you — all
-              times are shown in <strong>GMT</strong>.
+              A free 30-minute walkthrough of rostering, qualifications and safety cover for your centre. Times are
+              shown in <strong>GMT</strong>.
             </p>
           </div>
           <div className="flex flex-col justify-center border-t border-teal/30 bg-teal/5 p-7 text-center md:border-l md:border-t-0">
@@ -61,7 +59,7 @@ export default function ContactPage() {
             <h2 className="font-semibold">Email us</h2>
           </div>
           <p className="mt-2 text-sm text-slate-600">
-            For anything at all — questions, a demo, or help getting set up. We usually reply within one working day.
+            Questions, a demo or setup help — we reply within one working day.
           </p>
           <a href={`mailto:${GENERAL_EMAIL}`} className="mt-3 inline-block font-semibold text-teal hover:underline">
             {GENERAL_EMAIL}
@@ -79,7 +77,7 @@ export default function ContactPage() {
             <h2 className="font-semibold">Start a free month</h2>
           </div>
           <p className="mt-2 text-sm text-slate-600">
-            Prefer to dive in? Start your free month — no card required — and we&apos;ll be on hand if you need us.
+            Dive straight in — no card required, and we&apos;re on hand if you need us.
           </p>
           <a href="/#get-demo" className="mt-3 inline-block font-semibold text-teal hover:underline">
             Start my free month →
