@@ -30,6 +30,8 @@ export async function seedOrganisationDefaults(
     alertLeadDays: 30,
     currency: jurisdiction === "ireland" ? "EUR" : "GBP",
     timezone: jurisdiction === "ireland" ? "Europe/Dublin" : "Europe/London",
+    // Warn when an instructor is double-booked / unavailable — on by default.
+    enforceConflictChecks: true,
   });
 
   for (const s of DEFAULT_SLOTS) {

@@ -40,7 +40,11 @@ export function GeneralSettingsForm({
       </div>
       <div>
         <label className="mb-1 block text-xs font-medium text-slate-500">Currency</label>
-        <input name="currency" defaultValue={currency} maxLength={3} className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm uppercase outline-none focus:border-teal" />
+        <select name="currency" defaultValue={currency || "GBP"} className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal">
+          <option value="GBP">GBP (£)</option>
+          <option value="EUR">EUR (€)</option>
+          <option value="USD">USD ($)</option>
+        </select>
       </div>
       <div>
         <label className="mb-1 block text-xs font-medium text-slate-500">Timezone</label>
