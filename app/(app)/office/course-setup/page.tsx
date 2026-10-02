@@ -21,7 +21,6 @@ export default async function CourseSetupPage() {
               <th className="px-4 py-3">Scheme</th>
               <th className="px-4 py-3">Capacity</th>
               <th className="px-4 py-3">Ratio</th>
-              <th className="px-4 py-3">Safety boat</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -31,7 +30,6 @@ export default async function CourseSetupPage() {
                 <td className="px-4 py-3 text-slate-600">{c.scheme ?? "—"}</td>
                 <td className="px-4 py-3 text-slate-600">{c.defaultCapacity}</td>
                 <td className="px-4 py-3 text-slate-600">1:{c.studentsPerInstructor}</td>
-                <td className="px-4 py-3 text-slate-600">{c.requiresSafetyBoat ? "Required" : "—"}</td>
               </tr>
             ))}
           </tbody>

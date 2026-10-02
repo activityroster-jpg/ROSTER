@@ -419,7 +419,7 @@ function DemoCourses({ onOpen }: { onOpen: (p: Panel) => void }) {
         </div>
 
         <div className="rounded-card border border-slate-200 bg-white p-4">
-          <h2 className="font-semibold text-navy">Build a course</h2>
+          <h2 className="font-semibold text-navy">Add a course</h2>
           <p className="mb-3 text-xs text-slate-500">Give it a name, pick the type, then add each session — any days and times you like.</p>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
@@ -1160,7 +1160,7 @@ function DemoCourseSetup() {
       <Card className="p-0">
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-            <tr><th className="px-4 py-3">Course type</th><th className="px-4 py-3">Scheme</th><th className="px-4 py-3">Capacity</th><th className="px-4 py-3">Ratio</th><th className="px-4 py-3">Safety boat</th></tr>
+            <tr><th className="px-4 py-3">Course type</th><th className="px-4 py-3">Scheme</th><th className="px-4 py-3">Capacity</th><th className="px-4 py-3">Ratio</th></tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {types.map((c) => (
@@ -1169,7 +1169,6 @@ function DemoCourseSetup() {
                 <td className="px-4 py-3 text-slate-600">{c.scheme}</td>
                 <td className="px-4 py-3 text-slate-600">{c.cap}</td>
                 <td className="px-4 py-3 text-slate-600">1:{c.ratio}</td>
-                <td className="px-4 py-3 text-slate-600">{c.safety ? "Required" : "—"}</td>
               </tr>
             ))}
           </tbody>

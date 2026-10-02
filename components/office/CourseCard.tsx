@@ -44,6 +44,8 @@ export function CourseCard({
   const router = useRouter();
   const [pending, start] = useTransition();
   const [err, setErr] = useState<string | null>(null);
+  // Rows stay tight until clicked; clicking the header expands the full options.
+  const [open, setOpen] = useState(false);
 
   const [editingName, setEditingName] = useState(false);
   const [name, setName] = useState(course.name);
@@ -92,12 +94,31 @@ export function CourseCard({
   const inputCls = "rounded border border-slate-300 px-1.5 py-1 text-sm outline-none focus:border-teal";
 
   return (
-    <div className={`rounded-card border border-slate-200 px-3 py-2.5 ${shade ? "bg-sky-50/70" : "bg-white"}`}>
-      {/* Top row — name · date/time · staff required · status, all editable */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+    <div className={`rounded-card border border-slate-200 px-3 py-2.5 ${shade ? "bg-sky-100/70" : "bg-white"}`}>
+      {/* Top row — tight by default; click to expand. */}
+      <div
+        className={`flex flex-wrap items-center gap-x-3 gap-y-1.5 ${open ? "" : "cursor-pointer"}`}
+        onClick={() => { if (!open) setOpen(true); }}
+      >
+        <button
+          type="button"
+          onClick={(ev) => { ev.stopPropagation(); setOpen((o) => !o); }}
+          aria-label={open ? "Collapse course" : "Expand course"}
+          aria-expanded={open}
+          className="flex-none text-slate-400 hover:text-navy"
+        >
+          {open ? "▾" : "▸"}
+        </button>
         <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${aud.cls}`}>{aud.label}</span>
 
-        {editingName ? (
+        {!open ? (
+          <>
+            <span className="font-semibold text-navy">{course.name || course.courseTypeName}</span>
+            <span className="text-sm text-slate-500">
+              {single ? `${fmtDate(single.date)}, ${fmtTime(single.startMs)}–${fmtTime(single.endMs)}` : sessions.length === 0 ? "No sessions yet" : `${sessions.length} sessions`}
+            </span>
+          </>
+        ) : editingName ? (
           <input autoFocus value={name} onChange={(ev) => setName(ev.target.value)} onBlur={saveName}
             onKeyDown={(ev) => { if (ev.key === "Enter") saveName(); if (ev.key === "Escape") { setName(course.name); setEditingName(false); } }}
             className={`${inputCls} font-semibold text-navy`} />
@@ -106,7 +127,7 @@ export function CourseCard({
             className="font-semibold text-navy hover:underline decoration-dotted underline-offset-2">{course.name || course.courseTypeName}</button>
         )}
 
-        {editingWhen && single ? (
+        {open && (editingWhen && single ? (
           <span className="flex items-center gap-1">
             <input type="date" value={d} onChange={(ev) => setD(ev.target.value)} className={inputCls} />
             <input type="time" value={s} onChange={(ev) => setS(ev.target.value)} className={inputCls} />
@@ -118,24 +139,26 @@ export function CourseCard({
         ) : single ? (
           <button type="button" onClick={() => setEditingWhen(true)} title="Click to change date & time"
             className="text-sm text-slate-600 hover:text-navy hover:underline decoration-dotted underline-offset-2">
-            📅 {fmtDate(single.date)}, {fmtTime(single.startMs)}–{fmtTime(single.endMs)}
+            {fmtDate(single.date)}, {fmtTime(single.startMs)}–{fmtTime(single.endMs)}
           </button>
         ) : sessions.length === 0 ? (
           <a href={`/office/courses/${course.id}`} className="text-sm text-slate-400 hover:underline">No sessions — add →</a>
         ) : (
-          <a href={`/office/courses/${course.id}`} className="text-sm text-slate-600 hover:underline">📅 {sessions.length} sessions · manage →</a>
+          <a href={`/office/courses/${course.id}`} className="text-sm text-slate-600 hover:underline">{sessions.length} sessions · manage →</a>
+        ))}
+
+        {open && (
+          <label className="flex items-center gap-1 text-xs text-slate-500" title="How many staff this course needs">
+            👥
+            <select value={course.staffRequired ?? ""} onChange={(ev) => run(() => setStaffRequiredAction(course.id, ev.target.value === "" ? null : Number(ev.target.value)))}
+              className="rounded border border-slate-300 py-1 pl-1 pr-5 text-xs outline-none focus:border-teal">
+              <option value="">auto</option>
+              {[1, 2, 3, 4, 5, 6, 8, 10].map((n) => <option key={n} value={n}>{n} staff</option>)}
+            </select>
+          </label>
         )}
 
-        <label className="flex items-center gap-1 text-xs text-slate-500" title="How many staff this course needs">
-          👥
-          <select value={course.staffRequired ?? ""} onChange={(ev) => run(() => setStaffRequiredAction(course.id, ev.target.value === "" ? null : Number(ev.target.value)))}
-            className="rounded border border-slate-300 py-1 pl-1 pr-5 text-xs outline-none focus:border-teal">
-            <option value="">auto</option>
-            {[1, 2, 3, 4, 5, 6, 8, 10].map((n) => <option key={n} value={n}>{n} staff</option>)}
-          </select>
-        </label>
-
-        {(() => {
+        {open && (() => {
           const required = course.staffRequired ?? computedRequired ?? null;
           const n = assigned.length;
           if (required == null) return n > 0 ? <span className="text-xs text-slate-500">{n} assigned</span> : null;
@@ -158,38 +181,41 @@ export function CourseCard({
         </span>
       </div>
 
-      {/* Assigned staff — compact inline pills */}
-      {assigned.length > 0 ? (
-        <div className="mt-2 flex flex-wrap items-center gap-1.5">
-          {assigned.map((a) => (
-            <span key={a.id} className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700">
-              {a.instructorName} · {a.roleName}{a.isOverride ? <span className="text-amber">(o)</span> : null}
-              <button type="button" onClick={() => run(() => removeStaffAction(course.id, a.id))} title="Remove" className="ml-0.5 text-slate-400 hover:text-port">✕</button>
-            </span>
-          ))}
-        </div>
-      ) : null}
+      {/* Assigned staff + assign controls — revealed when the row is expanded. */}
+      {open ? (
+        <>
+          {assigned.length > 0 ? (
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              {assigned.map((a) => (
+                <span key={a.id} className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700">
+                  {a.instructorName} · {a.roleName}{a.isOverride ? <span className="text-amber">(o)</span> : null}
+                  <button type="button" onClick={() => run(() => removeStaffAction(course.id, a.id))} title="Remove" className="ml-0.5 text-slate-400 hover:text-port">✕</button>
+                </span>
+              ))}
+            </div>
+          ) : null}
 
-      {/* Assign row — instructor · role · assign (no override reason field) */}
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        <select aria-label="Instructor" value={instr} onChange={(ev) => setInstr(ev.target.value)} className={`${inputCls} min-w-[10rem] flex-1`}>
-          <option value="">Instructor…</option>
-          {instructors.map((i) => (
-            <option key={i.id} value={i.id}>{i.name}{i.fit ? "" : ` — ${i.reason || "not cleared"}`}</option>
-          ))}
-        </select>
-        <select aria-label="Role" value={role} onChange={(ev) => setRole(ev.target.value)} className={`${inputCls} min-w-[8rem]`}>
-          <option value="">Role…</option>
-          {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-        </select>
-        <label className="flex items-center gap-1 text-xs text-slate-500" title="Assign even if a check isn't met">
-          <input type="checkbox" checked={override} onChange={(ev) => setOverride(ev.target.checked)} /> override
-        </label>
-        <button type="button" onClick={assign} disabled={pending} className="rounded-lg bg-teal px-3 py-1.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">
-          {pending ? "…" : "Assign"}
-        </button>
-        {err ? <span role="alert" className="text-xs text-port">{err}</span> : null}
-      </div>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <select aria-label="Instructor" value={instr} onChange={(ev) => setInstr(ev.target.value)} className={`${inputCls} min-w-[10rem] flex-1`}>
+              <option value="">Instructor…</option>
+              {instructors.map((i) => (
+                <option key={i.id} value={i.id}>{i.name}{i.fit ? "" : ` — ${i.reason || "not cleared"}`}</option>
+              ))}
+            </select>
+            <select aria-label="Role" value={role} onChange={(ev) => setRole(ev.target.value)} className={`${inputCls} min-w-[8rem]`}>
+              <option value="">Role…</option>
+              {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+            </select>
+            <label className="flex items-center gap-1 text-xs text-slate-500" title="Assign even if a check isn't met">
+              <input type="checkbox" checked={override} onChange={(ev) => setOverride(ev.target.checked)} /> override
+            </label>
+            <button type="button" onClick={assign} disabled={pending} className="rounded-lg bg-teal px-3 py-1.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">
+              {pending ? "…" : "Assign"}
+            </button>
+            {err ? <span role="alert" className="text-xs text-port">{err}</span> : null}
+          </div>
+        </>
+      ) : null}
     </div>
   );
 }

@@ -37,7 +37,7 @@ export const DEFAULT_ROLES: RoleSeed[] = [
   { name: "Senior Instructor", code: "SENIOR", countsTowardRatio: true, isSafetyCover: false, isFirstAider: false },
   { name: "Assistant Instructor", code: "ASSISTANT", countsTowardRatio: true, isSafetyCover: false, isFirstAider: false },
   { name: "Safety Boat Driver", code: "SAFETY_BOAT", countsTowardRatio: false, isSafetyCover: true, isFirstAider: false },
-  { name: "First Aider", code: "FIRST_AIDER", countsTowardRatio: false, isSafetyCover: false, isFirstAider: true },
+  { name: "Volunteer", code: "VOLUNTEER", countsTowardRatio: false, isSafetyCover: false, isFirstAider: false },
 ];
 
 export interface GradeSeed {

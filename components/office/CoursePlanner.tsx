@@ -121,7 +121,7 @@ export function CoursePlanner({ courseTypes, events, slotStyle }: { courseTypes:
 
       {/* Builder */}
       <div className="rounded-card border border-slate-200 bg-white p-4">
-        <h2 className="font-semibold text-navy">Build a course</h2>
+        <h2 className="font-semibold text-navy">Add a course</h2>
         <p className="mb-3 text-xs text-slate-500">Give it a name, pick the type, then add each session — any days and times you like (e.g. two on Saturday, one Monday evening, one Wednesday).</p>
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
