@@ -47,9 +47,9 @@ for r, areas in {
  "London": "E EC N NW SE SW W WC BR CR EN HA IG KT RM SM TW UB",
  "South East": "BN CT GU HP ME MK OX PO RG RH SL SO TN DA",
  "South West": "BA BH BS DT EX GL PL SN SP TA TQ TR",
- "East": "AL CB CM CO IP LU NR PE SG SS",
+ "East": "AL CB CM CO IP LU NR PE SG SS WD",
  "East Midlands": "DE LE LN NG NN",
- "West Midlands": "B CV DY HR ST TF WR WS WV",
+ "West Midlands": "B CV DY HR ST SY TF WR WS WV",
  "Yorkshire": "BD DN HD HG HU HX LS S WF YO",
  "North West": "BB BL CA CH CW FY L LA M OL PR SK WA WN",
  "North East": "DH DL NE SR TS",
@@ -64,16 +64,16 @@ EIRCODE = re.compile(r"^[AC-FHKNPRTV-Y]\d[\dW]\s?[AC-FHKNPRTV-Y\d]{4}$", re.I)
 HOME_WORDS = ("United Kingdom", "Ireland", "Isle of Man", "Jersey", "Guernsey", "Alderney")
 # Counties / ceremonial areas that RYA addresses put between town and postcode.
 COUNTIES = {c.lower() for c in """
-Bedfordshire Berkshire Bristol Buckinghamshire Cambridgeshire Cheshire Cornwall Cumbria
-Derbyshire Devon Dorset Durham Essex Gloucestershire Hampshire Herefordshire Hertfordshire
+Bedfordshire Berkshire Buckinghamshire Cambridgeshire Cheshire Cornwall Cumbria
+Derbyshire Devon Dorset Essex Gloucestershire Hampshire Herefordshire Hertfordshire
 Kent Lancashire Leicestershire Lincolnshire Merseyside Norfolk Northamptonshire
 Northumberland Nottinghamshire Oxfordshire Rutland Shropshire Somerset Staffordshire Suffolk
 Surrey Sussex Warwickshire Wiltshire Worcestershire Yorkshire Middlesex Cumberland
-Westmorland Anglesey Gwynedd Conwy Denbighshire Flintshire Wrexham Powys Ceredigion
+Westmorland Anglesey Gwynedd Denbighshire Flintshire Powys Ceredigion
 Pembrokeshire Carmarthenshire Glamorgan Monmouthshire Argyll Ayrshire Fife Lanarkshire
 Renfrewshire Dunbartonshire Stirlingshire Perthshire Angus Aberdeenshire Morayshire Moray
 Highland Lothian Midlothian Borders Dumfriesshire Galloway Kincardineshire Caithness
-Sutherland Orkney Shetland Antrim Armagh Down Fermanagh Londonderry Tyrone
+Sutherland Orkney Shetland Down Fermanagh Tyrone
 """.split()} | {"east sussex", "west sussex", "north yorkshire", "south yorkshire",
                "west yorkshire", "east yorkshire", "east riding of yorkshire", "isle of wight",
                "greater london", "greater manchester", "west midlands", "tyne and wear",
@@ -89,7 +89,12 @@ Wexford Wicklow
 
 def is_county(part):
     p = part.strip()
-    return bool(re.match(r"^(County|Co\.?)\s*\S", p, re.I)) or p.lower() in COUNTIES
+    return bool(re.match(r"^(County\s|Co\.\s*|Co\s)\S", p)) or p.lower() in COUNTIES
+
+
+STREETISH = re.compile(r"\d|\b(Road|Rd|Street|Lane|Way|Quay|Pier|Park|Estate|Drive|Avenue|"
+                       r"Close|Walk|Parade|Wharf|Business|Industrial|Unit|House|Buildings?|"
+                       r"Marina|Slip|Yard|Campus|University|Centre|Club)\b", re.I)
 COUNTRY_WORDS = ("United Kingdom", "Republic Of Ireland", "Republic of Ireland", "Ireland",
                  "Northern Ireland", "Isle of Man", "Jersey", "Guernsey", "Channel Islands")
 
@@ -251,7 +256,7 @@ def detail(slug):
     if parts and (UK_PC.search(parts[-1].upper()) or EIRCODE.match(parts[-1])):
         pc = parts.pop().upper()
     city = parts.pop() if parts else ""
-    if parts and is_county(city):
+    if parts and is_county(city) and not STREETISH.search(parts[-1]):
         city = parts.pop()
     addr1 = parts[0] if parts else ""
     addr2 = ", ".join(parts[1:]) if len(parts) > 1 else ""
@@ -395,23 +400,43 @@ def main():
 
 
 def clean(path=OUT):
-    """Fix rows where a county landed in the city column (town moved up from address 2)."""
+    """Tidy an existing CSV in place: town back into the city column where a county
+    (or "Channel Isles") landed there, regions recomputed from postcodes, blank
+    region + a note where the RYA publishes no address, and duplicates dropped."""
     rows = list(csv.DictReader(open(path, encoding="utf-8")))
-    fixed = 0
+    moved = regioned = noaddr = 0
+    out, seen = [], set()
     for r in rows:
-        if r["city"] and is_county(r["city"]) and (r["address 2"] or r["address 1"]):
+        if r["city"] and (is_county(r["city"]) or r["city"] in ("Channel Isles", "Channel Islands")) \
+                and (r["address 2"] or r["address 1"]):
             src = "address 2" if r["address 2"] else "address 1"
             parts = [p.strip() for p in r[src].split(",") if p.strip()]
-            if src == "address 1" and len(parts) < 2:
-                continue  # don't move the only street line into the city column
-            r["city"] = parts.pop()
-            r[src] = ", ".join(parts)
-            fixed += 1
+            if (src == "address 2" or len(parts) >= 2) and not STREETISH.search(parts[-1]):
+                r["city"] = parts.pop()
+                r[src] = ", ".join(parts)
+                moved += 1
+        if r["region"] != "Overseas":
+            if r["postcode"]:
+                new = region_for(r["full address"], r["postcode"])
+                if new != r["region"]:
+                    r["region"], regioned = new, regioned + 1
+                    r["country"] = country_for(new)
+            elif r["region"].startswith("CHECK"):
+                r["region"] = ""
+                if "No address published" not in r["notes"]:
+                    r["notes"] += ". No address published by the RYA"
+                noaddr += 1
+        key = (r["name"].strip().lower(), r["postcode"].replace(" ", "").lower())
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(r)
     with open(path, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=HEADERS)
         w.writeheader()
-        w.writerows(rows)
-    print(f"clean: moved the town into the city column on {fixed} rows")
+        w.writerows(out)
+    print(f"clean: town moved into city on {moved} rows; region fixed on {regioned}; "
+          f"{noaddr} rows have no address; {len(rows) - len(out)} duplicates dropped")
 
 
 def check(path=OUT):
@@ -422,13 +447,14 @@ def check(path=OUT):
     no_pc = sum(1 for r in rows if not r["postcode"].strip())
     keys = Counter((r["name"].strip().lower(), r["postcode"].replace(" ", "").lower()) for r in rows)
     dups = {k: c for k, c in keys.items() if c > 1}
-    odd = [r for r in rows if r["region"].startswith("CHECK")
-           or r.get("country", "United Kingdom") not in ("United Kingdom", "Ireland")]
+    odd = [r for r in rows if r["region"].startswith("CHECK")]
+    print(f"  overseas rows:          {sum(1 for r in rows if r['region'] == 'Overseas')}")
+    print(f"  no region (no address): {sum(1 for r in rows if not r['region'])}")
     print(f"  blank names:            {len(blank_name)}")
     print(f"  no email:               {no_email}")
     print(f"  no postcode:            {no_pc}")
     print(f"  duplicate name+postcode: {len(dups)} keys ({sum(dups.values()) - len(dups)} extra rows)")
-    print(f"  CHECK / non-UK-IE rows: {len(odd)}")
+    print(f"  CHECK rows:             {len(odd)}")
     for r in odd[:30]:
         print(f"    - {r['name']} | {r['region']} | {r.get('country', '')} | {r['full address']}")
     print("  by region:", dict(Counter(r["region"] for r in rows).most_common()))
