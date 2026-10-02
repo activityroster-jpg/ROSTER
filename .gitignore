@@ -56,3 +56,4 @@ rya_progress.json
 rya_progress.json.tmp
 rya_debug_listing.html
 rya_scrape.log
+__pycache__/
