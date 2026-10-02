@@ -81,8 +81,8 @@ function DisciplineGallery() {
               <img src={d.src} alt={d.label} loading="lazy" className="h-full w-full object-cover object-center transition duration-500 group-hover:scale-105" />
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-navy/80 via-navy/20 to-transparent" />
               <div className="pointer-events-none absolute inset-x-0 bottom-0 p-4">
-                <p className="font-display text-base font-semibold text-white sm:text-lg">{d.label}</p>
-                <p className="text-xs text-white/80">{d.sub}</p>
+                <p className="font-display text-sm font-semibold leading-tight text-white sm:text-lg">{d.label}</p>
+                <p className="hidden text-xs text-white/80 sm:block">{d.sub}</p>
               </div>
             </div>
           ))}
@@ -97,7 +97,7 @@ function MobilePhotoStrip() {
   return (
     <div className="grid grid-cols-3 gap-1 md:hidden" aria-hidden>
       {[PHOTOS.catamarans, PHOTOS.instructors, PHOTOS.kayaks].map((src) => (
-        <img key={src} src={src} alt="" loading="lazy" className="aspect-square w-full object-cover" />
+        <img key={src} src={src} alt="" loading="lazy" className="aspect-[3/4] w-full object-cover" />
       ))}
     </div>
   );
@@ -140,11 +140,11 @@ export default function MarketingHome() {
       {/* Hero — the photo shows through more on phones, where there's no demo */}
       <section className="relative overflow-hidden bg-navy text-white">
         <div
-          className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-40 md:opacity-20"
+          className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-50 md:opacity-20"
           style={{ backgroundImage: `url('${PHOTOS.hero}')` }}
           aria-hidden
         />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-navy/70 via-navy/80 to-navy md:bg-[linear-gradient(90deg,#0A2E52_35%,rgba(10,46,82,0.72)_100%)]" aria-hidden />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-navy/60 via-navy/75 to-navy md:bg-[linear-gradient(90deg,#0A2E52_35%,rgba(10,46,82,0.72)_100%)]" aria-hidden />
         <div className="relative mx-auto grid max-w-6xl items-center gap-8 px-4 py-14 md:grid-cols-2 md:py-20">
           <div>
             <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-[#4fd1c5]">
