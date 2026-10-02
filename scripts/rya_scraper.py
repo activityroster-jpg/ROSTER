@@ -197,6 +197,11 @@ def cell_radius_km(la, ln, h):
     return max(km(la, ln, la + dy, ln + dx) for dy in (-h, h) for dx in (-h, h))
 
 
+def inside_uk_pass(la, ln, h):
+    """True if the cell lies entirely within the area the UK & Ireland pass covered."""
+    return la - h >= 49.0 and la + h <= 62.0 and ln - h >= -11.0 and ln + h <= 3.0
+
+
 def start_cells():
     """1-degree cells over the UK, Ireland, Isle of Man and Channel Islands
     (or 20-degree cells over the whole world with --overseas)."""
@@ -329,6 +334,9 @@ def main():
     n = 0
     while state["queue"]:
         la, ln, h = state["queue"][0]
+        if OVERSEAS and inside_uk_pass(la, ln, h):
+            state["queue"].pop(0)  # already fully covered by the UK & Ireland pass
+            continue
         found = listing(round(la, 5), round(ln, 5))
         time.sleep(DELAY)
         if found is None:
