@@ -36,7 +36,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
   const ratioOn = Boolean(settings[0]?.enforceRatioChecks);
   const conflictOn = Boolean(settings[0]?.enforceConflictChecks);
   const courses = [...coverageByCourse.values()];
-  const activeTypes = courseTypes.filter((c) => c.active).map((c) => ({ id: c.id, name: c.name, audience: c.audience }));
+  const activeTypes = courseTypes.filter((c) => c.active && c.listed).map((c) => ({ id: c.id, name: c.name, audience: c.audience }));
   const courseRows = await repos.tenant.course.list(ctx);
   const audienceByCourse = new Map(courseRows.map((c) => [c.id, courseTypes.find((t) => t.id === c.courseTypeId)?.audience ?? "all"]));
   const staffReqByCourse = new Map(courseRows.map((c) => [c.id, c.staffRequired ?? null]));

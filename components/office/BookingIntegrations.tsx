@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { connectIntegrationAction, removeIntegrationAction, previewIntegrationChangesAction, applyIntegrationChangesAction, type PreviewResult } from "@/app/(app)/office/integrations/actions";
 import { providerInitials } from "@/lib/integrations/catalogue";
 import type { FeedDiff } from "@/lib/services/integrations";
+import { CourseTypeChoice, initialChoice, type TypeOption } from "@/components/office/CourseTypeChoice";
 
 interface ProviderUi { id: string; name: string; color: string; category: string; blurb: string; methods: string[]; apiPlanned?: boolean; apiAdapter?: boolean; icsHelp?: string; website?: string }
 interface ConnectedUi { id: string; provider: string; name: string; color: string; kind: string; feedUrl: string | null; status: string; lastSyncedAt: string | null; lastResult: string | null }
@@ -43,6 +44,8 @@ export function BookingIntegrations({ providers, connected }: { providers: Provi
   const [diff, setDiff] = useState<FeedDiff | null>(null);
   const [addSel, setAddSel] = useState<Set<string>>(new Set());
   const [remSel, setRemSel] = useState<Set<string>>(new Set());
+  const [types, setTypes] = useState<TypeOption[]>([]);
+  const [choices, setChoices] = useState<Record<string, string>>({});
 
   const check = (id: string) => {
     setMsg(null); setDiff(null); setReviewId(id);
@@ -50,6 +53,8 @@ export function BookingIntegrations({ providers, connected }: { providers: Provi
       const res: PreviewResult = await previewIntegrationChangesAction(id);
       if (res.ok) {
         setDiff(res.diff);
+        setTypes(res.types);
+        setChoices(Object.fromEntries(res.diff.toAdd.map((a) => [a.key, initialChoice(a.suggestedTypeId)])));
         setAddSel(new Set(res.diff.toAdd.map((a) => a.key))); // new courses pre-selected to add
         setRemSel(new Set()); // removals opt-in only — never pre-checked
       } else { setMsg({ ok: false, text: res.error }); setReviewId(null); }
@@ -58,7 +63,7 @@ export function BookingIntegrations({ providers, connected }: { providers: Provi
 
   const apply = (id: string) => {
     start(async () => {
-      const res = await applyIntegrationChangesAction(id, [...addSel], [...remSel]);
+      const res = await applyIntegrationChangesAction(id, [...addSel], [...remSel], Object.fromEntries([...addSel].map((k) => [k, choices[k] ?? ""]).filter(([, v]) => v)));
       setMsg({ ok: res.ok, text: res.ok ? res.message ?? "Done" : res.error ?? "Failed" });
       if (res.ok) { setReviewId(null); setDiff(null); router.refresh(); }
     });
@@ -136,13 +141,15 @@ export function BookingIntegrations({ providers, connected }: { providers: Provi
                               <p className="text-sm font-semibold text-navy">New in {c.name} <span className="font-normal text-slate-400">({diff.toAdd.length})</span></p>
                               <button type="button" onClick={() => setAddSel((s) => s.size === diff.toAdd.length ? new Set() : new Set(diff.toAdd.map((a) => a.key)))} className="text-xs font-medium text-teal hover:underline">{addSel.size === diff.toAdd.length ? "Deselect all" : "Select all"}</button>
                             </div>
+                            <p className="mb-1 text-xs text-slate-500">We&apos;ve matched each one to your course types — check them, and pick a type for any marked “no match” (or add it to your list).</p>
                             <ul className="space-y-1">
                               {diff.toAdd.map((a) => (
-                                <li key={a.key} className="flex items-center gap-2 rounded-lg bg-starboard/5 px-2 py-1.5 text-sm">
+                                <li key={a.key} className="flex flex-wrap items-center gap-2 rounded-lg bg-starboard/5 px-2 py-1.5 text-sm">
                                   <input type="checkbox" checked={addSel.has(a.key)} onChange={() => setAddSel((s) => { const n = new Set(s); n.has(a.key) ? n.delete(a.key) : n.add(a.key); return n; })} />
                                   <span className="font-medium text-navy">{a.name}</span>
                                   <span className="text-xs text-slate-500">{a.date} · {a.slot}{a.startTime ? ` · ${a.startTime}` : ""}</span>
-                                  <span className={`ml-auto rounded px-1.5 py-0.5 text-[10px] font-semibold ${a.audience === "youth" ? "bg-amber/15 text-amber" : a.audience === "adult" ? "bg-teal/15 text-teal" : "bg-slate-100 text-slate-500"}`}>{a.audience}</span>
+                                  <span className="ml-auto"><CourseTypeChoice value={choices[a.key] ?? initialChoice(a.suggestedTypeId)} onChange={(v) => setChoices((c) => ({ ...c, [a.key]: v }))} types={types} importedName={a.name} matched={Boolean(a.suggestedTypeId)} /></span>
+                                  <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${a.audience === "youth" ? "bg-amber/15 text-amber" : a.audience === "adult" ? "bg-teal/15 text-teal" : "bg-slate-100 text-slate-500"}`}>{a.audience}</span>
                                 </li>
                               ))}
                             </ul>

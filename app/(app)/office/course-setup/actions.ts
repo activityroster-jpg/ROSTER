@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireTenant } from "@/lib/tenant/require";
 import { writeAudit } from "@/lib/services/audit";
-import { deleteOrRetireCourseType } from "@/lib/services/course-types";
+import { deleteOrRetireCourseType, moveCoursesToType } from "@/lib/services/course-types";
 import { COURSE_AUDIENCES } from "@/lib/db/schema";
 
 export type CourseTypeResult = { ok: boolean; error?: string; message?: string };
@@ -81,4 +81,25 @@ export async function reactivateCourseTypeAction(id: string): Promise<CourseType
   await writeAudit(repos, ctx, { action: "reactivate", entity: "course_type", entityId: id });
   revalidate();
   return { ok: true };
+}
+
+/** Put a one-off course type on the regular list (or take one off it). */
+export async function setCourseTypeListedAction(id: string, listed: boolean): Promise<CourseTypeResult> {
+  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const updated = await repos.tenant.courseType.update(ctx, id, { listed: listed === true, active: true });
+  if (!updated) return { ok: false, error: "Course type not found" };
+  await writeAudit(repos, ctx, { action: listed ? "list" : "unlist", entity: "course_type", entityId: id });
+  revalidate();
+  return { ok: true, message: listed ? `${updated.name} added to your course list` : `${updated.name} removed from your list` };
+}
+
+/** Move all courses of one type under another (fixing imported near-duplicates). */
+export async function moveCoursesToTypeAction(fromId: string, toId: string): Promise<CourseTypeResult> {
+  const { ctx, repos } = await requireTenant({ role: "admin" });
+  if (typeof fromId !== "string" || typeof toId !== "string" || !fromId || !toId) return { ok: false, error: "Pick a course type" };
+  const res = await moveCoursesToType(repos, ctx, fromId, toId);
+  if (!res) return { ok: false, error: "Course type not found" };
+  await writeAudit(repos, ctx, { action: "merge", entity: "course_type", entityId: fromId, after: { into: toId, moved: res.moved } });
+  revalidate();
+  return { ok: true, message: `Moved ${res.moved} course${res.moved === 1 ? "" : "s"} from “${res.from}” to “${res.to}”` };
 }

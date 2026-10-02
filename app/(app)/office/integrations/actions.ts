@@ -1,5 +1,6 @@
 "use server";
 
+import { sanitiseTypeChoices } from "@/lib/services/course-type-resolve";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { requireTenant } from "@/lib/tenant/require";
@@ -71,7 +72,7 @@ export async function removeIntegrationAction(id: string): Promise<IntegrationRe
   return { ok: true, message: "Disconnected" };
 }
 
-export type PreviewResult = { ok: true; diff: FeedDiff } | { ok: false; error: string };
+export type PreviewResult = { ok: true; diff: FeedDiff; types: { id: string; name: string }[] } | { ok: false; error: string };
 
 /**
  * Check the feed for changes WITHOUT importing anything: returns new events to
@@ -86,7 +87,11 @@ export async function previewIntegrationChangesAction(id: string): Promise<Previ
     const drafts = await fetchIntegrationDrafts(row);
     const diff = await diffFeed(repos, ctx, drafts, `integration:${row.provider}`);
     await repos.tenant.integration.update(ctx, id, { status: "connected", lastResult: `${diff.toAdd.length} new · ${diff.toRemove.length} removed · ${diff.unchanged} unchanged` });
-    return { ok: true, diff };
+    const types = (await repos.tenant.courseType.list(ctx))
+      .filter((c) => c.active && c.listed)
+      .map((c) => ({ id: c.id, name: c.name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    return { ok: true, diff, types };
   } catch (err) {
     const msg = (err as Error).message || "Check failed";
     await repos.tenant.integration.update(ctx, id, { status: "error", lastResult: msg });
@@ -95,14 +100,14 @@ export async function previewIntegrationChangesAction(id: string): Promise<Previ
 }
 
 /** Apply the admin's chosen additions/removals. Never changes anything not selected. */
-export async function applyIntegrationChangesAction(id: string, addKeys: string[], removeCourseIds: string[]): Promise<IntegrationResult> {
+export async function applyIntegrationChangesAction(id: string, addKeys: string[], removeCourseIds: string[], typeChoices?: Record<string, string>): Promise<IntegrationResult> {
   const { ctx, repos } = await requireTenant({ role: "admin" });
   const row = (await repos.tenant.integration.list(ctx, eq(integrationTable.id, id)))[0];
   if (!row) return { ok: false, error: "Not found" };
   if ((addKeys?.length ?? 0) === 0 && (removeCourseIds?.length ?? 0) === 0) return { ok: false, error: "Nothing selected" };
   try {
     const drafts = await fetchIntegrationDrafts(row);
-    const out = await applyChanges(repos, ctx, drafts, `integration:${row.provider}`, addKeys ?? [], removeCourseIds ?? []);
+    const out = await applyChanges(repos, ctx, drafts, `integration:${row.provider}`, addKeys ?? [], removeCourseIds ?? [], sanitiseTypeChoices(typeChoices));
     const summary = `${out.added} added · ${out.removed} removed`;
     await repos.tenant.integration.update(ctx, id, { status: "connected", lastSyncedAt: new Date(), lastResult: summary });
     revalidatePath("/office/courses");

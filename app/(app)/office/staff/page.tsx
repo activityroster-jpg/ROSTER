@@ -21,7 +21,7 @@ export default async function StaffPage() {
     .sort((a, b) => a.rank - b.rank)
     .map((q) => ({ id: q.id, name: q.name }));
   const courseChoices = courseTypes
-    .filter((c) => c.active)
+    .filter((c) => c.active && c.listed)
     .map((c) => ({ id: c.id, name: c.name, audience: c.audience, scheme: c.scheme, category: c.category }));
   const checkChoices = complianceTypes
     .filter((c) => c.active)

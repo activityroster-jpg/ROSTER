@@ -9,6 +9,7 @@ import { writeAudit } from "@/lib/services/audit";
 import { COURSE_STATUSES, SLOT_CODES, type CourseStatus, type SlotCode } from "@/lib/db/schema";
 import { normaliseTime, timeToSlot } from "@/lib/import/parse";
 import { getCourseEditorData, type CourseEditorData } from "@/lib/services/course-editor";
+import { createCourseTypeResolver, TYPE_NEW, TYPE_ONEOFF } from "@/lib/services/course-type-resolve";
 
 export type ActionState = { ok: boolean; error?: string; message?: string };
 
@@ -86,9 +87,12 @@ export async function createCourseFlexibleAction(input: {
   roles?: { roleTypeId: string; count: number }[];
   locationIds?: string[];
   equipmentIds?: string[];
+  /** A manually-typed course type instead of courseTypeId; optionally added to the regular list. */
+  newType?: { name: string; addToList: boolean };
 }): Promise<ActionState> {
   const { ctx, repos } = await requireTenant({ role: "admin" });
-  if (!input.courseTypeId) return { ok: false, error: "Pick a course type" };
+  const newTypeName = typeof input.newType?.name === "string" ? input.newType.name.trim().slice(0, 120) : "";
+  if (!input.courseTypeId && !newTypeName) return { ok: false, error: "Pick a course type, or type one in" };
   const rawSessions = Array.isArray(input.sessions) ? input.sessions : [];
   const sessions: NewCourseSession[] = [];
   for (const s of rawSessions) {
@@ -109,8 +113,14 @@ export async function createCourseFlexibleAction(input: {
     .slice(0, 20);
 
   try {
+    let courseTypeId = input.courseTypeId;
+    if (newTypeName) {
+      const resolver = await createCourseTypeResolver(repos, ctx);
+      const type = await resolver.resolve(newTypeName, "all", input.newType?.addToList === true ? TYPE_NEW : TYPE_ONEOFF);
+      courseTypeId = type.id;
+    }
     await createCourseWithSessions(repos, ctx, {
-      courseTypeId: input.courseTypeId,
+      courseTypeId,
       name: input.name?.trim() || undefined,
       sessions,
       roleRequirements,

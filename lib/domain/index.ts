@@ -7,3 +7,4 @@ export * from "./time";
 export * from "./conflict";
 export * from "./fit";
 export * from "./ratio";
+export * from "./course-type-match";

@@ -6,6 +6,8 @@ import { fetchBookwhenDrafts } from "@/lib/integrations/adapters/bookwhen";
 import { assertSafeFeedUrl } from "@/lib/integrations/url-guard";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { writeAudit } from "./audit";
+import { suggestCourseType } from "@/lib/domain";
+import { createCourseTypeResolver } from "./course-type-resolve";
 
 const FEED_TIMEOUT_MS = 12000;
 const FEED_MAX_BYTES = 8 * 1024 * 1024; // 8MB cap
@@ -38,7 +40,7 @@ export async function importDrafts(
   repos: Repositories,
   ctx: AnyTenantContext,
   drafts: DraftRow[],
-  opts?: { source?: string; onlyKeys?: Set<string> },
+  opts?: { source?: string; onlyKeys?: Set<string>; typeChoices?: Record<string, string> },
 ): Promise<SyncOutcome> {
   const t = repos.tenant;
   const today = new Date().toISOString().slice(0, 10);
@@ -48,7 +50,7 @@ export async function importDrafts(
     t.course.list(ctx),
     t.courseSession.list(ctx),
   ]);
-  const typeByName = new Map(types.map((c) => [c.name.trim().toLowerCase(), c]));
+  const resolver = await createCourseTypeResolver(repos, ctx);
   const courseName = new Map(courses.map((c) => {
     const type = types.find((x) => x.id === c.courseTypeId);
     return [c.id, (c.name ?? type?.name ?? "").trim().toLowerCase()];
@@ -81,19 +83,9 @@ export async function importDrafts(
       ? (d.audience as CourseAudience)
       : "all";
 
-    let type = typeByName.get(name.toLowerCase());
-    if (!type) {
-      type = await t.courseType.insert(ctx, {
-        name,
-        scheme: "Imported",
-        audience,
-        defaultCapacity: 8,
-        studentsPerInstructor: 4,
-        requiresSafetyBoat: audience === "youth",
-        active: true,
-      });
-      typeByName.set(name.toLowerCase(), type);
-    }
+    // The admin's review choice wins; unattended syncs match to the regular
+    // list, and anything unmatched becomes a one-off type (kept off the list).
+    const type = await resolver.resolve(name, audience, opts?.typeChoices?.[key]);
 
     const course = await t.course.insert(ctx, {
       courseTypeId: type.id,
@@ -125,7 +117,7 @@ export async function importDrafts(
 }
 
 export interface FeedDiff {
-  toAdd: { key: string; name: string; date: string; slot: string; startTime: string; endTime: string; audience: string }[];
+  toAdd: { key: string; name: string; date: string; slot: string; startTime: string; endTime: string; audience: string; suggestedTypeId: string | null }[];
   toRemove: { courseId: string; name: string; date: string; slot: string }[];
   unchanged: number;
 }
@@ -157,6 +149,7 @@ export async function diffFeed(
     if (!firstSession.has(s.courseId)) firstSession.set(s.courseId, s);
   }
 
+  const regular = types.filter((c) => c.active && c.listed);
   const feedKeys = new Set<string>();
   const toAdd: FeedDiff["toAdd"] = [];
   for (const d of drafts) {
@@ -169,7 +162,7 @@ export async function diffFeed(
     feedKeys.add(key);
     if (!allKeys.has(key)) {
       const audience = (COURSE_AUDIENCES as readonly string[]).includes(d.audience) ? d.audience : "all";
-      toAdd.push({ key, name, date, slot, startTime, endTime: d.endTime || "", audience });
+      toAdd.push({ key, name, date, slot, startTime, endTime: d.endTime || "", audience, suggestedTypeId: suggestCourseType(name, regular)?.type.id ?? null });
     }
   }
 
@@ -193,10 +186,11 @@ export async function applyChanges(
   source: string,
   addKeys: string[],
   removeCourseIds: string[],
+  typeChoices?: Record<string, string>,
 ): Promise<{ added: number; removed: number }> {
   let added = 0;
   if (addKeys.length) {
-    const out = await importDrafts(repos, ctx, drafts, { source, onlyKeys: new Set(addKeys) });
+    const out = await importDrafts(repos, ctx, drafts, { source, onlyKeys: new Set(addKeys), typeChoices });
     added = out.created;
   }
   let removed = 0;

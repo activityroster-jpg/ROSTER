@@ -12,6 +12,8 @@ import {
 } from "@/lib/import/parse";
 import { importCoursesAction, type ImportResult } from "@/app/(app)/office/import/actions";
 import type { CourseAudience } from "@/lib/db/schema";
+import { suggestCourseType } from "@/lib/domain/course-type-match";
+import { CourseTypeChoice, initialChoice, type TypeOption } from "@/components/office/CourseTypeChoice";
 
 const FIELD_LABELS: Record<ImportField, string> = {
   name: "Course name", date: "Date", startTime: "Start", endTime: "End", audience: "Youth / Adult", location: "Location", staff: "Staff",
@@ -26,7 +28,7 @@ function issuesFor(r: DraftRow): string[] {
   return out;
 }
 
-export function ImportWizard() {
+export function ImportWizard({ types = [] }: { types?: TypeOption[] }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [phase, setPhase] = useState<"input" | "map" | "review" | "done">("input");
@@ -36,6 +38,16 @@ export function ImportWizard() {
   const [drafts, setDrafts] = useState<DraftRow[]>([]);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  // Course type per row: auto-matched from the name until the admin picks one.
+  const [choices, setChoices] = useState<Record<number, string>>({});
+  const [manual, setManual] = useState<Set<number>>(new Set());
+  const suggestion = (name: string) => suggestCourseType(name, types)?.type.id ?? null;
+  const startReview = (rows: DraftRow[]) => {
+    setDrafts(rows);
+    setChoices(Object.fromEntries(rows.map((r, i) => [i, initialChoice(suggestion(r.name))])));
+    setManual(new Set());
+    setPhase("review");
+  };
 
   const readFile = (file: File) => {
     const reader = new FileReader();
@@ -50,7 +62,7 @@ export function ImportWizard() {
     if (/BEGIN:V(CALENDAR|EVENT)/i.test(t)) {
       const rows = draftsFromIcs(t);
       if (!rows.length) { setErr("No calendar events found."); return; }
-      setDrafts(rows); setPhase("review");
+      startReview(rows);
       return;
     }
     const g = parseCsv(t);
@@ -61,12 +73,11 @@ export function ImportWizard() {
   };
 
   const buildReview = () => {
-    const rows = draftsFromCsv(grid, mapping, true);
-    setDrafts(rows);
-    setPhase("review");
+    startReview(draftsFromCsv(grid, mapping, true));
   };
 
   const edit = (i: number, field: ImportField, value: string) => {
+    if (field === "name" && !manual.has(i)) setChoices((c) => ({ ...c, [i]: initialChoice(suggestion(value)) }));
     setDrafts((d) => d.map((r, idx) => {
       if (idx !== i) return r;
       const next = { ...r, [field]: field === "audience" ? (value as CourseAudience) : value } as DraftRow;
@@ -75,14 +86,16 @@ export function ImportWizard() {
     }));
   };
 
-  const importable = drafts.filter((r) => r.name.trim() && ISO.test(r.date));
+  const importable = drafts.map((r, i) => ({ r, i })).filter(({ r }) => r.name.trim() && ISO.test(r.date));
+  const unmatched = importable.filter(({ r, i }) => !manual.has(i) && !suggestion(r.name)).length;
   const flagged = drafts.filter((r) => r.issues.length > 0);
 
   const doImport = () => {
     setErr(null);
     startTransition(async () => {
-      const res = await importCoursesAction(importable.map((r) => ({
+      const res = await importCoursesAction(importable.map(({ r, i }) => ({
         name: r.name, date: r.date, startTime: r.startTime, endTime: r.endTime, audience: r.audience, location: r.location, staff: r.staff,
+        typeChoice: choices[i],
       })));
       setResult(res); setPhase("done");
       if (res.ok) router.refresh();
@@ -158,14 +171,15 @@ export function ImportWizard() {
             <p className="text-sm text-slate-500">
               <span className="font-semibold text-starboard">{importable.length} ready</span>
               {flagged.length ? <span> · <span className="font-semibold text-amber">{flagged.length} need a look</span></span> : null}
+              {unmatched ? <span> · <span className="font-semibold text-amber">{unmatched} with no type match</span></span> : null}
             </p>
           </div>
-          <p className="mt-1 text-sm text-slate-500">Anything we couldn&apos;t read confidently is highlighted — correct it here. Rows without a name or valid date won&apos;t be imported.</p>
+          <p className="mt-1 text-sm text-slate-500">Anything we couldn&apos;t read confidently is highlighted — correct it here. Rows without a name or valid date won&apos;t be imported. Each course is matched to one of your course types — check the Type column, and pick a type for any marked “no match”, add it to your list, or keep it as a one-off.</p>
 
           <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[820px] text-left text-sm">
+            <table className="w-full min-w-[1000px] text-left text-sm">
               <thead className="text-xs uppercase tracking-wide text-slate-400">
-                <tr>{(Object.keys(FIELD_LABELS) as ImportField[]).map((f) => <th key={f} className="px-2 py-2 font-semibold">{FIELD_LABELS[f]}</th>)}</tr>
+                <tr>{(Object.keys(FIELD_LABELS) as ImportField[]).map((f) => <th key={f} className="px-2 py-2 font-semibold">{FIELD_LABELS[f]}</th>)}<th className="px-2 py-2 font-semibold">Type</th></tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {drafts.map((r, i) => {
@@ -183,6 +197,10 @@ export function ImportWizard() {
                       </td>
                       <td className="px-2 py-1"><input value={r.location} onChange={(e) => edit(i, "location", e.target.value)} className="w-32 rounded border border-slate-300 px-2 py-1 text-sm" /></td>
                       <td className="px-2 py-1"><input value={r.staff} onChange={(e) => edit(i, "staff", e.target.value)} className="w-32 rounded border border-slate-300 px-2 py-1 text-sm" /></td>
+                      <td className="px-2 py-1">
+                        <CourseTypeChoice value={choices[i] ?? initialChoice(suggestion(r.name))} onChange={(v) => { setChoices((c) => ({ ...c, [i]: v })); setManual((m) => new Set(m).add(i)); }}
+                          types={types} importedName={r.name || "this course"} matched={manual.has(i) || Boolean(suggestion(r.name))} />
+                      </td>
                     </tr>
                   );
                 })}
@@ -209,7 +227,7 @@ export function ImportWizard() {
           {result.ok ? (
             <>
               <p className="font-display text-2xl font-semibold text-navy">✅ {result.message}</p>
-              <p className="mx-auto mt-2 max-w-md text-sm text-slate-600">New course types and locations were created where needed. Review and roster staff in Courses.</p>
+              <p className="mx-auto mt-2 max-w-md text-sm text-slate-600">Courses were filed under the types you chose; new locations were created where needed. Review and roster staff in Courses.</p>
               <div className="mt-6 flex justify-center gap-3">
                 <a href="/office/courses" className="rounded-lg bg-teal px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal-700">Go to Courses →</a>
                 <button onClick={() => { setPhase("input"); setText(""); setDrafts([]); setResult(null); }} className="rounded-lg border border-slate-300 px-5 py-2.5 text-sm font-semibold text-navy hover:bg-slate-50">Import more</button>

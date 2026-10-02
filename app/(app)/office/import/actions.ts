@@ -5,6 +5,7 @@ import { requireTenant } from "@/lib/tenant/require";
 import { COURSE_AUDIENCES, type CourseAudience } from "@/lib/db/schema";
 import { writeAudit } from "@/lib/services/audit";
 import { timeToSlot, toEpochMs } from "@/lib/import/parse";
+import { createCourseTypeResolver } from "@/lib/services/course-type-resolve";
 
 export interface ConfirmedRow {
   name: string;
@@ -14,6 +15,8 @@ export interface ConfirmedRow {
   audience: string;
   location: string;
   staff: string;
+  /** Review choice: a course type id, TYPE_NEW or TYPE_ONEOFF. */
+  typeChoice?: string;
 }
 
 export interface ImportResult {
@@ -30,21 +33,21 @@ const ISO = /^\d{4}-\d{2}-\d{2}$/;
  * Create courses (+ a first session, and optional location/staff links) from
  * reviewed import rows. Everything goes through the tenant repositories, so the
  * org filter is enforced. Rows the admin left incomplete are skipped, never
- * guessed. New course types / locations are created on demand.
+ * guessed. Each row lands under the course type chosen in review; new types
+ * (listed or one-off) and locations are created on demand.
  */
 export async function importCoursesAction(rows: ConfirmedRow[]): Promise<ImportResult> {
   const { ctx, repos } = await requireTenant({ role: "admin" });
   if (!Array.isArray(rows) || rows.length === 0) return { ok: false, created: 0, skipped: 0, error: "Nothing to import" };
 
   const t = repos.tenant;
-  const [existingTypes, existingLocations, instructors, roles] = await Promise.all([
-    t.courseType.list(ctx),
+  const resolver = await createCourseTypeResolver(repos, ctx);
+  const [existingLocations, instructors, roles] = await Promise.all([
     t.location.list(ctx),
     t.instructor.list(ctx),
     t.roleType.list(ctx),
   ]);
 
-  const typeByName = new Map(existingTypes.map((c) => [c.name.trim().toLowerCase(), c]));
   const locByName = new Map(existingLocations.map((l) => [l.name.trim().toLowerCase(), l]));
   const instructorByName = new Map(instructors.map((i) => [i.name.trim().toLowerCase(), i]));
   const defaultRole = roles.find((r) => r.active && r.countsTowardRatio) ?? roles.find((r) => r.active);
@@ -61,22 +64,9 @@ export async function importCoursesAction(rows: ConfirmedRow[]): Promise<ImportR
       ? (raw.audience as CourseAudience)
       : "all";
 
-    // 1) course type (find or create)
-    const key = name.toLowerCase();
-    let type = typeByName.get(key);
-    if (!type) {
-      type = await t.courseType.insert(ctx, {
-        name,
-        scheme: "Imported",
-        audience,
-        category: "Imported",
-        defaultCapacity: 8,
-        studentsPerInstructor: 4,
-        requiresSafetyBoat: audience === "youth",
-        active: true,
-      });
-      typeByName.set(key, type);
-    }
+    // 1) course type — the admin's review choice, else best match / one-off
+    const choice = typeof raw.typeChoice === "string" && raw.typeChoice.length <= 64 ? raw.typeChoice : undefined;
+    const type = await resolver.resolve(name, audience, choice);
 
     // 2) course
     const course = await t.course.insert(ctx, {

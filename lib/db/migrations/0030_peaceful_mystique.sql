@@ -1,0 +1,1 @@
+ALTER TABLE `course_type` ADD `listed` integer DEFAULT true NOT NULL;

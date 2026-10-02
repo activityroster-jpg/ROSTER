@@ -6,7 +6,11 @@ export const dynamic = "force-dynamic";
 
 export default async function ImportPage() {
   // Admin-only; ensures a tenant context exists before rendering the client wizard.
-  await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const types = (await repos.tenant.courseType.list(ctx))
+    .filter((c) => c.active && c.listed)
+    .map((c) => ({ id: c.id, name: c.name }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -17,8 +21,9 @@ export default async function ImportPage() {
           Bring your existing timetable across from a spreadsheet, booking system or calendar instead of typing it in.
           We read it, flag anything unclear, and you confirm before anything is created.
         </p>
+        <a href="/learn?topic=import" target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-teal hover:underline">📖 Read the guide</a>
       </div>
-      <ImportWizard />
+      <ImportWizard types={types} />
     </div>
   );
 }

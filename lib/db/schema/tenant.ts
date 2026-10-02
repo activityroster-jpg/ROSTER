@@ -213,6 +213,9 @@ export const courseType = sqliteTable("course_type", {
   requiresSafetyBoat: boolCol("requires_safety_boat").default(false),
   defaultPrice: real("default_price"), // per-head list price, nullable = not priced
   active: boolCol("active").default(true),
+  /** On the centre's regular course list (dropdowns, Course setup). One-off
+   * types entered manually or imported without a match are unlisted. */
+  listed: boolCol("listed").default(true),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 }, (t) => [index("course_type_org_idx").on(t.organisationId)]);

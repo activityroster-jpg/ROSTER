@@ -25,6 +25,7 @@ function addDaysIso(iso: string, n: number): string {
 const fmtTime = (ms: number) => new Date(ms).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
 const fmtDay = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
 let seq = 0;
+const OTHER = "__other";
 
 export function CoursePlanner({ courseTypes, events, slotStyle, roles = [], locations = [], equipment = [] }: {
   courseTypes: CourseTypeUi[]; events: EventUi[]; slotStyle: "slots" | "times";
@@ -35,6 +36,10 @@ export function CoursePlanner({ courseTypes, events, slotStyle, roles = [], loca
   const thisMonday = mondayOf(new Date());
   const [monday, setMonday] = useState(thisMonday);
   const [courseTypeId, setCourseTypeId] = useState("");
+  // "Other" — a manually-typed type, kept off the regular list unless ticked.
+  const [otherType, setOtherType] = useState("");
+  const [addToList, setAddToList] = useState(false);
+  const isOther = courseTypeId === OTHER;
   const [name, setName] = useState("");
   const [rows, setRows] = useState<Row[]>([]);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -77,14 +82,18 @@ export function CoursePlanner({ courseTypes, events, slotStyle, roles = [], loca
   const create = () => {
     setMsg(null);
     if (!courseTypeId) { setMsg({ ok: false, text: "Pick a course type first." }); return; }
+    if (isOther && !otherType.trim()) { setMsg({ ok: false, text: "Type the course type name." }); return; }
     if (rows.length === 0) { setMsg({ ok: false, text: "Add at least one session (click a day in the calendar or ‘Add session’)." }); return; }
     // Exact times apply in "set times" mode, or per row when ticked in slot mode.
     const timed = (r: Row) => slotStyle === "times" || r.useTimes;
     const sessions: FlexSession[] = rows.map((r) => ({ date: r.date, startTime: timed(r) ? r.startTime || undefined : undefined, endTime: timed(r) ? r.endTime || undefined : undefined, slot: r.slot }));
     const roleReqs = needs.filter((n) => n.roleTypeId).map((n) => ({ roleTypeId: n.roleTypeId, count: n.count }));
     start(async () => {
-      const res = await createCourseFlexibleAction({ courseTypeId, name, sessions, roles: roleReqs, locationIds, equipmentIds });
-      if (res.ok) { setRows([]); setName(""); setNeeds([]); setLocationIds([]); setEquipmentIds([]); setMsg({ ok: true, text: res.message ?? "Created" }); router.refresh(); }
+      const res = await createCourseFlexibleAction({
+        courseTypeId: isOther ? "" : courseTypeId, name, sessions, roles: roleReqs, locationIds, equipmentIds,
+        newType: isOther ? { name: otherType.trim(), addToList } : undefined,
+      });
+      if (res.ok) { setRows([]); setName(""); if (isOther) { setCourseTypeId(""); setOtherType(""); setAddToList(false); } setNeeds([]); setLocationIds([]); setEquipmentIds([]); setMsg({ ok: true, text: res.message ?? "Created" }); router.refresh(); }
       else setMsg({ ok: false, text: res.error ?? "Could not create" });
     });
   };
@@ -147,7 +156,18 @@ export function CoursePlanner({ courseTypes, events, slotStyle, roles = [], loca
             <select value={courseTypeId} onChange={(e) => setCourseTypeId(e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal">
               <option value="">Select…</option>
               {courseTypes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              <option value={OTHER}>＋ Other (type it in)…</option>
             </select>
+            {isOther ? (
+              <div className="mt-2 space-y-1.5">
+                <input value={otherType} onChange={(e) => setOtherType(e.target.value)} placeholder="e.g. Corporate team day" aria-label="Course type name" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal" />
+                <label className="flex items-center gap-2 text-xs text-slate-600">
+                  <input type="checkbox" checked={addToList} onChange={(e) => setAddToList(e.target.checked)} />
+                  Add to my regular course list
+                </label>
+                {!addToList ? <p className="text-[11px] text-slate-400">Left unticked, it&apos;s a one-off and won&apos;t clutter your list. You can add it later in Course setup.</p> : null}
+              </div>
+            ) : null}
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-500">Course name <span className="text-slate-400">(optional — a unique label)</span></label>
