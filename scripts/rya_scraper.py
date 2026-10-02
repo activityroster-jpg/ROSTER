@@ -19,7 +19,9 @@ Polite: 1.5 s between requests; robots.txt allows crawling. A full run takes
 roughly 1-3 hours. Ctrl+C and re-run to resume; failed fetches are retried.
 
 --overseas runs a second pass over the rest of the world (after the UK pass),
-appending to the same CSV with region "Overseas" and the country.
+appending to the same CSV with region "Overseas" and the country. It also
+collects listings the RYA has no location for (stored at 0,0), which no
+location search can reach; those can be UK or overseas.
 --clean fixes county-in-city rows in an existing CSV.
 --check prints row count, blank names/emails, duplicates and non-UK/IE rows.
 """
@@ -329,6 +331,28 @@ def main():
     # Coverage sweep (quadtree). Each query returns the nearest 20 results with
     # coordinates. If the 20th is farther away than the cell's corners, every
     # organisation in that cell is in the results; otherwise split the cell in 4.
+    if OVERSEAS and not state.get("nolocation_done"):
+        # Listings with no location are stored at 0,0, so no search near a real place
+        # ever reaches them. Search at 0,0 per type: once a result list contains a
+        # real location, every 0,0 listing of that type has been returned.
+        for kind in ("Club", "Training_Centre"):
+            html = get(f"{BASE}?lat=0&lng=0&locationType={kind}&locationSearch=&useBrowserLocation=false")
+            time.sleep(DELAY)
+            if html is None:
+                print("Could not fetch the no-location listings; re-run to retry.")
+                sys.exit(1)
+            found = parse_listing(html)
+            zero = [sl for sl, a, b in found if (a, b) in ((0.0, 0.0), (None, None))]
+            if len(zero) == len(found):
+                print(f"  warning: all {len(found)} {kind} results have no location - list may be truncated")
+            new = [sl for sl in zero if sl not in slug_set]
+            slugs += new
+            slug_set.update(new)
+            print(f"  {len(zero)} {kind} listings have no location ({len(new)} new)")
+        state["nolocation_done"] = True
+        state["slugs"] = slugs
+        save(state)
+
     print(f"Step 1/2: coverage sweep ({len(state['queue'])} cells queued, "
           f"{state['done_cells']} done, {len(slugs)} organisations so far)")
     n = 0
@@ -358,9 +382,12 @@ def main():
         slug_set.update(new)
         state["done_cells"] += 1
 
+        # Results are ordered by their stored coordinates; ones we couldn't parse are
+        # ignored (they used to force a split everywhere they appeared). Listings with
+        # no location are stored at 0,0 and are collected by --nolocation instead.
         dists = [km(la, ln, a, b) for _, a, b in found if a is not None]
         full_page = len(found) >= 20
-        if full_page and (len(dists) < len(found) or max(dists) < cell_radius_km(la, ln, h)):
+        if full_page and dists and max(dists) < cell_radius_km(la, ln, h):
             if h / 2 >= MIN_HALF:
                 q = h / 2
                 for dy in (-q, q):
