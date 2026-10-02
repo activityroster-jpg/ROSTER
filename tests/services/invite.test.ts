@@ -22,15 +22,22 @@ describe("linkInstructorUser (portal invite)", () => {
     instructorId = (await repos.tenant.instructor.list(ctx))[0]!.id;
   });
 
-  it("creates a user + instructor membership and links the instructor record", async () => {
+  it("creates a user + a PENDING instructor membership, active only once accepted", async () => {
     const res = await linkInstructorUser(repos, ctx, instructorId);
     expect(res.ok).toBe(true);
     if (!res.ok) return;
+    expect(res.pending).toBe(true);
 
     const user = await repos.control.userByEmail(res.email);
     expect(user).not.toBeNull();
-    const membership = await repos.control.activeMembership(user!.id, orgId);
-    expect(membership?.role).toBe("instructor");
+    // Not a member yet — a mistyped address can't grant access to a stranger.
+    expect(await repos.control.activeMembership(user!.id, orgId)).toBeNull();
+    expect((await repos.control.membershipFor(user!.id, orgId))?.status).toBe("invited");
+
+    // The invited person arrives signed in → the invite is accepted.
+    expect(await repos.control.acceptInvitedMembership(user!.id, orgId)).toBe(true);
+    expect((await repos.control.activeMembership(user!.id, orgId))?.role).toBe("instructor");
+    expect(await repos.control.acceptInvitedMembership(user!.id, orgId)).toBe(false); // nothing left to accept
 
     const instructor = await repos.tenant.instructor.findById(ctx, instructorId);
     expect(instructor?.userId).toBe(user!.id);

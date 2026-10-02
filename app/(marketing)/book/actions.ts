@@ -3,7 +3,7 @@
 import { getDb, getEnv } from "@/lib/cf/bindings";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { openSlots } from "@/lib/calls/slots";
-import { sendEmail } from "@/lib/mail";
+import { escapeHtml, sendEmail } from "@/lib/mail";
 import { LETTER_SENDER } from "@/lib/marketing";
 
 export type BookResult = { ok: boolean; error?: string };
@@ -18,8 +18,10 @@ const whenLabel = (d: Date) =>
 
 /** Public: book a 30-minute discovery call in one of the admin's open GMT slots. */
 export async function bookCallAction(input: { startAtIso: string; name: string; email: string; centre?: string; notes?: string }): Promise<BookResult> {
-  const name = (input.name ?? "").trim();
-  const email = (input.email ?? "").trim();
+  const name = (input.name ?? "").trim().slice(0, 120);
+  const email = (input.email ?? "").trim().slice(0, 254);
+  const centre = (input.centre ?? "").trim().slice(0, 160) || null;
+  const notes = (input.notes ?? "").trim().slice(0, 2000) || null;
   if (!name) return { ok: false, error: "Please enter your name." };
   if (!EMAIL_RE.test(email)) return { ok: false, error: "Please enter a valid email address." };
   const startAt = new Date(input.startAtIso);
@@ -43,8 +45,8 @@ export async function bookCallAction(input: { startAtIso: string; name: string; 
     durationMin: 30,
     name,
     email,
-    centre: (input.centre ?? "").trim() || null,
-    notes: (input.notes ?? "").trim() || null,
+    centre,
+    notes,
     status: "booked",
   });
 
@@ -54,7 +56,7 @@ export async function bookCallAction(input: { startAtIso: string; name: string; 
     await sendEmail({
       to: email,
       subject: "Your ActivityRoster call is booked",
-      html: `<p>Hi ${name},</p><p>Thanks — your 30-minute call with ActivityRoster is booked for <strong>${when}</strong>.</p><p>We'll be in touch shortly with a joining link. If you need to change the time, just reply to this email.</p>`,
+      html: `<p>Hi ${escapeHtml(name)},</p><p>Thanks — your 30-minute call with ActivityRoster is booked for <strong>${when}</strong>.</p><p>We'll be in touch shortly with a joining link. If you need to change the time, just reply to this email.</p>`,
     });
   } catch {
     // ignore
@@ -64,8 +66,8 @@ export async function bookCallAction(input: { startAtIso: string; name: string; 
     const adminTo = env.SUPPORT_EMAIL || LETTER_SENDER.email;
     await sendEmail({
       to: adminTo,
-      subject: `New call booking — ${name}`,
-      html: `<p><strong>${name}</strong> (${email}${input.centre ? `, ${input.centre}` : ""}) booked a 30-minute call.</p><p>When: <strong>${when}</strong></p>${input.notes ? `<p>Notes: ${input.notes}</p>` : ""}`,
+      subject: `New call booking — ${name.replace(/[\r\n]+/g, " ")}`,
+      html: `<p><strong>${escapeHtml(name)}</strong> (${escapeHtml(email)}${centre ? `, ${escapeHtml(centre)}` : ""}) booked a 30-minute call.</p><p>When: <strong>${when}</strong></p>${notes ? `<p>Notes: ${escapeHtml(notes)}</p>` : ""}`,
     });
   } catch {
     // ignore

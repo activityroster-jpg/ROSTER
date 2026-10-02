@@ -15,6 +15,8 @@ export interface StaffRow {
   warnings: number;
   blockText: string;
   linked: boolean;
+  /** Portal access: none yet, invite sent but not accepted, or accepted. */
+  inviteStatus: "none" | "pending" | "accepted";
   hasEmail: boolean;
   teaches: string[];
   teachesYouth: boolean;
@@ -140,7 +142,7 @@ export function StaffTable({ rows }: { rows: StaffRow[] }) {
                   </td>
                   <td className="px-4 py-3">
                     {r.hasEmail ? (
-                      <InviteInstructorButton instructorId={r.id} linked={r.linked} />
+                      <InviteInstructorButton instructorId={r.id} status={r.inviteStatus} />
                     ) : (
                       <span className="text-xs text-slate-400">Add email to invite</span>
                     )}

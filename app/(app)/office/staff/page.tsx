@@ -27,6 +27,11 @@ export default async function StaffPage() {
     .filter((c) => c.active)
     .map((c) => ({ id: c.id, name: c.name, mandatory: Boolean(c.mandatory) }));
 
+  const membershipStatus = await repos.control.membershipStatusByUser(ctx.organisationId);
+  const inviteStatusFor = (userId: string | null): StaffRow["inviteStatus"] => {
+    if (!userId) return "none";
+    return membershipStatus.get(userId) === "active" ? "accepted" : "pending";
+  };
   const rows: StaffRow[] = staff.map(({ instructor, fit }) => {
     const teach = teaching.get(instructor.id) ?? [];
     return {
@@ -38,6 +43,7 @@ export default async function StaffPage() {
       warnings: fit.warnings.length,
       blockText: fit.blocks.map((b) => (b.kind === "missing" ? `${b.name} missing` : `${b.name} expired`)).join(", "),
       linked: Boolean(instructor.userId),
+      inviteStatus: inviteStatusFor(instructor.userId),
       hasEmail: Boolean(instructor.email),
       teaches: teach.map((c) => c.name),
       teachesYouth: teach.some((c) => c.audience === "youth" || c.audience === "all"),

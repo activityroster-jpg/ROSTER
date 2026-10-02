@@ -3,7 +3,7 @@ import type { CloudflareEnv } from "@/lib/cf/bindings";
 import { JURISDICTIONS, PLANS, SETUP_MODES, type Jurisdiction, type Plan, type SetupMode, type SubscriptionStatus } from "@/lib/db/schema";
 import { seedOrganisationDefaults } from "@/lib/seed/seed";
 import type { SystemTenantContext } from "@/lib/tenant/context";
-import { sendEmail } from "@/lib/mail";
+import { escapeHtml, sendEmail } from "@/lib/mail";
 
 export interface ProvisionParams {
   slug: string;
@@ -106,7 +106,7 @@ export async function provisionCentre(
         subject: `Your ActivityRoster centre is ready — ${params.centreName}`,
         html: `
           <p>Welcome to ActivityRoster!</p>
-          <p>Your centre <strong>${params.centreName}</strong> is set up at
+          <p>Your centre <strong>${escapeHtml(params.centreName)}</strong> is set up at
             <a href="${appUrl}">${slug}.${env.APP_APEX_DOMAIN}</a>.</p>
           <p>Sign in to get started.</p>
         `,

@@ -6,7 +6,7 @@ import { getEnv, getRepositories } from "@/lib/cf/bindings";
 import { getAuth } from "@/lib/auth";
 import { resolveHost } from "@/lib/tenant/host";
 import { platformAdminEmails } from "@/lib/platform/admin";
-import { sendEmail } from "@/lib/mail";
+import { escapeHtml, sendEmail } from "@/lib/mail";
 
 export const dynamic = "force-dynamic";
 
@@ -62,19 +62,21 @@ export async function POST(req: Request) {
       userAgent,
     });
 
-    // Notify the platform owner(s).
+    // Notify the platform owner(s) — capped globally so a flood of reports
+    // can't bury the inbox (reports are still persisted and visible in /admin/errors).
     const admins = [...platformAdminEmails()];
-    if (admins.length) {
+    const mailCap = await rateLimit("report-error:mail:global", 20, 60 * 60);
+    if (admins.length && mailCap.allowed) {
       const body = `
         <p><strong>New error reported on ActivityRoster</strong></p>
-        <p><strong>Centre:</strong> ${org?.name ?? "—"} (${slug ?? "no subdomain"})<br>
-        <strong>User:</strong> ${userEmail ?? "not signed in"}<br>
-        <strong>Page:</strong> ${path ?? "—"}<br>
+        <p><strong>Centre:</strong> ${escapeHtml(org?.name ?? "—")} (${escapeHtml(slug ?? "no subdomain")})<br>
+        <strong>User:</strong> ${escapeHtml(userEmail ?? "not signed in")}<br>
+        <strong>Page:</strong> ${escapeHtml(path ?? "—")}<br>
         <strong>When:</strong> ${new Date().toISOString()}</p>
-        <p><strong>Message:</strong><br>${scrub(message)}</p>
-        ${digest ? `<p><strong>Digest:</strong> ${digest}</p>` : ""}
+        <p><strong>Message:</strong><br>${escapeHtml(scrub(message))}</p>
+        ${digest ? `<p><strong>Digest:</strong> ${escapeHtml(digest)}</p>` : ""}
         <p style="color:#64748b;font-size:12px">See all reports at /admin/errors.</p>`;
-      await Promise.all(admins.map((to) => sendEmail({ to, subject: `⚠️ Error reported — ${org?.name ?? "ActivityRoster"}`, html: body }).catch(() => {})));
+      await Promise.all(admins.map((to) => sendEmail({ to, subject: `⚠️ Error reported — ${(org?.name ?? "ActivityRoster").replace(/[\r\n]+/g, " ").slice(0, 80)}`, html: body }).catch(() => {})));
     }
   } catch (err) {
     console.error("[report-error] persist/notify failed:", (err as Error).message);

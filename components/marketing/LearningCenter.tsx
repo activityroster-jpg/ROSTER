@@ -166,6 +166,7 @@ const SECTIONS: Section[] = [
         "Pick their employment type — employed, freelance or volunteer. Need a different one? Add a custom job/instructor type inline.",
         "Tick the qualifications/tickets they hold and the courses they can teach (a searchable tickbox list).",
         "Save. If you gave an email, they're automatically invited to the instructor app to upload their own licences.",
+        "An invite shows as “Invite pending” until they open it — access to your centre only starts when the invited person signs in, so a mistyped address can't let the wrong account in.",
       ] },
       { kind: "sub", text: "Courses each person can teach" },
       { kind: "p", text: "Each staff profile shows the courses they're approved to teach. This drives the fit checks when you roster — and you can see it at a glance on their profile." },

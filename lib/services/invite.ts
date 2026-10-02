@@ -3,7 +3,7 @@ import type { AnyTenantContext } from "@/lib/tenant/context";
 import { writeAudit } from "./audit";
 
 export type InviteResult =
-  | { ok: true; email: string; created: boolean }
+  | { ok: true; email: string; created: boolean; pending: boolean }
   | { ok: false; error: string };
 
 /**
@@ -27,9 +27,12 @@ export async function linkInstructorUser(
   const existingUser = await repos.control.userByEmail(email);
   const user = existingUser ?? (await repos.control.createUser({ name: instructor.name, email }));
 
-  const membership = await repos.control.activeMembership(user.id, ctx.organisationId);
+  // Access starts as INVITED and only becomes active when this person reaches
+  // the centre signed in (see lib/tenant/resolve) — a mistyped address can't
+  // hand portal access to a stranger's existing account.
+  const membership = await repos.control.membershipFor(user.id, ctx.organisationId);
   if (!membership) {
-    await repos.control.createMembership({ userId: user.id, organisationId: ctx.organisationId, role: "instructor" });
+    await repos.control.createMembership({ userId: user.id, organisationId: ctx.organisationId, role: "instructor" }, "invited");
   }
 
   if (instructor.userId !== user.id) {
@@ -43,5 +46,5 @@ export async function linkInstructorUser(
     after: { email, userId: user.id },
   });
 
-  return { ok: true, email, created: !existingUser };
+  return { ok: true, email, created: !existingUser, pending: membership?.status !== "active" };
 }

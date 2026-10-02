@@ -50,8 +50,23 @@ export async function resolveTenant(headers: Headers): Promise<TenantResolution>
     return { ok: false, reason: "unauthenticated", slug: host.slug, organisation };
   }
 
-  const membership = await control.activeMembership(authSession.user.id, organisation.id);
-  if (!membership) {
+  let membership = await control.membershipFor(authSession.user.id, organisation.id);
+  if (membership?.status === "invited") {
+    // The invited person is here and signed in (magic link or their own login),
+    // which proves they own the invited address — accept the invite now.
+    if (await control.acceptInvitedMembership(authSession.user.id, organisation.id)) {
+      await control.logSecurityEvent({
+        userId: authSession.user.id,
+        organisationId: organisation.id,
+        kind: "invite_accepted",
+        ip: headers.get("cf-connecting-ip"),
+        userAgent: headers.get("user-agent")?.slice(0, 300) ?? null,
+        country: headers.get("cf-ipcountry"),
+      }).catch(() => {});
+      membership = { role: membership.role, status: "active" };
+    }
+  }
+  if (!membership || membership.status !== "active") {
     return { ok: false, reason: "not-a-member", slug: host.slug, organisation };
   }
 

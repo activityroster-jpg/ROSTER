@@ -26,6 +26,8 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
   }
 
   const { instructor, fit, documents, approvedCourses, onboarding } = profile;
+  const membership = instructor.userId ? await repos.control.membershipFor(instructor.userId, ctx.organisationId) : null;
+  const inviteStatus = !instructor.userId ? "none" : membership?.status === "active" ? "accepted" : "pending";
   const docItems: DocItem[] = documents.map((d) => ({
     kind: d.kind, itemId: d.itemId, name: d.name, expiryDate: d.expiryDate, mandatory: d.mandatory, hasFile: d.hasFile, docKey: d.docKey, verified: d.verified,
   }));
@@ -39,7 +41,7 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
           <p className="text-sm capitalize text-slate-500">{instructor.employmentType} · {instructor.email ?? "no email"}</p>
         </div>
         <div className="flex items-center gap-3">
-          {instructor.email ? <InviteInstructorButton instructorId={instructor.id} linked={Boolean(instructor.userId)} /> : null}
+          {instructor.email ? <InviteInstructorButton instructorId={instructor.id} status={inviteStatus} /> : null}
           {fit.fit ? <StatusPill tone="covered">Fit to roster</StatusPill> : <StatusPill tone="conflict">{fitReason(fit) || "Not cleared"}</StatusPill>}
         </div>
       </div>

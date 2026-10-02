@@ -464,7 +464,7 @@ export type NewPlatformTask = typeof platformTask.$inferInsert;
 
 export const SECURITY_EVENT_KINDS = [
   "pin_set", "pin_reset", "pin_reset_failed", "pin_failed", "pin_locked", "pin_reset_code_sent",
-  "recovery_email_set", "password_changed", "new_device", "reauth_passed", "reauth_failed",
+  "recovery_email_set", "password_changed", "new_device", "reauth_passed", "reauth_failed", "invite_accepted",
 ] as const;
 export type SecurityEventKind = (typeof SECURITY_EVENT_KINDS)[number];
 

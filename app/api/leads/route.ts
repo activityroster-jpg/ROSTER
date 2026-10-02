@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getEnv, getRepositories } from "@/lib/cf/bindings";
 import { leadSchema } from "@/lib/validation/lead";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/security/rate-limit";
-import { sendEmail } from "@/lib/mail";
+import { escapeHtml, sendEmail } from "@/lib/mail";
 
 export const dynamic = "force-dynamic";
 
@@ -34,8 +34,9 @@ export async function POST(req: Request) {
     const env = getEnv();
     await sendEmail({
       to: `hello@${env.APP_APEX_DOMAIN}`,
-      subject: `New demo request: ${centreName || email}`,
-      html: `<p>${email}${centreName ? ` — ${centreName}` : ""}${orgType ? ` (${orgType})` : ""}</p>${message ? `<p>${message}</p>` : ""}`,
+      subject: `New demo request: ${(centreName || email).replace(/[\r\n]+/g, " ").slice(0, 120)}`,
+      // Visitor-typed text is escaped — never let a stranger put HTML or links in the inbox.
+      html: `<p>${escapeHtml(email)}${centreName ? ` — ${escapeHtml(centreName)}` : ""}${orgType ? ` (${escapeHtml(orgType)})` : ""}</p>${message ? `<p>${escapeHtml(message)}</p>` : ""}`,
     });
   } catch {
     /* ignore */

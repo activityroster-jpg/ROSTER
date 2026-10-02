@@ -15,6 +15,7 @@ import {
   type ErrorReportStatus,
   type LeadOrgType,
   type MembershipRole,
+  type MembershipStatus,
   type NewOrganisation,
   type Organisation,
 } from "@/lib/db/schema";
@@ -94,12 +95,45 @@ export class ControlPlaneRepository {
     await this.db.update(user).set({ emailVerified: true }).where(eq(user.id, userId));
   }
 
-  async createMembership(values: {
-    userId: string;
-    organisationId: string;
-    role: MembershipRole;
-  }): Promise<void> {
-    await this.db.insert(membership).values({ ...values, status: "active" });
+  async createMembership(
+    values: { userId: string; organisationId: string; role: MembershipRole },
+    status: "active" | "invited" = "active",
+  ): Promise<void> {
+    await this.db.insert(membership).values({ ...values, status });
+  }
+
+  /** The membership row (any status) linking a user to an org, or null. */
+  async membershipFor(userId: string, organisationId: string): Promise<{ role: MembershipRole; status: MembershipStatus } | null> {
+    const rows = await this.db
+      .select({ role: membership.role, status: membership.status })
+      .from(membership)
+      .where(and(eq(membership.userId, userId), eq(membership.organisationId, organisationId)))
+      .limit(1);
+    return rows[0] ?? null;
+  }
+
+  /**
+   * Flip an invited membership to active. Called when the invited user first
+   * reaches the centre while signed in — the magic link (or their existing
+   * login) has proved they own the invited address. Returns false if there was
+   * no pending invite.
+   */
+  async acceptInvitedMembership(userId: string, organisationId: string): Promise<boolean> {
+    const rows = await this.db
+      .update(membership)
+      .set({ status: "active" })
+      .where(and(eq(membership.userId, userId), eq(membership.organisationId, organisationId), eq(membership.status, "invited")))
+      .returning({ id: membership.id });
+    return rows.length > 0;
+  }
+
+  /** userId → membership status for everyone in an org (Staff tab labels). */
+  async membershipStatusByUser(organisationId: string): Promise<Map<string, MembershipStatus>> {
+    const rows = await this.db
+      .select({ userId: membership.userId, status: membership.status })
+      .from(membership)
+      .where(eq(membership.organisationId, organisationId));
+    return new Map(rows.map((r) => [r.userId, r.status]));
   }
 
   async organisationByStripeCustomer(stripeCustomerId: string) {
