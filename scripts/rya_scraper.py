@@ -18,6 +18,9 @@ Race officials and launch points are filtered out in the query.
 Polite: 1.5 s between requests; robots.txt allows crawling. A full run takes
 roughly 1-3 hours. Ctrl+C and re-run to resume; failed fetches are retried.
 
+--overseas runs a second pass over the rest of the world (after the UK pass),
+appending to the same CSV with region "Overseas" and the country.
+--clean fixes county-in-city rows in an existing CSV.
 --check prints row count, blank names/emails, duplicates and non-UK/IE rows.
 """
 import csv, json, math, os, re, sys, time
@@ -28,6 +31,8 @@ DELAY = 1.5             # seconds between requests
 MIN_HALF = 0.004        # stop splitting cells below ~0.5 km across
 OUT = "rya_all_raw.csv"
 STATE = "rya_progress.json"
+OVERSEAS_STATE = "rya_progress_overseas.json"
+OVERSEAS = "--overseas" in sys.argv  # second pass: the rest of the world
 DEBUG_HTML = "rya_debug_listing.html"
 
 HEAD = {"User-Agent": "Mozilla/5.0 (outreach research; contact via website)"}
@@ -75,7 +80,16 @@ Sutherland Orkney Shetland Antrim Armagh Down Fermanagh Londonderry Tyrone
                "county durham", "west lothian", "east lothian", "argyll and bute",
                "scottish borders", "dumfries and galloway", "isle of anglesey",
                "vale of glamorgan", "north ayrshire", "south ayrshire", "east ayrshire",
-               "western isles", "na h-eileanan siar", "perth and kinross"}
+               "western isles", "na h-eileanan siar", "perth and kinross"} | {c.lower() for c in """
+Carlow Cavan Clare Cork Donegal Dublin Galway Kerry Kildare Kilkenny Laois Leitrim Limerick
+Longford Louth Mayo Meath Monaghan Offaly Roscommon Sligo Tipperary Waterford Westmeath
+Wexford Wicklow
+""".split()}
+
+
+def is_county(part):
+    p = part.strip()
+    return bool(re.match(r"^(County|Co\.?)\s*\S", p, re.I)) or p.lower() in COUNTIES
 COUNTRY_WORDS = ("United Kingdom", "Republic Of Ireland", "Republic of Ireland", "Ireland",
                  "Northern Ireland", "Isle of Man", "Jersey", "Guernsey", "Channel Islands")
 
@@ -179,8 +193,14 @@ def cell_radius_km(la, ln, h):
 
 
 def start_cells():
-    """1-degree cells over the UK, Ireland, Isle of Man and Channel Islands."""
+    """1-degree cells over the UK, Ireland, Isle of Man and Channel Islands
+    (or 20-degree cells over the whole world with --overseas)."""
     cells = []
+    if OVERSEAS:
+        for la in range(-50, 80, 20):
+            for ln in range(-170, 180, 20):
+                cells.append([float(la), float(ln), 10.0])
+        return cells
     la = 49.5
     while la < 61.5:
         ln = -10.5
@@ -220,14 +240,18 @@ def detail(slug):
             emails.append(e)
     services = [s for s in ("Training Centre", "OnBoard Club", "Club", "Sailability Centre",
                             "ICCTestCentre") if s in text]
-    if not address or not any(w in address for w in HOME_WORDS):
-        return ""  # overseas or not an organisation
+    if not address:
+        return ""  # not an organisation
+    if not any(w in address for w in HOME_WORDS):
+        if not OVERSEAS:
+            return ""  # overseas - collected by the --overseas pass
+        return overseas_row(name, address, phone, website, emails, services, slug)
     parts = [p.strip() for p in address.split(",") if p.strip() and p.strip() not in COUNTRY_WORDS]
     pc = ""
     if parts and (UK_PC.search(parts[-1].upper()) or EIRCODE.match(parts[-1])):
         pc = parts.pop().upper()
     city = parts.pop() if parts else ""
-    if parts and (city.startswith(("County ", "Co. ", "Co ")) or city.lower() in COUNTIES):
+    if parts and is_county(city):
         city = parts.pop()
     addr1 = parts[0] if parts else ""
     addr2 = ", ".join(parts[1:]) if len(parts) > 1 else ""
@@ -242,16 +266,43 @@ def detail(slug):
             emails[0] if emails else "", website, "", "", "", notes, full]
 
 
+def overseas_row(name, address, phone, website, emails, services, slug):
+    """Overseas address: "street, ..., town, postcode, country/region"."""
+    parts = [p.strip() for p in address.split(",") if p.strip()]
+    country = parts.pop() if parts and not re.search(r"\d", parts[-1]) else ""
+    pc = ""
+    if parts and re.search(r"\d", parts[-1]) and len(parts[-1]) <= 10:
+        pc = parts.pop()
+    city = parts.pop() if parts else ""
+    addr1 = parts[0] if parts else ""
+    addr2 = ", ".join(parts[1:]) if len(parts) > 1 else ""
+    notes = "Source: RYA listing (" + BASE + slug + "/). Services: " + ", ".join(services)
+    if phone:
+        notes += ". Tel " + re.sub(r"\s*(Club|Training Centre):.*", "", phone)
+    if len(emails) > 1:
+        notes += ". Other emails: " + ", ".join(emails[1:])
+    full = ", ".join(p for p in (addr1, addr2, city, pc, country) if p)
+    return [name, "Overseas", addr1, addr2, city, pc, country or "Overseas",
+            emails[0] if emails else "", website, "", "", "", notes, full]
+
+
 # --- main ------------------------------------------------------------------
 
 def load_state():
+    if OVERSEAS:
+        global STATE
+        STATE = OVERSEAS_STATE
     if os.path.exists(STATE):
         s = json.load(open(STATE))
         if s.get("version") == 3:
             return s
         print("Old-format progress file found; starting a fresh sweep.")
-    return {"version": 3, "queue": start_cells(), "done_cells": 0, "slugs": [],
-            "done_slugs": [], "failures": 0}
+    state = {"version": 3, "queue": start_cells(), "done_cells": 0, "slugs": [],
+             "done_slugs": [], "failures": 0}
+    if OVERSEAS and os.path.exists(OVERSEAS_STATE.replace("_overseas", "")):
+        # Skip everything the UK & Ireland pass already collected.
+        state["known"] = json.load(open(OVERSEAS_STATE.replace("_overseas", "")))["slugs"]
+    return state
 
 
 def save(state):
@@ -263,7 +314,7 @@ def save(state):
 def main():
     state = load_state()
     slugs = list(state["slugs"])
-    slug_set = set(slugs)
+    slug_set = set(slugs) | set(state.get("known", []))
 
     # Coverage sweep (quadtree). Each query returns the nearest 20 results with
     # coordinates. If the 20th is farther away than the cell's corners, every
@@ -343,6 +394,26 @@ def main():
     check()
 
 
+def clean(path=OUT):
+    """Fix rows where a county landed in the city column (town moved up from address 2)."""
+    rows = list(csv.DictReader(open(path, encoding="utf-8")))
+    fixed = 0
+    for r in rows:
+        if r["city"] and is_county(r["city"]) and (r["address 2"] or r["address 1"]):
+            src = "address 2" if r["address 2"] else "address 1"
+            parts = [p.strip() for p in r[src].split(",") if p.strip()]
+            if src == "address 1" and len(parts) < 2:
+                continue  # don't move the only street line into the city column
+            r["city"] = parts.pop()
+            r[src] = ", ".join(parts)
+            fixed += 1
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=HEADERS)
+        w.writeheader()
+        w.writerows(rows)
+    print(f"clean: moved the town into the city column on {fixed} rows")
+
+
 def check(path=OUT):
     rows = list(csv.DictReader(open(path, encoding="utf-8")))
     print(f"\n{path}: {len(rows)} rows")
@@ -364,6 +435,9 @@ def check(path=OUT):
 
 
 if __name__ == "__main__":
+    if "--clean" in sys.argv:
+        clean()
+        sys.exit(0)
     if "--check" in sys.argv:
         check()
         sys.exit(0)

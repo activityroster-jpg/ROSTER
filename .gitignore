@@ -57,3 +57,5 @@ rya_progress.json.tmp
 rya_debug_listing.html
 rya_scrape.log
 __pycache__/
+rya_progress_overseas.json
+rya_scrape_overseas.log
