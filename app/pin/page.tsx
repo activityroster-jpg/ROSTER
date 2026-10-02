@@ -15,5 +15,6 @@ export default async function PinPage({ searchParams }: { searchParams: Promise<
   const { control } = await getRepositories();
   const sec = await control.getUserSecurity(s.user.id);
   if (!sec?.pinHash) redirect(`/set-pin?next=${encodeURIComponent(next)}`);
-  return <PinForm mode="enter" next={next} />;
+  const hasPassword = await control.hasCredentialPassword(s.user.id);
+  return <PinForm mode="enter" next={next} hasPassword={hasPassword} />;
 }

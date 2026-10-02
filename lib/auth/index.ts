@@ -5,6 +5,7 @@ import type { Database } from "@/lib/db/client";
 import { account, session, twoFactor as twoFactorTable, user, verification } from "@/lib/db/schema";
 import { getDb, getEnv, type CloudflareEnv } from "@/lib/cf/bindings";
 import { sendEmail } from "@/lib/mail";
+import { notifySecurityChange, recordSecurityEvent } from "@/lib/security/events";
 
 /**
  * Better Auth is the source of truth for authentication (email/password, magic
@@ -31,6 +32,14 @@ export function createAuth(db: Database, env: CloudflareEnv) {
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: true,
+      // A password reset logs out every other session — an intruder who
+      // triggered the reset (or was already inside) loses access.
+      revokeSessionsOnPasswordReset: true,
+      // Tell the user, and log it, whenever their password is reset.
+      onPasswordReset: async ({ user: u }) => {
+        await notifySecurityChange(u.id, "Your ActivityRoster password was reset", "<p>Your password was just reset via the “Forgot password” link, and every other signed-in session has been logged out.</p>");
+        await recordSecurityEvent("password_changed", { userId: u.id, meta: { via: "reset" } });
+      },
       sendResetPassword: async ({ user, url }) => {
         await sendEmail({
           to: user.email,

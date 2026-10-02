@@ -460,5 +460,31 @@ export type NewBlogPost = typeof blogPost.$inferInsert;
 export type PlatformTask = typeof platformTask.$inferSelect;
 export type NewPlatformTask = typeof platformTask.$inferInsert;
 
+// --- Security events --------------------------------------------------------
+
+export const SECURITY_EVENT_KINDS = [
+  "pin_set", "pin_reset", "pin_reset_failed", "pin_failed", "pin_locked", "pin_reset_code_sent",
+  "recovery_email_set", "password_changed", "new_device", "reauth_passed", "reauth_failed",
+] as const;
+export type SecurityEventKind = (typeof SECURITY_EVENT_KINDS)[number];
+
+/**
+ * Account-security audit trail (control plane, per user): PIN set/reset/failures,
+ * recovery-email changes, password changes, new-device sign-ins. Written by
+ * lib/security/events; shown to the user on /security and to platform admins.
+ */
+export const securityEvent = sqliteTable("security_event", {
+  id: id(),
+  userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  organisationId: text("organisation_id"),
+  kind: text("kind", { enum: SECURITY_EVENT_KINDS }).notNull(),
+  ip: text("ip"),
+  userAgent: text("user_agent"),
+  country: text("country"),
+  meta: text("meta"), // JSON
+  createdAt: createdAt(),
+}, (t) => [index("security_event_user_idx").on(t.userId), index("security_event_created_idx").on(t.createdAt)]);
+export type SecurityEvent = typeof securityEvent.$inferSelect;
+
 // A tiny re-export so migrations pick up the raw-sql helper if needed.
 export const _sql = sql;

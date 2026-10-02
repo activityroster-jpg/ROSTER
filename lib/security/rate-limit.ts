@@ -10,7 +10,12 @@ export interface RateLimitResult {
   remaining: number;
 }
 
-export async function rateLimit(key: string, limit: number, windowSeconds: number): Promise<RateLimitResult> {
+export async function rateLimit(
+  key: string,
+  limit: number,
+  windowSeconds: number,
+  opts?: { failClosed?: boolean },
+): Promise<RateLimitResult> {
   try {
     const kv = getEnv().TENANT_CACHE;
     const window = Math.floor(Date.now() / 1000 / windowSeconds);
@@ -20,8 +25,9 @@ export async function rateLimit(key: string, limit: number, windowSeconds: numbe
     await kv.put(bucket, String(current + 1), { expirationTtl: windowSeconds });
     return { allowed: true, remaining: limit - current - 1 };
   } catch (err) {
-    console.warn("[rate-limit] KV unavailable, failing open:", (err as Error).message);
-    return { allowed: true, remaining: limit };
+    // Auth-sensitive limits fail CLOSED: a KV blip must not switch off brute-force protection.
+    console.warn(`[rate-limit] KV unavailable, failing ${opts?.failClosed ? "closed" : "open"}:`, (err as Error).message);
+    return opts?.failClosed ? { allowed: false, remaining: 0 } : { allowed: true, remaining: limit };
   }
 }
 

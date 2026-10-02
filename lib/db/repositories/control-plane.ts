@@ -1,8 +1,11 @@
 import { and, eq, lt } from "drizzle-orm";
 import type { Database } from "@/lib/db/client";
 import {
+  account,
   errorReport,
   lead,
+  securityEvent,
+  type SecurityEventKind,
   membership,
   organisation,
   slugReservation,
@@ -263,5 +266,47 @@ export class ControlPlaneRepository {
   /** Set (or clear) a user's account-recovery email. */
   async setRecoveryEmail(userId: string, recoveryEmail: string | null): Promise<void> {
     await this.db.update(user).set({ recoveryEmail }).where(eq(user.id, userId));
+  }
+
+  // --- Account security -----------------------------------------------------
+
+  /** True when the user signs in with a password (vs magic link only). */
+  async hasCredentialPassword(userId: string): Promise<boolean> {
+    const rows = await this.db
+      .select({ password: account.password })
+      .from(account)
+      .where(and(eq(account.userId, userId), eq(account.providerId, "credential")))
+      .limit(1);
+    return Boolean(rows[0]?.password);
+  }
+
+  async logSecurityEvent(input: {
+    userId: string;
+    organisationId?: string | null;
+    kind: SecurityEventKind;
+    ip?: string | null;
+    userAgent?: string | null;
+    country?: string | null;
+    meta?: string | null;
+  }): Promise<void> {
+    await this.db.insert(securityEvent).values({
+      userId: input.userId,
+      organisationId: input.organisationId ?? null,
+      kind: input.kind,
+      ip: input.ip ?? null,
+      userAgent: input.userAgent ?? null,
+      country: input.country ?? null,
+      meta: input.meta ?? null,
+    });
+  }
+
+  /** A user's own recent security events, newest first. */
+  async listSecurityEvents(userId: string, limit = 20) {
+    return this.db
+      .select()
+      .from(securityEvent)
+      .where(eq(securityEvent.userId, userId))
+      .orderBy(desc(securityEvent.createdAt))
+      .limit(limit);
   }
 }

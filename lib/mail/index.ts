@@ -54,6 +54,11 @@ export function renderEmail(bodyHtml: string): string {
   </div>`;
 }
 
+/** Escape user-supplied text before it goes into an email body. */
+export function escapeHtml(s: string | null | undefined): string {
+  return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+}
+
 export async function sendEmail(msg: EmailMessage): Promise<void> {
   const env = getEnv();
   const from = msg.from ?? "ActivityRoster <no-reply@activityroster.com>";

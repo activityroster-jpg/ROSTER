@@ -3,6 +3,22 @@ import { requireTenant } from "@/lib/tenant/require";
 import { getRepositories } from "@/lib/cf/bindings";
 import { TwoFactorSetup } from "@/components/office/TwoFactorSetup";
 import { RecoveryEmailForm } from "@/components/office/RecoveryEmailForm";
+import { describeAgent } from "@/lib/security/events";
+
+const EVENT_LABEL: Record<string, string> = {
+  pin_set: "PIN set",
+  pin_reset: "PIN reset",
+  pin_reset_failed: "Failed PIN reset attempt",
+  pin_failed: "Wrong PIN entered",
+  pin_locked: "PIN locked after repeated attempts",
+  pin_reset_code_sent: "PIN reset code emailed",
+  recovery_email_set: "Recovery email changed",
+  password_changed: "Password changed",
+  new_device: "Sign-in from a new device",
+  reauth_passed: "Identity re-confirmed",
+  reauth_failed: "Failed identity check",
+};
+const WARN = new Set(["pin_reset_failed", "pin_failed", "pin_locked", "reauth_failed", "new_device"]);
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +32,7 @@ export default async function SecurityPage() {
   const { control } = await getRepositories();
   const me = await control.userById(ctx.userId);
   const recoveryEmail = me?.recoveryEmail ?? null;
+  const events = await control.listSecurityEvents(ctx.userId, 12);
 
   return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4 py-10">
@@ -34,6 +51,28 @@ export default async function SecurityPage() {
         <h2 className="mb-1 font-semibold text-navy">Two-factor authentication</h2>
         <p className="mb-3 text-xs text-slate-500">Add a second step at sign-in — an authenticator app or a code by email.</p>
         <TwoFactorSetup />
+      </div>
+
+      <div className="mt-5 rounded-card border border-slate-200 bg-white p-5">
+        <h2 className="mb-1 font-semibold text-navy">Recent security activity</h2>
+        <p className="mb-3 text-xs text-slate-500">PIN, password and recovery-email events on your account. If you see something you don&apos;t recognise, change your password.</p>
+        {events.length === 0 ? (
+          <p className="text-sm text-slate-400">Nothing recorded yet.</p>
+        ) : (
+          <ul className="divide-y divide-slate-100 text-sm">
+            {events.map((e) => (
+              <li key={e.id} className="flex items-start justify-between gap-3 py-2">
+                <div>
+                  <span className={WARN.has(e.kind) ? "font-medium text-amber" : "font-medium text-navy"}>{EVENT_LABEL[e.kind] ?? e.kind}</span>
+                  <span className="block text-xs text-slate-400">{describeAgent(e.userAgent)}{e.country ? ` · ${e.country}` : ""}{e.ip ? ` · ${e.ip}` : ""}</span>
+                </div>
+                <time className="whitespace-nowrap text-xs text-slate-400" dateTime={e.createdAt.toISOString()}>
+                  {e.createdAt.toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" })}
+                </time>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       <Link href="/office" className="mt-4 text-center text-sm font-semibold text-teal hover:underline">
