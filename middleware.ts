@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { resolveHost } from "@/lib/tenant/host";
 import { PIN_COOKIE, PIN_IDLE_MAX_AGE_S } from "@/lib/auth/pin";
+import { DEVICE_COOKIE, DEVICE_HEADER, DEVICE_MAX_AGE_S, isDeviceId } from "@/lib/auth/device";
 
 /**
  * Slide the "PIN verified" cookie forward on each authenticated app request, so
@@ -37,6 +38,21 @@ export function middleware(req: NextRequest) {
   const path = url.pathname;
   const host = resolveHost(req.headers.get("host"), APEX);
 
+  // Device identity for the unfamiliar-device check: a random id in a
+  // long-lived cookie, also forwarded as a request header so this very request
+  // can see it (a client-sent header is always overwritten here, never trusted).
+  const existing = req.cookies.get(DEVICE_COOKIE)?.value;
+  const deviceId = existing && isDeviceId(existing) ? existing : crypto.randomUUID();
+  const fwd = new Headers(req.headers);
+  fwd.set(DEVICE_HEADER, deviceId);
+  const next = () => {
+    const res = NextResponse.next({ request: { headers: fwd } });
+    if (deviceId !== existing) {
+      res.cookies.set(DEVICE_COOKIE, deviceId, { httpOnly: true, secure: true, sameSite: "lax", path: "/", domain: `.${APEX}`, maxAge: DEVICE_MAX_AGE_S });
+    }
+    return res;
+  };
+
   const isAppPath = path.startsWith("/office") || path.startsWith("/portal");
 
   if (host.kind === "tenant") {
@@ -54,7 +70,7 @@ export function middleware(req: NextRequest) {
       return NextResponse.redirect(to);
     }
     // Keep the PIN session alive while the admin/instructor is active.
-    return isAppPath ? slidePinCookie(req, NextResponse.next()) : NextResponse.next();
+    return isAppPath ? slidePinCookie(req, next()) : next();
   }
 
   // Apex / reserved / unknown: the app surfaces are not served here.
@@ -66,7 +82,7 @@ export function middleware(req: NextRequest) {
   }
 
   // The platform admin area lives on the apex — slide its PIN session too.
-  return path.startsWith("/admin") ? slidePinCookie(req, NextResponse.next()) : NextResponse.next();
+  return path.startsWith("/admin") ? slidePinCookie(req, next()) : next();
 }
 
 export const config = {

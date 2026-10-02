@@ -232,6 +232,13 @@
       "when": 1790981675816,
       "tag": "0032_slippery_doctor_doom",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "6",
+      "when": 1790983659100,
+      "tag": "0033_volatile_firestar",
+      "breakpoints": true
     }
   ]
 }

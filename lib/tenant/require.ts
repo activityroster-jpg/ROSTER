@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getRepositories } from "@/lib/cf/bindings";
 import type { Organisation } from "@/lib/db/schema";
 import { enforcePinGate } from "@/lib/auth/pin-gate";
+import { enforceDeviceGate } from "@/lib/auth/device-gate";
 import type { TenantContext } from "./context";
 import { resolveTenant } from "./resolve";
 
@@ -41,6 +42,9 @@ export async function requireTenant(opts?: { role?: "admin"; skipMfaGate?: boole
     redirect("/portal");
   }
 
+  // Unfamiliar device, country or IP → password again first; then the PIN.
+  const landing = res.ctx.role === "admin" ? "/office" : "/portal";
+  await enforceDeviceGate(res.ctx.userId, landing, res.ctx.organisationId);
   // Everyone must set and enter their 4-digit PIN each session — admins land
   // back in the office, instructors in their portal.
   await enforcePinGate(res.ctx.userId, res.sessionId, res.ctx.role === "admin" ? "/office" : "/portal");

@@ -4,6 +4,7 @@ import { getRepositories } from "@/lib/cf/bindings";
 import { TwoFactorSetup } from "@/components/office/TwoFactorSetup";
 import { RecoveryEmailForm } from "@/components/office/RecoveryEmailForm";
 import { describeAgent } from "@/lib/security/events";
+import { TrustedDevices } from "@/components/office/TrustedDevices";
 
 const EVENT_LABEL: Record<string, string> = {
   pin_set: "PIN set",
@@ -33,6 +34,13 @@ export default async function SecurityPage() {
   const me = await control.userById(ctx.userId);
   const recoveryEmail = me?.recoveryEmail ?? null;
   const events = await control.listSecurityEvents(ctx.userId, 12);
+  const devices = (await control.listTrustedDevices(ctx.userId)).map((d) => ({
+    id: d.id,
+    device: describeAgent(d.userAgent),
+    ip: d.ip,
+    country: d.country,
+    lastSeen: d.lastSeenAt.toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" }),
+  }));
 
   return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4 py-10">
@@ -51,6 +59,12 @@ export default async function SecurityPage() {
         <h2 className="mb-1 font-semibold text-navy">Two-factor authentication</h2>
         <p className="mb-3 text-xs text-slate-500">Add a second step at sign-in — an authenticator app or a code by email.</p>
         <TwoFactorSetup />
+      </div>
+
+      <div className="mt-5 rounded-card border border-slate-200 bg-white p-5">
+        <h2 className="mb-1 font-semibold text-navy">Confirmed devices</h2>
+        <p className="mb-3 text-xs text-slate-500">Signing in from a new device, network or country asks for your password again. These are the ones you&apos;ve confirmed.</p>
+        <TrustedDevices rows={devices} />
       </div>
 
       <div className="mt-5 rounded-card border border-slate-200 bg-white p-5">

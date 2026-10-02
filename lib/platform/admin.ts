@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getAuth } from "@/lib/auth";
 import { getEnv } from "@/lib/cf/bindings";
 import { enforcePinGate } from "@/lib/auth/pin-gate";
+import { enforceDeviceGate } from "@/lib/auth/device-gate";
 
 /**
  * Platform-owner (super-admin) access control. This is the ONE surface that
@@ -27,6 +28,8 @@ export async function requirePlatformAdmin(): Promise<{ email: string }> {
   const session = await auth.api.getSession({ headers: h });
   const email = session?.user?.email ?? null;
   if (!(await isPlatformAdminEmail(email))) redirect("/sign-in");
+  // Unfamiliar device/network → password again; then the 4-digit PIN.
+  await enforceDeviceGate(session!.user.id, "/admin", null);
   // The money-facing admin also requires the 4-digit PIN each session.
   await enforcePinGate(session!.user.id, session!.session?.id, "/admin");
   return { email: email! };

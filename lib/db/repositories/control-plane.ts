@@ -5,6 +5,7 @@ import {
   errorReport,
   lead,
   securityEvent,
+  trustedDevice,
   type SecurityEventKind,
   membership,
   organisation,
@@ -342,5 +343,54 @@ export class ControlPlaneRepository {
       .where(eq(securityEvent.userId, userId))
       .orderBy(desc(securityEvent.createdAt))
       .limit(limit);
+  }
+
+  // --- Trusted devices (unfamiliar-device re-auth) ---------------------------
+
+  /** Is this user × device × IP combination already confirmed? Also bumps last-seen. */
+  async isTrustedDevice(userId: string, deviceId: string, ip: string, country: string | null): Promise<boolean> {
+    const rows = await this.db
+      .select({ id: trustedDevice.id, country: trustedDevice.country })
+      .from(trustedDevice)
+      .where(and(eq(trustedDevice.userId, userId), eq(trustedDevice.deviceId, deviceId), eq(trustedDevice.ip, ip)))
+      .limit(1);
+    const row = rows[0];
+    if (!row) return false;
+    // Same device + IP but a different country is still unfamiliar.
+    if ((row.country ?? null) !== (country ?? null)) return false;
+    await this.db.update(trustedDevice).set({ lastSeenAt: new Date() }).where(eq(trustedDevice.id, row.id));
+    return true;
+  }
+
+  async countTrustedDevices(userId: string): Promise<number> {
+    const rows = await this.db.select({ id: trustedDevice.id }).from(trustedDevice).where(eq(trustedDevice.userId, userId));
+    return rows.length;
+  }
+
+  /** Record (or refresh) a confirmed device × IP for the user. */
+  async trustDevice(input: { userId: string; deviceId: string; ip: string; country: string | null; userAgent: string | null }): Promise<void> {
+    await this.db
+      .insert(trustedDevice)
+      .values({ ...input, lastSeenAt: new Date() })
+      .onConflictDoUpdate({
+        target: [trustedDevice.userId, trustedDevice.deviceId, trustedDevice.ip],
+        set: { country: input.country, userAgent: input.userAgent, lastSeenAt: new Date() },
+      });
+  }
+
+  /** The user's confirmed devices, most recent first (one row per device × IP). */
+  async listTrustedDevices(userId: string, limit = 20) {
+    return this.db
+      .select()
+      .from(trustedDevice)
+      .where(eq(trustedDevice.userId, userId))
+      .orderBy(desc(trustedDevice.lastSeenAt))
+      .limit(limit);
+  }
+
+  /** Forget every device: the next request from anywhere asks for the password again. */
+  async forgetTrustedDevices(userId: string): Promise<number> {
+    const rows = await this.db.delete(trustedDevice).where(eq(trustedDevice.userId, userId)).returning({ id: trustedDevice.id });
+    return rows.length;
   }
 }

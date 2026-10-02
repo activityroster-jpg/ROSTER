@@ -486,5 +486,25 @@ export const securityEvent = sqliteTable("security_event", {
 }, (t) => [index("security_event_user_idx").on(t.userId), index("security_event_created_idx").on(t.createdAt)]);
 export type SecurityEvent = typeof securityEvent.$inferSelect;
 
+/**
+ * Devices (browser cookie id) + network (IP, country) a user has confirmed
+ * with their password. A sign-in from a combination not in this table must
+ * re-enter the password before the PIN. One row per user × device × IP.
+ */
+export const trustedDevice = sqliteTable("trusted_device", {
+  id: id(),
+  userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  deviceId: text("device_id").notNull(),
+  ip: text("ip").notNull(),
+  country: text("country"),
+  userAgent: text("user_agent"),
+  lastSeenAt: integer("last_seen_at", { mode: "timestamp_ms" }).notNull(),
+  createdAt: createdAt(),
+}, (t) => [
+  uniqueIndex("trusted_device_uq").on(t.userId, t.deviceId, t.ip),
+  index("trusted_device_user_idx").on(t.userId),
+]);
+export type TrustedDevice = typeof trustedDevice.$inferSelect;
+
 // A tiny re-export so migrations pick up the raw-sql helper if needed.
 export const _sql = sql;

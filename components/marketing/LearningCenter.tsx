@@ -380,6 +380,12 @@ const SECTIONS: Section[] = [
         "Too many wrong attempts locks the PIN for a cool-off period.",
         "Forgotten it? “Reset it” asks for your password — or emails a one-time code to your account and recovery addresses — before letting you choose a new one. Being signed in isn't enough on its own.",
       ] },
+      { kind: "sub", text: "New device, network or country? Password first" },
+      { kind: "bullets", items: [
+        "The first time you use a new device, a new internet connection (new IP address) or a new country, you're asked for your password before the PIN — even though you're already signed in. Accounts without a password get a one-time code by email instead.",
+        "Once confirmed, that device on that network isn't asked again. Your confirmed devices are listed under Security, with a “Forget all devices” button if a device is lost.",
+        "A stolen session or a left-open laptop can't be used from somewhere new without the password.",
+      ] },
       { kind: "sub", text: "Know when something changes" },
       { kind: "bullets", items: [
         "Every PIN set or reset, lock-out, recovery-email change and password reset is recorded with the device, country and IP it came from.",
