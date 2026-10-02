@@ -48,6 +48,12 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 },
   },
+  // Google Search Console ownership verification (meta-tag method). Set
+  // NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION to the token Search Console gives you
+  // and it renders <meta name="google-site-verification" ...> site-wide.
+  ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
+    ? { verification: { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION } }
+    : {}),
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
