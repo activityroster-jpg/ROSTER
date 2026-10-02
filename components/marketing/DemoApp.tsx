@@ -1,22 +1,30 @@
 "use client";
 
-import { Fragment, useState } from "react";
-import Link from "next/link";
-import { Bell } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Bell, Search, Settings2, ChevronsUpDown } from "lucide-react";
 import { Card, StatusPill } from "@/components/ui";
 import { Logo } from "@/components/Logo";
 
-type Slot = "AM" | "PM" | "EV";
-type Avail = "free" | "maybe" | "busy" | "none";
+// ---------------------------------------------------------------------------
+// This interactive demo mirrors the real office app (app/(app)/office/*). The
+// panels reuse the same Card / StatusPill primitives and reproduce each real
+// page's layout with example data, so what a prospect sees here matches the
+// product. Nothing is saved.
+// ---------------------------------------------------------------------------
+
 type Panel =
   | "dash" | "courses" | "availability" | "timeclock" | "leave"
   | "staff" | "equipment" | "locations" | "finance"
   | "settings" | "billing" | "coursesetup" | "changelog"
-  // Reached from within a panel (not the sidebar), mirroring the real app:
-  // the printable rota from the Dashboard, Integrations from Courses.
+  // Reached from within a panel, as in the real app (printable rota from the
+  // Dashboard, Integrations from Courses).
   | "rota" | "integrations";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const DNUM = ["22", "23", "24", "25", "26", "27", "28"]; // week of 22 Sep
+const SLOTS = ["AM", "PM", "EV"] as const;
+type Slot = (typeof SLOTS)[number];
+const SLOT_LABEL: Record<string, string> = { AM: "Morning", PM: "Afternoon", EV: "Evening" };
 
 // Mirrors the real office sidebar exactly (app/(app)/office/layout.tsx).
 const NAV_GROUPS: { group: string; items: { label: string; key: Panel }[] }[] = [
@@ -42,73 +50,42 @@ const NAV_GROUPS: { group: string; items: { label: string; key: Panel }[] }[] = 
 ];
 const NAV_FLAT = NAV_GROUPS.flatMap((g) => g.items);
 
-// ---------------------------------------------------------------------------
-// Shared example staff roster (used by both the Staff and Availability tabs).
-// `badges` are RYA instructor qualifications; `lic` is whether every mandatory
-// licence / ticket is currently valid.
-// ---------------------------------------------------------------------------
-type Lic = "up" | "expiring" | "blocked";
-type Emp = "Employed" | "Freelance" | "Volunteer";
+// --- Shared example data ----------------------------------------------------
 
-const BADGE_MEANING: Record<string, string> = {
-  SI: "Senior Instructor",
-  DI: "Dinghy Instructor",
-  AI: "Assistant Instructor",
-  PBI: "Powerboat Instructor",
-  WI: "Windsurfing Instructor",
-  SBC: "Safety Boat",
-};
-
-// availability pattern per day (Mon→Sun): f=free a=AM only p=PM only b=busy o=off
-const STAFF: {
-  n: string;
-  e: Emp;
-  badges: string[];
-  lic: Lic;
-  note: string;
-  pat: string;
-}[] = [
-  { n: "Sarah Whitlock", e: "Employed", badges: ["SI", "DI", "PBI", "SBC"], lic: "up", note: "—", pat: "ofafffp" },
-  { n: "Tom Bergin", e: "Freelance", badges: ["DI", "WI"], lic: "expiring", note: "Safeguarding expires 12 Oct", pat: "fofaoff" },
-  { n: "Aoife Kelly", e: "Employed", badges: ["DI", "PBI"], lic: "blocked", note: "First Aid expired 30 Aug", pat: "affofpf" },
-  { n: "Dan Rees", e: "Volunteer", badges: ["PBI", "SBC"], lic: "up", note: "—", pat: "ooffffb" },
-  { n: "Megan Foyle", e: "Employed", badges: ["SI", "DI"], lic: "up", note: "—", pat: "faffoff" },
-  { n: "Liam O'Connor", e: "Freelance", badges: ["DI", "AI"], lic: "up", note: "—", pat: "ofofffp" },
-  { n: "Priya Nair", e: "Employed", badges: ["DI", "WI", "SBC"], lic: "up", note: "—", pat: "ffaofff" },
-  { n: "Jack Turnbull", e: "Freelance", badges: ["PBI", "SBC"], lic: "expiring", note: "Powerboat cert expires 30 Nov", pat: "bofofff" },
-  { n: "Ella Munro", e: "Volunteer", badges: ["AI"], lic: "up", note: "—", pat: "offfaff" },
-  { n: "Ryan Doyle", e: "Freelance", badges: ["DI", "PBI"], lic: "up", note: "—", pat: "fofoffb" },
-  { n: "Chloe Adeyemi", e: "Employed", badges: ["SI", "DI", "WI"], lic: "up", note: "—", pat: "ffoffaf" },
-  { n: "Fionn Walsh", e: "Freelance", badges: ["DI"], lic: "expiring", note: "DBS renewal due 05 Nov", pat: "afffoff" },
-  { n: "Grace Hollis", e: "Volunteer", badges: ["AI", "SBC"], lic: "up", note: "—", pat: "oofffff" },
-  { n: "Noah Pereira", e: "Employed", badges: ["DI", "PBI", "SBC"], lic: "up", note: "—", pat: "fffaofp" },
-  { n: "Isla Fraser", e: "Freelance", badges: ["WI", "DI"], lic: "up", note: "—", pat: "ofaffff" },
-  { n: "Ben Okafor", e: "Freelance", badges: ["PBI", "SBC"], lic: "blocked", note: "Safety Boat cert lapsed 15 Sep", pat: "fooffbf" },
-  { n: "Maya Sørensen", e: "Employed", badges: ["SI", "DI", "PBI"], lic: "up", note: "—", pat: "fafffof" },
-  { n: "Cormac Byrne", e: "Volunteer", badges: ["AI"], lic: "up", note: "—", pat: "offoffa" },
-  { n: "Hannah Leung", e: "Freelance", badges: ["DI", "WI"], lic: "up", note: "—", pat: "ffafoff" },
-  { n: "Oscar Mendez", e: "Freelance", badges: ["PBI", "SBC"], lic: "up", note: "—", pat: "oofffbf" },
-  { n: "Freya Donnelly", e: "Employed", badges: ["DI", "AI"], lic: "expiring", note: "First Aid expires 20 Oct", pat: "affffof" },
-  { n: "Amir Hassan", e: "Freelance", badges: ["DI", "PBI", "WI", "SBC"], lic: "up", note: "—", pat: "fffaffb" },
+type Ev = { id: string; dayIdx: number; time: string; name: string; aud: "youth" | "adult" | "all" };
+const EVENTS: Ev[] = [
+  { id: "e1", dayIdx: 0, time: "09:00", name: "Start Sailing", aud: "adult" },
+  { id: "e2", dayIdx: 1, time: "13:00", name: "Improving Skills", aud: "adult" },
+  { id: "e3", dayIdx: 2, time: "09:00", name: "Youth Stage 2", aud: "youth" },
+  { id: "e4", dayIdx: 2, time: "17:30", name: "Adult Improver", aud: "adult" },
+  { id: "e5", dayIdx: 3, time: "13:00", name: "Youth Stage 2", aud: "youth" },
+  { id: "e6", dayIdx: 4, time: "09:00", name: "Start Sailing", aud: "adult" },
+  { id: "e7", dayIdx: 5, time: "09:00", name: "Powerboat L2", aud: "adult" },
+  { id: "e8", dayIdx: 5, time: "13:00", name: "Start Windsurf", aud: "adult" },
+  { id: "e9", dayIdx: 6, time: "10:00", name: "Stage 1 Junior", aud: "youth" },
 ];
+const audTint = (a: string) => a === "youth" ? "border-l-amber bg-amber/10 text-amber" : a === "adult" ? "border-l-teal bg-teal/10 text-teal" : "border-l-slate-400 bg-slate-100 text-slate-600";
+const audBadge = (a: string) => a === "youth" ? "bg-amber/15 text-amber" : a === "adult" ? "bg-teal/15 text-teal" : "bg-slate-100 text-slate-500";
 
-const WEEK: Record<string, Record<Slot, { name: string; time: string; state: "ok" | "att" | "bad" } | null>> = {
-  Mon: { AM: { name: "Start Sailing", time: "09:00", state: "ok" }, PM: null, EV: null },
-  Tue: { AM: null, PM: { name: "Improving Skills", time: "13:00", state: "ok" }, EV: null },
-  Wed: { AM: { name: "Youth Stage 2", time: "09:00", state: "att" }, PM: null, EV: { name: "Adult Improver", time: "17:30", state: "ok" } },
-  Thu: { AM: null, PM: { name: "Youth Stage 2", time: "13:00", state: "ok" }, EV: null },
-  Fri: { AM: { name: "Start Sailing", time: "09:00", state: "ok" }, PM: null, EV: null },
-  Sat: { AM: { name: "Powerboat L2", time: "09:00", state: "bad" }, PM: { name: "Start Windsurf", time: "13:00", state: "ok" }, EV: null },
-  Sun: { AM: null, PM: null, EV: null },
-};
-
-const chipTone = { ok: "bg-starboard/10 text-starboard", att: "bg-amber/10 text-amber", bad: "bg-port/10 text-port" };
+type Staff = { n: string; email: string | null; emp: string; teaches: string[]; youth: boolean; adult: boolean; fit: boolean; warn: number; block: string };
+const STAFF: Staff[] = [
+  { n: "Sarah Whitlock", email: "sarah@harboursailing.co.uk", emp: "employed", teaches: ["Start Sailing", "Powerboat L2"], youth: false, adult: true, fit: true, warn: 0, block: "" },
+  { n: "Tom Bergin", email: "tom@harboursailing.co.uk", emp: "freelance", teaches: ["Youth Stage 2", "Start Windsurf"], youth: true, adult: true, fit: false, warn: 1, block: "Safeguarding expired" },
+  { n: "Aoife Kelly", email: "aoife@harboursailing.co.uk", emp: "employed", teaches: ["Youth Stage 2", "Powerboat L2"], youth: true, adult: true, fit: false, warn: 0, block: "First Aid expired" },
+  { n: "Dan Rees", email: null, emp: "volunteer", teaches: ["Powerboat L2"], youth: false, adult: true, fit: true, warn: 0, block: "" },
+  { n: "Megan Foyle", email: "megan@harboursailing.co.uk", emp: "employed", teaches: ["Start Sailing", "Youth Stage 2"], youth: true, adult: true, fit: true, warn: 0, block: "" },
+  { n: "Liam O'Connor", email: "liam@harboursailing.co.uk", emp: "freelance", teaches: ["Start Sailing"], youth: false, adult: true, fit: true, warn: 1, block: "" },
+  { n: "Priya Nair", email: "priya@harboursailing.co.uk", emp: "employed", teaches: ["Start Windsurf", "Adult Improver"], youth: false, adult: true, fit: true, warn: 0, block: "" },
+  { n: "Grace Hollis", email: "grace@harboursailing.co.uk", emp: "volunteer", teaches: [], youth: false, adult: false, fit: true, warn: 0, block: "" },
+];
 
 const DEMO_ALERTS = [
   { title: "Leave approved", body: "Liam O'Connor — 6–10 Oct", tone: "starboard" },
   { title: "Shift claimed", body: "Grace Hollis offered Sat safety-boat cover", tone: "teal" },
   { title: "Ticket expiring", body: "Tom Bergin — Safeguarding expires 12 Oct", tone: "amber" },
 ];
+
+// ---------------------------------------------------------------------------
 
 export function DemoApp() {
   const [view, setView] = useState<"office" | "portal">("office");
@@ -117,13 +94,11 @@ export function DemoApp() {
 
   return (
     <div>
-      {/* Read-only mock-up banner */}
       <div className="mb-4 flex items-start gap-2 rounded-card border border-amber/30 bg-amber/10 px-4 py-3 text-sm text-[#8a6314]">
         <span aria-hidden>👀</span>
         <p>
-          <span className="font-semibold">This is a read-only mock-up</span> with example data to show how
-          ActivityRoster looks and behaves. Clicking around won&apos;t change or save anything — your real centre
-          will be fully editable.
+          <span className="font-semibold">This is a read-only mock-up</span> with example data, showing the real
+          ActivityRoster office. Clicking around won&apos;t change or save anything.
         </p>
       </div>
 
@@ -161,15 +136,15 @@ export function DemoApp() {
               </div>
             ) : null}
           </div>
-          <Link href="/#get-demo" className="text-sm font-semibold text-teal hover:underline">
+          <a href="/#get-demo" className="text-sm font-semibold text-teal hover:underline">
             Try this free for a month →
-          </Link>
+          </a>
         </div>
       </div>
 
       {view === "office" ? (
         <div className="overflow-hidden rounded-card border border-slate-200 shadow-sm">
-          <div className="grid md:grid-cols-[200px_1fr]">
+          <div className="grid md:grid-cols-[220px_1fr]">
             <aside className="hidden bg-navy p-4 text-white md:block">
               <Logo variant="onDark" size="sm" />
               <p className="mb-3 mt-1 border-b border-white/10 pb-3 text-xs text-white/60">Harbour Sailing Centre</p>
@@ -194,7 +169,6 @@ export function DemoApp() {
             </aside>
 
             <div className="bg-canvas p-5">
-              {/* Mobile tab switcher — all sections */}
               <div className="mb-4 flex gap-2 overflow-x-auto pb-1 md:hidden">
                 {NAV_FLAT.map((item) => (
                   <button
@@ -234,191 +208,47 @@ export function DemoApp() {
   );
 }
 
-function DemoDashboard({ onOpen }: { onOpen: (p: Panel) => void }) {
+// --- Shared bits ------------------------------------------------------------
+
+function Tile({ label, value, sub, tone = "navy" }: { label: string; value: string | number; sub: string; tone?: "navy" | "port" | "amber" | "starboard" | "teal" }) {
+  const valTone = { navy: "text-navy", port: "text-port", amber: "text-amber", starboard: "text-starboard", teal: "text-teal" }[tone];
   return (
-    <div>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-display text-xl font-semibold text-navy">Dashboard</h2>
-        <button onClick={() => onOpen("rota")} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-navy hover:bg-slate-50">🖨 Open printable rota</button>
-      </div>
-      <p className="text-sm text-slate-500">Harbour Sailing Centre · week of 21 Sep</p>
-
-      <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">
-        This week at a glance — the three things to act on before the water
-      </p>
-      <div className="mt-2 grid gap-3 sm:grid-cols-3">
-        <Card>
-          <p className="text-sm font-semibold text-navy">Staff blocked from rostering</p>
-          <p className="mt-1 text-3xl font-semibold text-port">2</p>
-          <p className="text-xs text-slate-500">A mandatory licence has lapsed — they can&apos;t be assigned until it&apos;s renewed.</p>
-        </Card>
-        <Card>
-          <p className="text-sm font-semibold text-navy">Licences expiring soon</p>
-          <p className="mt-1 text-3xl font-semibold text-amber">4</p>
-          <p className="text-xs text-slate-500">Tickets or vetting due within the next 6 weeks — renew before they stop a roster.</p>
-        </Card>
-        <Card>
-          <p className="text-sm font-semibold text-navy">Courses needing attention</p>
-          <p className="mt-1 text-3xl font-semibold text-amber">2</p>
-          <p className="text-xs text-slate-500">Under-staffed or missing safety-boat cover for the group size.</p>
-        </Card>
-      </div>
-
-      <Card className="mt-4 overflow-x-auto">
-        <h3 className="mb-3 font-semibold text-navy">This week&apos;s sessions</h3>
-        <table className="w-full min-w-[620px] border-collapse text-xs">
-          <thead>
-            <tr><th className="w-10"></th>{DAYS.map((d) => <th key={d} className="px-2 py-1 text-left font-semibold text-slate-500">{d}</th>)}</tr>
-          </thead>
-          <tbody>
-            {(["AM", "PM", "EV"] as Slot[]).map((slot) => (
-              <tr key={slot} className="align-top">
-                <td className="py-1 pr-2 font-bold text-slate-400">{slot}</td>
-                {DAYS.map((d) => {
-                  const cell = WEEK[d]![slot];
-                  return (
-                    <td key={d + slot} className="min-w-[80px] border border-slate-100 p-1">
-                      {cell ? (
-                        <div className={`rounded-md px-2 py-1 ${chipTone[cell.state]}`}>
-                          <div className="font-semibold leading-tight">{cell.name}</div>
-                          <div className="text-[10px] opacity-80">{cell.time}</div>
-                        </div>
-                      ) : null}
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </Card>
-
-      <Card className="mt-4">
-        <h3 className="mb-1 font-semibold text-navy">Coverage check</h3>
-        {[
-          { c: "Youth Stage 2 · Wed AM", m: "RYA Youth Sailing", tone: "attention" as const, t: "Under-staffed", s: "1 / 2 staff" },
-          { c: "Powerboat Level 2 · Sat AM", m: "RYA Powerboat", tone: "conflict" as const, t: "No safety cover", s: "safety boat required" },
-          { c: "Start Sailing · Mon AM", m: "RYA National Sailing", tone: "covered" as const, t: "Covered", s: "2 / 2 staff" },
-        ].map((r) => (
-          <div key={r.c} className="flex items-center justify-between border-t border-slate-100 py-2.5 first:border-t-0">
-            <div><p className="text-sm font-semibold text-navy">{r.c}</p><p className="text-xs text-slate-400">{r.m}</p></div>
-            <div className="text-right"><StatusPill tone={r.tone}>{r.t}</StatusPill><p className="text-xs text-slate-400">{r.s}</p></div>
-          </div>
-        ))}
-      </Card>
+    <div className="rounded-card border border-slate-200 bg-white p-4 shadow-sm">
+      <p className="text-xs font-medium text-slate-500">{label}</p>
+      <p className={`mt-1 text-2xl font-semibold ${valTone}`}>{value}</p>
+      <p className="mt-0.5 text-xs text-slate-400">{sub}</p>
     </div>
   );
 }
 
-type Course = {
-  name: string; meta: string; tone: "covered" | "conflict" | "attention"; pill: string;
-  staff: string[]; warn: string | null; assign?: boolean;
-  detail: { students: string; times: string[]; kit: string[]; note: string };
-};
-
-const COURSES: Course[] = [
-  {
-    name: "Powerboat Level 2", meta: "RYA Powerboat · Sat 26 Sep · 1/1 staff", tone: "conflict", pill: "No safety cover",
-    staff: ["Dan Rees · Instructor"], warn: "Safety boat required for this course — no safety-boat driver assigned yet.", assign: true,
-    detail: { students: "6 booked (max 6)", times: ["Sat 26 Sep · 09:00–12:30 — theory & handling", "Sat 26 Sep · 13:30–16:30 — on-water assessment"], kit: ["RIB “Kestrel”", "Fuel & kill-cords checked"], note: "Ratio 1:3. Certificates issued on completion." },
-  },
-  {
-    name: "Youth Stage 2", meta: "RYA Youth Sailing · Wed 24 Sep · 1/2 staff", tone: "attention", pill: "Under-staffed",
-    staff: ["Megan Foyle · Senior Instructor"], warn: "Group of 12 needs 2 ratio-counting instructors — 1 more to assign.",
-    detail: { students: "12 booked (max 12)", times: ["Wed 24 Sep · 09:00–12:00 — rigging & launching", "Wed 24 Sep · 13:00–15:30 — sailing skills"], kit: ["Pico dinghies ×6", "Safety boat on standby"], note: "RYA ratio for under-16s is 1:6 — a second instructor is required." },
-  },
-  {
-    name: "Start Sailing", meta: "RYA National Sailing · Mon 21 Sep · 2/2 staff", tone: "covered", pill: "Covered",
-    staff: ["Sarah Whitlock · Senior Instructor", "Dan Rees · Safety Boat"], warn: null,
-    detail: { students: "8 booked (max 8)", times: ["Mon 21 Sep · 09:00–12:30 — intro & first sail", "Mon 21 Sep · 13:30–16:00 — points of sail"], kit: ["Wayfarer ×4", "RIB “Merlin”"], note: "Two-day course — continues Tue 22 Sep." },
-  },
-  {
-    name: "Improving Skills", meta: "RYA National Sailing · Tue 22 Sep · 2/2 staff", tone: "covered", pill: "Covered",
-    staff: ["Chloe Adeyemi · Senior Instructor", "Liam O'Connor · Instructor"], warn: null,
-    detail: { students: "7 booked (max 8)", times: ["Tue 22 Sep · 13:00–16:30 — sail trim & tacking"], kit: ["ILCA / Laser ×6"], note: "Feeds into Seamanship Skills next month." },
-  },
-  {
-    name: "Adult Improver", meta: "RYA National Sailing · Wed 24 Sep (EV) · 1/1 staff", tone: "covered", pill: "Covered",
-    staff: ["Priya Nair · Instructor"], warn: null,
-    detail: { students: "5 booked (max 6)", times: ["Wed 24 Sep · 17:30–20:00 — evening session"], kit: ["Wayfarer ×3"], note: "Evening twilight sail — buoyancy aids mandatory." },
-  },
-  {
-    name: "Start Windsurfing", meta: "RYA Windsurfing · Sat 26 Sep · 2/2 staff", tone: "covered", pill: "Covered",
-    staff: ["Isla Fraser · Windsurf Instructor", "Hannah Leung · Windsurf Instructor"], warn: null,
-    detail: { students: "10 booked (max 10)", times: ["Sat 26 Sep · 13:00–16:30 — beginner windsurf"], kit: ["Windsurf boards ×10"], note: "Warm-water gear provided; wetsuits sized on arrival." },
-  },
-  {
-    name: "Stage 1 Junior", meta: "RYA Youth Sailing · Sun 27 Sep · 2/2 staff", tone: "covered", pill: "Covered",
-    staff: ["Maya Sørensen · Senior Instructor", "Ella Munro · Assistant"], warn: null,
-    detail: { students: "9 booked (max 12)", times: ["Sun 27 Sep · 10:00–12:30 — games & first sail"], kit: ["Topper ×8"], note: "Parents welcome to watch from the balcony." },
-  },
-];
-
-function DemoCourses({ onOpen }: { onOpen: (p: Panel) => void }) {
-  const [open, setOpen] = useState<string | null>("Powerboat Level 2");
+/** A big, read-only week calendar matching WeekCalendarView. */
+function WeekCalendar() {
+  const today = 2; // Wed highlighted
   return (
-    <div>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-display text-xl font-semibold text-navy">Courses</h2>
-        <div className="flex gap-2">
-          <button onClick={() => onOpen("integrations")} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-navy hover:bg-slate-50">Connect a booking system</button>
-          <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-400">+ New course</span>
-        </div>
+    <div className="rounded-card border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <button className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-navy hover:bg-slate-50" aria-label="Previous week">←</button>
+        <span className="rounded-lg bg-navy px-3 py-1.5 text-sm font-semibold text-white">22 Sep – 28 Sep · this week</span>
+        <button className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-navy hover:bg-slate-50" aria-label="Next week">→</button>
+        <span className="ml-auto rounded-lg bg-teal px-3 py-1.5 text-sm font-semibold text-white"><span aria-hidden>＋</span> New course</span>
       </div>
-      <p className="text-sm text-slate-500">This week&apos;s catalogue — click a course to open it.</p>
-      <div className="mt-4 space-y-3">
-        {COURSES.map((c) => {
-          const isOpen = open === c.name;
+      <div className="grid grid-cols-7 gap-2">
+        {DAYS.map((d, i) => {
+          const evs = EVENTS.filter((e) => e.dayIdx === i);
+          const isToday = i === today;
           return (
-            <Card key={c.name}>
-              <button className="flex w-full items-start justify-between gap-3 text-left" onClick={() => setOpen(isOpen ? null : c.name)}>
-                <div>
-                  <p className="font-semibold text-navy">{c.name} <span className="ml-1 text-xs font-normal text-slate-400">{isOpen ? "▾" : "▸"}</span></p>
-                  <p className="text-xs text-slate-400">{c.meta}</p>
+            <div key={d} className={`min-h-[8rem] rounded-lg border p-1.5 ${isToday ? "border-teal bg-teal/5" : "border-slate-100 bg-slate-50/40"}`}>
+              <div className="mb-1.5 text-center">
+                <div className="text-[11px] font-semibold uppercase text-slate-400">{d}</div>
+                <div className={`text-sm font-bold ${isToday ? "text-teal" : "text-navy"}`}>{DNUM[i]}</div>
+              </div>
+              {evs.length === 0 ? <p className="text-center text-[10px] text-slate-300">—</p> : evs.map((e) => (
+                <div key={e.id} className={`mb-1 block rounded border-l-4 px-1.5 py-1 text-[11px] leading-tight ${audTint(e.aud)}`}>
+                  <span className="block font-semibold">{e.time}</span>
+                  <span className="block truncate">{e.name}</span>
                 </div>
-                <StatusPill tone={c.tone}>{c.pill}</StatusPill>
-              </button>
-
-              {c.staff.length ? (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {c.staff.map((s) => (
-                    <span key={s} className="rounded-full bg-slate-100 px-3 py-1 text-xs">{s}</span>
-                  ))}
-                </div>
-              ) : null}
-              {c.warn ? (
-                <p className={`mt-2 flex items-center gap-1.5 text-sm ${c.tone === "conflict" ? "text-port" : "text-amber"}`}>● {c.warn}</p>
-              ) : null}
-
-              {isOpen ? (
-                <div className="mt-3 grid gap-4 rounded-lg bg-canvas p-4 sm:grid-cols-2">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Students</p>
-                    <p className="mt-1 text-sm text-navy">{c.detail.students}</p>
-                    <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-slate-400">Sessions</p>
-                    <ul className="mt-1 space-y-1 text-sm text-slate-600">
-                      {c.detail.times.map((t) => <li key={t}>• {t}</li>)}
-                    </ul>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Boats &amp; kit</p>
-                    <ul className="mt-1 space-y-1 text-sm text-slate-600">
-                      {c.detail.kit.map((k) => <li key={k}>• {k}</li>)}
-                    </ul>
-                    <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-slate-400">Note</p>
-                    <p className="mt-1 text-sm text-slate-600">{c.detail.note}</p>
-                  </div>
-                  {c.assign ? (
-                    <div className="sm:col-span-2 flex flex-wrap items-center gap-2 border-t border-slate-200 pt-3">
-                      <span className="text-sm text-slate-500">Add safety cover:</span>
-                      <span className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-500">Aoife Kelly ⚠ expired ▾</span>
-                      <span className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-500">Safety Boat Driver ▾</span>
-                      <button className="rounded-lg bg-teal px-3 py-1.5 text-sm font-semibold text-white">Assign</button>
-                    </div>
-                  ) : null}
-                </div>
-              ) : null}
-            </Card>
+              ))}
+            </div>
           );
         })}
       </div>
@@ -426,140 +256,358 @@ function DemoCourses({ onOpen }: { onOpen: (p: Panel) => void }) {
   );
 }
 
-const SHIFTS = ["AM", "PM", "EV"] as const;
+// --- Dashboard --------------------------------------------------------------
 
-// Course roles that need an instructor, keyed by "<dayIdx>|<shiftIdx>" (day 0 = Mon).
-const SHIFT_DEMAND: Record<string, string[]> = {
-  "0|0": ["Start Sailing", "Youth Stage 1", "Safety Boat cover"],
-  "0|1": ["Improving Skills"],
-  "1|1": ["Improving Skills", "Safety Boat cover"],
-  "2|0": ["Youth Stage 2", "Youth Stage 2 (2nd)"],
-  "2|2": ["Adult Improver"],
-  "3|1": ["Youth Stage 2"],
-  "4|0": ["Start Sailing", "Safety Boat cover"],
-  "5|0": ["Powerboat L2", "Powerboat L2 Safety Boat"],
-  "5|1": ["Start Windsurf", "Start Windsurf (2nd)"],
-  "6|1": ["Junior Stage 1", "Junior Stage 1 Assistant"],
-};
-
-// Pre-filled assignments to seed the demo: "<staffIdx>|<dayIdx>|<shiftIdx>": role
-const SEED_ASSIGN: Record<string, string> = {
-  "0|0|0": "Start Sailing",
-  "3|0|0": "Safety Boat cover",
-  "10|0|1": "Improving Skills",
-  "4|2|0": "Youth Stage 2",
-  "6|2|2": "Adult Improver",
-  "14|5|1": "Start Windsurf",
-};
-
-// Base availability for a (staff, day, shift): free | maybe | off
-function baseAvail(si: number, di: number, shi: number): "free" | "maybe" | "off" {
-  const h = (si * 7 + di * 5 + shi * 11 + si * shi) % 10;
-  if (h < 6) return "free";
-  if (h < 8) return "maybe";
-  return "off";
-}
-
-const abbr = (r: string) =>
-  r.split(/[\s()]+/).filter(Boolean).map((w) => w[0]).join("").slice(0, 3).toUpperCase();
-
-function DemoAvailability() {
-  const [assign, setAssign] = useState<Record<string, string>>(SEED_ASSIGN);
-  const [sel, setSel] = useState<string | null>(null); // "si|di|shi"
-  const [pick, setPick] = useState<string>("");
-
-  const rolesTaken = (di: number, shi: number) =>
-    Object.keys(assign)
-      .filter((k) => { const p = k.split("|"); return +p[1]! === di && +p[2]! === shi; })
-      .map((k) => assign[k]!);
-  const demandOf = (di: number, shi: number) => SHIFT_DEMAND[`${di}|${shi}`] ?? [];
-  const openOf = (di: number, shi: number) => demandOf(di, shi).filter((r) => !rolesTaken(di, shi).includes(r));
-
-  let totalOpen = 0;
-  let totalShifts = 0;
-  for (let di = 0; di < 7; di++) for (let shi = 0; shi < 3; shi++) { totalOpen += openOf(di, shi).length; totalShifts += demandOf(di, shi).length; }
-
-  const selectCell = (si: number, di: number, shi: number) => {
-    setSel(`${si}|${di}|${shi}`);
-    setPick(openOf(di, shi)[0] ?? "");
-  };
-  const doAssign = () => { if (sel && pick) { setAssign((a) => ({ ...a, [sel]: pick })); setSel(null); } };
-  const doUnassign = () => { if (sel) { setAssign((a) => { const n = { ...a }; delete n[sel]; return n; }); setSel(null); } };
-
-  const p = sel?.split("|");
-  const sSi = p ? +p[0]! : -1, sDi = p ? +p[1]! : -1, sShi = p ? +p[2]! : -1;
-  const sAssigned = sel ? assign[sel] : undefined;
-  const sBase = sel ? baseAvail(sSi, sDi, sShi) : "off";
-  const sOpen = sel ? openOf(sDi, sShi) : [];
-
-  const cellCls = { free: "bg-starboard/15 text-starboard hover:bg-starboard/25", maybe: "bg-amber/15 text-amber hover:bg-amber/25", off: "bg-slate-100 text-slate-300" };
+function DemoDashboard({ onOpen }: { onOpen: (p: Panel) => void }) {
+  const rota = [
+    { day: "Mon 22 Sep", items: [{ slot: "AM", time: "09:00", aud: "adult", name: "Start Sailing", staff: "Sarah Whitlock, Dan Rees", cover: true }] },
+    { day: "Tue 23 Sep", items: [{ slot: "PM", time: "13:00", aud: "adult", name: "Improving Skills", staff: "Chloe Adeyemi, Liam O'Connor", cover: true }] },
+    { day: "Wed 24 Sep", items: [
+      { slot: "AM", time: "09:00", aud: "youth", name: "Youth Stage 2", staff: "Megan Foyle", cover: false },
+      { slot: "EV", time: "17:30", aud: "adult", name: "Adult Improver", staff: "Priya Nair", cover: true },
+    ] },
+    { day: "Sat 27 Sep", items: [
+      { slot: "AM", time: "09:00", aud: "adult", name: "Powerboat L2", staff: "Dan Rees", cover: false },
+      { slot: "PM", time: "13:00", aud: "adult", name: "Start Windsurf", staff: "Isla Fraser, Hannah Leung", cover: true },
+    ] },
+  ];
+  const coverage = [
+    { name: "Youth Stage 2 · Wed", type: "RYA Youth Sailing", tone: "attention" as const, label: "Under-staffed", sub: "1/2 staff" },
+    { name: "Powerboat Level 2 · Sat", type: "RYA Powerboat", tone: "conflict" as const, label: "No safety cover", sub: "safety boat required" },
+    { name: "Start Sailing · Mon", type: "RYA National Sailing", tone: "covered" as const, label: "Covered", sub: "2/2 staff" },
+    { name: "Start Windsurf · Sat", type: "RYA Windsurfing", tone: "covered" as const, label: "Covered", sub: "2/2 staff" },
+  ];
 
   return (
     <div>
-      <h2 className="font-display text-xl font-semibold text-navy">Availability</h2>
-      <p className="text-sm text-slate-500">
-        {STAFF.length} instructors · AM / PM / EV every day. <span className="font-semibold text-port">{totalOpen}</span> of {totalShifts} shifts still to fill this week.
-      </p>
-
-      {/* Legend */}
-      <div className="mt-3 flex flex-wrap gap-2 text-xs">
-        <span className="inline-flex items-center rounded-full bg-starboard/15 px-2.5 py-0.5 font-medium text-starboard">Free</span>
-        <span className="inline-flex items-center rounded-full bg-teal px-2.5 py-0.5 font-medium text-white">Assigned</span>
-        <span className="inline-flex items-center rounded-full bg-amber/15 px-2.5 py-0.5 font-medium text-amber">Maybe</span>
-        <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 font-medium text-slate-400">Off</span>
-        <span className="text-slate-400">· tap any box to assign or view</span>
+      <div className="mb-6">
+        <h1 className="font-display text-2xl font-semibold text-navy">Dashboard</h1>
+        <p className="text-sm text-slate-500">Harbour Sailing Centre · week of 22 Sep</p>
       </div>
 
-      <Card className="mt-4 overflow-x-auto p-0">
-        <table className="border-collapse text-center text-[10px]">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Today</p>
+      <div className="mb-6 grid gap-3 sm:grid-cols-3">
+        <Tile label="On the water now" value={2} sub="Clocked in" tone="starboard" />
+        <Tile label="Hours logged today" value="6.5" sub="4 started" />
+        <Tile label="Sessions this week" value={9} sub="View / print rota" tone="teal" />
+      </div>
+
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Needs attention</p>
+      <div className="mb-8 grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        <Tile label="Not cleared to roster" value={2} sub="Missing / expired checks" tone="port" />
+        <Tile label="Checks expiring" value={4} sub="Within lead time" tone="amber" />
+        <Tile label="Courses to cover" value={2} sub="Understaffed / no cover" tone="amber" />
+        <Tile label="Leave to approve" value={2} sub="Pending requests" tone="amber" />
+        <Tile label="Open shifts" value={1} sub="Need cover" tone="amber" />
+      </div>
+
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="font-display text-lg font-semibold text-navy">Calendar</h2>
+        <button onClick={() => onOpen("courses")} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-navy hover:bg-slate-50">Plan courses →</button>
+      </div>
+      <div className="mb-8"><WeekCalendar /></div>
+
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="font-display text-lg font-semibold text-navy">This week&apos;s rota</h2>
+        <button onClick={() => onOpen("rota")} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-navy hover:bg-slate-50">Full rota · print / PDF →</button>
+      </div>
+      <Card className="p-0">
+        <div className="divide-y divide-slate-100">
+          {rota.map((day) => (
+            <div key={day.day} className="px-4 py-3">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">{day.day}</p>
+              <ul className="space-y-1.5">
+                {day.items.map((s) => (
+                  <li key={s.slot + s.time} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                    <span className="w-28 flex-none font-medium text-navy">{SLOT_LABEL[s.slot]} <span className="text-xs font-normal text-slate-400">{s.time}</span></span>
+                    <span className="min-w-[10rem] flex-1">
+                      <span className={`mr-1.5 rounded px-1.5 py-0.5 text-[10px] font-semibold ${audBadge(s.aud)}`}>{s.aud === "youth" ? "Youth" : "Adult"}</span>
+                      <span className="font-medium text-navy">{s.name}</span>
+                    </span>
+                    <span className="text-xs text-slate-500">{s.staff}</span>
+                    {!s.cover ? <StatusPill tone="attention">Needs cover</StatusPill> : null}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      <div className="mt-6">
+        <h2 className="mb-3 font-display text-lg font-semibold text-navy">Coverage</h2>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {coverage.map((c) => (
+            <Card key={c.name} className="flex items-center justify-between">
+              <div>
+                <p className="font-medium text-navy">{c.name}</p>
+                <p className="text-xs text-slate-500">{c.type}</p>
+              </div>
+              <div className="text-right">
+                <StatusPill tone={c.tone}>{c.label}</StatusPill>
+                <p className="mt-1 text-xs text-slate-400">{c.sub}</p>
+              </div>
+            </Card>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- Courses ----------------------------------------------------------------
+
+type DemoCourse = { name: string; type: string; aud: "youth" | "adult"; sessions: string[]; staff: string[]; tone: "covered" | "attention" | "conflict"; pill: string };
+const COURSE_WEEKS: { label: string; courses: DemoCourse[] }[] = [
+  { label: "Week of 22 Sep – 28 Sep", courses: [
+    { name: "Start Sailing", type: "RYA National Sailing", aud: "adult", sessions: ["Mon 22 Sep · 09:00–12:30", "Tue 23 Sep · 09:00–12:30"], staff: ["Sarah Whitlock · Senior Instructor", "Dan Rees · Safety Boat"], tone: "covered", pill: "Covered" },
+    { name: "Youth Stage 2", type: "RYA Youth Sailing", aud: "youth", sessions: ["Wed 24 Sep · 09:00–12:00", "Thu 25 Sep · 13:00–15:30"], staff: ["Megan Foyle · Senior Instructor"], tone: "attention", pill: "Under-staffed" },
+    { name: "Powerboat Level 2", type: "RYA Powerboat", aud: "adult", sessions: ["Sat 27 Sep · 09:00–12:30"], staff: ["Dan Rees · Instructor"], tone: "conflict", pill: "No safety cover" },
+    { name: "Start Windsurfing", type: "RYA Windsurfing", aud: "adult", sessions: ["Sat 27 Sep · 13:00–16:30"], staff: ["Isla Fraser · Windsurf Instructor", "Hannah Leung · Windsurf Instructor"], tone: "covered", pill: "Covered" },
+  ] },
+];
+
+function DemoCourses({ onOpen }: { onOpen: (p: Panel) => void }) {
+  return (
+    <div>
+      <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+        <h1 className="font-display text-2xl font-semibold text-navy">Courses</h1>
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-sm text-slate-500">6 scheduled</span>
+          <button onClick={() => onOpen("integrations")} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-navy hover:bg-slate-50">Connect a booking system</button>
+          <span className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-navy">Import from spreadsheet / calendar</span>
+        </div>
+      </div>
+      <p className="mb-6 text-sm text-slate-500">
+        Add a course, then assign staff to it. Youth and adult courses are labelled so they never get mixed up. We check
+        instructor qualifications, ratios &amp; safety-boat cover and double-bookings as you go — anything short is flagged.
+      </p>
+
+      {/* Planner: calendar + builder */}
+      <div className="mb-6 space-y-4">
+        <div className="rounded-card border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <h2 className="mr-1 font-display text-lg font-semibold text-navy">Calendar</h2>
+            <button className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-navy hover:bg-slate-50" aria-label="Previous week">←</button>
+            <span className="rounded-lg bg-navy px-3 py-1.5 text-sm font-semibold text-white">22 Sep – 28 Sep · this week</span>
+            <button className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-navy hover:bg-slate-50" aria-label="Next week">→</button>
+            <span className="ml-auto text-xs text-slate-400">Tap any day to add a session to the course you&apos;re building below.</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+            {DAYS.map((d, i) => {
+              const evs = EVENTS.filter((e) => e.dayIdx === i);
+              const isToday = i === 2;
+              return (
+                <div key={d} className={`flex min-h-[11rem] flex-col rounded-lg border p-1.5 ${isToday ? "border-teal bg-teal/5" : "border-slate-100 bg-slate-50/50"}`}>
+                  <div className="mb-1.5 text-center">
+                    <div className="text-[11px] font-semibold uppercase text-slate-400">{d}</div>
+                    <div className={`text-sm font-bold ${isToday ? "text-teal" : "text-navy"}`}>{DNUM[i]}</div>
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    {evs.map((e) => (
+                      <div key={e.id} className={`rounded border-l-4 px-1.5 py-1 text-[11px] leading-tight ${audTint(e.aud)}`}>
+                        <span className="block font-semibold">{e.time}</span>
+                        <span className="block truncate">{e.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <span className="mt-1 flex w-full items-center justify-center gap-1 rounded-md border border-teal/40 bg-teal/5 py-1 text-[11px] font-semibold text-teal"><span aria-hidden>＋</span> Add</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="rounded-card border border-slate-200 bg-white p-4">
+          <h2 className="font-semibold text-navy">Build a course</h2>
+          <p className="mb-3 text-xs text-slate-500">Give it a name, pick the type, then add each session — any days and times you like.</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-500">Course type</label>
+              <div className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-400">Select…</div>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-500">Course name <span className="text-slate-400">(optional)</span></label>
+              <div className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-400">e.g. Aug Half-Term Kids Camp</div>
+            </div>
+          </div>
+          <div className="mt-4 flex items-center gap-3">
+            <span className="rounded-lg bg-teal px-5 py-2.5 text-sm font-semibold text-white">Create course</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Course list */}
+      <div className="mb-3 flex items-center gap-2">
+        <h2 className="font-display text-lg font-semibold text-navy">Courses</h2>
+        <div className="ml-2 flex rounded-lg border border-slate-200 p-0.5 text-sm">
+          <span className="rounded-md bg-navy px-3 py-1 font-medium text-white">Upcoming (6)</span>
+          <span className="rounded-md px-3 py-1 font-medium text-slate-500">Past (14)</span>
+        </div>
+      </div>
+
+      <div className="space-y-5">
+        <div className="mb-3 flex items-center gap-3 border-b-2 border-navy/10 pb-2">
+          <span className="h-6 w-1.5 flex-none rounded-full bg-teal" />
+          <h3 className="font-display text-xl font-bold text-navy">September 2026</h3>
+          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500">4 courses</span>
+        </div>
+        {COURSE_WEEKS.map((w) => (
+          <div key={w.label}>
+            <div className="mb-2 flex items-center justify-between rounded-lg bg-navy px-3 py-1.5">
+              <span className="font-display text-sm font-bold text-white">{w.label}</span>
+              <span className="rounded-full bg-white/15 px-2 py-0.5 text-[11px] font-semibold text-white">{w.courses.length} courses</span>
+            </div>
+            <div className="space-y-2">
+              {w.courses.map((c) => (
+                <Card key={c.name}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-navy">
+                        <span className={`mr-1.5 rounded px-1.5 py-0.5 text-[10px] font-semibold ${audBadge(c.aud)}`}>{c.aud === "youth" ? "Youth" : "Adult"}</span>
+                        {c.name}
+                      </p>
+                      <p className="text-xs text-slate-400">{c.type} · {c.sessions.join(" · ")}</p>
+                    </div>
+                    <StatusPill tone={c.tone}>{c.pill}</StatusPill>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {c.staff.map((s) => <span key={s} className="rounded-full bg-slate-100 px-3 py-1 text-xs">{s}</span>)}
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// --- Weekly rota (printable) ------------------------------------------------
+
+function DemoRota({ onBack }: { onBack: () => void }) {
+  const staffFor: Record<string, string[]> = {
+    "Start Sailing": ["Sarah Whitlock (SI)", "Dan Rees (Safety Boat)"],
+    "Improving Skills": ["Chloe Adeyemi (SI)", "Liam O'Connor (DI)"],
+    "Youth Stage 2": ["Megan Foyle (SI)", "— 2nd instructor needed"],
+    "Adult Improver": ["Priya Nair (DI)"],
+    "Powerboat L2": ["Dan Rees (PBI)", "— safety boat needed"],
+    "Start Windsurf": ["Isla Fraser (WI)", "Hannah Leung (WI)"],
+    "Stage 1 Junior": ["Maya Sørensen (SI)", "Ella Munro (AI)"],
+  };
+  return (
+    <div>
+      <button onClick={onBack} className="mb-2 text-xs text-slate-400 hover:text-slate-600">← Dashboard</button>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="font-display text-2xl font-semibold text-navy">Weekly rota</h1>
+        <div className="flex gap-2">
+          <span className="rounded-lg bg-teal px-3 py-1.5 text-xs font-semibold text-white">🖨 Print / Save PDF</span>
+          <span className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-navy">Export hours (CSV)</span>
+        </div>
+      </div>
+      <p className="mb-4 text-sm text-slate-500">Harbour Sailing Centre · week of 22 Sep · every session, who&apos;s on, and the cover status.</p>
+
+      <Card className="overflow-x-auto p-0">
+        <table className="w-full min-w-[560px] text-left text-sm">
+          <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+            <tr><th className="px-4 py-3">Day</th><th className="px-4 py-3">Session</th><th className="px-4 py-3">Staff on</th><th className="px-4 py-3">Status</th></tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {EVENTS.map((e) => {
+              const staff = staffFor[e.name] ?? ["—"];
+              const under = staff.some((s) => s.startsWith("—"));
+              const tone: "covered" | "attention" | "conflict" = e.name === "Powerboat L2" ? "conflict" : under ? "attention" : "covered";
+              const label = e.name === "Powerboat L2" ? "No safety cover" : under ? "Under-staffed" : "Covered";
+              return (
+                <tr key={e.id} className="align-top hover:bg-slate-50/50">
+                  <td className="whitespace-nowrap px-4 py-3 font-medium text-navy">{DAYS[e.dayIdx]} {DNUM[e.dayIdx]} <span className="text-xs text-slate-400">{e.time}</span></td>
+                  <td className="px-4 py-3 text-slate-600">
+                    <span className={`mr-1.5 rounded px-1.5 py-0.5 text-[10px] font-semibold ${audBadge(e.aud)}`}>{e.aud === "youth" ? "Youth" : "Adult"}</span>{e.name}
+                  </td>
+                  <td className="px-4 py-3 text-slate-600">{staff.map((s) => <span key={s} className="block">{s}</span>)}</td>
+                  <td className="px-4 py-3"><StatusPill tone={tone}>{label}</StatusPill></td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </Card>
+      <p className="mt-2 text-xs text-slate-400">Print a clean one-page rota for the wall, or export actual hours straight to payroll. Flip to any week, past or future.</p>
+    </div>
+  );
+}
+
+// --- Availability (matrix) --------------------------------------------------
+
+const AVAIL_CELL: Record<string, { label: string; cls: string }> = {
+  free: { label: "✓", cls: "bg-starboard/15 text-starboard hover:bg-starboard/25" },
+  maybe: { label: "~", cls: "bg-amber/15 text-amber hover:bg-amber/25" },
+  busy: { label: "✕", cls: "bg-port/15 text-port hover:bg-port/25" },
+  none: { label: "·", cls: "bg-slate-50 text-slate-300 hover:bg-slate-100" },
+};
+function availState(si: number, di: number, shi: number): "free" | "maybe" | "busy" | "none" {
+  const h = (si * 7 + di * 5 + shi * 11 + si * shi) % 10;
+  return h < 5 ? "free" : h < 7 ? "maybe" : h < 9 ? "none" : "busy";
+}
+const ROSTERED = new Set(["0|0|0", "3|0|0", "4|2|0", "6|2|2", "0|5|0"]);
+
+function DemoAvailability() {
+  return (
+    <div>
+      <h1 className="mb-1 font-display text-2xl font-semibold text-navy">Availability</h1>
+      <p className="mb-4 text-sm text-slate-500">
+        Who&apos;s available — submitted by instructors in their app. Hover a <span className="font-medium text-navy">●</span> to see what they&apos;re rostered on, or <span className="font-medium text-navy">click any slot</span> to fill an open shift with that instructor.
+      </p>
+
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <span className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-navy hover:bg-slate-50">← Previous</span>
+        <span className="rounded-lg bg-navy px-3 py-1.5 text-sm font-semibold text-white">22 Sep – 28 Sep · this week</span>
+        <span className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-navy hover:bg-slate-50">Next →</span>
+      </div>
+
+      <div className="mb-3 flex flex-wrap gap-2 text-xs">
+        <span className="inline-flex items-center gap-1 rounded-full bg-starboard/15 px-2.5 py-0.5 font-medium text-starboard">✓ Free</span>
+        <span className="inline-flex items-center gap-1 rounded-full bg-amber/15 px-2.5 py-0.5 font-medium text-amber">~ Maybe</span>
+        <span className="inline-flex items-center gap-1 rounded-full bg-port/15 px-2.5 py-0.5 font-medium text-port">✕ Busy</span>
+        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 font-medium text-slate-400">— Not set</span>
+        <span className="inline-flex items-center gap-1 rounded-full bg-navy/10 px-2.5 py-0.5 font-medium text-navy">● Rostered</span>
+      </div>
+
+      <div className="overflow-x-auto rounded-card border border-slate-200 bg-white">
+        <table className="border-collapse text-center text-sm">
           <thead>
-            {/* Day row */}
-            <tr className="bg-slate-50 text-slate-500">
-              <th rowSpan={3} className="sticky left-0 z-10 border-r border-slate-200 bg-slate-50 px-3 text-left text-xs font-semibold">Instructor</th>
-              {DAYS.map((d) => (
-                <th key={d} colSpan={3} className="border-l border-slate-200 px-1 py-1 font-semibold">{d}</th>
+            <tr className="bg-slate-50 text-slate-600">
+              <th rowSpan={3} className="sticky left-0 z-10 border-r border-slate-200 bg-slate-50 px-4 text-left text-sm font-semibold">Instructor</th>
+              {DAYS.map((d, i) => (
+                <th key={d} colSpan={3} className="border-l border-slate-200 px-1 py-2 text-sm font-bold text-navy">{d} <span className="font-normal text-slate-400">{DNUM[i]}</span></th>
               ))}
             </tr>
-            {/* Shift row */}
-            <tr className="bg-slate-50 text-slate-400">
-              {DAYS.map((_, di) => SHIFTS.map((sh, shi) => (
-                <th key={`${di}-${sh}`} className={`w-9 px-0.5 py-0.5 font-semibold ${shi === 0 ? "border-l border-slate-200" : ""}`}>{sh}</th>
+            <tr className="bg-slate-50 text-xs text-slate-400">
+              {DAYS.map((_, di) => SLOTS.map((s, si) => (
+                <th key={`${di}-${s}`} className={`w-12 px-1 py-1 font-semibold ${si === 0 ? "border-l border-slate-200" : ""}`}>{s}</th>
               )))}
             </tr>
-            {/* Count row: open / total shifts to fill */}
             <tr className="bg-slate-50">
-              {DAYS.map((_, di) => SHIFTS.map((sh, shi) => {
-                const open = openOf(di, shi).length, tot = demandOf(di, shi).length;
-                const tone = tot === 0 ? "text-slate-300" : open > 0 ? "text-port" : "text-starboard";
-                return (
-                  <th key={`c${di}-${sh}`} className={`px-0.5 pb-1 font-bold ${tone} ${shi === 0 ? "border-l border-slate-200" : ""}`} title="Shifts to fill / total shifts">
-                    {tot === 0 ? "·" : `${open}/${tot}`}
-                  </th>
-                );
+              {DAYS.map((_, di) => SLOTS.map((s, si) => {
+                const n = STAFF.filter((_st, idx) => availState(idx, di, si) === "free").length;
+                return <th key={`c${di}-${s}`} className={`px-1 pb-1.5 text-xs font-bold ${n > 0 ? "text-starboard" : "text-slate-300"} ${si === 0 ? "border-l border-slate-200" : ""}`}>{n}</th>;
               }))}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {STAFF.map((s, si) => (
-              <tr key={s.n} className="hover:bg-slate-50/40">
-                <td className="sticky left-0 z-10 border-r border-slate-200 bg-white px-3 py-1 text-left text-xs font-medium text-navy">
-                  <span className="whitespace-nowrap">{s.n}</span>
-                  {s.lic === "blocked" ? <span className="ml-1 align-middle text-port" title="Licence expired — blocked from rostering">●</span> : null}
-                </td>
-                {DAYS.map((_, di) => SHIFTS.map((_sh, shi) => {
-                  const key = `${si}|${di}|${shi}`;
-                  const role = assign[key];
-                  const base = baseAvail(si, di, shi);
-                  const isSel = sel === key;
-                  const cls = role ? "bg-teal text-white hover:bg-teal-700" : cellCls[base];
+            {STAFF.map((st, si) => (
+              <tr key={st.n} className="hover:bg-slate-50/40">
+                <td className="sticky left-0 z-10 whitespace-nowrap border-r border-slate-200 bg-white px-4 py-1.5 text-left text-sm font-semibold text-navy">{st.n}</td>
+                {DAYS.map((_, di) => SLOTS.map((_s, shi) => {
+                  const status = availState(si, di, shi);
+                  const cfg = AVAIL_CELL[status]!;
+                  const rostered = ROSTERED.has(`${si}|${di}|${shi}`);
                   return (
-                    <td key={key} className={`p-0 ${shi === 0 ? "border-l border-slate-200" : ""}`}>
-                      <button
-                        onClick={() => selectCell(si, di, shi)}
-                        title={role ? `Assigned: ${role}` : base === "off" ? "Unavailable" : "Available"}
-                        className={`h-6 w-9 font-semibold ${cls} ${isSel ? "ring-2 ring-inset ring-navy" : ""}`}
-                      >
-                        {role ? abbr(role) : base === "free" ? "✓" : base === "maybe" ? "~" : ""}
+                    <td key={`${si}-${di}-${shi}`} className={`p-0 ${shi === 0 ? "border-l border-slate-200" : ""}`}>
+                      <button className={`relative flex h-10 w-12 items-center justify-center text-base font-semibold transition ${cfg.cls}`}>
+                        <span aria-hidden>{cfg.label}</span>
+                        {rostered ? <span className="absolute bottom-1 left-1/2 h-2 w-2 -translate-x-1/2 rounded-full bg-navy" /> : null}
                       </button>
                     </td>
                   );
@@ -568,530 +616,101 @@ function DemoAvailability() {
             ))}
           </tbody>
         </table>
-      </Card>
-
-      {/* Assign / detail panel */}
-      {sel ? (
-        <Card className="mt-3">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="font-semibold text-navy">{STAFF[sSi]!.n}</p>
-              <p className="text-xs text-slate-500">{DAYS[sDi]} · {SHIFTS[sShi]} shift</p>
-            </div>
-            <button onClick={() => setSel(null)} className="text-xs text-slate-400 hover:text-slate-600">Close ✕</button>
-          </div>
-
-          {sAssigned ? (
-            <div className="mt-3 flex flex-wrap items-center gap-3">
-              <span className="rounded-lg bg-teal/10 px-3 py-1.5 text-sm font-semibold text-teal">Assigned to {sAssigned}</span>
-              <button onClick={doUnassign} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-navy hover:bg-slate-50">Unassign</button>
-            </div>
-          ) : sBase === "off" ? (
-            <p className="mt-3 text-sm text-slate-500">Marked unavailable for this shift — nothing to assign.</p>
-          ) : sOpen.length ? (
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              {sBase === "maybe" ? <span className="rounded-full bg-amber/15 px-2.5 py-0.5 text-xs font-medium text-amber">Marked “maybe” — confirm first</span> : null}
-              <select value={pick} onChange={(e) => setPick(e.target.value)} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none focus:border-teal">
-                {sOpen.map((r) => <option key={r} value={r}>{r}</option>)}
-              </select>
-              <button onClick={doAssign} className="rounded-lg bg-teal px-4 py-1.5 text-sm font-semibold text-white hover:bg-teal-700">Assign</button>
-            </div>
-          ) : (
-            <p className="mt-3 text-sm text-slate-500">This instructor is free, but every shift in this slot is already covered.</p>
-          )}
-        </Card>
-      ) : (
-        <p className="mt-2 text-xs text-slate-400">Tap a box: assigned shifts show the course; free shifts open a dropdown to roster the instructor.</p>
-      )}
+      </div>
+      <p className="mt-2 text-xs text-slate-400">The number under each slot is how many instructors are free then. Click a slot to fill an open shift with that instructor.</p>
     </div>
   );
 }
 
-const LIC_PILL: Record<Lic, { tone: "covered" | "conflict" | "attention"; label: string }> = {
-  up: { tone: "covered", label: "Up to date" },
-  expiring: { tone: "attention", label: "Expiring soon" },
-  blocked: { tone: "conflict", label: "Expired" },
-};
-
-type StaffRow = (typeof STAFF)[number];
-
-const ONBOARDING = ["Contract signed", "Induction & site tour", "Safeguarding training", "First Aid confirmed", "Kit issued", "Added to payroll"];
-const ONBOARDING_IN_PROGRESS = new Set(["Cormac Byrne", "Ella Munro"]);
-
-function docsFor(s: StaffRow) {
-  const docs: { name: string; exp: string; st: Lic }[] = [
-    { name: "First Aid", exp: "14 May 2027", st: "up" },
-    { name: "Safeguarding", exp: "02 Feb 2027", st: "up" },
-    { name: "DBS / vetting", exp: "20 Jun 2027", st: "up" },
-    ...s.badges.map((b) => ({ name: `RYA ${BADGE_MEANING[b]}`, exp: "current", st: "up" as Lic })),
-  ];
-  if (s.lic !== "up") {
-    const note = s.note.toLowerCase();
-    const match = (kw: string) => note.includes(kw);
-    const target =
-      match("first aid") ? "First Aid" :
-      match("safeguard") ? "Safeguarding" :
-      match("dbs") ? "DBS / vetting" :
-      match("safety boat") ? "RYA Safety Boat" :
-      match("powerboat") ? "RYA Powerboat Instructor" : "First Aid";
-    const d = docs.find((x) => x.name === target);
-    if (d) { d.st = s.lic; d.exp = s.note.replace(/^[^0-9]*/, "") || d.exp; }
-  }
-  return docs;
-}
-
-function DemoStaff() {
-  const [open, setOpen] = useState<string | null>(null);
-  const openRow = STAFF.find((s) => s.n === open) ?? null;
-  const docs = openRow ? docsFor(openRow) : [];
-  const inProgress = openRow ? ONBOARDING_IN_PROGRESS.has(openRow.n) : false;
-
-  return (
-    <div>
-      <div className="flex items-center justify-between">
-        <h2 className="font-display text-xl font-semibold text-navy">Staff</h2>
-        <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-400">+ Add staff</span>
-      </div>
-      <p className="text-sm text-slate-500">{STAFF.length} instructors · click anyone to open their HR profile, documents &amp; onboarding.</p>
-
-      {/* Badge legend */}
-      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
-        {Object.entries(BADGE_MEANING).map(([code, meaning]) => (
-          <span key={code}><span className="font-semibold text-navy">{code}</span> {meaning}</span>
-        ))}
-      </div>
-
-      <Card className="mt-4 overflow-x-auto p-0">
-        <table className="w-full min-w-[640px] text-left text-sm">
-          <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-            <tr>
-              <th className="px-4 py-3">Name</th>
-              <th className="px-4 py-3">Instructor type</th>
-              <th className="px-4 py-3">Employment</th>
-              <th className="px-4 py-3">Licences up to date</th>
-              <th className="px-4 py-3">Notes</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {STAFF.map((s) => (
-              <tr key={s.n} className="cursor-pointer hover:bg-slate-50" onClick={() => setOpen(s.n)}>
-                <td className="whitespace-nowrap px-4 py-3 font-medium text-teal underline decoration-teal/30 underline-offset-2">{s.n}</td>
-                <td className="px-4 py-3">
-                  <span className="flex flex-wrap gap-1">
-                    {s.badges.map((b) => (
-                      <span key={b} className="rounded bg-navy/5 px-1.5 py-0.5 text-xs font-semibold text-navy" title={BADGE_MEANING[b]}>{b}</span>
-                    ))}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-slate-600">{s.e}</td>
-                <td className="px-4 py-3"><StatusPill tone={LIC_PILL[s.lic].tone}>{LIC_PILL[s.lic].label}</StatusPill></td>
-                <td className={`px-4 py-3 ${s.lic === "blocked" ? "text-port" : s.lic === "expiring" ? "text-amber" : "text-slate-500"}`}>{s.note}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </Card>
-
-      {/* HR profile drawer */}
-      {openRow ? (
-        <div className="fixed inset-0 z-50 flex justify-end bg-navy/40" onClick={() => setOpen(null)}>
-          <div className="h-full w-full max-w-md overflow-y-auto bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-start justify-between">
-              <div>
-                <h3 className="font-display text-lg font-semibold text-navy">{openRow.n}</h3>
-                <p className="text-xs text-slate-500">{openRow.e} · {openRow.badges.join(" · ")}</p>
-              </div>
-              <button onClick={() => setOpen(null)} className="text-sm text-slate-400 hover:text-slate-600">Close ✕</button>
-            </div>
-
-            <div className="mt-3"><StatusPill tone={LIC_PILL[openRow.lic].tone}>Licences {LIC_PILL[openRow.lic].label.toLowerCase()}</StatusPill></div>
-
-            <h4 className="mt-5 text-xs font-semibold uppercase tracking-wide text-slate-400">Documents &amp; certificates</h4>
-            <table className="mt-2 w-full text-left text-sm">
-              <tbody className="divide-y divide-slate-100">
-                {docs.map((d) => (
-                  <tr key={d.name}>
-                    <td className="py-2 text-navy">{d.name}</td>
-                    <td className="py-2 text-xs text-slate-500">{d.exp}</td>
-                    <td className="py-2 text-right"><StatusPill tone={LIC_PILL[d.st].tone}>{LIC_PILL[d.st].label}</StatusPill></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <button className="mt-2 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-navy hover:bg-slate-50">+ Upload document</button>
-
-            <h4 className="mt-5 text-xs font-semibold uppercase tracking-wide text-slate-400">Onboarding</h4>
-            <ul className="mt-2 space-y-1.5">
-              {ONBOARDING.map((task, i) => {
-                const done = !inProgress || i < ONBOARDING.length - 2;
-                return (
-                  <li key={task} className="flex items-center gap-2 text-sm">
-                    <span className={`flex h-4 w-4 flex-none items-center justify-center rounded-full text-[10px] text-white ${done ? "bg-starboard" : "bg-slate-300"}`}>{done ? "✓" : ""}</span>
-                    <span className={done ? "text-slate-600" : "text-slate-400"}>{task}</span>
-                  </li>
-                );
-              })}
-            </ul>
-            {inProgress ? <p className="mt-2 text-xs text-amber">Onboarding in progress — 2 steps to go.</p> : <p className="mt-2 text-xs text-starboard">Fully onboarded.</p>}
-          </div>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-const KIT = [
-  { item: "RIB safety boat — “Kestrel”", type: "Safety boat", last: "18 Sep 2026", next: "18 Dec 2026", tone: "covered" as const, st: "Serviceable", log: ["Engine service & impeller replaced (18 Sep)", "Kill-cords and fuel checked", "Assigned to: Powerboat L2, Sat"] },
-  { item: "RIB safety boat — “Merlin”", type: "Safety boat", last: "02 Aug 2026", next: "28 Sep 2026", tone: "attention" as const, st: "Service due", log: ["Annual service due 28 Sep — booked with marina", "Nav lights replaced (Aug)", "Assigned to: Start Sailing, Mon"] },
-  { item: "RIB safety boat — “Falcon”", type: "Safety boat", last: "22 Sep 2026", next: "22 Dec 2026", tone: "covered" as const, st: "Serviceable", log: ["Handed back after full service (22 Sep)", "New VHF radio fitted", "Assigned to: Powerboat L2, Sat"] },
-  { item: "Pico dinghies ×12", type: "Dinghy", last: "10 Sep 2026", next: "10 Mar 2027", tone: "covered" as const, st: "Serviceable", log: ["Hulls & rigging inspected (10 Sep)", "2 new mainsails this season"] },
-  { item: "ILCA / Laser ×6", type: "Dinghy", last: "10 Sep 2026", next: "10 Mar 2027", tone: "covered" as const, st: "Serviceable", log: ["Foils checked, no damage", "Assigned to: Improving Skills, Tue"] },
-  { item: "Wayfarer ×4", type: "Dinghy", last: "05 Sep 2026", next: "05 Mar 2027", tone: "covered" as const, st: "Serviceable", log: ["Buoyancy tanks pressure-tested", "Assigned to: Start Sailing, Mon"] },
-  { item: "Topper ×8", type: "Dinghy", last: "12 Jul 2026", next: "12 Sep 2026", tone: "conflict" as const, st: "Out of action (1)", log: ["Hull #4 cracked — withdrawn from rostering", "Repair quote requested", "7 of 8 still available"] },
-  { item: "Windsurf boards ×10", type: "Windsurf", last: "20 Aug 2026", next: "20 Feb 2027", tone: "covered" as const, st: "Serviceable", log: ["Fins & footstraps checked", "Assigned to: Start Windsurf, Sat"] },
-  { item: "Sea kayaks ×15", type: "Paddlesport", last: "01 Sep 2026", next: "01 Mar 2027", tone: "covered" as const, st: "Serviceable", log: ["Hatches & bulkheads sealed", "Spray decks counted"] },
-  { item: "Buoyancy aids ×80", type: "Safety kit", last: "15 Sep 2026", next: "15 Sep 2027", tone: "covered" as const, st: "Serviceable", log: ["Buckles & stitching inspected", "Sized S–XXL, stock checked"] },
-  { item: "Engine — 40hp outboard", type: "Safety boat", last: "01 Jun 2026", next: "01 Oct 2026", tone: "attention" as const, st: "Service due", log: ["100-hour service due 01 Oct", "Spare prop in store"] },
-];
-
-function DemoEquipment() {
-  const [open, setOpen] = useState<string | null>("Topper ×8");
-  return (
-    <div>
-      <div className="flex items-center justify-between">
-        <h2 className="font-display text-xl font-semibold text-navy">Equipment</h2>
-        <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-400">+ Add item</span>
-      </div>
-      <p className="text-sm text-slate-500">Boats, engines and safety kit — click an item to open its service log.</p>
-
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
-        <Card><p className="text-sm font-semibold text-navy">Serviceable</p><p className="mt-1 text-3xl font-semibold text-starboard">8</p><p className="text-xs text-slate-500">Ready to go afloat</p></Card>
-        <Card><p className="text-sm font-semibold text-navy">Service due</p><p className="mt-1 text-3xl font-semibold text-amber">2</p><p className="text-xs text-slate-500">Booked in this month</p></Card>
-        <Card><p className="text-sm font-semibold text-navy">Out of action</p><p className="mt-1 text-3xl font-semibold text-port">1</p><p className="text-xs text-slate-500">Withdrawn from rostering</p></Card>
-      </div>
-
-      <Card className="mt-4 overflow-x-auto p-0">
-        <table className="w-full min-w-[640px] text-left text-sm">
-          <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-            <tr><th className="px-4 py-3">Item</th><th className="px-4 py-3">Type</th><th className="px-4 py-3">Last check</th><th className="px-4 py-3">Next service</th><th className="px-4 py-3">Status</th></tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {KIT.map((k) => {
-              const isOpen = open === k.item;
-              return (
-                <Fragment key={k.item}>
-                  <tr className="cursor-pointer hover:bg-slate-50" onClick={() => setOpen(isOpen ? null : k.item)}>
-                    <td className="whitespace-nowrap px-4 py-3 font-medium text-navy">
-                      <span className="mr-1 text-xs text-slate-400">{isOpen ? "▾" : "▸"}</span>{k.item}
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">{k.type}</td>
-                    <td className="px-4 py-3 text-slate-600">{k.last}</td>
-                    <td className="px-4 py-3 text-slate-600">{k.next}</td>
-                    <td className="px-4 py-3"><StatusPill tone={k.tone}>{k.st}</StatusPill></td>
-                  </tr>
-                  {isOpen ? (
-                    <tr className="bg-canvas">
-                      <td colSpan={5} className="px-4 py-3">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Service log &amp; notes</p>
-                        <ul className="mt-1 space-y-1 text-sm text-slate-600">
-                          {k.log.map((l) => <li key={l}>• {l}</li>)}
-                        </ul>
-                      </td>
-                    </tr>
-                  ) : null}
-                </Fragment>
-              );
-            })}
-          </tbody>
-        </table>
-      </Card>
-      <p className="mt-2 text-xs text-slate-400">Kit that&apos;s out of action can&apos;t be assigned to a session until it&apos;s signed back on.</p>
-    </div>
-  );
-}
-
-type PayRow = { n: string; sched: number; actual: number; rate: string; approved: boolean };
-
-const PAY: PayRow[] = [
-  { n: "Sarah Whitlock", sched: 24, actual: 24, rate: "£18.00", approved: true },
-  { n: "Tom Bergin", sched: 12, actual: 14, rate: "£16.50", approved: true },
-  { n: "Liam O'Connor", sched: 16, actual: 16, rate: "£15.00", approved: true },
-  { n: "Priya Nair", sched: 18, actual: 17, rate: "£17.00", approved: false },
-  { n: "Jack Turnbull", sched: 8, actual: 8, rate: "£16.50", approved: true },
-  { n: "Chloe Adeyemi", sched: 20, actual: 22, rate: "£18.00", approved: false },
-  { n: "Isla Fraser", sched: 10, actual: 10, rate: "£15.50", approved: true },
-  { n: "Noah Pereira", sched: 22, actual: 20, rate: "£17.50", approved: true },
-];
-
-const TS_COURSES = ["Start Sailing", "Improving Skills", "Youth Stage 2", "Adult Improver", "Powerboat L2", "Start Windsurf"];
-const payAmount = (h: number, r: string) => h * parseFloat(r.replace("£", ""));
-
-// Build an example timesheet whose actual hours sum to the row's actual total.
-function timesheetFor(row: PayRow) {
-  const rows: { date: string; course: string; sched: number; actual: number }[] = [];
-  let remaining = row.actual;
-  let day = 2;
-  let i = 0;
-  while (remaining > 0 && i < 12) {
-    const planned = i % 2 === 0 ? 3.5 : 4;
-    const actual = Math.min(remaining, planned);
-    rows.push({ date: `${day} Sep`, course: TS_COURSES[(row.n.length + i) % TS_COURSES.length]!, sched: planned, actual });
-    remaining -= actual;
-    day += i % 3 === 2 ? 3 : 2;
-    i++;
-  }
-  return rows;
-}
-
-function DemoFinance() {
-  const [openName, setOpenName] = useState<string | null>(null);
-  const grand = PAY.reduce((a, p) => a + payAmount(p.actual, p.rate), 0);
-  const openRow = PAY.find((p) => p.n === openName) ?? null;
-  const ts = openRow ? timesheetFor(openRow) : [];
-
-  return (
-    <div>
-      <div className="flex items-center justify-between">
-        <h2 className="font-display text-xl font-semibold text-navy">Payroll</h2>
-        <span className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-navy">Export CSV</span>
-      </div>
-      <p className="text-sm text-slate-500">Scheduled vs actual hours from session sign-off — September. Click anyone for their timesheet.</p>
-
-      <Card className="mt-4">
-        <p className="text-sm text-slate-500">Total pay (from recorded hours)</p>
-        <p className="mt-1 text-3xl font-semibold text-navy">£{grand.toFixed(2)}</p>
-      </Card>
-
-      <Card className="mt-4 overflow-x-auto p-0">
-        <table className="w-full min-w-[560px] text-left text-sm">
-          <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-            <tr><th className="px-4 py-3">Instructor</th><th className="px-4 py-3">Scheduled (h)</th><th className="px-4 py-3">Actual (h)</th><th className="px-4 py-3">Rate</th><th className="px-4 py-3">Pay</th><th className="px-4 py-3">Approved</th></tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {PAY.map((p) => (
-              <tr key={p.n} className="cursor-pointer hover:bg-slate-50" onClick={() => setOpenName(p.n)}>
-                <td className="whitespace-nowrap px-4 py-3 font-medium text-teal underline decoration-teal/30 underline-offset-2">{p.n}</td>
-                <td className="px-4 py-3 text-slate-600">{p.sched} h</td>
-                <td className={`px-4 py-3 ${p.actual !== p.sched ? "font-semibold text-amber" : "text-slate-600"}`}>{p.actual} h</td>
-                <td className="px-4 py-3 text-slate-600">{p.rate}/h</td>
-                <td className="px-4 py-3 font-medium text-navy">£{payAmount(p.actual, p.rate).toFixed(2)}</td>
-                <td className="px-4 py-3"><StatusPill tone={p.approved ? "covered" : "neutral"}>{p.approved ? "Yes" : "No"}</StatusPill></td>
-              </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr className="border-t border-slate-200 bg-slate-50">
-              <td className="px-4 py-3 font-semibold text-navy" colSpan={4}>Total to pay</td>
-              <td className="px-4 py-3 font-semibold text-navy">£{grand.toFixed(2)}</td>
-              <td className="px-4 py-3"></td>
-            </tr>
-          </tfoot>
-        </table>
-      </Card>
-      <p className="mt-2 text-xs text-slate-400">Click any instructor to open their full timesheet. Actual hours are captured from session sign-off, so payroll matches what really happened on the water.</p>
-
-      {/* Timesheet modal */}
-      {openRow ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy/40 p-4" onClick={() => setOpenName(null)}>
-          <div className="w-full max-w-lg rounded-card bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-start justify-between">
-              <div>
-                <h3 className="font-display text-lg font-semibold text-navy">{openRow.n} — timesheet</h3>
-                <p className="text-xs text-slate-500">September · {openRow.rate}/h · {openRow.actual} actual hours</p>
-              </div>
-              <button onClick={() => setOpenName(null)} className="text-sm text-slate-400 hover:text-slate-600">Close ✕</button>
-            </div>
-            <table className="mt-4 w-full text-left text-sm">
-              <thead className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
-                <tr><th className="py-2">Date</th><th className="py-2">Course</th><th className="py-2 text-right">Sched</th><th className="py-2 text-right">Actual</th></tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {ts.map((r, i) => (
-                  <tr key={i}>
-                    <td className="py-2 text-slate-600">{r.date}</td>
-                    <td className="py-2 text-navy">{r.course}</td>
-                    <td className="py-2 text-right text-slate-600">{r.sched} h</td>
-                    <td className={`py-2 text-right ${r.actual !== r.sched ? "font-semibold text-amber" : "text-slate-600"}`}>{r.actual} h</td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="border-t border-slate-200">
-                  <td className="py-2 font-semibold text-navy" colSpan={3}>Total pay ({openRow.actual} h)</td>
-                  <td className="py-2 text-right font-semibold text-navy">£{payAmount(openRow.actual, openRow.rate).toFixed(2)}</td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function DemoSettings() {
-  const sections = [
-    { title: "Centre details", desc: "Harbour Sailing Centre · harbour.activityroster.com · EU (GDPR) data region", items: ["Name, logo & brand colour", "Address & contact", "Season & opening times"] },
-    { title: "Grades & roles", desc: "How your instructors and helpers are graded.", items: ["Senior Instructor, Instructor, Assistant", "Safety Boat Driver", "Custom volunteer roles"] },
-    { title: "Compliance checks", desc: "The licences and vetting that must be valid to roster.", items: ["First Aid (mandatory)", "Safeguarding (mandatory)", "DBS / PVG / AccessNI / Garda vetting", "RYA instructor certificates"] },
-    { title: "Course catalogue", desc: "RYA course types, ratios and required qualifications.", items: ["RYA National Sailing scheme", "RYA Youth Sailing scheme", "RYA Powerboat & Windsurfing", "Custom sessions"] },
-    { title: "Jurisdictions & vetting", desc: "Right checks for where your staff work.", items: ["England & Wales — DBS", "Scotland — PVG", "Northern Ireland — AccessNI", "Ireland — Garda vetting"] },
-    { title: "Billing", desc: "Plan, invoices and payment method.", items: ["Small Club £35/mo (up to 10) or Standard £65/mo (unlimited)", "Upgrade or switch to annual in a click", "Update payment method & download invoices"] },
-  ];
-  return (
-    <div>
-      <h2 className="font-display text-xl font-semibold text-navy">Settings</h2>
-      <p className="text-sm text-slate-500">
-        This is where each centre shapes ActivityRoster to how it runs — grades, checks, courses and jurisdictions are all yours.
-        Retired config is deactivated, never deleted, so old records still make sense.
-      </p>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        {sections.map((s) => (
-          <Card key={s.title}>
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-navy">{s.title}</h3>
-              <span className="text-xs font-semibold text-teal">Edit</span>
-            </div>
-            <p className="mt-1 text-xs text-slate-500">{s.desc}</p>
-            <ul className="mt-3 space-y-1.5">
-              {s.items.map((it) => (
-                <li key={it} className="flex items-center gap-2 text-sm text-slate-700">
-                  <span className="h-1.5 w-1.5 flex-none rounded-full bg-teal" />{it}
-                </li>
-              ))}
-            </ul>
-          </Card>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Time & attendance
-// ---------------------------------------------------------------------------
-const DEMO_NOW = "13:20";
-const toMin = (t: string) => { const [h, m] = t.split(":").map(Number); return h! * 60 + m!; };
-const hrs = (a: string, b: string) => ((toMin(b) - toMin(a)) / 60);
-
-type Shift = { name: string; role: string; course: string; in: string | null; out: string | null };
+// --- Time clock -------------------------------------------------------------
 
 function DemoTimeClock() {
-  const [rows, setRows] = useState<Shift[]>([
-    { name: "Sarah Whitlock", role: "Senior Instructor", course: "Start Sailing", in: "08:55", out: null },
-    { name: "Dan Rees", role: "Safety Boat", course: "Start Sailing", in: "08:58", out: null },
-    { name: "Chloe Adeyemi", role: "Senior Instructor", course: "Improving Skills", in: "12:50", out: null },
-    { name: "Priya Nair", role: "Instructor", course: "Adult Improver (EV)", in: null, out: null },
-    { name: "Tom Bergin", role: "Instructor", course: "Youth Stage 2", in: "08:50", out: "12:10" },
-    { name: "Megan Foyle", role: "Senior Instructor", course: "Youth Stage 2", in: "08:52", out: "12:05" },
-  ]);
-
-  const toggle = (i: number) => setRows((rs) => rs.map((r, j) => {
-    if (i !== j) return r;
-    if (!r.in) return { ...r, in: DEMO_NOW };
-    if (!r.out) return { ...r, out: DEMO_NOW };
-    return r;
-  }));
-
-  const onWater = rows.filter((r) => r.in && !r.out).length;
-  const started = rows.filter((r) => r.in).length;
-  const hoursToday = rows.reduce((a, r) => a + (r.in && r.out ? hrs(r.in, r.out) : 0), 0);
-
+  const rows = [
+    { n: "Sarah Whitlock", course: "Start Sailing", in: "08:55", out: null, status: "on-water" as const },
+    { n: "Dan Rees", course: "Start Sailing", in: "08:58", out: null, status: "on-water" as const },
+    { n: "Megan Foyle", course: "Youth Stage 2", in: "08:52", out: "12:05", status: "done" as const },
+    { n: "Tom Bergin", course: "Youth Stage 2", in: "08:50", out: "12:10", status: "done" as const },
+    { n: "Priya Nair", course: "Adult Improver (EV)", in: null, out: null, status: "none" as const },
+  ];
+  const hrs = (a: string | null, b: string | null) => {
+    if (!a) return "—";
+    const to = (t: string) => { const [h, m] = t.split(":").map(Number); return h! * 60 + m!; };
+    const end = b ? to(b) : to("13:20");
+    return ((end - to(a)) / 60).toFixed(1);
+  };
   return (
     <div>
-      <h2 className="font-display text-xl font-semibold text-navy">Time clock</h2>
-      <p className="text-sm text-slate-500">Clock-in at the boat park builds timesheets automatically — demo time is {DEMO_NOW}.</p>
+      <h1 className="mb-1 font-display text-2xl font-semibold text-navy">Time clock</h1>
+      <p className="mb-6 text-sm text-slate-500">Attendance for 24 Sep 2026 — built from instructor clock-ins.</p>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
-        <Card><p className="text-sm font-semibold text-navy">On the water now</p><p className="mt-1 text-3xl font-semibold text-starboard">{onWater}</p><p className="text-xs text-slate-500">Clocked in, not yet out</p></Card>
-        <Card><p className="text-sm font-semibold text-navy">Started today</p><p className="mt-1 text-3xl font-semibold text-navy">{started}<span className="text-lg text-slate-400">/{rows.length}</span></p><p className="text-xs text-slate-500">Rostered instructors</p></Card>
-        <Card><p className="text-sm font-semibold text-navy">Hours logged today</p><p className="mt-1 text-3xl font-semibold text-navy">{hoursToday.toFixed(1)}</p><p className="text-xs text-slate-500">Actual, from clock-outs</p></Card>
+      <div className="mb-4 grid gap-3 sm:grid-cols-3">
+        <Card><p className="text-sm font-semibold text-navy">On the water now</p><p className="mt-1 text-3xl font-semibold text-starboard">2</p><p className="text-xs text-slate-500">Clocked in, not yet out</p></Card>
+        <Card><p className="text-sm font-semibold text-navy">Started today</p><p className="mt-1 text-3xl font-semibold text-navy">4</p><p className="text-xs text-slate-500">Instructors clocked in</p></Card>
+        <Card><p className="text-sm font-semibold text-navy">Hours logged today</p><p className="mt-1 text-3xl font-semibold text-navy">6.5</p><p className="text-xs text-slate-500">Actual, from clock times</p></Card>
       </div>
 
-      <Card className="mt-4 overflow-x-auto p-0">
-        <table className="w-full min-w-[620px] text-left text-sm">
+      <Card className="p-0">
+        <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
             <tr><th className="px-4 py-3">Instructor</th><th className="px-4 py-3">Session</th><th className="px-4 py-3">Clock in</th><th className="px-4 py-3">Clock out</th><th className="px-4 py-3">Hours</th><th className="px-4 py-3">Status</th></tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {rows.map((r, i) => {
-              const status = !r.in ? "not-started" : !r.out ? "on-water" : "done";
-              return (
-                <tr key={r.name} className="hover:bg-slate-50/50">
-                  <td className="whitespace-nowrap px-4 py-3"><span className="font-medium text-navy">{r.name}</span><span className="block text-xs text-slate-400">{r.role}</span></td>
-                  <td className="px-4 py-3 text-slate-600">{r.course}</td>
-                  <td className="px-4 py-3 text-slate-600">{r.in ?? "—"}</td>
-                  <td className="px-4 py-3 text-slate-600">{r.out ?? "—"}</td>
-                  <td className="px-4 py-3 font-medium text-navy">{r.in && r.out ? hrs(r.in, r.out).toFixed(1) : r.in ? hrs(r.in, DEMO_NOW).toFixed(1) : "—"}</td>
-                  <td className="px-4 py-3">
-                    {status === "done" ? <StatusPill tone="neutral">Signed off</StatusPill> : (
-                      <button onClick={() => toggle(i)} className={`rounded-lg px-3 py-1.5 text-xs font-semibold text-white ${status === "on-water" ? "bg-port hover:opacity-90" : "bg-starboard hover:opacity-90"}`}>
-                        {status === "on-water" ? "Clock out" : "Clock in"}
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
+            {rows.map((r) => (
+              <tr key={r.n}>
+                <td className="px-4 py-3 font-medium text-navy">{r.n}</td>
+                <td className="px-4 py-3 text-slate-600">{r.course}</td>
+                <td className="px-4 py-3 text-slate-600">{r.in ?? "—"}</td>
+                <td className="px-4 py-3 text-slate-600">{r.out ?? "—"}</td>
+                <td className="px-4 py-3 font-medium text-navy">{hrs(r.in, r.out)}</td>
+                <td className="px-4 py-3">
+                  {r.status === "none" ? <span className="text-xs text-slate-400">Not started</span> : <StatusPill tone={r.status === "on-water" ? "covered" : "neutral"}>{r.status === "on-water" ? "On the water" : "Signed off"}</StatusPill>}
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </Card>
-      <p className="mt-2 text-xs text-slate-400">Optional photo &amp; GPS check at clock-in confirms the instructor is on site. Actual hours flow straight into Payroll.</p>
     </div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Leave & cover (open shifts)
-// ---------------------------------------------------------------------------
-type LeaveStatus = "pending" | "approved" | "declined";
+// --- Leave & cover ----------------------------------------------------------
 
 function DemoLeave() {
-  const [leave, setLeave] = useState<{ name: string; type: string; dates: string; days: number; status: LeaveStatus }[]>([
-    { name: "Liam O'Connor", type: "Annual leave", dates: "6–10 Oct", days: 5, status: "pending" },
-    { name: "Isla Fraser", type: "Sick", dates: "24 Sep", days: 1, status: "pending" },
-    { name: "Freya Donnelly", type: "Training (RYA)", dates: "18–19 Oct", days: 2, status: "approved" },
-    { name: "Cormac Byrne", type: "Unpaid", dates: "2 Nov", days: 1, status: "pending" },
-  ]);
-  const setStatus = (i: number, s: LeaveStatus) => setLeave((ls) => ls.map((l, j) => (i === j ? { ...l, status: s } : l)));
-
-  const [shifts, setShifts] = useState<{ course: string; when: string; role: string; state: "open" | "offered" | "filled"; by: string }[]>([
-    { course: "Powerboat Level 2", when: "Sat 26 Sep · AM", role: "Safety Boat Driver", state: "open", by: "Dan Rees" },
-    { course: "Youth Stage 2", when: "Wed 24 Sep · AM", role: "2nd Instructor", state: "offered", by: "Grace Hollis" },
-    { course: "Start Windsurf", when: "Sat 26 Sep · PM", role: "Windsurf Instructor", state: "filled", by: "Hannah Leung" },
-  ]);
-  const advance = (i: number) => setShifts((ss) => ss.map((s, j) => {
-    if (i !== j) return s;
-    if (s.state === "open") return { ...s, state: "offered" };
-    if (s.state === "offered") return { ...s, state: "filled" };
-    return s;
-  }));
-
-  const pill = { pending: "attention", approved: "covered", declined: "conflict" } as const;
-
+  const leave = [
+    { n: "Liam O'Connor", type: "Annual leave", dates: "6–10 Oct", status: "pending" as const },
+    { n: "Isla Fraser", type: "Sick", dates: "24 Sep", status: "pending" as const },
+    { n: "Freya Donnelly", type: "Training (RYA)", dates: "18–19 Oct", status: "approved" as const },
+  ];
+  const shifts = [
+    { role: "Safety Boat Driver", course: "Powerboat Level 2", when: "Sat 27 Sep · AM", state: "open" as const, by: "" },
+    { role: "2nd Instructor", course: "Youth Stage 2", when: "Wed 24 Sep · AM", state: "offered" as const, by: "Grace Hollis" },
+    { role: "Windsurf Instructor", course: "Start Windsurf", when: "Sat 27 Sep · PM", state: "filled" as const, by: "Hannah Leung" },
+  ];
+  const lpill = { pending: "attention", approved: "covered", declined: "conflict" } as const;
   return (
     <div>
-      <h2 className="font-display text-xl font-semibold text-navy">Leave &amp; cover</h2>
-      <p className="text-sm text-slate-500">Approve leave and fill the gaps it leaves — with open shifts staff can claim.</p>
+      <h1 className="mb-1 font-display text-2xl font-semibold text-navy">Leave &amp; cover</h1>
+      <p className="mb-6 text-sm text-slate-500">Approve leave and fill the gaps it leaves with open shifts staff can claim.</p>
 
-      <Card className="mt-4 p-0">
-        <h3 className="px-4 pt-4 font-semibold text-navy">Leave requests</h3>
-        <table className="mt-2 w-full text-left text-sm">
+      <h2 className="mb-2 font-semibold text-navy">Leave requests</h2>
+      <Card className="mb-8 p-0">
+        <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
             <tr><th className="px-4 py-3">Staff</th><th className="px-4 py-3">Type</th><th className="px-4 py-3">Dates</th><th className="px-4 py-3">Status</th><th className="px-4 py-3"></th></tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {leave.map((l, i) => (
-              <tr key={l.name} className="hover:bg-slate-50/50">
-                <td className="whitespace-nowrap px-4 py-3 font-medium text-navy">{l.name}</td>
+            {leave.map((l) => (
+              <tr key={l.n}>
+                <td className="px-4 py-3 font-medium text-navy">{l.n}</td>
                 <td className="px-4 py-3 text-slate-600">{l.type}</td>
-                <td className="px-4 py-3 text-slate-600">{l.dates} <span className="text-xs text-slate-400">· {l.days}d</span></td>
-                <td className="px-4 py-3"><StatusPill tone={pill[l.status]}>{l.status[0]!.toUpperCase() + l.status.slice(1)}</StatusPill></td>
+                <td className="px-4 py-3 text-slate-600">{l.dates}</td>
+                <td className="px-4 py-3"><StatusPill tone={lpill[l.status]}>{l.status[0]!.toUpperCase() + l.status.slice(1)}</StatusPill></td>
                 <td className="px-4 py-3 text-right">
                   {l.status === "pending" ? (
                     <span className="flex justify-end gap-2">
-                      <button onClick={() => setStatus(i, "approved")} className="rounded-lg bg-starboard px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90">Approve</button>
-                      <button onClick={() => setStatus(i, "declined")} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-navy hover:bg-slate-50">Decline</button>
+                      <span className="rounded-lg bg-starboard px-3 py-1.5 text-xs font-semibold text-white">Approve</span>
+                      <span className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-navy">Decline</span>
                     </span>
                   ) : <span className="text-xs text-slate-400">actioned</span>}
                 </td>
@@ -1101,26 +720,22 @@ function DemoLeave() {
         </table>
       </Card>
 
-      <Card className="mt-4">
-        <h3 className="font-semibold text-navy">Open shifts — cover needed</h3>
-        <p className="text-xs text-slate-500">Broadcast to fit, available staff; they claim it from their app.</p>
-        <div className="mt-3 space-y-2">
-          {shifts.map((s, i) => (
-            <div key={s.course + s.when} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 p-3">
+      <h2 className="mb-2 font-semibold text-navy">Open shifts — cover needed</h2>
+      <Card className="p-0">
+        <div className="divide-y divide-slate-100">
+          {shifts.map((s) => (
+            <div key={s.course + s.when} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
               <div>
                 <p className="text-sm font-semibold text-navy">{s.role} · {s.course}</p>
                 <p className="text-xs text-slate-400">{s.when}</p>
               </div>
-              {s.state === "filled" ? (
-                <StatusPill tone="covered">Filled · {s.by}</StatusPill>
-              ) : s.state === "offered" ? (
-                <span className="flex items-center gap-2">
-                  <span className="rounded-full bg-amber/15 px-2.5 py-0.5 text-xs font-medium text-amber">{s.by} offered</span>
-                  <button onClick={() => advance(i)} className="rounded-lg bg-teal px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-700">Confirm</button>
-                </span>
-              ) : (
-                <button onClick={() => advance(i)} className="rounded-lg bg-navy px-3 py-1.5 text-xs font-semibold text-white hover:bg-navy-700">Broadcast to available</button>
-              )}
+              {s.state === "filled" ? <StatusPill tone="covered">Filled · {s.by}</StatusPill>
+                : s.state === "offered" ? (
+                  <span className="flex items-center gap-2">
+                    <span className="rounded-full bg-amber/15 px-2.5 py-0.5 text-xs font-medium text-amber">{s.by} offered</span>
+                    <span className="rounded-lg bg-teal px-3 py-1.5 text-xs font-semibold text-white">Confirm</span>
+                  </span>
+                ) : <span className="rounded-lg bg-navy px-3 py-1.5 text-xs font-semibold text-white">Broadcast to available</span>}
             </div>
           ))}
         </div>
@@ -1129,266 +744,443 @@ function DemoLeave() {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Weekly rota (printable) + payroll export
-// ---------------------------------------------------------------------------
-function DemoRota({ onBack }: { onBack: () => void }) {
-  const staffFor: Record<string, string[]> = {
-    "Start Sailing": ["Sarah Whitlock (SI)", "Dan Rees (Safety Boat)"],
-    "Improving Skills": ["Chloe Adeyemi (SI)", "Liam O'Connor (DI)"],
-    "Youth Stage 2": ["Megan Foyle (SI)", "— 2nd instructor needed"],
-    "Adult Improver": ["Priya Nair (DI)"],
-    "Powerboat L2": ["Dan Rees (PBI)", "— safety boat needed"],
-    "Start Windsurf": ["Isla Fraser (WI)", "Hannah Leung (WI)"],
-  };
+// --- Staff ------------------------------------------------------------------
+
+const STAFF_TABS = [
+  { key: "all", label: "All" },
+  { key: "fit", label: "Fit to roster" },
+  { key: "blocked", label: "Blocked" },
+  { key: "expiring", label: "Expiring soon" },
+] as const;
+type StaffTab = (typeof STAFF_TABS)[number]["key"];
+
+function DemoStaff() {
+  const [tab, setTab] = useState<StaffTab>("all");
+  const [q, setQ] = useState("");
+  const counts = { all: STAFF.length, fit: STAFF.filter((s) => s.fit).length, blocked: STAFF.filter((s) => !s.fit).length, expiring: STAFF.filter((s) => s.warn > 0).length };
+  const filtered = useMemo(() => STAFF.filter((r) => {
+    if (tab === "fit" && !r.fit) return false;
+    if (tab === "blocked" && r.fit) return false;
+    if (tab === "expiring" && r.warn === 0) return false;
+    if (q.trim() && !`${r.n} ${r.email ?? ""}`.toLowerCase().includes(q.trim().toLowerCase())) return false;
+    return true;
+  }), [tab, q]);
+
   return (
     <div>
-      <button onClick={onBack} className="mb-2 text-xs text-slate-400 hover:text-slate-600">← Dashboard</button>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-display text-xl font-semibold text-navy">Weekly rota</h2>
-        <div className="flex gap-2">
-          <span className="rounded-lg bg-teal px-3 py-1.5 text-xs font-semibold text-white">🖨 Print / Save PDF</span>
-          <span className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-navy">Export hours (CSV)</span>
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="font-display text-2xl font-bold text-navy">Staff</h1>
+          <p className="text-sm text-slate-500">{STAFF.length} instructors · fit-to-roster and the courses each can teach, from the qualifications they hold</p>
+        </div>
+        <span className="flex-none rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-navy">Import from spreadsheet</span>
+      </div>
+
+      <Card className="mb-5">
+        <h2 className="mb-1 font-semibold text-navy">Add an instructor</h2>
+        <p className="mb-3 text-xs text-slate-500">Enter their details and what they teach — we email them an invite to set up their account and upload their licences.</p>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div><label className="mb-1 block text-xs font-medium text-slate-500">Name</label><div className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-400">Full name</div></div>
+          <div><label className="mb-1 block text-xs font-medium text-slate-500">Email</label><div className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-400">name@centre.co.uk</div></div>
+          <div><label className="mb-1 block text-xs font-medium text-slate-500">Employment</label><div className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-600">Employed</div></div>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {["Dinghy Instructor", "Powerboat Instructor", "First Aid", "Safeguarding"].map((c) => (
+            <span key={c} className="rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-500">{c}</span>
+          ))}
+          <span className="rounded-lg bg-teal px-4 py-1.5 text-xs font-semibold text-white">Add &amp; invite</span>
+        </div>
+      </Card>
+
+      <div className="rounded-card border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
+          <div className="flex flex-wrap gap-1">
+            {STAFF_TABS.map((t) => (
+              <button key={t.key} onClick={() => setTab(t.key)} className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition ${tab === t.key ? "bg-teal text-white" : "text-slate-500 hover:bg-slate-100"}`}>
+                {t.label}<span className={`ml-1.5 text-xs ${tab === t.key ? "text-white/80" : "text-slate-400"}`}>{counts[t.key]}</span>
+              </button>
+            ))}
+          </div>
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search staff by name or email" className="w-64 max-w-[70vw] rounded-full border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm outline-none focus:border-teal focus:bg-white" aria-label="Search staff" />
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[640px] text-left text-sm">
+            <thead className="bg-slate-50/70 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <tr>
+                {["Name", "Email", "Employment", "Can teach", "Fit to roster", "Portal access"].map((h) => (
+                  <th key={h} className="px-4 py-3"><span className="inline-flex items-center gap-1">{h}<ChevronsUpDown className="h-3 w-3 text-slate-300" /></span></th>
+                ))}
+                <th className="px-4 py-3 text-right"><Settings2 className="ml-auto h-4 w-4 text-slate-300" /></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filtered.length === 0 ? (
+                <tr><td colSpan={7} className="px-4 py-10 text-center text-slate-400">No staff match this view.</td></tr>
+              ) : filtered.map((r) => (
+                <tr key={r.n} className="transition hover:bg-navy-50/60">
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-teal/10 text-xs font-semibold text-teal">{r.n.split(" ").map((p) => p[0]).slice(0, 2).join("")}</span>
+                      <span className="font-medium text-navy">{r.n}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-slate-500">{r.email ?? "—"}</td>
+                  <td className="px-4 py-3 capitalize text-slate-600">{r.emp}</td>
+                  <td className="px-4 py-3">
+                    {r.teaches.length === 0 ? <span className="text-xs text-slate-400">Add a qualification</span> : (
+                      <div className="flex flex-col gap-1">
+                        <div className="flex flex-wrap gap-1">
+                          {r.youth ? <span className="rounded-full bg-amber/15 px-2 py-0.5 text-[11px] font-semibold text-amber">Youth</span> : null}
+                          {r.adult ? <span className="rounded-full bg-teal/15 px-2 py-0.5 text-[11px] font-semibold text-teal">Adult</span> : null}
+                        </div>
+                        <span className="text-xs text-slate-500">{r.teaches.slice(0, 2).join(", ")}{r.teaches.length > 2 ? ` +${r.teaches.length - 2} more` : ""}</span>
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {r.fit ? <StatusPill tone="covered">Fit</StatusPill> : <StatusPill tone="conflict">{r.block || "Not cleared"}</StatusPill>}
+                    {r.warn > 0 ? <span className="ml-2"><StatusPill tone="attention">{r.warn} expiring</StatusPill></span> : null}
+                  </td>
+                  <td className="px-4 py-3">{r.email ? <span className="text-xs font-semibold text-teal">Invite</span> : <span className="text-xs text-slate-400">Add email to invite</span>}</td>
+                  <td className="px-4 py-3 text-right"><Settings2 className="ml-auto h-4 w-4 text-slate-300" /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
-      <p className="text-sm text-slate-500">Harbour Sailing Centre · week of 21 Sep · every session, who&apos;s on, and the cover status.</p>
-
-      <Card className="mt-4 overflow-x-auto p-0">
-        <table className="w-full min-w-[560px] text-left text-sm">
-          <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-            <tr><th className="px-4 py-3">Day</th><th className="px-4 py-3">Session</th><th className="px-4 py-3">Staff on</th><th className="px-4 py-3">Status</th></tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {DAYS.flatMap((d) =>
-              (["AM", "PM", "EV"] as Slot[]).map((slot) => {
-                const cell = WEEK[d]![slot];
-                if (!cell) return null;
-                const staff = staffFor[cell.name] ?? ["—"];
-                const tone: "covered" | "attention" | "conflict" =
-                  cell.state === "ok" ? "covered" : cell.state === "att" ? "attention" : "conflict";
-                const label = cell.state === "ok" ? "Covered" : cell.state === "att" ? "Under-staffed" : "No safety cover";
-                return (
-                  <tr key={d + slot} className="align-top hover:bg-slate-50/50">
-                    <td className="whitespace-nowrap px-4 py-3 font-medium text-navy">{d} <span className="text-xs text-slate-400">{cell.time}</span></td>
-                    <td className="px-4 py-3 text-slate-600">{cell.name}</td>
-                    <td className="px-4 py-3 text-slate-600">{staff.map((s) => <span key={s} className="block">{s}</span>)}</td>
-                    <td className="px-4 py-3"><StatusPill tone={tone}>{label}</StatusPill></td>
-                  </tr>
-                );
-              }),
-            )}
-          </tbody>
-        </table>
-      </Card>
-      <p className="mt-2 text-xs text-slate-400">Print a clean one-page rota for the wall, or export actual hours straight to payroll. Flip to any week, past or future.</p>
     </div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Locations (operating areas), in your own categories
-// ---------------------------------------------------------------------------
+// --- Equipment --------------------------------------------------------------
+
+function DemoEquipment() {
+  const kit = [
+    { name: "RIB “Kestrel”", type: "Safety boat", id: "RIB-01", status: "available" },
+    { name: "RIB “Merlin”", type: "Safety boat", id: "RIB-02", status: "maintenance" },
+    { name: "Pico dinghies ×12", type: "Dinghy", id: "—", status: "available" },
+    { name: "ILCA / Laser ×6", type: "Dinghy", id: "—", status: "available" },
+    { name: "Topper #4", type: "Dinghy", id: "TOP-04", status: "retired" },
+    { name: "Windsurf boards ×10", type: "Windsurf", id: "—", status: "available" },
+  ];
+  const tone = (s: string) => s === "available" ? "covered" : s === "retired" ? "neutral" : "attention";
+  return (
+    <div>
+      <h1 className="mb-6 font-display text-2xl font-semibold text-navy">Equipment</h1>
+      <Card className="mb-6">
+        <h2 className="mb-3 font-semibold text-navy">Add equipment</h2>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div><label className="mb-1 block text-xs font-medium text-slate-500">Name</label><div className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-400">e.g. RIB “Falcon”</div></div>
+          <div><label className="mb-1 block text-xs font-medium text-slate-500">Type</label><div className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-600">Safety boat</div></div>
+          <div><label className="mb-1 block text-xs font-medium text-slate-500">Identifier</label><div className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-400">optional</div></div>
+        </div>
+        <span className="mt-3 inline-block rounded-lg bg-teal px-4 py-1.5 text-xs font-semibold text-white">Add equipment</span>
+      </Card>
+      <Card className="overflow-hidden p-0">
+        <table className="w-full text-left text-sm">
+          <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+            <tr><th className="px-4 py-3">Name</th><th className="px-4 py-3">Type</th><th className="px-4 py-3">Identifier</th><th className="px-4 py-3">Status</th></tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {kit.map((e) => (
+              <tr key={e.name}>
+                <td className="px-4 py-3 font-medium text-navy">{e.name}</td>
+                <td className="px-4 py-3 text-slate-600">{e.type}</td>
+                <td className="px-4 py-3 text-slate-600">{e.id}</td>
+                <td className="px-4 py-3"><StatusPill tone={tone(e.status)}>{e.status}</StatusPill></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Card>
+    </div>
+  );
+}
+
+// --- Locations --------------------------------------------------------------
+
 function DemoLocations() {
-  const groups: { cat: string; items: { n: string; note: string }[] }[] = [
-    { cat: "On the water", items: [
-      { n: "Main Harbour", note: "Sheltered training water" },
-      { n: "Estuary Zone", note: "Tidal — SI sign-off required" },
-      { n: "Open Bay", note: "Advanced sessions only" },
-    ] },
-    { cat: "Shore", items: [
-      { n: "Boat Park", note: "Rigging & launching" },
-      { n: "Slipway", note: "Powerboat launch" },
-    ] },
-    { cat: "Indoor", items: [
-      { n: "Training Room", note: "Theory & shore briefings" },
-      { n: "Changing Rooms", note: "—" },
-    ] },
+  const boxes = [
+    { name: "On the water", items: ["Main Harbour", "Estuary Zone", "Open Bay"] },
+    { name: "Shore", items: ["Boat Park", "Slipway"] },
+    { name: "Indoor", items: ["Training Room", "Changing Rooms"] },
   ];
   return (
     <div>
-      <div className="flex items-center justify-between">
-        <h2 className="font-display text-xl font-semibold text-navy">Locations</h2>
-        <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-400">+ Add category</span>
+      <h1 className="mb-1 font-display text-2xl font-semibold text-navy">Locations</h1>
+      <p className="mb-6 text-sm text-slate-500">
+        Everywhere activity happens — launch areas, classrooms, pontoons, operating areas. Group them into categories so
+        they&apos;re easy to pick when you build a roster.
+      </p>
+
+      <div className="mb-6 grid gap-4 lg:grid-cols-2">
+        <Card>
+          <h2 className="mb-3 font-semibold text-navy">Add a location</h2>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div><label className="mb-1 block text-xs font-medium text-slate-500">Name</label><div className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-400">e.g. Main Harbour</div></div>
+            <div><label className="mb-1 block text-xs font-medium text-slate-500">Category</label><div className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-600">On the water</div></div>
+          </div>
+          <span className="mt-3 inline-block rounded-lg bg-teal px-4 py-1.5 text-xs font-semibold text-white">Add location</span>
+        </Card>
+        <Card>
+          <h2 className="mb-1 font-semibold text-navy">Add a category</h2>
+          <p className="mb-3 text-xs text-slate-500">Make your own groupings — they appear as boxes below and in the category picker.</p>
+          <div className="flex gap-2">
+            <div className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-400">e.g. Off-site</div>
+            <span className="rounded-lg bg-teal px-4 py-2 text-xs font-semibold text-white">Add</span>
+          </div>
+        </Card>
       </div>
-      <p className="text-sm text-slate-500">Your operating areas and sites, grouped into your own categories — sessions and kit are assigned to these.</p>
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
-        {groups.map((g) => (
-          <Card key={g.cat}>
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-navy">{g.cat}</h3>
-              <span className="text-xs font-semibold text-teal">+ Add</span>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {boxes.map((box) => (
+          <Card key={box.name}>
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="font-semibold text-navy">{box.name}</h3>
+              <span className="text-xs text-slate-400">{box.items.length}</span>
             </div>
-            <ul className="mt-3 space-y-2">
-              {g.items.map((it) => (
-                <li key={it.n} className="rounded-lg border border-slate-200 px-3 py-2">
-                  <p className="text-sm font-medium text-navy">{it.n}</p>
-                  <p className="text-xs text-slate-400">{it.note}</p>
-                </li>
+            <ul className="divide-y divide-slate-100">
+              {box.items.map((l) => (
+                <li key={l} className="flex items-center justify-between py-2 text-sm text-navy">{l}<span className="text-xs text-slate-300">⋯</span></li>
               ))}
             </ul>
           </Card>
         ))}
       </div>
-      <p className="mt-2 text-xs text-slate-400">Make your own categories (water, shore, indoor, off-site…) and add areas under each. Retired areas are deactivated, never deleted, so old sessions still read correctly.</p>
     </div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Integrations — read-only course feeds from booking systems & calendars
-// ---------------------------------------------------------------------------
-function DemoIntegrations({ onBack }: { onBack: () => void }) {
-  const feeds = [
-    { n: "Bookwhen", kind: "Booking system", status: "connected" as const, last: "synced 8 min ago", courses: 18 },
-    { n: "WebCollect", kind: "Membership & bookings", status: "connected" as const, last: "synced 1 h ago", courses: 24 },
-    { n: "Google Calendar", kind: "Calendar (ICS)", status: "connected" as const, last: "synced 20 min ago", courses: 6 },
-    { n: "Class4Kids", kind: "Booking system", status: "available" as const, last: "not connected", courses: 0 },
-    { n: "Any other calendar (ICS)", kind: "Paste a feed URL", status: "available" as const, last: "not connected", courses: 0 },
-  ];
-  const tone = { connected: "covered", available: "neutral" } as const;
+// --- Payroll (finance) ------------------------------------------------------
+
+type PayRow = { n: string; sched: number; actual: number; rate: string; approved: boolean };
+const PAY: PayRow[] = [
+  { n: "Sarah Whitlock", sched: 24, actual: 24, rate: "£18.00", approved: true },
+  { n: "Tom Bergin", sched: 12, actual: 14, rate: "£16.50", approved: true },
+  { n: "Liam O'Connor", sched: 16, actual: 16, rate: "£15.00", approved: true },
+  { n: "Priya Nair", sched: 18, actual: 17, rate: "£17.00", approved: false },
+  { n: "Megan Foyle", sched: 20, actual: 22, rate: "£18.00", approved: false },
+  { n: "Dan Rees", sched: 8, actual: 8, rate: "£16.50", approved: true },
+];
+const payAmount = (h: number, r: string) => h * parseFloat(r.replace("£", ""));
+
+function DemoFinance() {
+  const [openName, setOpenName] = useState<string | null>(null);
+  const grand = PAY.reduce((a, p) => a + payAmount(p.actual, p.rate), 0);
+  const openRow = PAY.find((p) => p.n === openName) ?? null;
   return (
     <div>
-      <button onClick={onBack} className="mb-2 text-xs text-slate-400 hover:text-slate-600">← Courses</button>
-      <div className="flex items-center justify-between">
-        <h2 className="font-display text-xl font-semibold text-navy">Integrations</h2>
-        <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-400">+ Connect a feed</span>
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="font-display text-2xl font-semibold text-navy">Payroll</h1>
+        <span className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-navy">Export CSV</span>
       </div>
-      <p className="text-sm text-slate-500">Pull your courses in automatically from the booking system or calendar you already use — one-way and read-only.</p>
 
-      <Card className="mt-4 overflow-x-auto p-0">
+      <Card className="mb-4">
+        <p className="text-sm text-slate-500">Total pay (from recorded hours)</p>
+        <p className="mt-1 text-3xl font-semibold text-navy">£{grand.toFixed(2)}</p>
+      </Card>
+
+      <Card className="overflow-x-auto p-0">
         <table className="w-full min-w-[560px] text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-            <tr><th className="px-4 py-3">Source</th><th className="px-4 py-3">Type</th><th className="px-4 py-3">Courses imported</th><th className="px-4 py-3">Status</th></tr>
+            <tr><th className="px-4 py-3">Instructor</th><th className="px-4 py-3">Scheduled (h)</th><th className="px-4 py-3">Actual (h)</th><th className="px-4 py-3">Rate</th><th className="px-4 py-3">Pay</th><th className="px-4 py-3">Approved</th></tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {feeds.map((f) => (
-              <tr key={f.n} className="hover:bg-slate-50/50">
-                <td className="whitespace-nowrap px-4 py-3 font-medium text-navy">{f.n}</td>
-                <td className="px-4 py-3 text-slate-600">{f.kind}</td>
-                <td className="px-4 py-3 text-slate-600">{f.courses || "—"}</td>
-                <td className="px-4 py-3">
-                  <StatusPill tone={tone[f.status]}>{f.status === "connected" ? "Connected" : "Available"}</StatusPill>
-                  <span className="block text-xs text-slate-400">{f.last}</span>
-                </td>
+            {PAY.map((p) => (
+              <tr key={p.n} className="cursor-pointer hover:bg-slate-50" onClick={() => setOpenName(p.n)}>
+                <td className="whitespace-nowrap px-4 py-3 font-medium text-teal underline decoration-teal/30 underline-offset-2">{p.n}</td>
+                <td className="px-4 py-3 text-slate-600">{p.sched.toFixed(2)}</td>
+                <td className={`px-4 py-3 ${p.actual !== p.sched ? "font-semibold text-amber" : "text-slate-600"}`}>{p.actual.toFixed(2)}</td>
+                <td className="px-4 py-3 text-slate-600">{p.rate}</td>
+                <td className="px-4 py-3 font-medium text-navy">£{payAmount(p.actual, p.rate).toFixed(2)}</td>
+                <td className="px-4 py-3"><StatusPill tone={p.approved ? "covered" : "neutral"}>{p.approved ? "Yes" : "No"}</StatusPill></td>
               </tr>
             ))}
           </tbody>
         </table>
       </Card>
-      <p className="mt-2 text-xs text-slate-400">We never change anything in your booking system — we only read the course calendar and turn each event into a draft session for you to review.</p>
+      <p className="mt-2 text-xs text-slate-400">Actual hours come from session sign-off, so payroll matches what really happened on the water. Click anyone to open their timesheet.</p>
+
+      {openRow ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy/40 p-4" onClick={() => setOpenName(null)}>
+          <div className="w-full max-w-md rounded-card bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="font-display text-lg font-semibold text-navy">{openRow.n} — timesheet</h3>
+                <p className="text-xs text-slate-500">September · {openRow.rate}/h · {openRow.actual} actual hours</p>
+              </div>
+              <button onClick={() => setOpenName(null)} className="text-sm text-slate-400 hover:text-slate-600">Close ✕</button>
+            </div>
+            <p className="mt-4 text-sm text-slate-500">Pay this period: <span className="font-semibold text-navy">£{payAmount(openRow.actual, openRow.rate).toFixed(2)}</span></p>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Billing
-// ---------------------------------------------------------------------------
-function DemoBilling() {
-  const invoices = [
-    { date: "1 Sep 2026", desc: "Standard plan — monthly", amount: "£65.00" },
-    { date: "1 Aug 2026", desc: "Standard plan — monthly", amount: "£65.00" },
-    { date: "1 Jul 2026", desc: "Standard plan — monthly", amount: "£65.00" },
-  ];
+// --- Settings ---------------------------------------------------------------
+
+function ConfigBox({ title, items }: { title: string; items: { label: string; meta?: string }[] }) {
+  return (
+    <Card>
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="font-semibold text-navy">{title}</h3>
+        <span className="text-xs font-semibold text-teal">+ Add</span>
+      </div>
+      <ul className="divide-y divide-slate-100">
+        {items.map((it) => (
+          <li key={it.label} className="flex items-center justify-between py-2 text-sm">
+            <span className="text-navy">{it.label}{it.meta ? <span className="ml-2 text-xs text-slate-400">{it.meta}</span> : null}</span>
+            <span className="h-4 w-7 rounded-full bg-teal/30"><span className="ml-3.5 block h-4 w-3.5 rounded-full bg-teal" /></span>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
+function DemoSettings() {
   return (
     <div>
-      <h2 className="font-display text-xl font-semibold text-navy">Billing</h2>
-      <p className="text-sm text-slate-500">Your plan, payment method and VAT invoices.</p>
+      <h1 className="mb-1 font-display text-2xl font-semibold text-navy">Settings</h1>
+      <p className="mb-6 text-sm text-slate-500">
+        Shape ActivityRoster to how your centre runs — courses, grades, roles, checks and slots are all yours to edit.
+        Retiring an item hides it from new records but keeps your history intact (nothing is deleted).
+      </p>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <Card>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Current plan</p>
-          <p className="mt-1 text-2xl font-semibold text-navy">Standard · £65<span className="text-sm text-slate-400">/month</span></p>
-          <p className="mt-1 text-sm text-slate-500">Unlimited instructors &amp; volunteers · renews 1 Oct 2026</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <span className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-navy">Switch to annual (2 months free)</span>
-            <span className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-navy">Change plan</span>
-          </div>
-        </Card>
-        <Card>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Payment method</p>
-          <p className="mt-1 text-sm text-navy">Visa ···· 4242 · expires 03/28</p>
-          <p className="mt-1 text-xs text-slate-500">Billed in GBP · VAT handled at checkout</p>
-          <span className="mt-3 inline-block rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-navy">Update card</span>
-        </Card>
+      <Card className="mb-6">
+        <h2 className="mb-1 font-semibold text-navy">General</h2>
+        <p className="mb-3 text-xs text-slate-500">Alert lead time controls how early expiring tickets are flagged.</p>
+        <div className="grid gap-3 sm:grid-cols-4">
+          <div><label className="mb-1 block text-xs font-medium text-slate-500">Session style</label><div className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-600">Morning / Afternoon / Evening</div></div>
+          <div><label className="mb-1 block text-xs font-medium text-slate-500">Alert lead (days)</label><div className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-600">30</div></div>
+          <div><label className="mb-1 block text-xs font-medium text-slate-500">Currency</label><div className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-600">GBP</div></div>
+          <div><label className="mb-1 block text-xs font-medium text-slate-500">Timezone</label><div className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-600">Europe/London</div></div>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-4 text-sm text-slate-600">
+          {["Enforce licence checks", "Enforce ratio & safety cover", "Enforce double-booking checks"].map((t) => (
+            <label key={t} className="flex items-center gap-2"><span className="h-4 w-7 rounded-full bg-teal/30"><span className="ml-3.5 block h-4 w-3.5 rounded-full bg-teal" /></span>{t}</label>
+          ))}
+        </div>
+      </Card>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <ConfigBox title="Session slots" items={[{ label: "AM · Morning", meta: "09:00–12:30" }, { label: "PM · Afternoon", meta: "13:00–16:30" }, { label: "EV · Evening", meta: "17:30–20:00" }]} />
+        <ConfigBox title="Roles" items={[{ label: "Senior Instructor", meta: "ratio" }, { label: "Instructor", meta: "ratio" }, { label: "Safety Boat Driver", meta: "safety" }, { label: "First Aider", meta: "first-aid" }]} />
+        <ConfigBox title="Grades" items={[{ label: "Dinghy Instructor", meta: "Sailing" }, { label: "Powerboat Instructor", meta: "Powerboat" }, { label: "Windsurfing Instructor", meta: "Windsurf" }]} />
+        <ConfigBox title="Compliance checks" items={[{ label: "First Aid", meta: "mandatory" }, { label: "Safeguarding", meta: "mandatory" }, { label: "DBS / vetting", meta: "mandatory" }]} />
+        <ConfigBox title="Equipment types" items={[{ label: "Safety boat", meta: "tracked" }, { label: "Dinghy", meta: "tracked" }, { label: "Buoyancy aids", meta: "bulk" }]} />
+        <ConfigBox title="Location types" items={[{ label: "On the water" }, { label: "Shore" }, { label: "Indoor" }]} />
       </div>
 
-      <Card className="mt-4 p-0">
-        <h3 className="px-4 pt-4 font-semibold text-navy">Invoices</h3>
+      <Card className="mt-8">
+        <h2 className="mb-3 font-semibold text-navy">Data &amp; billing</h2>
+        <div className="flex flex-wrap gap-3">
+          {["Export all data (JSON)", "Manage billing", "Security & 2FA", "Change login PIN"].map((b) => (
+            <span key={b} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-navy">{b}</span>
+          ))}
+        </div>
+        <p className="mt-3 text-xs text-slate-400">Your data is stored in the EU. Config is deactivate-never-delete: retiring an item keeps historical records intact.</p>
+      </Card>
+    </div>
+  );
+}
+
+// --- Billing ----------------------------------------------------------------
+
+function DemoBilling() {
+  const invoices = [
+    { num: "INV-2026-009", date: "1 Sep 2026", amount: "£65.00", status: "paid" },
+    { num: "INV-2026-008", date: "1 Aug 2026", amount: "£65.00", status: "paid" },
+    { num: "INV-2026-007", date: "1 Jul 2026", amount: "£65.00", status: "paid" },
+  ];
+  return (
+    <div className="mx-auto max-w-3xl">
+      <h1 className="mb-1 font-display text-2xl font-semibold text-navy">Billing</h1>
+      <p className="mb-5 text-sm text-slate-500">Your plan, payments and VAT invoices.</p>
+
+      <Card className="mb-6">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p className="text-sm text-slate-500">Current status</p>
+            <p className="mt-0.5 text-lg font-semibold capitalize text-navy">active · Standard £65/mo</p>
+          </div>
+          <StatusPill tone="covered">Active</StatusPill>
+        </div>
+        <span className="mt-4 inline-block rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-navy">Manage billing, card &amp; cancellation →</span>
+      </Card>
+
+      <Card className="mb-6 border-amber/40 bg-amber/5">
+        <h2 className="mb-2 font-semibold text-navy">Done-for-you setup</h2>
+        <p className="text-sm text-slate-600">We build the platform around exactly how your centre runs — from £850, plus £350 travel for on-site work with your team. One-off; then you continue on the normal plan.</p>
+      </Card>
+
+      <Card className="p-0">
+        <h2 className="px-4 pt-4 font-semibold text-navy">Invoices</h2>
         <table className="mt-2 w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-            <tr><th className="px-4 py-3">Date</th><th className="px-4 py-3">Description</th><th className="px-4 py-3">Amount</th><th className="px-4 py-3">Status</th><th className="px-4 py-3"></th></tr>
+            <tr><th className="px-4 py-3">Invoice</th><th className="px-4 py-3">Date</th><th className="px-4 py-3">Amount</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">PDF</th></tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {invoices.map((i) => (
-              <tr key={i.date}>
-                <td className="whitespace-nowrap px-4 py-3 text-slate-600">{i.date}</td>
-                <td className="px-4 py-3 text-navy">{i.desc}</td>
+              <tr key={i.num}>
+                <td className="px-4 py-3 font-medium text-navy">{i.num}</td>
+                <td className="px-4 py-3 text-slate-600">{i.date}</td>
                 <td className="px-4 py-3 text-slate-600">{i.amount}</td>
-                <td className="px-4 py-3"><StatusPill tone="covered">Paid</StatusPill></td>
-                <td className="px-4 py-3 text-right"><span className="text-xs font-semibold text-teal">Download PDF</span></td>
+                <td className="px-4 py-3 capitalize text-slate-600">{i.status}</td>
+                <td className="px-4 py-3 text-right"><span className="font-semibold text-teal">Download</span></td>
               </tr>
             ))}
           </tbody>
         </table>
       </Card>
-      <p className="mt-2 text-xs text-slate-400">Start with a free month — no card required. Proper VAT invoices are emailed and downloadable here.</p>
     </div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Course setup — the configurable course catalogue
-// ---------------------------------------------------------------------------
+// --- Course setup -----------------------------------------------------------
+
 function DemoCourseSetup() {
   const types = [
-    { n: "RYA Start Sailing", aud: "Adult", scheme: "National Sailing", ratio: "1:6", quals: ["Dinghy Instructor"], safety: false },
-    { n: "RYA Youth Stage 2", aud: "Youth", scheme: "Youth Sailing", ratio: "1:6", quals: ["Dinghy Instructor", "First Aid"], safety: true },
-    { n: "RYA Powerboat Level 2", aud: "Adult", scheme: "Powerboat", ratio: "1:3", quals: ["Powerboat Instructor"], safety: true },
-    { n: "RYA Start Windsurfing", aud: "Adult", scheme: "Windsurfing", ratio: "1:6", quals: ["Windsurfing Instructor"], safety: false },
+    { n: "RYA Start Sailing", scheme: "National Sailing", cap: 8, ratio: 6, safety: false },
+    { n: "RYA Youth Stage 2", scheme: "Youth Sailing", cap: 12, ratio: 6, safety: true },
+    { n: "RYA Powerboat Level 2", scheme: "Powerboat", cap: 6, ratio: 3, safety: true },
+    { n: "RYA Start Windsurfing", scheme: "Windsurfing", cap: 10, ratio: 6, safety: false },
   ];
   return (
     <div>
-      <div className="flex items-center justify-between">
-        <h2 className="font-display text-xl font-semibold text-navy">Course setup</h2>
-        <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-400">+ Add course type</span>
-      </div>
-      <p className="text-sm text-slate-500">Your course catalogue — each type sets the RYA scheme, ratio, required tickets and whether safety cover is needed.</p>
-
-      <Card className="mt-4 overflow-x-auto p-0">
-        <table className="w-full min-w-[640px] text-left text-sm">
+      <h1 className="mb-6 font-display text-2xl font-semibold text-navy">Course setup</h1>
+      <p className="mb-4 text-sm text-slate-500">Your RYA course-type catalogue. Editing defaults and add/remove lands with full course management.</p>
+      <Card className="p-0">
+        <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-            <tr><th className="px-4 py-3">Course type</th><th className="px-4 py-3">Audience</th><th className="px-4 py-3">Ratio</th><th className="px-4 py-3">Required tickets</th><th className="px-4 py-3">Safety cover</th></tr>
+            <tr><th className="px-4 py-3">Course type</th><th className="px-4 py-3">Scheme</th><th className="px-4 py-3">Capacity</th><th className="px-4 py-3">Ratio</th><th className="px-4 py-3">Safety boat</th></tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {types.map((t) => (
-              <tr key={t.n} className="hover:bg-slate-50/50">
-                <td className="whitespace-nowrap px-4 py-3 font-medium text-navy">{t.n}<span className="block text-xs text-slate-400">RYA {t.scheme}</span></td>
-                <td className="px-4 py-3"><span className={`rounded px-1.5 py-0.5 text-xs font-semibold ${t.aud === "Youth" ? "bg-amber/15 text-amber" : "bg-teal/10 text-teal"}`}>{t.aud}</span></td>
-                <td className="px-4 py-3 text-slate-600">{t.ratio}</td>
-                <td className="px-4 py-3 text-slate-600">{t.quals.join(", ")}</td>
-                <td className="px-4 py-3">{t.safety ? <StatusPill tone="attention">Required</StatusPill> : <span className="text-xs text-slate-400">Not required</span>}</td>
+            {types.map((c) => (
+              <tr key={c.n}>
+                <td className="px-4 py-3 font-medium text-navy">{c.n}</td>
+                <td className="px-4 py-3 text-slate-600">{c.scheme}</td>
+                <td className="px-4 py-3 text-slate-600">{c.cap}</td>
+                <td className="px-4 py-3 text-slate-600">1:{c.ratio}</td>
+                <td className="px-4 py-3 text-slate-600">{c.safety ? "Required" : "—"}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </Card>
-
-      <Card className="mt-4">
-        <h3 className="font-semibold text-navy">Session times</h3>
-        <p className="mt-1 text-sm text-slate-500">Choose how your sessions are timed — the same choice is used across the planner and rota.</p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <span className="rounded-lg border border-teal bg-teal/5 px-3 py-1.5 text-sm font-semibold text-teal">Morning / Afternoon / Evening slots ✓</span>
-          <span className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-500">Explicit start &amp; end times</span>
-        </div>
-      </Card>
-      <p className="mt-2 text-xs text-slate-400">Retired course types are deactivated, never deleted — past courses keep pointing at them and still read correctly.</p>
     </div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Change log — the per-centre audit trail
-// ---------------------------------------------------------------------------
+// --- Change log -------------------------------------------------------------
+
 function DemoChangeLog() {
   const rows = [
     { when: "Today · 13:22", who: "Sarah Whitlock", what: "Assigned Dan Rees (Safety Boat) to Powerboat L2 · Sat" },
@@ -1400,9 +1192,8 @@ function DemoChangeLog() {
   ];
   return (
     <div>
-      <h2 className="font-display text-xl font-semibold text-navy">Change log</h2>
-      <p className="text-sm text-slate-500">Every roster, staff, resource and billing change is recorded — who did what, and when.</p>
-      <Card className="mt-4 p-0">
+      <h1 className="mb-6 font-display text-2xl font-semibold text-navy">Change log</h1>
+      <Card className="p-0">
         <ul className="divide-y divide-slate-100">
           {rows.map((r) => (
             <li key={r.when + r.what} className="flex gap-3 px-4 py-3">
@@ -1415,11 +1206,53 @@ function DemoChangeLog() {
           ))}
         </ul>
       </Card>
-      <p className="mt-2 text-xs text-slate-400">The audit trail is scoped to your centre and can be exported if you ever need it.</p>
+      <p className="mt-2 text-xs text-slate-400">Every roster, staff, resource and billing change is recorded — scoped to your centre, and exportable.</p>
     </div>
   );
 }
 
+// --- Integrations -----------------------------------------------------------
+
+function DemoIntegrations({ onBack }: { onBack: () => void }) {
+  const feeds = [
+    { n: "Bookwhen", kind: "Booking system", status: "connected" as const, last: "synced 8 min ago", courses: 18 },
+    { n: "WebCollect", kind: "Membership & bookings", status: "connected" as const, last: "synced 1 h ago", courses: 24 },
+    { n: "Google Calendar", kind: "Calendar (ICS)", status: "connected" as const, last: "synced 20 min ago", courses: 6 },
+    { n: "Class4Kids", kind: "Booking system", status: "available" as const, last: "not connected", courses: 0 },
+    { n: "Any other calendar (ICS)", kind: "Paste a feed URL", status: "available" as const, last: "not connected", courses: 0 },
+  ];
+  const tone = { connected: "covered", available: "neutral" } as const;
+  return (
+    <div>
+      <button onClick={onBack} className="mb-2 text-xs text-slate-400 hover:text-slate-600">← Courses</button>
+      <h1 className="mb-1 font-display text-2xl font-semibold text-navy">Integrations</h1>
+      <p className="mb-6 text-sm text-slate-500">Pull your courses in automatically from the booking system or calendar you already use — one-way and read-only.</p>
+
+      <Card className="overflow-x-auto p-0">
+        <table className="w-full min-w-[560px] text-left text-sm">
+          <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+            <tr><th className="px-4 py-3">Source</th><th className="px-4 py-3">Type</th><th className="px-4 py-3">Courses imported</th><th className="px-4 py-3">Status</th></tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {feeds.map((f) => (
+              <tr key={f.n}>
+                <td className="whitespace-nowrap px-4 py-3 font-medium text-navy">{f.n}</td>
+                <td className="px-4 py-3 text-slate-600">{f.kind}</td>
+                <td className="px-4 py-3 text-slate-600">{f.courses || "—"}</td>
+                <td className="px-4 py-3"><StatusPill tone={tone[f.status]}>{f.status === "connected" ? "Connected" : "Available"}</StatusPill><span className="block text-xs text-slate-400">{f.last}</span></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Card>
+      <p className="mt-2 text-xs text-slate-400">We never change anything in your booking system — we only read the course calendar and turn each event into a draft session for you to review.</p>
+    </div>
+  );
+}
+
+// --- Instructor portal ------------------------------------------------------
+
+type Avail = "free" | "maybe" | "busy" | "none";
 function DemoPortal() {
   const initial: Record<string, Avail> = {
     "Mon|AM": "free", "Mon|PM": "busy", "Mon|EV": "none",
@@ -1429,9 +1262,7 @@ function DemoPortal() {
   const [avail, setAvail] = useState(initial);
   const cycle: Avail[] = ["free", "maybe", "busy", "none"];
   const label: Record<Avail, string> = { free: "Free", maybe: "Maybe", busy: "Busy", none: "—" };
-  const tone: Record<Avail, string> = {
-    free: "bg-starboard/15 text-starboard", maybe: "bg-amber/15 text-amber", busy: "bg-port/15 text-port", none: "bg-slate-100 text-slate-400",
-  };
+  const tone: Record<Avail, string> = { free: "bg-starboard/15 text-starboard", maybe: "bg-amber/15 text-amber", busy: "bg-port/15 text-port", none: "bg-slate-100 text-slate-400" };
   const tap = (k: string) => setAvail((a) => ({ ...a, [k]: cycle[(cycle.indexOf(a[k] ?? "none") + 1) % cycle.length]! }));
 
   return (
@@ -1444,9 +1275,9 @@ function DemoPortal() {
         <div className="min-h-[380px] bg-canvas p-4">
           <p className="mb-2 font-display text-lg font-semibold text-navy">My schedule</p>
           {[
-            { c: "Start Sailing", t: "Mon 21 Sep · 09:00–12:30", s: "AM" },
-            { c: "Improving Skills", t: "Tue 22 Sep · 13:00–16:30", s: "PM" },
-            { c: "Adult Improver", t: "Wed 23 Sep · 17:30–20:00", s: "EV" },
+            { c: "Start Sailing", t: "Mon 22 Sep · 09:00–12:30", s: "AM" },
+            { c: "Improving Skills", t: "Tue 23 Sep · 13:00–16:30", s: "PM" },
+            { c: "Adult Improver", t: "Wed 24 Sep · 17:30–20:00", s: "EV" },
           ].map((x) => (
             <div key={x.c} className="mb-2 flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2.5">
               <div><p className="text-sm font-semibold text-navy">{x.c}</p><p className="text-xs text-slate-400">{x.t}</p></div>
@@ -1457,13 +1288,12 @@ function DemoPortal() {
           {["Mon", "Tue", "Wed"].map((d) => (
             <div key={d} className="mb-2 grid grid-cols-[48px_1fr_1fr_1fr] items-center gap-1.5">
               <span className="text-sm font-semibold text-navy">{d}</span>
-              {(["AM", "PM", "EV"] as Slot[]).map((s) => {
+              {SLOTS.map((s) => {
                 const k = `${d}|${s}`;
                 const v = avail[k] ?? "none";
                 return (
                   <button key={k} onClick={() => tap(k)} className={`rounded-lg py-2 text-xs font-semibold ${tone[v]}`}>
-                    <span className="block text-[10px] uppercase opacity-70">{s}</span>
-                    {label[v]}
+                    <span className="block text-[10px] uppercase opacity-70">{s}</span>{label[v]}
                   </button>
                 );
               })}
