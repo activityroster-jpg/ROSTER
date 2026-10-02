@@ -19,8 +19,8 @@ export default async function SettingsPage() {
   ]);
   const s = settings[0];
 
-  const toItems = <T extends { id: string; active: boolean }>(rows: T[], label: (r: T) => string, meta?: (r: T) => string): ConfigItem[] =>
-    rows.map((r) => ({ id: r.id, label: label(r), active: r.active, meta: meta?.(r) }));
+  const toItems = <T extends { id: string; active: boolean }>(rows: T[], label: (r: T) => string, meta?: (r: T) => string, edit?: (r: T) => string): ConfigItem[] =>
+    rows.map((r) => ({ id: r.id, label: label(r), active: r.active, meta: meta?.(r), editValue: edit?.(r) }));
 
   return (
     <div>
@@ -48,7 +48,7 @@ export default async function SettingsPage() {
         <ConfigManager
           title="Session slots"
           kind="slot"
-          items={toItems(slots, (x) => `${x.code} · ${x.label}`, (x) => `${x.startTime}–${x.endTime}`)}
+          items={toItems(slots, (x) => `${x.code} · ${x.label}`, (x) => `${x.startTime}–${x.endTime}`, (x) => x.label)}
           extraFields={[
             { name: "code", label: "Code (AM/PM/EV)", type: "text", placeholder: "AM" },
             { name: "startTime", label: "Start", type: "time" },
@@ -98,6 +98,25 @@ export default async function SettingsPage() {
       </div>
 
       <Card className="mt-8">
+        <h2 className="mb-1 font-semibold text-navy">More settings</h2>
+        <p className="mb-3 text-xs text-slate-500">These areas have their own page — a change there is the same as here.</p>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {[
+            { href: "/office/integrations", label: "Integrations & import", desc: "Booking-system feeds & spreadsheet import" },
+            { href: "/office/equipment", label: "Equipment & boats", desc: "Your fleet and kit" },
+            { href: "/office/locations", label: "Locations", desc: "Sites & operating areas" },
+            { href: "/office/course-setup", label: "Course setup", desc: "Course types, ratios & defaults" },
+            { href: "/office/staff", label: "Staff & pay rates", desc: "Instructors, qualifications & pay rates" },
+          ].map((l) => (
+            <a key={l.href} href={l.href} className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-sm hover:border-teal hover:bg-slate-50">
+              <span><span className="font-medium text-navy">{l.label}</span><span className="block text-xs text-slate-400">{l.desc}</span></span>
+              <span className="text-slate-300">→</span>
+            </a>
+          ))}
+        </div>
+      </Card>
+
+      <Card className="mt-6">
         <h2 className="mb-3 font-semibold text-navy">Data &amp; billing</h2>
         <div className="flex flex-wrap gap-3">
           <a href="/api/office/export" className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-navy hover:bg-slate-50">

@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
-import { addConfigAction, setConfigActiveAction, type ActionState, type ConfigKind } from "@/app/(app)/office/settings/actions";
+import { useActionState, useState } from "react";
+import { addConfigAction, setConfigActiveAction, setConfigNameAction, type ActionState, type ConfigKind } from "@/app/(app)/office/settings/actions";
 
 const initial: ActionState = { ok: false };
 
@@ -10,6 +10,57 @@ export interface ConfigItem {
   label: string;
   active: boolean;
   meta?: string;
+  /** Raw name to prefill the rename box (defaults to label). */
+  editValue?: string;
+}
+
+/** One config row: shows name + meta, with inline rename and deactivate. */
+function ConfigRow({ item, kind }: { item: ConfigItem; kind: ConfigKind }) {
+  const [, toggle] = useActionState(setConfigActiveAction, initial);
+  const [renameState, rename] = useActionState(setConfigNameAction, initial);
+  const [editing, setEditing] = useState(false);
+
+  if (editing) {
+    return (
+      <li>
+        <form
+          action={(fd) => { rename(fd); setEditing(false); }}
+          className="flex items-center gap-1.5"
+        >
+          <input type="hidden" name="kind" value={kind} />
+          <input type="hidden" name="id" value={item.id} />
+          <input
+            name="name"
+            defaultValue={item.editValue ?? item.label}
+            autoFocus
+            required
+            className="min-w-[8rem] flex-1 rounded border border-slate-300 px-2 py-1 text-sm outline-none focus:border-teal"
+          />
+          <button className="rounded bg-teal px-2 py-1 text-xs font-semibold text-white hover:bg-teal-700">Save</button>
+          <button type="button" onClick={() => setEditing(false)} className="text-xs text-slate-400 hover:text-navy">✕</button>
+        </form>
+        {renameState.error ? <span className="text-xs text-port">{renameState.error}</span> : null}
+      </li>
+    );
+  }
+
+  return (
+    <li className="flex items-center justify-between gap-2">
+      <span className={item.active ? "text-slate-700" : "text-slate-400 line-through"}>
+        {item.label}
+        {item.meta ? <span className="ml-2 text-xs text-slate-400">{item.meta}</span> : null}
+      </span>
+      <span className="flex flex-none items-center gap-2">
+        <button onClick={() => setEditing(true)} className="text-xs text-slate-400 hover:text-navy">Edit</button>
+        <form action={toggle}>
+          <input type="hidden" name="kind" value={kind} />
+          <input type="hidden" name="id" value={item.id} />
+          <input type="hidden" name="active" value={item.active ? "false" : "true"} />
+          <button className="text-xs text-slate-400 hover:text-navy">{item.active ? "Deactivate" : "Reactivate"}</button>
+        </form>
+      </span>
+    </li>
+  );
 }
 
 export interface ExtraField {
@@ -35,7 +86,6 @@ export function ConfigManager({
   extraFields?: ExtraField[];
 }) {
   const [addState, add, adding] = useActionState(addConfigAction, initial);
-  const [, toggle] = useActionState(setConfigActiveAction, initial);
 
   return (
     <div className="rounded-card border border-slate-200 bg-white p-5">
@@ -45,22 +95,7 @@ export function ConfigManager({
         {items.length === 0 ? (
           <li className="text-slate-400">None configured</li>
         ) : (
-          items.map((item) => (
-            <li key={item.id} className="flex items-center justify-between gap-2">
-              <span className={item.active ? "text-slate-700" : "text-slate-400 line-through"}>
-                {item.label}
-                {item.meta ? <span className="ml-2 text-xs text-slate-400">{item.meta}</span> : null}
-              </span>
-              <form action={toggle}>
-                <input type="hidden" name="kind" value={kind} />
-                <input type="hidden" name="id" value={item.id} />
-                <input type="hidden" name="active" value={item.active ? "false" : "true"} />
-                <button className="text-xs text-slate-400 hover:text-navy">
-                  {item.active ? "Deactivate" : "Reactivate"}
-                </button>
-              </form>
-            </li>
-          ))
+          items.map((item) => <ConfigRow key={item.id} item={item} kind={kind} />)
         )}
       </ul>
 

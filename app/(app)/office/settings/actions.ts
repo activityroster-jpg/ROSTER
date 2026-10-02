@@ -142,6 +142,34 @@ export async function addConfigAction(_prev: ActionState, formData: FormData): P
   return { ok: true, message: `${name} added` };
 }
 
+/** Rename a config item (the "edit name" option beside deactivate). */
+export async function setConfigNameAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const kind = String(formData.get("kind") ?? "") as ConfigKind;
+  const id = String(formData.get("id") ?? "");
+  const name = String(formData.get("name") ?? "").trim();
+  if (!id) return { ok: false, error: "Missing item" };
+  if (!name) return { ok: false, error: "Enter a name" };
+
+  const t = repos.tenant;
+  let res: unknown = null;
+  switch (kind) {
+    case "slot": res = await t.sessionSlot.update(ctx, id, { label: name }); break;
+    case "role": res = await t.roleType.update(ctx, id, { name }); break;
+    case "grade": res = await t.qualificationType.update(ctx, id, { name }); break;
+    case "compliance": res = await t.complianceType.update(ctx, id, { name }); break;
+    case "equipmentType": res = await t.equipmentType.update(ctx, id, { name }); break;
+    case "locationType": res = await t.locationType.update(ctx, id, { name }); break;
+    default: return { ok: false, error: "Unknown config type" };
+  }
+  if (!res) return { ok: false, error: "Item not found" };
+
+  await writeAudit(repos, ctx, { action: "rename", entity: `config:${kind}`, entityId: id, after: { name } });
+  revalidatePath("/office/settings");
+  revalidatePath("/office/course-setup");
+  return { ok: true };
+}
+
 /** Deactivate/reactivate a config item (deactivate-never-delete). */
 export async function setConfigActiveAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const { ctx, repos } = await requireTenant({ role: "admin" });

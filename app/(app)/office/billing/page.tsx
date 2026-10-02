@@ -63,7 +63,13 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
 
       {pricing.setupEnabled || organisation.setupPurchasedAt ? (
         <Card className="mb-6 border-amber/40 bg-amber/5">
-          <h2 className="mb-2 font-semibold text-navy">Done-for-you setup</h2>
+          <h2 className="mb-2 font-semibold text-navy">Custom platform — done for you</h2>
+          <p className="mb-3 text-sm text-slate-600">
+            Short on time, or want it just so? We&apos;ll build the platform around exactly how your centre runs — your
+            courses, grades, ratios, checks and session times — import your data, and hand it over ready to go. It&apos;s
+            from {money(pricing.setupPrice, pricing.currency)} setup, plus £350 travel if we come and work with your team
+            on site (recommended); after that you simply continue on your normal monthly plan.
+          </p>
           <SetupServiceCard price={money(pricing.setupPrice, pricing.currency)} purchased={Boolean(organisation.setupPurchasedAt)} />
         </Card>
       ) : null}
