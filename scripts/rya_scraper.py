@@ -5,34 +5,27 @@ Run:    python3 scripts/rya_scraper.py            (full sweep, resumable)
 Check:  python3 scripts/rya_scraper.py --check    (report on the CSV only)
 Output: rya_all_raw.csv (+ rya_progress.json state) in the current folder.
 
-It sweeps a grid of points over the UK & Ireland, collects every club /
-training centre listed near each point, then opens each one and reads the
-address, phone, website and email that the RYA publishes. Race officials
-(individual people) are skipped. It pauses between requests to be polite,
-so a full run takes roughly 1-3 hours. Ctrl+C and re-run to resume.
+How it works: the directory always shows the nearest 20 clubs / training
+centres to a point, and embeds each one's coordinates for the map. Starting
+from 1-degree cells over the UK, Ireland, Isle of Man and Channel Islands, it
+searches each cell's centre; if the 20th result is farther away than the
+cell's corners, the cell is fully covered, otherwise the cell is split in four
+and each quarter is searched. That guarantees nothing is missed in dense areas
+(Solent, Clyde, Lakes) without hammering sparse ones. It then opens each
+listing and reads the address, phone, website and email the RYA publishes.
+Race officials and launch points are filtered out in the query.
 
-Changes from the original:
-  * Adaptive grid: when a point's results look capped (the search only shows
-    the nearest N), that cell is split into 4 finer points, so dense areas
-    (Solent, Clyde, Lakes, London reservoirs) aren't silently truncated.
-  * Follows "next page" links on the results list, if there are any.
-  * A failed fetch is NOT marked done, so a re-run retries it (the original
-    recorded network errors as "0 results" and never came back).
-  * Stops early (and saves the HTML to rya_debug_listing.html) if the first
-    ~60 land points find nothing, i.e. the site's markup has changed.
-  * Adds a "country" column (United Kingdom / Ireland / Isle of Man / ...),
-    which the importer maps, so Irish leads aren't stamped "United Kingdom".
-  * Accepts Dublin Eircodes (D6W ...) and Crown Dependency postcodes.
-  * --check: row count, blank names/emails, duplicates, non-UK/IE rows.
+Polite: 1.5 s between requests; robots.txt allows crawling. A full run takes
+roughly 1-3 hours. Ctrl+C and re-run to resume; failed fetches are retried.
+
+--check prints row count, blank names/emails, duplicates and non-UK/IE rows.
 """
-import csv, json, os, re, sys, time
-from urllib.parse import urljoin
+import csv, json, math, os, re, sys, time
 from collections import Counter
 
 BASE = "https://www.rya.org.uk/wheres-my-nearest/"
 DELAY = 1.5             # seconds between requests
-STEP = 0.25             # base grid spacing in degrees (~25 km)
-MIN_STEP = 0.03         # don't subdivide below ~3 km
+MIN_HALF = 0.004        # stop splitting cells below ~0.5 km across
 OUT = "rya_all_raw.csv"
 STATE = "rya_progress.json"
 DEBUG_HTML = "rya_debug_listing.html"
@@ -131,59 +124,71 @@ def get(url):
 
 # --- Step 1: listings ------------------------------------------------------
 
-def parse_listing(html, page_url=BASE):
-    """Return (slugs, next_page_url) from one results page."""
+LOC_RE = re.compile(r"\{Id:(\d+),Name:.*?,Latitude:(-?[\d.]+),Longitude:(-?[\d.]+)")
+
+
+def parse_listing(html):
+    """Return [(slug, lat, lng)] for each club / training centre on a results page.
+    The page embeds every result's coordinates in a script block (for the map);
+    cards carry the same Id in aria-describedby="locationTypes_<Id> ..."."""
     from bs4 import BeautifulSoup
+    coords = {i: (float(la), float(ln)) for i, la, ln in LOC_RE.findall(html)}
     soup = BeautifulSoup(html, "html.parser")
     found = []
     for a in soup.find_all("a", href=True):
         if a.get_text(strip=True).lower() != "more info":
             continue
-        li = a.find_parent("li") or a.find_parent("article") or a.find_parent("div")
+        li = a.find_parent("li")
+        h4 = li.find("h4") if li else None
+        m = re.search(r"locationTypes_(\d+)", (h4.get("aria-describedby") or "") if h4 else "")
         kinds = li.get_text(" ", strip=True) if li else ""
         if "Race Official" in kinds and "Club" not in kinds and "Training Centre" not in kinds:
-            continue  # individual race officials - skip
+            continue  # individual race officials - skip (also filtered in the query)
         slug = a["href"].split("?")[0].split("#")[0].rstrip("/").split("/")[-1]
-        if slug and slug != "wheres-my-nearest" and slug not in found:
-            found.append(slug)
-    nxt = soup.find("a", rel="next") or soup.find(
-        "a", string=re.compile(r"^\s*(Next|›|»)\s*$", re.I))
-    next_url = urljoin(page_url, nxt["href"]) if nxt and nxt.get("href") else None
-    return found, next_url
+        if not slug or slug == "wheres-my-nearest":
+            continue
+        la, ln = coords.get(m.group(1), (None, None)) if m else (None, None)
+        found.append((slug, la, ln))
+    return found
 
 
 def listing(lat, lng):
-    """All slugs near a point (following pagination). None if any fetch failed."""
-    url = f"{BASE}?lat={lat}&lng={lng}&locationSearch=&useBrowserLocation=false"
-    slugs, pages, first_page_count = [], 0, None
-    while url and pages < 20:
-        html = get(url)
-        if html is None:
-            return None, 0
-        found, url = parse_listing(html, url)
-        if first_page_count is None:
-            first_page_count = len(found)
-            if not found:
-                with open(DEBUG_HTML, "w", encoding="utf-8") as f:
-                    f.write(html)
-        slugs += [s for s in found if s not in slugs]
-        pages += 1
-        if url:
-            time.sleep(DELAY)
-    # "Capped" = a full first page with no pagination to get the rest.
-    return slugs, (first_page_count if pages == 1 else 0)
+    """Nearest-20 clubs/training centres to a point. None if the fetch failed."""
+    url = (f"{BASE}?lat={lat}&lng={lng}&locationType=Club&locationType=Training_Centre"
+           f"&locationSearch=&useBrowserLocation=false")
+    html = get(url)
+    if html is None:
+        return None
+    found = parse_listing(html)
+    if not found:
+        with open(DEBUG_HTML, "w", encoding="utf-8") as f:
+            f.write(html)
+    return found
 
 
-def base_grid():
-    pts = []
-    lat = 49.9
-    while lat <= 60.9:
-        lng = -10.6
-        while lng <= 1.8:
-            pts.append([round(lat, 4), round(lng, 4), STEP])
-            lng += STEP
-        lat += STEP
-    return pts
+def km(la1, ln1, la2, ln2):
+    p = math.pi / 180
+    a = (math.sin((la2 - la1) * p / 2) ** 2
+         + math.cos(la1 * p) * math.cos(la2 * p) * math.sin((ln2 - ln1) * p / 2) ** 2)
+    return 12742 * math.asin(math.sqrt(a))
+
+
+def cell_radius_km(la, ln, h):
+    """Distance from a cell's centre to its farthest corner (cell = centre +/- h degrees)."""
+    return max(km(la, ln, la + dy, ln + dx) for dy in (-h, h) for dx in (-h, h))
+
+
+def start_cells():
+    """1-degree cells over the UK, Ireland, Isle of Man and Channel Islands."""
+    cells = []
+    la = 49.5
+    while la < 61.5:
+        ln = -10.5
+        while ln < 2.5:
+            cells.append([la, ln, 0.5])
+            ln += 1.0
+        la += 1.0
+    return cells
 
 
 # --- Step 2: detail pages --------------------------------------------------
@@ -242,11 +247,11 @@ def detail(slug):
 def load_state():
     if os.path.exists(STATE):
         s = json.load(open(STATE))
-        if s.get("version") == 2:
+        if s.get("version") == 3:
             return s
         print("Old-format progress file found; starting a fresh sweep.")
-    return {"version": 2, "queue": base_grid(), "done_points": [], "slugs": [],
-            "done_slugs": [], "cap": 0, "land_points_checked": 0}
+    return {"version": 3, "queue": start_cells(), "done_cells": 0, "slugs": [],
+            "done_slugs": [], "failures": 0}
 
 
 def save(state):
@@ -257,25 +262,21 @@ def save(state):
 
 def main():
     state = load_state()
-    done_points = set(state["done_points"])
     slugs = list(state["slugs"])
     slug_set = set(slugs)
 
-    print(f"Step 1/2: sweeping grid ({len(state['queue'])} points queued, "
-          f"{len(done_points)} done, {len(slugs)} organisations so far)")
+    # Coverage sweep (quadtree). Each query returns the nearest 20 results with
+    # coordinates. If the 20th is farther away than the cell's corners, every
+    # organisation in that cell is in the results; otherwise split the cell in 4.
+    print(f"Step 1/2: coverage sweep ({len(state['queue'])} cells queued, "
+          f"{state['done_cells']} done, {len(slugs)} organisations so far)")
     n = 0
     while state["queue"]:
-        la, ln, step = state["queue"][0]
-        key = f"{la},{ln}"
-        if key in done_points:
-            state["queue"].pop(0)
-            continue
-        found, capped_count = listing(la, ln)
+        la, ln, h = state["queue"][0]
+        found = listing(round(la, 5), round(ln, 5))
         time.sleep(DELAY)
         if found is None:
-            # Leave it queued but move it to the back so one bad point doesn't stall the run.
-            state["queue"].append(state["queue"].pop(0))
-            state.setdefault("failures", 0)
+            state["queue"].append(state["queue"].pop(0))  # retry later
             state["failures"] += 1
             if state["failures"] > 200:
                 print("Too many failed requests - is the site reachable? Stopping; re-run to resume.")
@@ -283,38 +284,38 @@ def main():
                 sys.exit(1)
             continue
         state["queue"].pop(0)
-        new = [s for s in found if s not in slug_set]
+        if not found and not slugs:
+            print(f"\n0 organisations returned - the RYA page layout has probably changed. "
+                  f"Saved the page to {DEBUG_HTML} for inspection.")
+            save(state)
+            sys.exit(2)
+        new = [s for s, _, _ in found if s not in slug_set]
         slugs += new
         slug_set.update(new)
-        done_points.add(key)
-        state["done_points"].append(key)
+        state["done_cells"] += 1
 
-        # Learn the page size; if this point hit it, the list is probably truncated.
-        state["cap"] = max(state["cap"], capped_count)
-        if capped_count >= 10 and capped_count == state["cap"] and step / 2 >= MIN_STEP:
-            h = step / 4
-            for dla, dln in ((-h, -h), (-h, h), (h, -h), (h, h)):
-                state["queue"].append([round(la + dla, 4), round(ln + dln, 4), step / 2])
-
-        if found:
-            state["land_points_checked"] = 0
-        elif not slugs:
-            state["land_points_checked"] += 1
-            # Most grid points are sea, but every point gets "nearest" results.
-            if state["land_points_checked"] >= 60:
-                print(f"\n0 organisations after 60 points - the RYA page layout has probably "
-                      f"changed. Saved the last results page to {DEBUG_HTML} for inspection.")
-                save(state)
-                sys.exit(2)
+        dists = [km(la, ln, a, b) for _, a, b in found if a is not None]
+        full_page = len(found) >= 20
+        if full_page and (len(dists) < len(found) or max(dists) < cell_radius_km(la, ln, h)):
+            if h / 2 >= MIN_HALF:
+                q = h / 2
+                for dy in (-q, q):
+                    for dx in (-q, q):
+                        state["queue"].append([la + dy, ln + dx, q])
+            else:
+                state.setdefault("dense_spots", []).append([la, ln])
 
         n += 1
         if n % 25 == 0:
-            print(f"  {len(done_points)} points done, {len(state['queue'])} queued, "
-                  f"{len(slugs)} organisations found (page size seen: {state['cap']})", flush=True)
+            print(f"  {state['done_cells']} cells searched, {len(state['queue'])} queued, "
+                  f"{len(slugs)} organisations found", flush=True)
             state["slugs"] = slugs
             save(state)
     state["slugs"] = slugs
     save(state)
+    print(f"Sweep complete: {len(slugs)} organisations from {state['done_cells']} searches"
+          + (f" ({len(state.get('dense_spots', []))} very dense spots hit the size limit)"
+             if state.get("dense_spots") else ""))
 
     done_slugs = set(state["done_slugs"])
     todo = [s for s in slugs if s not in done_slugs]
