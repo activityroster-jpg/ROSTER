@@ -244,6 +244,13 @@ const SECTIONS: Section[] = [
     blurb: "A clean, printable rota for the wall or the inbox.",
     blocks: [
       { kind: "p", text: "The Rota page shows the whole week: each day, each session, who's working, their role, the location/classroom and the times." },
+      { kind: "sub", text: "Three templates" },
+      { kind: "bullets", items: [
+        "By week — a table for each day. The classic wall rota.",
+        "By day — big cards, one day per page. Good for a briefing board or a day sheet for each site.",
+        "Compact grid — days across, morning/afternoon/evening down, the whole week on one page.",
+      ] },
+      { kind: "p", text: "Use the “Show” tickboxes to switch fields on or off: times, instructor names, role, location, equipment (safety boats etc.) and the safety-cover status. Your choice of template and fields is remembered on this device, and the PDF matches what's on screen." },
       { kind: "bullets", items: [
         "Move between weeks with the navigation — past or future.",
         "Print / Save-as-PDF produces a tidy one-page rota for the wall or the inbox — the layout is designed for it.",

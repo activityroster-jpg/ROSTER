@@ -246,8 +246,12 @@ export interface RotaSession {
   audience: CourseAudience;
   status: string;
   coverageOk: boolean;
+  understaffed: boolean;
+  missingSafetyCover: boolean;
   staff: { name: string; role: string }[];
   locations: string[];
+  /** Equipment on the course, e.g. "Safety RIB 1", "Pico ×2". */
+  equipment: string[];
 }
 export interface RotaDay {
   date: string;
@@ -266,7 +270,7 @@ export async function getWeekRota(
   mondayIso: string,
 ): Promise<RotaDay[]> {
   const t = repos.tenant;
-  const [courses, courseTypes, sessions, staffAssignments, roleTypes, instructors, courseLocations, locations] =
+  const [courses, courseTypes, sessions, staffAssignments, roleTypes, instructors, courseLocations, locations, courseEquipment, equipment] =
     await Promise.all([
       t.course.list(ctx),
       t.courseType.list(ctx),
@@ -276,6 +280,8 @@ export async function getWeekRota(
       t.instructor.list(ctx),
       t.courseLocation.list(ctx),
       t.location.list(ctx),
+      t.courseEquipment.list(ctx),
+      t.equipment.list(ctx),
     ]);
 
   const { coverageByCourse } = await getWeekSchedule(repos, ctx, mondayIso);
@@ -297,6 +303,14 @@ export async function getWeekRota(
     const n = locationName.get(cl.locationId);
     if (n) arr.push(n);
     locsByCourse.set(cl.courseId, arr);
+  }
+
+  const equipmentName = new Map(equipment.map((e) => [e.id, e.identifier ? `${e.name} (${e.identifier})` : e.name]));
+  const equipByCourse = new Map<string, string[]>();
+  for (const ce of courseEquipment) {
+    const n = ce.equipmentId ? equipmentName.get(ce.equipmentId) : undefined;
+    if (!n) continue;
+    equipByCourse.set(ce.courseId, [...(equipByCourse.get(ce.courseId) ?? []), ce.quantity > 1 ? `${n} ×${ce.quantity}` : n]);
   }
 
   const sunday = addDays(mondayIso, 7);
@@ -324,8 +338,11 @@ export async function getWeekRota(
           audience: (ct?.audience ?? "all") as CourseAudience,
           status: course?.status ?? "scheduled",
           coverageOk: cov?.ratio.ok ?? true,
+          understaffed: cov?.ratio.understaffed ?? false,
+          missingSafetyCover: cov?.ratio.missingSafetyCover ?? false,
           staff: staffByCourse.get(s.courseId) ?? [],
           locations: locsByCourse.get(s.courseId) ?? [],
+          equipment: equipByCourse.get(s.courseId) ?? [],
         };
       })
       .sort((a, b) => slotRank[a.slot] - slotRank[b.slot] || a.startAt - b.startAt);
