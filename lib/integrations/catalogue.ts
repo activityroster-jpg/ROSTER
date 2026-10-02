@@ -31,7 +31,7 @@ export interface Provider {
   website?: string;
 }
 
-export const PROVIDERS: Provider[] = [
+const RAW_PROVIDERS: Provider[] = [
   {
     id: "webcollect",
     name: "WebCollect",
@@ -167,6 +167,15 @@ export const PROVIDERS: Provider[] = [
     icsHelp: "Find the 'calendar feed', 'iCal' or 'subscribe' URL in your system and paste it here.",
   },
 ];
+
+// The mainstream providers most centres recognise, floated to the top of the
+// list. A stable sort keeps every other provider in its original order (and the
+// generic "Any other calendar" option last).
+const FEATURED_ORDER = ["google_calendar", "outlook", "eventbrite", "fareharbor", "bookwhen"];
+export const PROVIDERS: Provider[] = [...RAW_PROVIDERS].sort((a, b) => {
+  const ai = FEATURED_ORDER.indexOf(a.id); const bi = FEATURED_ORDER.indexOf(b.id);
+  return (ai < 0 ? 999 : ai) - (bi < 0 ? 999 : bi);
+});
 
 export function providerById(id: string): Provider | undefined {
   return PROVIDERS.find((p) => p.id === id);

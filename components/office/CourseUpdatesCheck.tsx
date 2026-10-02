@@ -63,7 +63,6 @@ export function CourseUpdatesCheck({ integrations }: { integrations: ConnectedIn
             {pending && activeId === i.id ? "Checking…" : `Check ${i.name} for updates`}
           </button>
         ))}
-        <a href="/office/integrations" className="ml-auto text-xs font-medium text-teal hover:underline">Manage integrations →</a>
       </div>
 
       {msg ? <p role="status" className={`mt-2 text-sm ${msg.ok ? "text-starboard" : "text-port"}`}>{msg.text}</p> : null}
