@@ -1,6 +1,6 @@
 import { getEnv, type CloudflareEnv } from "@/lib/cf/bindings";
 
-type SecretName = "BETTER_AUTH_SECRET" | "STRIPE_WEBHOOK_SECRET" | "CRON_SECRET";
+type SecretName = "BETTER_AUTH_SECRET" | "STRIPE_WEBHOOK_SECRET";
 
 const DEV_FALLBACK = "dev-insecure-secret-change-me";
 

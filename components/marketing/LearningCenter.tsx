@@ -106,9 +106,9 @@ const SECTIONS: Section[] = [
     id: "integrations",
     icon: "🔌",
     label: "Booking system integrations",
-    blurb: "Feed your courses in automatically from the booking system you already use.",
+    blurb: "Pull your courses in from the booking system you already use — whenever you press the button.",
     blocks: [
-      { kind: "p", text: "If you already take bookings in another system, ActivityRoster can pull your courses in automatically so you never re-type them. Open Office → Courses → “Connect a booking system” (or the Integrations page)." },
+      { kind: "p", text: "If you already take bookings in another system, ActivityRoster can pull your courses in so you never re-type them — only when you press “Check for updates”, never on a schedule. Open Office → Courses → “Connect a booking system” (or the Integrations page)." },
       { kind: "sub", text: "How it works" },
       { kind: "steps", items: [
         "Pick your booking system from the list (WebCollect, Bookwhen, Eola, Class4Kids, Checkfront and more — or any calendar).",

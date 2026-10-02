@@ -1,10 +1,9 @@
 import type { Repositories } from "@/lib/db/repositories";
-import type { AnyTenantContext, SystemTenantContext } from "@/lib/tenant/context";
+import type { AnyTenantContext } from "@/lib/tenant/context";
 import { COURSE_AUDIENCES, type CourseAudience } from "@/lib/db/schema";
 import { draftsFromIcs, timeToSlot, toEpochMs, type DraftRow } from "@/lib/import/parse";
 import { fetchBookwhenDrafts } from "@/lib/integrations/adapters/bookwhen";
 import { assertSafeFeedUrl } from "@/lib/integrations/url-guard";
-import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { writeAudit } from "./audit";
 import { suggestCourseType } from "@/lib/domain";
 import { createCourseTypeResolver } from "./course-type-resolve";
@@ -248,43 +247,4 @@ export async function fetchIntegrationDrafts(row: { kind: string; provider: stri
   }
   if (!/BEGIN:VCALENDAR/i.test(text)) throw new Error("That URL didn't return a calendar (ICS) feed");
   return draftsFromIcs(text);
-}
-
-export interface CronSyncSummary {
-  ran: number;
-  ok: number;
-  failed: number;
-  created: number;
-  details: { org: string; provider: string; result: string }[];
-}
-
-/**
- * The scheduled job: sync every auto-sync integration across all centres.
- * Runs per-org with a system context (attributed to the cron in the audit log).
- * Errors on one integration never stop the others.
- */
-export async function syncAllIntegrations(repos: Repositories): Promise<CronSyncSummary> {
-  const platform = new PlatformRepository(repos.db);
-  const rows = await platform.listAutoSyncIntegrations();
-  const summary: CronSyncSummary = { ran: 0, ok: 0, failed: 0, created: 0, details: [] };
-
-  for (const row of rows) {
-    summary.ran++;
-    const ctx: SystemTenantContext = { organisationId: row.organisationId, slug: row.slug, system: true, reason: "cron-sync-integrations" };
-    try {
-      const drafts = await fetchIntegrationDrafts(row);
-      const out = await importDrafts(repos, ctx, drafts, { source: `integration:${row.provider}` });
-      const result = `${out.created} added · ${out.duplicates} dup · ${out.skipped} skipped`;
-      await repos.tenant.integration.update(ctx, row.id, { status: "connected", lastSyncedAt: new Date(), lastResult: result });
-      summary.ok++;
-      summary.created += out.created;
-      summary.details.push({ org: row.slug, provider: row.provider, result });
-    } catch (err) {
-      const msg = (err as Error).message || "sync failed";
-      await repos.tenant.integration.update(ctx, row.id, { status: "error", lastResult: msg });
-      summary.failed++;
-      summary.details.push({ org: row.slug, provider: row.provider, result: `ERROR: ${msg}` });
-    }
-  }
-  return summary;
 }

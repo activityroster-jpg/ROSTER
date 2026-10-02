@@ -10,7 +10,7 @@ describe("requireSecret", () => {
     expect(() => requireSecret("BETTER_AUTH_SECRET", env({ BETTER_AUTH_SECRET: "short" }))).toThrow();
   });
   it("returns the configured secret", () => {
-    expect(requireSecret("CRON_SECRET", env({ CRON_SECRET: "a-perfectly-long-secret-value" }))).toBe("a-perfectly-long-secret-value");
+    expect(requireSecret("STRIPE_WEBHOOK_SECRET", env({ STRIPE_WEBHOOK_SECRET: "a-perfectly-long-secret-value" }))).toBe("a-perfectly-long-secret-value");
   });
   it("falls back to a dev value outside production", () => {
     expect(requireSecret("BETTER_AUTH_SECRET", env({ APP_ENV: "development" }))).toBe("dev-insecure-secret-change-me");

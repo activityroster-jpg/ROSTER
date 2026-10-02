@@ -97,7 +97,7 @@ export function BookingIntegrations({ providers, connected }: { providers: Provi
           </div>
         ) : (
           <p className="text-sm text-slate-500">
-            <span className="font-semibold text-navy">No booking system connected yet.</span> Pick yours below to feed your courses in automatically.
+            <span className="font-semibold text-navy">No booking system connected yet.</span> Pick yours below, then press “Check for updates” whenever you want to pull courses in.
           </p>
         )}
       </div>
