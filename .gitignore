@@ -49,3 +49,9 @@ local.db*
 
 # typescript build info
 *.tsbuildinfo
+
+# RYA directory sweep output (contains contact details; keep out of git)
+rya_all_raw.csv
+rya_progress.json
+rya_progress.json.tmp
+rya_debug_listing.html

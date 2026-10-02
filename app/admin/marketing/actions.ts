@@ -7,8 +7,17 @@ import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { PROSPECT_STATUSES, type NewMarketingProspect, type ProspectStatus } from "@/lib/db/schema";
 import { primaryProspectStatus } from "@/lib/marketing";
 import { parseCsv } from "@/lib/import/parse";
+import { z } from "zod";
 
-export type ProspectResult = { ok: boolean; error?: string; message?: string; count?: number };
+export type ProspectResult = {
+  ok: boolean;
+  error?: string;
+  message?: string;
+  count?: number;
+  updated?: number;
+  unchanged?: number;
+  skipped?: number;
+};
 
 async function platform() {
   await requirePlatformAdmin();
@@ -83,9 +92,25 @@ const HEADER_MAP: Record<string, keyof NewMarketingProspect> = {
   notes: "notes", note: "notes",
 };
 
-/** Bulk-import prospects from pasted CSV (e.g. the public RYA training-centre directory). */
-export async function importProspectsAction(csv: string): Promise<ProspectResult> {
+const ImportOptions = z.object({
+  /** Free-text provenance label, e.g. "RYA directory sweep, Oct 2026". */
+  source: z.string().trim().max(80).optional(),
+  /** Update existing prospects that match on name + postcode instead of skipping them. */
+  merge: z.boolean().optional(),
+});
+
+/** Bulk-import prospects from pasted CSV (e.g. the public RYA training-centre directory).
+ *  The client sends large files in chunks (each call carries the header row) to
+ *  stay under the server-action body limit and D1's per-request query cap. */
+export async function importProspectsAction(
+  csv: string,
+  options?: { source?: string; merge?: boolean },
+): Promise<ProspectResult> {
   const repo = await platform();
+  const parsedOpts = ImportOptions.safeParse(options ?? {});
+  if (!parsedOpts.success) return { ok: false, error: "Source label must be 80 characters or fewer." };
+  const source = parsedOpts.data.source || "import";
+  const merge = parsedOpts.data.merge ?? false;
   const grid = parseCsv(csv ?? "");
   if (grid.length < 2) return { ok: false, error: "Paste a table with a header row and at least one data row." };
 
@@ -107,24 +132,35 @@ export async function importProspectsAction(csv: string): Promise<ProspectResult
       addressLine2: rec.addressLine2 || null,
       city: rec.city || null,
       postcode: rec.postcode || null,
-      country: rec.country || "United Kingdom",
+      country: rec.country || undefined, // DB default (United Kingdom) on insert; never overwrites on merge
       email: rec.email || null,
       website: rec.website || null,
       linkedinUrl: rec.linkedinUrl || null,
       contactName: rec.contactName || null,
       contactRole: rec.contactRole || null,
       notes: rec.notes || null,
-      source: "import",
+      source,
     });
   }
   if (rows.length === 0) return { ok: false, error: "No rows with a name to import." };
+  if (merge) {
+    const { inserted, updated, unchanged } = await repo.upsertProspects(rows, source);
+    revalidatePath("/admin/marketing");
+    return {
+      ok: true,
+      count: inserted,
+      updated,
+      unchanged,
+      message: `Imported ${inserted} new; updated ${updated} existing; ${unchanged} unchanged.`,
+    };
+  }
   const { inserted, skipped } = await repo.insertProspectsUnique(rows);
   revalidatePath("/admin/marketing");
   const msg =
     skipped > 0
       ? `Imported ${inserted} prospect${inserted === 1 ? "" : "s"}; skipped ${skipped} already on file.`
       : `Imported ${inserted} prospect${inserted === 1 ? "" : "s"}.`;
-  return { ok: true, count: inserted, message: msg };
+  return { ok: true, count: inserted, skipped, message: msg };
 }
 
 /** Seed a few clearly-fictional example prospects so the pipeline isn't empty.

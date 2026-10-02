@@ -1,0 +1,373 @@
+"""
+RYA "Where's my nearest" sweep -> CSV in the outreach-import format.
+
+Run:    python3 scripts/rya_scraper.py            (full sweep, resumable)
+Check:  python3 scripts/rya_scraper.py --check    (report on the CSV only)
+Output: rya_all_raw.csv (+ rya_progress.json state) in the current folder.
+
+It sweeps a grid of points over the UK & Ireland, collects every club /
+training centre listed near each point, then opens each one and reads the
+address, phone, website and email that the RYA publishes. Race officials
+(individual people) are skipped. It pauses between requests to be polite,
+so a full run takes roughly 1-3 hours. Ctrl+C and re-run to resume.
+
+Changes from the original:
+  * Adaptive grid: when a point's results look capped (the search only shows
+    the nearest N), that cell is split into 4 finer points, so dense areas
+    (Solent, Clyde, Lakes, London reservoirs) aren't silently truncated.
+  * Follows "next page" links on the results list, if there are any.
+  * A failed fetch is NOT marked done, so a re-run retries it (the original
+    recorded network errors as "0 results" and never came back).
+  * Stops early (and saves the HTML to rya_debug_listing.html) if the first
+    ~60 land points find nothing, i.e. the site's markup has changed.
+  * Adds a "country" column (United Kingdom / Ireland / Isle of Man / ...),
+    which the importer maps, so Irish leads aren't stamped "United Kingdom".
+  * Accepts Dublin Eircodes (D6W ...) and Crown Dependency postcodes.
+  * --check: row count, blank names/emails, duplicates, non-UK/IE rows.
+"""
+import csv, json, os, re, sys, time
+from urllib.parse import urljoin
+from collections import Counter
+
+BASE = "https://www.rya.org.uk/wheres-my-nearest/"
+DELAY = 1.5             # seconds between requests
+STEP = 0.25             # base grid spacing in degrees (~25 km)
+MIN_STEP = 0.03         # don't subdivide below ~3 km
+OUT = "rya_all_raw.csv"
+STATE = "rya_progress.json"
+DEBUG_HTML = "rya_debug_listing.html"
+
+HEAD = {"User-Agent": "Mozilla/5.0 (outreach research; contact via website)"}
+HEADERS = ["name", "region", "address 1", "address 2", "city", "postcode", "country",
+           "email", "website", "linkedin", "contact", "role", "notes", "full address"]
+
+REGION = {}
+for r, areas in {
+ "Scotland": "AB DD DG EH FK G HS IV KA KW KY ML PA PH TD ZE",
+ "Wales": "CF LD LL NP SA",
+ "Northern Ireland": "BT",
+ "London": "E EC N NW SE SW W WC BR CR EN HA IG KT RM SM TW UB",
+ "South East": "BN CT GU HP ME MK OX PO RG RH SL SO TN DA",
+ "South West": "BA BH BS DT EX GL PL SN SP TA TQ TR",
+ "East": "AL CB CM CO IP LU NR PE SG SS",
+ "East Midlands": "DE LE LN NG NN",
+ "West Midlands": "B CV DY HR ST TF WR WS WV",
+ "Yorkshire": "BD DN HD HG HU HX LS S WF YO",
+ "North West": "BB BL CA CH CW FY L LA M OL PR SK WA WN",
+ "North East": "DH DL NE SR TS",
+ "Channel Islands": "GY JE",
+ "Isle of Man": "IM",
+}.items():
+    for a in areas.split():
+        REGION[a] = r
+
+UK_PC = re.compile(r"\b([A-Z]{1,2})\d[A-Z\d]?\s*\d[A-Z]{2}\b")
+EIRCODE = re.compile(r"^[AC-FHKNPRTV-Y]\d[\dW]\s?[AC-FHKNPRTV-Y\d]{4}$", re.I)
+HOME_WORDS = ("United Kingdom", "Ireland", "Isle of Man", "Jersey", "Guernsey", "Alderney")
+# Counties / ceremonial areas that RYA addresses put between town and postcode.
+COUNTIES = {c.lower() for c in """
+Bedfordshire Berkshire Bristol Buckinghamshire Cambridgeshire Cheshire Cornwall Cumbria
+Derbyshire Devon Dorset Durham Essex Gloucestershire Hampshire Herefordshire Hertfordshire
+Kent Lancashire Leicestershire Lincolnshire Merseyside Norfolk Northamptonshire
+Northumberland Nottinghamshire Oxfordshire Rutland Shropshire Somerset Staffordshire Suffolk
+Surrey Sussex Warwickshire Wiltshire Worcestershire Yorkshire Middlesex Cumberland
+Westmorland Anglesey Gwynedd Conwy Denbighshire Flintshire Wrexham Powys Ceredigion
+Pembrokeshire Carmarthenshire Glamorgan Monmouthshire Argyll Ayrshire Fife Lanarkshire
+Renfrewshire Dunbartonshire Stirlingshire Perthshire Angus Aberdeenshire Morayshire Moray
+Highland Lothian Midlothian Borders Dumfriesshire Galloway Kincardineshire Caithness
+Sutherland Orkney Shetland Antrim Armagh Down Fermanagh Londonderry Tyrone
+""".split()} | {"east sussex", "west sussex", "north yorkshire", "south yorkshire",
+               "west yorkshire", "east yorkshire", "east riding of yorkshire", "isle of wight",
+               "greater london", "greater manchester", "west midlands", "tyne and wear",
+               "county durham", "west lothian", "east lothian", "argyll and bute",
+               "scottish borders", "dumfries and galloway", "isle of anglesey",
+               "vale of glamorgan", "north ayrshire", "south ayrshire", "east ayrshire",
+               "western isles", "na h-eileanan siar", "perth and kinross"}
+COUNTRY_WORDS = ("United Kingdom", "Republic Of Ireland", "Republic of Ireland", "Ireland",
+                 "Northern Ireland", "Isle of Man", "Jersey", "Guernsey", "Channel Islands")
+
+
+def region_for(address, postcode):
+    if EIRCODE.match(postcode or ""):
+        return "Ireland"
+    m = UK_PC.search(postcode or "")
+    if m:
+        return REGION.get(m.group(1), "CHECK (" + m.group(1) + ")")
+    if "Ireland" in address and "Northern" not in address and "United Kingdom" not in address:
+        return "Ireland"
+    return "CHECK"
+
+
+def country_for(region):
+    return {"Ireland": "Ireland", "Isle of Man": "Isle of Man",
+            "Channel Islands": "Channel Islands"}.get(region, "United Kingdom")
+
+
+# --- HTTP ------------------------------------------------------------------
+
+_session = None
+
+
+def get(url):
+    """Return page HTML, or None on failure (so callers can retry next run)."""
+    global _session
+    import requests
+    if _session is None:
+        _session = requests.Session()
+        _session.headers.update(HEAD)
+    for attempt in range(3):
+        try:
+            r = _session.get(url, timeout=30)
+            if r.status_code == 200:
+                return r.text
+            print("  HTTP", r.status_code, url)
+            if r.status_code == 404:
+                return None
+        except requests.RequestException as e:
+            print("  error:", e)
+        time.sleep(5 * (attempt + 1))
+    return None
+
+
+# --- Step 1: listings ------------------------------------------------------
+
+def parse_listing(html, page_url=BASE):
+    """Return (slugs, next_page_url) from one results page."""
+    from bs4 import BeautifulSoup
+    soup = BeautifulSoup(html, "html.parser")
+    found = []
+    for a in soup.find_all("a", href=True):
+        if a.get_text(strip=True).lower() != "more info":
+            continue
+        li = a.find_parent("li") or a.find_parent("article") or a.find_parent("div")
+        kinds = li.get_text(" ", strip=True) if li else ""
+        if "Race Official" in kinds and "Club" not in kinds and "Training Centre" not in kinds:
+            continue  # individual race officials - skip
+        slug = a["href"].split("?")[0].split("#")[0].rstrip("/").split("/")[-1]
+        if slug and slug != "wheres-my-nearest" and slug not in found:
+            found.append(slug)
+    nxt = soup.find("a", rel="next") or soup.find(
+        "a", string=re.compile(r"^\s*(Next|›|»)\s*$", re.I))
+    next_url = urljoin(page_url, nxt["href"]) if nxt and nxt.get("href") else None
+    return found, next_url
+
+
+def listing(lat, lng):
+    """All slugs near a point (following pagination). None if any fetch failed."""
+    url = f"{BASE}?lat={lat}&lng={lng}&locationSearch=&useBrowserLocation=false"
+    slugs, pages, first_page_count = [], 0, None
+    while url and pages < 20:
+        html = get(url)
+        if html is None:
+            return None, 0
+        found, url = parse_listing(html, url)
+        if first_page_count is None:
+            first_page_count = len(found)
+            if not found:
+                with open(DEBUG_HTML, "w", encoding="utf-8") as f:
+                    f.write(html)
+        slugs += [s for s in found if s not in slugs]
+        pages += 1
+        if url:
+            time.sleep(DELAY)
+    # "Capped" = a full first page with no pagination to get the rest.
+    return slugs, (first_page_count if pages == 1 else 0)
+
+
+def base_grid():
+    pts = []
+    lat = 49.9
+    while lat <= 60.9:
+        lng = -10.6
+        while lng <= 1.8:
+            pts.append([round(lat, 4), round(lng, 4), STEP])
+            lng += STEP
+        lat += STEP
+    return pts
+
+
+# --- Step 2: detail pages --------------------------------------------------
+
+def field(text, label, stop):
+    m = re.search(label + r"\s*:\s*(.+?)\s*(?:" + stop + r"|$)", text, re.S)
+    return m.group(1).strip() if m else ""
+
+
+def detail(slug):
+    """Row for the CSV, "" if the page is not a UK/IE organisation, None on fetch failure."""
+    from bs4 import BeautifulSoup
+    html = get(BASE + slug + "/")
+    if html is None:
+        return None
+    soup = BeautifulSoup(html, "html.parser")
+    h1 = soup.find("h1")
+    name = (h1.get_text(" ", strip=True) if h1 else "") or slug.replace("-", " ").title()
+    main = soup.find("main") or soup
+    text = main.get_text(" ", strip=True)
+    labels = r"Telephone numbers|Website|Email addresses|Back to search results|Address\s*:"
+    address = field(text, "Address", labels)
+    phone = field(text, "Telephone numbers", labels)
+    website = (field(text, "Website", labels).split(" ") or [""])[0]
+    emails = []
+    for e in re.findall(r"[\w.+-]+@[\w-]+\.[\w.-]+", field(text, "Email addresses", labels) or ""):
+        e = e.rstrip(".")
+        if e.lower() not in [x.lower() for x in emails] and not e.lower().endswith("rya.org.uk"):
+            emails.append(e)
+    services = [s for s in ("Training Centre", "OnBoard Club", "Club", "Sailability Centre",
+                            "ICCTestCentre") if s in text]
+    if not address or not any(w in address for w in HOME_WORDS):
+        return ""  # overseas or not an organisation
+    parts = [p.strip() for p in address.split(",") if p.strip() and p.strip() not in COUNTRY_WORDS]
+    pc = ""
+    if parts and (UK_PC.search(parts[-1].upper()) or EIRCODE.match(parts[-1])):
+        pc = parts.pop().upper()
+    city = parts.pop() if parts else ""
+    if parts and (city.startswith(("County ", "Co. ", "Co ")) or city.lower() in COUNTIES):
+        city = parts.pop()
+    addr1 = parts[0] if parts else ""
+    addr2 = ", ".join(parts[1:]) if len(parts) > 1 else ""
+    notes = "Source: RYA listing (" + BASE + slug + "/). Services: " + ", ".join(services)
+    if phone:
+        notes += ". Tel " + re.sub(r"\s*(Club|Training Centre):.*", "", phone)
+    if len(emails) > 1:
+        notes += ". Other emails: " + ", ".join(emails[1:])
+    region = region_for(address, pc)
+    full = ", ".join(p for p in (addr1, addr2, city, pc) if p)
+    return [name, region, addr1, addr2, city, pc, country_for(region),
+            emails[0] if emails else "", website, "", "", "", notes, full]
+
+
+# --- main ------------------------------------------------------------------
+
+def load_state():
+    if os.path.exists(STATE):
+        s = json.load(open(STATE))
+        if s.get("version") == 2:
+            return s
+        print("Old-format progress file found; starting a fresh sweep.")
+    return {"version": 2, "queue": base_grid(), "done_points": [], "slugs": [],
+            "done_slugs": [], "cap": 0, "land_points_checked": 0}
+
+
+def save(state):
+    tmp = STATE + ".tmp"
+    json.dump(state, open(tmp, "w"))
+    os.replace(tmp, STATE)
+
+
+def main():
+    state = load_state()
+    done_points = set(state["done_points"])
+    slugs = list(state["slugs"])
+    slug_set = set(slugs)
+
+    print(f"Step 1/2: sweeping grid ({len(state['queue'])} points queued, "
+          f"{len(done_points)} done, {len(slugs)} organisations so far)")
+    n = 0
+    while state["queue"]:
+        la, ln, step = state["queue"][0]
+        key = f"{la},{ln}"
+        if key in done_points:
+            state["queue"].pop(0)
+            continue
+        found, capped_count = listing(la, ln)
+        time.sleep(DELAY)
+        if found is None:
+            # Leave it queued but move it to the back so one bad point doesn't stall the run.
+            state["queue"].append(state["queue"].pop(0))
+            state.setdefault("failures", 0)
+            state["failures"] += 1
+            if state["failures"] > 200:
+                print("Too many failed requests - is the site reachable? Stopping; re-run to resume.")
+                save(state)
+                sys.exit(1)
+            continue
+        state["queue"].pop(0)
+        new = [s for s in found if s not in slug_set]
+        slugs += new
+        slug_set.update(new)
+        done_points.add(key)
+        state["done_points"].append(key)
+
+        # Learn the page size; if this point hit it, the list is probably truncated.
+        state["cap"] = max(state["cap"], capped_count)
+        if capped_count >= 10 and capped_count == state["cap"] and step / 2 >= MIN_STEP:
+            h = step / 4
+            for dla, dln in ((-h, -h), (-h, h), (h, -h), (h, h)):
+                state["queue"].append([round(la + dla, 4), round(ln + dln, 4), step / 2])
+
+        if found:
+            state["land_points_checked"] = 0
+        elif not slugs:
+            state["land_points_checked"] += 1
+            # Most grid points are sea, but every point gets "nearest" results.
+            if state["land_points_checked"] >= 60:
+                print(f"\n0 organisations after 60 points - the RYA page layout has probably "
+                      f"changed. Saved the last results page to {DEBUG_HTML} for inspection.")
+                save(state)
+                sys.exit(2)
+
+        n += 1
+        if n % 25 == 0:
+            print(f"  {len(done_points)} points done, {len(state['queue'])} queued, "
+                  f"{len(slugs)} organisations found (page size seen: {state['cap']})", flush=True)
+            state["slugs"] = slugs
+            save(state)
+    state["slugs"] = slugs
+    save(state)
+
+    done_slugs = set(state["done_slugs"])
+    todo = [s for s in slugs if s not in done_slugs]
+    print(f"Step 2/2: reading {len(todo)} of {len(slugs)} listings")
+    new_file = not os.path.exists(OUT)
+    with open(OUT, "a", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        if new_file:
+            w.writerow(HEADERS)
+        for i, s in enumerate(todo, 1):
+            row = detail(s)
+            time.sleep(DELAY)
+            if row is None:
+                continue  # fetch failed - retried on next run
+            if row:
+                w.writerow(row)
+            state["done_slugs"].append(s)
+            if i % 25 == 0:
+                print(f"  {i}/{len(todo)}", flush=True)
+                f.flush()
+                save(state)
+    save(state)
+    left = len(slugs) - len(state["done_slugs"])
+    print(f"Done -> {OUT}" + (f" ({left} listings failed to load - re-run to retry)" if left else ""))
+    check()
+
+
+def check(path=OUT):
+    rows = list(csv.DictReader(open(path, encoding="utf-8")))
+    print(f"\n{path}: {len(rows)} rows")
+    blank_name = [r for r in rows if not r["name"].strip()]
+    no_email = sum(1 for r in rows if not r["email"].strip())
+    no_pc = sum(1 for r in rows if not r["postcode"].strip())
+    keys = Counter((r["name"].strip().lower(), r["postcode"].replace(" ", "").lower()) for r in rows)
+    dups = {k: c for k, c in keys.items() if c > 1}
+    odd = [r for r in rows if r["region"].startswith("CHECK")
+           or r.get("country", "United Kingdom") not in ("United Kingdom", "Ireland")]
+    print(f"  blank names:            {len(blank_name)}")
+    print(f"  no email:               {no_email}")
+    print(f"  no postcode:            {no_pc}")
+    print(f"  duplicate name+postcode: {len(dups)} keys ({sum(dups.values()) - len(dups)} extra rows)")
+    print(f"  CHECK / non-UK-IE rows: {len(odd)}")
+    for r in odd[:30]:
+        print(f"    - {r['name']} | {r['region']} | {r.get('country', '')} | {r['full address']}")
+    print("  by region:", dict(Counter(r["region"] for r in rows).most_common()))
+
+
+if __name__ == "__main__":
+    if "--check" in sys.argv:
+        check()
+        sys.exit(0)
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\nStopped. Run again to resume.")
+        sys.exit(0)

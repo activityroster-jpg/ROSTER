@@ -48,6 +48,19 @@ export interface OrgMember {
   status: string;
 }
 
+/** Prospect identity for import de-dupe: name + postcode, ignoring case and
+ *  whitespace (so "CO7 0DY" and "co70dy" match). */
+export function prospectKey(name: string, postcode: string | null | undefined): string {
+  return `${name.trim().replace(/\s+/g, " ").toLowerCase()}|${(postcode ?? "").replace(/\s+/g, "").toLowerCase()}`;
+}
+
+/** Fields a merge import may overwrite (when the incoming value is non-blank).
+ *  name + postcode are the match key, so they are never rewritten. */
+const MERGE_FIELDS = [
+  "region", "addressLine1", "addressLine2", "city", "country",
+  "email", "website", "linkedinUrl", "contactName", "contactRole",
+] as const satisfies readonly (keyof NewMarketingProspect)[];
+
 /**
  * PLATFORM-OWNER cross-tenant repository. Unlike TenantRepository (which is
  * pinned to one org), this deliberately reads across organisations for the
@@ -162,19 +175,65 @@ export class PlatformRepository {
     const existing = await this.db
       .select({ name: marketingProspect.name, postcode: marketingProspect.postcode })
       .from(marketingProspect);
-    const keyOf = (name: string, postcode: string | null | undefined) =>
-      `${name.trim().toLowerCase()}|${(postcode ?? "").trim().toLowerCase()}`;
-    const seen = new Set(existing.map((r) => keyOf(r.name, r.postcode)));
+    const seen = new Set(existing.map((r) => prospectKey(r.name, r.postcode)));
     const fresh: typeof rows = [];
     let skipped = 0;
     for (const r of rows) {
-      const k = keyOf(r.name, r.postcode);
+      const k = prospectKey(r.name, r.postcode);
       if (seen.has(k)) { skipped++; continue; }
       seen.add(k);
       fresh.push(r);
     }
     const inserted = await this.insertProspects(fresh);
     return { inserted, skipped };
+  }
+
+  /**
+   * Merge import: rows matching an existing prospect (name + postcode, same key
+   * as insertProspectsUnique) are UPDATED instead of skipped; the rest are
+   * inserted. Only non-blank incoming values overwrite, so a sparse CSV never
+   * wipes data already on file; pipeline status is never touched; incoming notes
+   * are appended (not replaced) so hand-written notes survive. `source` is
+   * stamped on every row inserted or updated.
+   */
+  async upsertProspects(
+    rows: Omit<NewMarketingProspect, "id" | "createdAt" | "updatedAt">[],
+    source: string,
+  ): Promise<{ inserted: number; updated: number; unchanged: number }> {
+    if (rows.length === 0) return { inserted: 0, updated: 0, unchanged: 0 };
+    const existing = await this.db.select().from(marketingProspect);
+    const byKey = new Map(existing.map((r) => [prospectKey(r.name, r.postcode), r]));
+    const fresh: typeof rows = [];
+    const freshKeys = new Set<string>();
+    let updated = 0;
+    let unchanged = 0;
+    for (const r of rows) {
+      const k = prospectKey(r.name, r.postcode);
+      const cur = byKey.get(k);
+      if (!cur) {
+        // De-dupe within the incoming batch too.
+        if (freshKeys.has(k)) { unchanged++; continue; }
+        freshKeys.add(k);
+        fresh.push({ ...r, source });
+        continue;
+      }
+      const patch: Partial<NewMarketingProspect> = {};
+      for (const f of MERGE_FIELDS) {
+        const v = r[f];
+        if (typeof v === "string" && v.trim() !== "" && v !== cur[f]) patch[f] = v;
+      }
+      const note = r.notes?.trim();
+      if (note && !(cur.notes ?? "").includes(note)) {
+        patch.notes = cur.notes ? `${cur.notes}\n${note}` : note;
+      }
+      if (Object.keys(patch).length === 0 && cur.source === source) { unchanged++; continue; }
+      patch.source = source;
+      const next = await this.updateProspect(cur.id, patch);
+      if (next) byKey.set(k, next);
+      updated++;
+    }
+    const inserted = await this.insertProspects(fresh);
+    return { inserted, updated, unchanged };
   }
 
   async updateProspect(id: string, patch: Partial<Omit<NewMarketingProspect, "id" | "createdAt">>): Promise<MarketingProspect | null> {

@@ -50,4 +50,46 @@ describe("marketing prospect bulk import", () => {
     expect(res).toEqual({ inserted: 1, skipped: 1 });
     expect(await repo.countProspects()).toBe(1);
   });
+
+  it("merge import updates matches, inserts new, and never clobbers with blanks", async () => {
+    const { db } = createTestDb();
+    const repo = new PlatformRepository(db);
+    await repo.insertProspects([
+      { ...prospect("Aldeburgh Yacht Club", "IP15 5NA"), email: "old@ayc.test", contactName: "A. Person", notes: "Called in May" },
+    ]);
+    const [existing] = await repo.listProspects();
+    await repo.setProspectStatus(existing!.id, "email_sent");
+
+    const SRC = "RYA directory sweep, Oct 2026";
+    const res = await repo.upsertProspects(
+      [
+        // Same centre, postcode spaced differently; new email + website, blank contact.
+        { ...prospect("aldeburgh yacht club", "IP155NA"), email: "info@ayc.test", website: "ayc.test", contactName: null, notes: "Source: RYA listing" },
+        prospect("Alton Water Sports Centre", "IP9 2RY"),
+        prospect("Alton Water Sports Centre", "IP9 2RY"), // in-batch duplicate
+      ],
+      SRC,
+    );
+    expect(res).toEqual({ inserted: 1, updated: 1, unchanged: 1 });
+    expect(await repo.countProspects()).toBe(2);
+
+    const rows = await repo.listProspects();
+    const ayc = rows.find((r) => r.id === existing!.id)!;
+    expect(ayc.name).toBe("Aldeburgh Yacht Club");
+    expect(ayc.postcode).toBe("IP15 5NA"); // match key not rewritten
+    expect(ayc.email).toBe("info@ayc.test");
+    expect(ayc.website).toBe("ayc.test");
+    expect(ayc.contactName).toBe("A. Person"); // blank didn't overwrite
+    expect(ayc.status).toBe("email_sent"); // pipeline untouched
+    expect(ayc.notes).toBe("Called in May\nSource: RYA listing"); // appended
+    expect(ayc.source).toBe(SRC);
+    expect(rows.find((r) => r.name === "Alton Water Sports Centre")!.source).toBe(SRC);
+
+    // Re-running the same import is a no-op (notes not re-appended).
+    const again = await repo.upsertProspects(
+      [{ ...prospect("Aldeburgh Yacht Club", "IP15 5NA"), email: "info@ayc.test", notes: "Source: RYA listing" }],
+      SRC,
+    );
+    expect(again).toEqual({ inserted: 0, updated: 0, unchanged: 1 });
+  });
 });
