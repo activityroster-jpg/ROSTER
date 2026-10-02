@@ -22,6 +22,9 @@ export const user = sqliteTable("user", {
   email: text("email").notNull(),
   emailVerified: boolCol("email_verified").default(false),
   image: text("image"),
+  // A secondary email an admin sets for account recovery (separate from the
+  // sign-in email). Never used as a login identity.
+  recoveryEmail: text("recovery_email"),
   // twoFactor plugin
   twoFactorEnabled: integer("two_factor_enabled", { mode: "boolean" }),
   // 4-digit login PIN (a second factor for centre admins + the platform owner).

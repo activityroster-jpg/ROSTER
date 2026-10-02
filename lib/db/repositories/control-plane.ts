@@ -259,4 +259,9 @@ export class ControlPlaneRepository {
   async resetPinFailures(userId: string): Promise<void> {
     await this.db.update(user).set({ pinFailedCount: 0, pinLockedUntil: null }).where(eq(user.id, userId));
   }
+
+  /** Set (or clear) a user's account-recovery email. */
+  async setRecoveryEmail(userId: string, recoveryEmail: string | null): Promise<void> {
+    await this.db.update(user).set({ recoveryEmail }).where(eq(user.id, userId));
+  }
 }

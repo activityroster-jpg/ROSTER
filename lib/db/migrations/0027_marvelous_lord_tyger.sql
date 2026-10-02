@@ -1,0 +1,1 @@
+ALTER TABLE `user` ADD `recovery_email` text;
