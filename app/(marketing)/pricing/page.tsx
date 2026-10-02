@@ -7,6 +7,13 @@ import { TIERS, TIER_ORDER } from "@/lib/tiers";
 
 export const dynamic = "force-dynamic";
 
+export const metadata = {
+  title: "Pricing — ActivityRoster",
+  description:
+    "Simple flat pricing per centre — no per-user fees. Small Club £35/mo (up to 10) or Standard £65/mo unlimited, plus an optional done-for-you custom build. Cheaper than per-user tools for volunteer-heavy RYA centres.",
+  alternates: { canonical: "/pricing" },
+};
+
 const INCLUDED = [
   "Scheduling & rostering with RYA ratio + safety-cover checks built in",
   "Youth & adult courses kept cleanly separate throughout",

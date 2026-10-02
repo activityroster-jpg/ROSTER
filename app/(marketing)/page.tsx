@@ -108,8 +108,8 @@ export default function MarketingHome() {
         name: "ActivityRoster",
         applicationCategory: "BusinessApplication",
         operatingSystem: "Web",
-        offers: { "@type": "Offer", price: "75", priceCurrency: "GBP" },
-        description: "Staff rostering, qualifications and safety-cover compliance for RYA centres.",
+        offers: { "@type": "Offer", price: "35", priceCurrency: "GBP" },
+        description: "Flat per-centre pricing (from £35/mo) for staff rostering, qualifications and safety-cover compliance at RYA centres.",
       },
     ],
   };
@@ -134,15 +134,14 @@ export default function MarketingHome() {
               The all-in-one platform for RYA sailing &amp; watersports centres.
             </h1>
             <p className="mt-4 max-w-xl text-lg text-white/80">
-              Scheduling, time &amp; attendance, leave, HR, payroll and reporting in one place — and it&apos;s
-              compliance-aware: it won&apos;t roster an under-qualified instructor, an over-ratio course, or craft afloat
-              without safety cover, and it tracks every ticket so nothing lapses.
+              Rostering, time &amp; attendance, leave, HR and payroll in one place — and it won&apos;t let you roster an
+              under-qualified instructor, an over-ratio course, or a boat afloat without safety cover.
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
               <Link href="/contact" className="rounded-lg bg-[#0C6B74] px-6 py-3 font-semibold text-white shadow-lg transition hover:bg-teal-700">
                 Schedule a call →
               </Link>
-              <Link href="/demo" className="rounded-lg border border-white/25 px-6 py-3 font-semibold text-white hover:bg-white/10">
+              <Link href="/demo" className="hidden rounded-lg border border-white/25 px-6 py-3 font-semibold text-white hover:bg-white/10 md:inline-block">
                 Explore the demo
               </Link>
             </div>
@@ -277,8 +276,8 @@ export default function MarketingHome() {
         </div>
       </section>
 
-      {/* Demo band */}
-      <section className="bg-canvas">
+      {/* Demo band — hidden on mobile (the full demo is a desktop experience) */}
+      <section className="hidden bg-canvas md:block">
         <div className="mx-auto max-w-6xl px-4 py-16 text-center">
           <h2 className="font-display text-2xl font-semibold text-navy">See it before you speak to anyone</h2>
           <p className="mx-auto mt-2 max-w-2xl text-slate-600">
