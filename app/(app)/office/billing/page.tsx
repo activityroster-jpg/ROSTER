@@ -1,7 +1,7 @@
 import { requireTenant } from "@/lib/tenant/require";
 import { getDb, getEnv } from "@/lib/cf/bindings";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
-import { effectivePricing, fmtMoney } from "@/lib/pricing";
+import { effectivePricing, fmtMoney, ON_SITE_DAY_PRICE } from "@/lib/pricing";
 import { listInvoices, type InvoiceRow } from "@/lib/billing/invoices";
 import { PlanChoice } from "@/components/office/PlanChoice";
 import { SetupServiceCard } from "@/components/office/SetupServiceCard";
@@ -70,7 +70,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
             from {money(pricing.setupPrice, pricing.currency)} setup, plus £350 travel if we come and work with your team
             on site (recommended); after that you simply continue on your normal monthly plan.
           </p>
-          <SetupServiceCard price={money(pricing.setupPrice, pricing.currency)} purchased={Boolean(organisation.setupPurchasedAt)} />
+          <SetupServiceCard price={money(pricing.setupPrice, pricing.currency)} onsitePrice={money(ON_SITE_DAY_PRICE, pricing.currency)} purchased={Boolean(organisation.setupPurchasedAt)} />
         </Card>
       ) : null}
 

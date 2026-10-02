@@ -19,14 +19,19 @@ export interface CloudflareEnv {
   BETTER_AUTH_URL?: string;
   STRIPE_SECRET_KEY?: string;
   STRIPE_WEBHOOK_SECRET?: string;
-  // Recurring price IDs for the single plan, one per billing interval.
+  // Optional price-id overrides. When unset, prices are found on the Stripe
+  // account by product name + interval (see lib/billing/prices).
+  STRIPE_PRICE_SMALL_MONTHLY?: string;
+  STRIPE_PRICE_SMALL_ANNUAL?: string;
+  STRIPE_PRICE_STANDARD_MONTHLY?: string;
+  STRIPE_PRICE_STANDARD_ANNUAL?: string;
+  STRIPE_PRICE_SETUP?: string; // "Custom Package" one-off
+  STRIPE_PRICE_ONSITE?: string; // "UK Onsite Daily Consultancy" one-off
+  // Legacy names (still honoured as Standard monthly/annual fallbacks).
   STRIPE_PRICE_MONTHLY?: string;
   STRIPE_PRICE_ANNUAL?: string;
-  // Legacy names (kept as fallbacks for the monthly price).
   STRIPE_PRICE_ROSTERING?: string;
   STRIPE_PRICE_FULL?: string;
-  // One-time price for the "done-for-you" setup & customisation service.
-  STRIPE_PRICE_SETUP?: string;
   SENTRY_DSN?: string;
   RESEND_API_KEY?: string;
   // Shown in the legal footer of every email (optional — set for compliance).

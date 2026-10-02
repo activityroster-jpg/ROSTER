@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requirePlatformAdmin } from "@/lib/platform/admin";
+import { resolvePrices, PRICE_KINDS } from "@/lib/billing/prices";
 import { getDb, getEnv, getRepositories } from "@/lib/cf/bindings";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { createStripe } from "@/lib/billing/stripe";
@@ -141,4 +142,17 @@ export async function setPlanAction(id: string, plan: string): Promise<Result> {
   revalidatePath("/admin");
   revalidatePath(`/admin/centres/${id}`);
   return { ok: true };
+}
+
+/** Drop the hour-long cache and look the prices up on Stripe again. */
+export async function refreshStripePricesAction(): Promise<{ ok: boolean; message?: string; error?: string }> {
+  await requirePlatformAdmin();
+  try {
+    const all = await resolvePrices(getEnv(), { fresh: true });
+    const found = PRICE_KINDS.filter((k) => all[k]).length;
+    revalidatePath("/admin");
+    return { ok: true, message: `Found ${found} of ${PRICE_KINDS.length} prices on Stripe` };
+  } catch (err) {
+    return { ok: false, error: (err as Error).message };
+  }
 }

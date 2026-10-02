@@ -13,6 +13,9 @@ export const DEFAULT_PRICING = {
   setupEnabled: true,
 } as const;
 
+/** The on-site day (travel to work with the team) sold alongside the custom package, GBP. */
+export const ON_SITE_DAY_PRICE = 350;
+
 export interface EffectivePricing {
   monthly: number;
   annual: number;

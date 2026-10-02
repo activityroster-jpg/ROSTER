@@ -17,8 +17,14 @@ STRIPE_SECRET_KEY=sk_live_or_test_...
 # From the webhook endpoint you create for /api/webhooks/stripe.
 STRIPE_WEBHOOK_SECRET=whsec_...
 # Price IDs for each plan (Products → Prices in Stripe).
-STRIPE_PRICE_ROSTERING=price_...
-STRIPE_PRICE_FULL=price_...
+# Optional price-id overrides. Leave blank: prices are found on your Stripe
+# account by product name ("Small Club Plan", "Standard Plan", "Custom Package",
+# "UK Onsite Daily Consultancy") and billing interval.
+STRIPE_PRICE_SMALL_MONTHLY=
+STRIPE_PRICE_SMALL_ANNUAL=
+STRIPE_PRICE_STANDARD_MONTHLY=
+STRIPE_PRICE_STANDARD_ANNUAL=
+STRIPE_PRICE_ONSITE=
 # One-TIME price for the done-for-you setup service (a one-off, NOT recurring).
 STRIPE_PRICE_SETUP=price_...
 

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Check } from "lucide-react";
 import { getDb } from "@/lib/cf/bindings";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
-import { fmtMoney, comparisonRow, COMPETITOR_PRICING } from "@/lib/pricing";
+import { fmtMoney, comparisonRow, COMPETITOR_PRICING, ON_SITE_DAY_PRICE } from "@/lib/pricing";
 import { TIERS, TIER_ORDER } from "@/lib/tiers";
 
 export const dynamic = "force-dynamic";
@@ -37,7 +37,7 @@ const SETUP_INCLUDED = [
 ];
 
 // Travel to run the custom build on site with the centre's team (recommended).
-const ON_SITE_TRAVEL = 350;
+const ON_SITE_TRAVEL = ON_SITE_DAY_PRICE;
 
 // Names of the per-user platforms we compare against (for the intro copy).
 const COMPETITOR_NAMES = COMPETITOR_PRICING.map((c) => c.name);

@@ -20,6 +20,7 @@ export async function startCheckoutAction(interval: string): Promise<CheckoutRes
       slug: organisation.slug,
       ownerEmail: user?.email ?? "",
       interval: interval as BillingInterval,
+      tier: organisation.tier,
       stripeCustomerId: organisation.stripeCustomerId,
       discountPercent: organisation.discountPercent,
       freeMonths: organisation.freeMonths,
@@ -31,7 +32,7 @@ export async function startCheckoutAction(interval: string): Promise<CheckoutRes
 }
 
 /** Start a Stripe Checkout session for the one-off setup & customisation service. */
-export async function startSetupCheckoutAction(): Promise<CheckoutResult> {
+export async function startSetupCheckoutAction(onsite = false): Promise<CheckoutResult> {
   const { ctx, organisation, repos } = await requireTenant({ role: "admin" });
   const user = await repos.control.userById(ctx.userId);
   try {
@@ -41,6 +42,7 @@ export async function startSetupCheckoutAction(): Promise<CheckoutResult> {
       email: user?.email ?? null,
       stripeCustomerId: organisation.stripeCustomerId,
       returnBase: `https://${organisation.slug}.${getEnv().APP_APEX_DOMAIN}`,
+      onsite: onsite === true,
     });
     return { ok: true, url };
   } catch (err) {

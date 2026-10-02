@@ -28,8 +28,9 @@ export async function GET(req: Request) {
 
   const email = url.searchParams.get("email");
   const slug = url.searchParams.get("slug");
+  const onsite = url.searchParams.get("onsite") === "1";
   try {
-    const { url: checkoutUrl } = await createSetupCheckout(env, { email, slug });
+    const { url: checkoutUrl } = await createSetupCheckout(env, { email, slug, onsite });
     return NextResponse.redirect(checkoutUrl, 303);
   } catch {
     // Stripe not configured yet — don't leak the reason; route to the contact form.

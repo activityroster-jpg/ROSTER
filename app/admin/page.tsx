@@ -8,6 +8,10 @@ import { createStripe } from "@/lib/billing/stripe";
 import { listPromotionCodes, type PromoCodeRow } from "@/lib/billing/coupons";
 import { GlobalPricingForm } from "@/components/admin/GlobalPricingForm";
 import { PromoCodes } from "@/components/admin/PromoCodes";
+import { StripePricesPanel, type PriceCheckRow } from "@/components/admin/StripePricesPanel";
+import { PRICE_KINDS, priceLabel, resolvePrices } from "@/lib/billing/prices";
+import { TIERS } from "@/lib/tiers";
+import { ON_SITE_DAY_PRICE } from "@/lib/pricing";
 import { Card, StatusPill } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
@@ -40,6 +44,30 @@ export default async function AdminOverviewPage() {
     promoCodes = await listPromotionCodes(stripe);
   } catch { stripeReady = false; }
 
+  // What each plan/add-on resolves to in Stripe vs what we advertise.
+  const resolved = await resolvePrices(getEnv());
+  const advertised: Record<string, number | null> = {
+    small_club_monthly: TIERS.small_club.monthlyPrice,
+    small_club_annual: TIERS.small_club.annualPrice,
+    standard_monthly: TIERS.standard.monthlyPrice,
+    standard_annual: TIERS.standard.annualPrice,
+    setup: pricing.setupPrice,
+    onsite_day: ON_SITE_DAY_PRICE,
+  };
+  const priceRows: PriceCheckRow[] = PRICE_KINDS.map((kind) => {
+    const r = resolved[kind];
+    return {
+      kind,
+      label: priceLabel(kind),
+      advertised: advertised[kind] ?? null,
+      stripeAmount: r?.unitAmount != null ? r.unitAmount / 100 : null,
+      currency: r?.currency ?? pricing.currency,
+      priceId: r?.id ?? null,
+      productName: r?.productName ?? null,
+      source: r?.source ?? null,
+    };
+  });
+
   const total = orgs.length;
   const active = orgs.filter((o) => o.subscriptionStatus === "active").length;
   const trialing = orgs.filter((o) => o.subscriptionStatus === "trialing").length;
@@ -64,6 +92,12 @@ export default async function AdminOverviewPage() {
         <h2 className="mb-1 font-semibold text-navy">Default pricing</h2>
         <p className="mb-4 text-xs text-slate-500">Set once here; every centre inherits it unless you give them a discount or custom price on their page.</p>
         <GlobalPricingForm monthlyPrice={pricing.monthlyPrice} annualPrice={pricing.annualPrice} currency={pricing.currency} trialDays={pricing.trialDays} freeFirstMonth={Boolean(pricing.freeFirstMonth)} setupPrice={pricing.setupPrice} setupEnabled={Boolean(pricing.setupEnabled)} />
+      </Card>
+
+      <Card className="mb-8">
+        <h2 className="mb-1 font-semibold text-navy">Stripe prices</h2>
+        <p className="mb-3 text-xs text-slate-500">Checkout charges these. They&apos;re found on your Stripe account automatically; this shows what was found next to what the site advertises.</p>
+        <StripePricesPanel rows={priceRows} stripeReady={stripeReady} />
       </Card>
 
       <Card className="mb-8">

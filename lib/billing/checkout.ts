@@ -2,7 +2,9 @@ import type Stripe from "stripe";
 import type { CloudflareEnv } from "@/lib/cf/bindings";
 import type { SignupInput } from "@/lib/validation/signup";
 import { createStripe } from "./stripe";
-import { priceIdForPlan, priceIdForInterval, type BillingInterval } from "./plans";
+import type { BillingInterval } from "./plans";
+import { priceIdFor, priceKindFor } from "./prices";
+import type { OrgTier } from "@/lib/db/schema";
 import { couponForOrgDiscount } from "./coupons";
 
 /**
@@ -22,7 +24,9 @@ export async function createCheckoutSession(
   input: SignupInput,
 ): Promise<{ url: string; id: string }> {
   const stripe = createStripe(env);
-  const price = priceIdForPlan(env, input.plan);
+  // Paid signup from the marketing site is always the Standard plan, monthly
+  // (the plan enum is legacy; tiers are set on the centre afterwards).
+  const price = await priceIdFor(env, "standard_monthly");
   const apex = env.APP_APEX_DOMAIN;
 
   const metadata = {
@@ -69,15 +73,18 @@ export async function createSubscriptionCheckout(
     slug: string;
     ownerEmail: string;
     interval: BillingInterval;
+    /** The centre's pricing tier — picks Small Club vs Standard prices. */
+    tier?: OrgTier | null;
     stripeCustomerId?: string | null;
     discountPercent?: number | null;
     freeMonths?: number | null;
   },
 ): Promise<{ url: string }> {
   const stripe = createStripe(env);
-  const price = priceIdForInterval(env, opts.interval);
+  const kind = priceKindFor(opts.tier, opts.interval);
+  const price = await priceIdFor(env, kind);
   const base = `https://${opts.slug}.${env.APP_APEX_DOMAIN}`;
-  const metadata = { org_id: opts.orgId, slug: opts.slug, interval: opts.interval };
+  const metadata = { org_id: opts.orgId, slug: opts.slug, interval: opts.interval, tier: opts.tier ?? "standard" };
 
   // Auto-apply the centre's admin-set discount as a Stripe coupon. Stripe forbids
   // combining an automatic discount with a promo-code box, so it's one or the other.
@@ -102,7 +109,7 @@ export async function createSubscriptionCheckout(
       subscription_data: { metadata },
       metadata,
     },
-    { idempotencyKey: `upgrade:${opts.orgId}:${opts.interval}:${Math.floor(Date.now() / (60 * 60 * 1000))}` },
+    { idempotencyKey: `upgrade:${opts.orgId}:${kind}:${Math.floor(Date.now() / (60 * 60 * 1000))}` },
   );
 
   if (!session.url) throw new Error("Stripe did not return a checkout URL");

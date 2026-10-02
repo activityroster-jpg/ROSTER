@@ -1,6 +1,6 @@
 import type { CloudflareEnv } from "@/lib/cf/bindings";
 import { createStripe } from "./stripe";
-import { priceIdForSetup } from "./plans";
+import { priceIdFor } from "./prices";
 
 /**
  * Create a hosted Stripe Checkout Session for the one-off "done-for-you" setup
@@ -25,19 +25,23 @@ export async function createSetupCheckout(
     orgId?: string | null;
     stripeCustomerId?: string | null;
     returnBase?: string | null;
+    /** Add the on-site day (travel to work with the team) as a second line. */
+    onsite?: boolean;
   } = {},
 ): Promise<{ url: string }> {
   const stripe = createStripe(env);
-  const price = priceIdForSetup(env);
+  const price = await priceIdFor(env, "setup");
+  const lineItems: { price: string; quantity: number }[] = [{ price, quantity: 1 }];
+  if (opts.onsite) lineItems.push({ price: await priceIdFor(env, "onsite_day"), quantity: 1 });
   const base = opts.returnBase || `https://${env.APP_APEX_DOMAIN}`;
 
-  const metadata: Record<string, string> = { setup_service: "1" };
+  const metadata: Record<string, string> = { setup_service: "1", onsite: opts.onsite ? "1" : "0" };
   if (opts.slug) metadata.slug = opts.slug;
   if (opts.orgId) metadata.org_id = opts.orgId;
 
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
-    line_items: [{ price, quantity: 1 }],
+    line_items: lineItems,
     ...(opts.stripeCustomerId
       ? { customer: opts.stripeCustomerId, customer_update: { address: "auto", name: "auto" } }
       : opts.email
