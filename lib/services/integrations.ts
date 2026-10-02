@@ -217,12 +217,25 @@ export async function fetchIntegrationDrafts(row: { kind: string; provider: stri
   }
   // Default: ICS feed — guard against SSRF, cap time + size.
   if (!row.feedUrl) throw new Error("No calendar feed URL set");
-  const safeUrl = assertSafeFeedUrl(row.feedUrl);
+  let safeUrl = assertSafeFeedUrl(row.feedUrl);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FEED_TIMEOUT_MS);
   let text: string;
   try {
-    const res = await fetch(safeUrl, { headers: { Accept: "text/calendar, text/plain, */*" }, redirect: "follow", signal: controller.signal });
+    // Follow redirects by hand so every hop is re-checked by the SSRF guard —
+    // a public URL must not be allowed to bounce us onto an internal address.
+    let res: Response | null = null;
+    for (let hop = 0; hop < 4; hop++) {
+      const r: Response = await fetch(safeUrl, { headers: { Accept: "text/calendar, text/plain, */*" }, redirect: "manual", signal: controller.signal });
+      const location = r.headers.get("location");
+      if (r.status >= 300 && r.status < 400 && location) {
+        safeUrl = assertSafeFeedUrl(new URL(location, safeUrl).toString());
+        continue;
+      }
+      res = r;
+      break;
+    }
+    if (!res) throw new Error("Calendar feed redirected too many times");
     if (!res.ok) throw new Error(`Feed responded ${res.status}`);
     const buf = await res.arrayBuffer();
     if (buf.byteLength > FEED_MAX_BYTES) throw new Error("Calendar feed is too large");

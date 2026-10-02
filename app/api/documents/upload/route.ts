@@ -3,11 +3,11 @@ import { NextResponse } from "next/server";
 import { requireTenant } from "@/lib/tenant/require";
 import { attachDocument, type DocumentKind } from "@/lib/services/documents";
 import { instructor as instructorTable } from "@/lib/db/schema";
+import { sniffDocumentType } from "@/lib/security/file-type";
 
 export const dynamic = "force-dynamic";
 
 const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
-const ALLOWED = new Set(["application/pdf", "image/png", "image/jpeg", "image/webp"]);
 
 /**
  * Upload a certificate/vetting document and attach it to a compliance item or
@@ -34,8 +34,12 @@ export async function POST(req: Request) {
   if (file.size > MAX_BYTES) {
     return NextResponse.json({ error: "File too large (max 10 MB)" }, { status: 413 });
   }
-  if (file.type && !ALLOWED.has(file.type)) {
-    return NextResponse.json({ error: "Unsupported file type (PDF or image only)" }, { status: 415 });
+  // The real type comes from the bytes, never from the browser's claim — an
+  // HTML or SVG file renamed .png is refused here.
+  const body = await file.arrayBuffer();
+  const contentType = sniffDocumentType(body);
+  if (!contentType) {
+    return NextResponse.json({ error: "Unsupported file type (PDF, PNG, JPEG or WebP only)" }, { status: 415 });
   }
 
   // Instructors may only upload against their own records.
@@ -49,7 +53,7 @@ export async function POST(req: Request) {
   const result = await attachDocument(
     repos,
     ctx,
-    { kind: kind as DocumentKind, itemId, filename: file.name, contentType: file.type, body: await file.arrayBuffer(), expiryDate },
+    { kind: kind as DocumentKind, itemId, filename: file.name, contentType, body, expiryDate },
     restrictTo,
   );
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });

@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { requireTenant } from "@/lib/tenant/require";
 import { getDocument } from "@/lib/r2";
 import { instructor as instructorTable } from "@/lib/db/schema";
+import { ALLOWED_DOCUMENT_TYPES } from "@/lib/security/file-type";
 
 export const dynamic = "force-dynamic";
 
@@ -27,9 +28,16 @@ export async function GET(req: Request) {
   const object = await getDocument(ctx, key);
   if (!object) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
+  // Only the document types we accept are shown inline; anything else (old
+  // uploads from before type sniffing) is forced to download, never rendered.
+  const type = object.httpMetadata?.contentType ?? "application/octet-stream";
+  const inline = ALLOWED_DOCUMENT_TYPES.has(type);
+  const leaf = key.split("/").pop()?.replace(/[^a-zA-Z0-9._-]/g, "_") ?? "document";
   return new Response(object.body, {
     headers: {
-      "Content-Type": object.httpMetadata?.contentType ?? "application/octet-stream",
+      "Content-Type": inline ? type : "application/octet-stream",
+      "Content-Disposition": `${inline ? "inline" : "attachment"}; filename="${leaf}"`,
+      "X-Content-Type-Options": "nosniff",
       "Cache-Control": "private, no-store",
     },
   });

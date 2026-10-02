@@ -158,7 +158,35 @@ Staff tab.
 
 ---
 
-## Proposed order of work
+## Status (after the fix round)
+
+| Finding | Status |
+|---|---|
+| H1 PIN reset without proof | **Fixed** — password or emailed one-time code required; throttled; logged; notified |
+| H2 Insecure secret fallbacks | **Fixed** — `requireSecret()` hard-fails in production |
+| H3 Sign-in brute force | **Fixed** — KV throttle on `/api/auth/*` sensitive POSTs, per IP + per email, fail-closed |
+| M1 Email HTML injection | **Fixed** — `escapeHtml` at every call site; single-line capped subjects |
+| M2 Security events unaudited | **Fixed** — `security_event` table (migration 0032); shown on /security |
+| M3 Cron secret in query string | **Fixed** — header only |
+| M4 Limiter fails open | **Fixed for auth/PIN** (`failClosed`); marketing forms still fail open by design |
+| M5 Error-report mail flood | **Fixed** — 20 emails/hour global cap; reports still stored |
+| M6 No revocation / notification | **Fixed** — sessions revoked on password reset; emails on PIN reset/lock, recovery-email and password changes |
+| M7 Invite grants access early | **Fixed** — memberships start `invited`, activate on first signed-in visit |
+| L2 Feed redirects | **Fixed** — manual redirects, every hop re-validated |
+| L4 PIN gate fail-open | **Fixed** — fails closed |
+| L5 Upload type trust | **Fixed** — magic-byte sniffing; downloads get nosniff + safe disposition |
+| L1 CSP `unsafe-inline` | Open — nonce-based CSP is a separate project |
+| L3 Plaintext Bookwhen tokens | Open — encrypt at rest when the integrations area is next touched |
+| L6 Signup email enumeration | Open — accepted |
+| L7 Dev-tooling advisories | Open — build/test only; keep dependencies current |
+| L8 Onboarding cookie flags | Open — cosmetic |
+
+**Operator action:** run migration 0032 (`d1-security-event-migration.sql`) in D1,
+and confirm `BETTER_AUTH_SECRET`, `STRIPE_WEBHOOK_SECRET` and `CRON_SECRET` are
+set as Worker secrets — with the new guard, a missing `BETTER_AUTH_SECRET`
+will stop sign-in in production instead of silently using a public string.
+
+## Proposed order of work (as executed)
 
 1. **H1 + M6 + M2** — PIN reset requires password, audit + email on security
    events, revoke sessions on password reset. (Same files; one change.)
