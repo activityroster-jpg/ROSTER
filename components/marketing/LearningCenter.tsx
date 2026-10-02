@@ -234,9 +234,10 @@ const SECTIONS: Section[] = [
     blocks: [
       { kind: "p", text: "The Rota page shows the whole week: each day, each session, who's working, their role, the location/classroom and the times." },
       { kind: "bullets", items: [
-        "Move between weeks with the navigation.",
-        "Use your browser's print/Save-as-PDF to produce a tidy printable rota — the layout is designed for it.",
-        "Unassigned or under-covered sessions are clearly marked so nothing slips through.",
+        "Move between weeks with the navigation — past or future.",
+        "Print / Save-as-PDF produces a tidy one-page rota for the wall or the inbox — the layout is designed for it.",
+        "Export the week's hours to CSV for payroll straight from the rota.",
+        "Unassigned or under-covered sessions (and any missing safety-boat cover) are clearly marked so nothing slips through.",
       ] },
     ],
   },

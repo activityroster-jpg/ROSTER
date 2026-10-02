@@ -9,21 +9,22 @@ import { Logo } from "@/components/Logo";
 type Slot = "AM" | "PM" | "EV";
 type Avail = "free" | "maybe" | "busy" | "none";
 type Panel =
-  | "dash" | "courses" | "availability" | "timeclock" | "leave"
-  | "staff" | "equipment" | "bookings" | "reports" | "finance" | "settings";
+  | "dash" | "courses" | "rota" | "availability" | "timeclock" | "leave"
+  | "staff" | "equipment" | "locations" | "integrations" | "finance" | "settings";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 const NAV: { label: string; key: Panel; group?: string }[] = [
   { label: "Dashboard", key: "dash" },
   { label: "Courses", key: "courses" },
+  { label: "Weekly rota", key: "rota" },
   { label: "Availability", key: "availability" },
   { label: "Time clock", key: "timeclock" },
   { label: "Leave & cover", key: "leave" },
   { label: "Staff (HR)", key: "staff" },
   { label: "Equipment", key: "equipment" },
-  { label: "Bookings", key: "bookings" },
-  { label: "Reports", key: "reports" },
+  { label: "Locations", key: "locations" },
+  { label: "Integrations", key: "integrations" },
   { label: "Payroll", key: "finance" },
   { label: "Settings", key: "settings" },
 ];
@@ -190,13 +191,14 @@ export function DemoApp() {
 
               {panel === "dash" ? <DemoDashboard /> : null}
               {panel === "courses" ? <DemoCourses /> : null}
+              {panel === "rota" ? <DemoRota /> : null}
               {panel === "availability" ? <DemoAvailability /> : null}
               {panel === "timeclock" ? <DemoTimeClock /> : null}
               {panel === "leave" ? <DemoLeave /> : null}
               {panel === "staff" ? <DemoStaff /> : null}
               {panel === "equipment" ? <DemoEquipment /> : null}
-              {panel === "bookings" ? <DemoBookings /> : null}
-              {panel === "reports" ? <DemoReports /> : null}
+              {panel === "locations" ? <DemoLocations /> : null}
+              {panel === "integrations" ? <DemoIntegrations /> : null}
               {panel === "finance" ? <DemoFinance /> : null}
               {panel === "settings" ? <DemoSettings /> : null}
             </div>
@@ -826,7 +828,7 @@ function DemoFinance() {
       <p className="text-sm text-slate-500">Course income, outstanding invoices and staff pay — September.</p>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
-        <Card><p className="text-sm font-semibold text-navy">Course revenue</p><p className="mt-1 text-3xl font-semibold text-navy">£14,280</p><p className="text-xs text-slate-500">This month, 38 bookings</p></Card>
+        <Card><p className="text-sm font-semibold text-navy">Course revenue</p><p className="mt-1 text-3xl font-semibold text-navy">£14,280</p><p className="text-xs text-slate-500">This month, across all courses</p></Card>
         <Card><p className="text-sm font-semibold text-navy">Outstanding invoices</p><p className="mt-1 text-3xl font-semibold text-amber">£1,940</p><p className="text-xs text-slate-500">4 awaiting payment</p></Card>
         <Card><p className="text-sm font-semibold text-navy">Staff pay to process</p><p className="mt-1 text-3xl font-semibold text-navy">£{Math.round(grand).toLocaleString()}</p><p className="text-xs text-slate-500">{PAY.length} instructors, actual hours</p></Card>
       </div>
@@ -907,7 +909,7 @@ function DemoSettings() {
     { title: "Compliance checks", desc: "The licences and vetting that must be valid to roster.", items: ["First Aid (mandatory)", "Safeguarding (mandatory)", "DBS / PVG / AccessNI / Garda vetting", "RYA instructor certificates"] },
     { title: "Course catalogue", desc: "RYA course types, ratios and required qualifications.", items: ["RYA National Sailing scheme", "RYA Youth Sailing scheme", "RYA Powerboat & Windsurfing", "Custom sessions"] },
     { title: "Jurisdictions & vetting", desc: "Right checks for where your staff work.", items: ["England & Wales — DBS", "Scotland — PVG", "Northern Ireland — AccessNI", "Ireland — Garda vetting"] },
-    { title: "Billing", desc: "Plan, invoices and payment method.", items: ["£75/month or £675/year (3 months free)", "Update payment method", "Download invoices"] },
+    { title: "Billing", desc: "Plan, invoices and payment method.", items: ["Small Club £35/mo (up to 10) or Standard £65/mo (unlimited)", "Upgrade or switch to annual in a click", "Update payment method & download invoices"] },
   ];
   return (
     <div>
@@ -1101,120 +1103,150 @@ function DemoLeave() {
 }
 
 // ---------------------------------------------------------------------------
-// Reports & analytics
+// Weekly rota (printable) + payroll export
 // ---------------------------------------------------------------------------
-function Bar({ label, value, max, sub, tone = "teal" }: { label: string; value: number; max: number; sub?: string; tone?: "teal" | "amber" | "starboard" | "navy" }) {
-  const pct = Math.max(3, Math.round((value / max) * 100));
-  const bg = { teal: "bg-teal", amber: "bg-amber", starboard: "bg-starboard", navy: "bg-navy" }[tone];
-  return (
-    <div className="mb-2.5">
-      <div className="flex justify-between text-xs"><span className="text-slate-600">{label}</span><span className="font-semibold text-navy">{sub}</span></div>
-      <div className="mt-1 h-2.5 w-full overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full ${bg}`} style={{ width: `${pct}%` }} /></div>
-    </div>
-  );
-}
-
-function DemoReports() {
-  const weeks = [
-    { w: "Wk 1", rev: 3200, cost: 1650 },
-    { w: "Wk 2", rev: 3850, cost: 1820 },
-    { w: "Wk 3", rev: 4100, cost: 2050 },
-    { w: "Wk 4", rev: 3130, cost: 1710 },
-  ];
-  const maxWk = Math.max(...weeks.map((x) => x.rev));
-  const util = [
-    { n: "Sarah Whitlock", pct: 92 }, { n: "Chloe Adeyemi", pct: 88 }, { n: "Maya Sørensen", pct: 81 },
-    { n: "Noah Pereira", pct: 74 }, { n: "Priya Nair", pct: 69 }, { n: "Liam O'Connor", pct: 58 },
-  ];
-  const boats = [
-    { n: "Pico dinghies", pct: 84 }, { n: "RIBs (safety)", pct: 77 }, { n: "Windsurf boards", pct: 61 },
-    { n: "ILCA / Laser", pct: 55 }, { n: "Sea kayaks", pct: 38 },
-  ];
-  const totalRev = weeks.reduce((a, x) => a + x.rev, 0);
-  const totalCost = weeks.reduce((a, x) => a + x.cost, 0);
-  const wagePct = Math.round((totalCost / totalRev) * 100);
-
+function DemoRota() {
+  const staffFor: Record<string, string[]> = {
+    "Start Sailing": ["Sarah Whitlock (SI)", "Dan Rees (Safety Boat)"],
+    "Improving Skills": ["Chloe Adeyemi (SI)", "Liam O'Connor (DI)"],
+    "Youth Stage 2": ["Megan Foyle (SI)", "— 2nd instructor needed"],
+    "Adult Improver": ["Priya Nair (DI)"],
+    "Powerboat L2": ["Dan Rees (PBI)", "— safety boat needed"],
+    "Start Windsurf": ["Isla Fraser (WI)", "Hannah Leung (WI)"],
+  };
   return (
     <div>
-      <h2 className="font-display text-xl font-semibold text-navy">Reports</h2>
-      <p className="text-sm text-slate-500">Labour cost, revenue and utilisation — September. <span className="text-slate-400">Illustrative figures.</span></p>
-
-      <div className="mt-4 grid gap-3 sm:grid-cols-4">
-        <Card><p className="text-xs font-semibold text-navy">Revenue</p><p className="mt-1 text-2xl font-semibold text-navy">£{totalRev.toLocaleString()}</p></Card>
-        <Card><p className="text-xs font-semibold text-navy">Wage cost</p><p className="mt-1 text-2xl font-semibold text-amber">£{totalCost.toLocaleString()}</p></Card>
-        <Card><p className="text-xs font-semibold text-navy">Wage % of revenue</p><p className={`mt-1 text-2xl font-semibold ${wagePct <= 55 ? "text-starboard" : "text-port"}`}>{wagePct}%</p></Card>
-        <Card><p className="text-xs font-semibold text-navy">Avg instructor use</p><p className="mt-1 text-2xl font-semibold text-navy">77%</p></Card>
-      </div>
-
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <Card>
-          <h3 className="mb-3 font-semibold text-navy">Revenue vs wage cost — by week</h3>
-          {weeks.map((x) => (
-            <div key={x.w} className="mb-3">
-              <Bar label={`${x.w} · revenue`} value={x.rev} max={maxWk} sub={`£${x.rev.toLocaleString()}`} tone="teal" />
-              <Bar label={`${x.w} · wage cost`} value={x.cost} max={maxWk} sub={`£${x.cost.toLocaleString()}`} tone="amber" />
-            </div>
-          ))}
-        </Card>
-        <div className="space-y-4">
-          <Card>
-            <h3 className="mb-3 font-semibold text-navy">Instructor utilisation</h3>
-            {util.map((u) => <Bar key={u.n} label={u.n} value={u.pct} max={100} sub={`${u.pct}%`} tone={u.pct >= 80 ? "starboard" : "navy"} />)}
-          </Card>
-          <Card>
-            <h3 className="mb-3 font-semibold text-navy">Boat &amp; kit utilisation</h3>
-            {boats.map((b) => <Bar key={b.n} label={b.n} value={b.pct} max={100} sub={`${b.pct}%`} tone="teal" />)}
-          </Card>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="font-display text-xl font-semibold text-navy">Weekly rota</h2>
+        <div className="flex gap-2">
+          <span className="rounded-lg bg-teal px-3 py-1.5 text-xs font-semibold text-white">🖨 Print / Save PDF</span>
+          <span className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-navy">Export hours (CSV)</span>
         </div>
       </div>
-      <p className="mt-2 text-xs text-slate-400">Every figure drills down to the sessions behind it, and exports to CSV or your accountant.</p>
-    </div>
-  );
-}
-
-function DemoBookings() {
-  const rows = [
-    { c: "Powerboat Level 2", who: "M. Fisher", places: 2, amount: "£240", status: "paid" as const },
-    { c: "Start Sailing", who: "The Hendersons", places: 4, amount: "£360", status: "confirmed" as const },
-    { c: "Youth Stage 2", who: "R. Okafor", places: 1, amount: "£110", status: "confirmed" as const },
-    { c: "Start Windsurf", who: "A. Price", places: 2, amount: "£150", status: "provisional" as const },
-    { c: "Adult Improver", who: "J. Kelly", places: 2, amount: "£180", status: "paid" as const },
-    { c: "Stage 1 Junior", who: "The Walsh family", places: 3, amount: "£165", status: "provisional" as const },
-  ];
-  const tone = { paid: "covered", confirmed: "covered", provisional: "attention", cancelled: "conflict" } as const;
-  return (
-    <div>
-      <div className="flex items-center justify-between">
-        <h2 className="font-display text-xl font-semibold text-navy">Bookings</h2>
-        <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-400">+ New booking</span>
-      </div>
-      <p className="text-sm text-slate-500">Customer bookings and course revenue.</p>
-
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
-        <Card><p className="text-sm font-semibold text-navy">Earned revenue</p><p className="mt-1 text-3xl font-semibold text-navy">£890</p><p className="text-xs text-slate-500">Confirmed &amp; paid</p></Card>
-        <Card><p className="text-sm font-semibold text-navy">Provisional</p><p className="mt-1 text-3xl font-semibold text-amber">£315</p><p className="text-xs text-slate-500">Awaiting confirmation</p></Card>
-        <Card><p className="text-sm font-semibold text-navy">Bookings</p><p className="mt-1 text-3xl font-semibold text-navy">{rows.length}</p><p className="text-xs text-slate-500">This month</p></Card>
-      </div>
+      <p className="text-sm text-slate-500">Harbour Sailing Centre · week of 21 Sep · every session, who&apos;s on, and the cover status.</p>
 
       <Card className="mt-4 overflow-x-auto p-0">
         <table className="w-full min-w-[560px] text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-            <tr><th className="px-4 py-3">Customer</th><th className="px-4 py-3">Course</th><th className="px-4 py-3">Places</th><th className="px-4 py-3">Amount</th><th className="px-4 py-3">Status</th></tr>
+            <tr><th className="px-4 py-3">Day</th><th className="px-4 py-3">Session</th><th className="px-4 py-3">Staff on</th><th className="px-4 py-3">Status</th></tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {rows.map((r) => (
-              <tr key={r.who + r.c} className="hover:bg-slate-50/50">
-                <td className="px-4 py-3 font-medium text-navy">{r.who}</td>
-                <td className="px-4 py-3 text-slate-600">{r.c}</td>
-                <td className="px-4 py-3 text-slate-600">{r.places}</td>
-                <td className="px-4 py-3 font-medium text-navy">{r.amount}</td>
-                <td className="px-4 py-3"><StatusPill tone={tone[r.status]}>{r.status[0]!.toUpperCase() + r.status.slice(1)}</StatusPill></td>
+            {DAYS.flatMap((d) =>
+              (["AM", "PM", "EV"] as Slot[]).map((slot) => {
+                const cell = WEEK[d]![slot];
+                if (!cell) return null;
+                const staff = staffFor[cell.name] ?? ["—"];
+                const tone: "covered" | "attention" | "conflict" =
+                  cell.state === "ok" ? "covered" : cell.state === "att" ? "attention" : "conflict";
+                const label = cell.state === "ok" ? "Covered" : cell.state === "att" ? "Under-staffed" : "No safety cover";
+                return (
+                  <tr key={d + slot} className="align-top hover:bg-slate-50/50">
+                    <td className="whitespace-nowrap px-4 py-3 font-medium text-navy">{d} <span className="text-xs text-slate-400">{cell.time}</span></td>
+                    <td className="px-4 py-3 text-slate-600">{cell.name}</td>
+                    <td className="px-4 py-3 text-slate-600">{staff.map((s) => <span key={s} className="block">{s}</span>)}</td>
+                    <td className="px-4 py-3"><StatusPill tone={tone}>{label}</StatusPill></td>
+                  </tr>
+                );
+              }),
+            )}
+          </tbody>
+        </table>
+      </Card>
+      <p className="mt-2 text-xs text-slate-400">Print a clean one-page rota for the wall, or export actual hours straight to payroll. Flip to any week, past or future.</p>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Locations (operating areas), in your own categories
+// ---------------------------------------------------------------------------
+function DemoLocations() {
+  const groups: { cat: string; items: { n: string; note: string }[] }[] = [
+    { cat: "On the water", items: [
+      { n: "Main Harbour", note: "Sheltered training water" },
+      { n: "Estuary Zone", note: "Tidal — SI sign-off required" },
+      { n: "Open Bay", note: "Advanced sessions only" },
+    ] },
+    { cat: "Shore", items: [
+      { n: "Boat Park", note: "Rigging & launching" },
+      { n: "Slipway", note: "Powerboat launch" },
+    ] },
+    { cat: "Indoor", items: [
+      { n: "Training Room", note: "Theory & shore briefings" },
+      { n: "Changing Rooms", note: "—" },
+    ] },
+  ];
+  return (
+    <div>
+      <div className="flex items-center justify-between">
+        <h2 className="font-display text-xl font-semibold text-navy">Locations</h2>
+        <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-400">+ Add category</span>
+      </div>
+      <p className="text-sm text-slate-500">Your operating areas and sites, grouped into your own categories — sessions and kit are assigned to these.</p>
+      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        {groups.map((g) => (
+          <Card key={g.cat}>
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-navy">{g.cat}</h3>
+              <span className="text-xs font-semibold text-teal">+ Add</span>
+            </div>
+            <ul className="mt-3 space-y-2">
+              {g.items.map((it) => (
+                <li key={it.n} className="rounded-lg border border-slate-200 px-3 py-2">
+                  <p className="text-sm font-medium text-navy">{it.n}</p>
+                  <p className="text-xs text-slate-400">{it.note}</p>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        ))}
+      </div>
+      <p className="mt-2 text-xs text-slate-400">Make your own categories (water, shore, indoor, off-site…) and add areas under each. Retired areas are deactivated, never deleted, so old sessions still read correctly.</p>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Integrations — read-only course feeds from booking systems & calendars
+// ---------------------------------------------------------------------------
+function DemoIntegrations() {
+  const feeds = [
+    { n: "Bookwhen", kind: "Booking system", status: "connected" as const, last: "synced 8 min ago", courses: 18 },
+    { n: "WebCollect", kind: "Membership & bookings", status: "connected" as const, last: "synced 1 h ago", courses: 24 },
+    { n: "Google Calendar", kind: "Calendar (ICS)", status: "connected" as const, last: "synced 20 min ago", courses: 6 },
+    { n: "Class4Kids", kind: "Booking system", status: "available" as const, last: "not connected", courses: 0 },
+    { n: "Any other calendar (ICS)", kind: "Paste a feed URL", status: "available" as const, last: "not connected", courses: 0 },
+  ];
+  const tone = { connected: "covered", available: "neutral" } as const;
+  return (
+    <div>
+      <div className="flex items-center justify-between">
+        <h2 className="font-display text-xl font-semibold text-navy">Integrations</h2>
+        <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-400">+ Connect a feed</span>
+      </div>
+      <p className="text-sm text-slate-500">Pull your courses in automatically from the booking system or calendar you already use — one-way and read-only.</p>
+
+      <Card className="mt-4 overflow-x-auto p-0">
+        <table className="w-full min-w-[560px] text-left text-sm">
+          <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+            <tr><th className="px-4 py-3">Source</th><th className="px-4 py-3">Type</th><th className="px-4 py-3">Courses imported</th><th className="px-4 py-3">Status</th></tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {feeds.map((f) => (
+              <tr key={f.n} className="hover:bg-slate-50/50">
+                <td className="whitespace-nowrap px-4 py-3 font-medium text-navy">{f.n}</td>
+                <td className="px-4 py-3 text-slate-600">{f.kind}</td>
+                <td className="px-4 py-3 text-slate-600">{f.courses || "—"}</td>
+                <td className="px-4 py-3">
+                  <StatusPill tone={tone[f.status]}>{f.status === "connected" ? "Connected" : "Available"}</StatusPill>
+                  <span className="block text-xs text-slate-400">{f.last}</span>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </Card>
-      <p className="mt-2 text-xs text-slate-400">Confirmed &amp; paid bookings feed the revenue vs wage-cost view in Reports.</p>
+      <p className="mt-2 text-xs text-slate-400">We never change anything in your booking system — we only read the course calendar and turn each event into a draft session for you to review.</p>
     </div>
   );
 }
