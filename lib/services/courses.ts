@@ -18,6 +18,12 @@ export interface CreateCourseInput {
   capacity?: number;
   ratio?: number;
   locationId?: string;
+  /** Locations to attach (validated against this centre). */
+  locationIds?: string[];
+  /** Equipment units to attach (validated against this centre). */
+  equipmentIds?: string[];
+  /** Staff the course needs, by role — e.g. 2× Instructor, 1× Safety Boat. */
+  roleRequirements?: { roleTypeId: string; count: number }[];
   sessions: NewCourseSession[];
 }
 
@@ -65,15 +71,42 @@ export async function createCourseWithSessions(
     });
   }
 
-  if (input.locationId) {
-    await t.courseLocation.insert(ctx, { courseId: course.id, locationId: input.locationId });
+  // Locations (legacy single id + the multi-select), de-duplicated and only ones
+  // that belong to this centre (findById is tenant scoped).
+  const locIds = [...new Set([...(input.locationId ? [input.locationId] : []), ...(input.locationIds ?? [])])];
+  for (const locationId of locIds) {
+    if (await t.location.findById(ctx, locationId)) {
+      await t.courseLocation.insert(ctx, { courseId: course.id, locationId });
+    }
   }
+
+  for (const equipmentId of [...new Set(input.equipmentIds ?? [])]) {
+    if (await t.equipment.findById(ctx, equipmentId)) {
+      await t.courseEquipment.insert(ctx, { courseId: course.id, equipmentId, quantity: 1 });
+    }
+  }
+
+  // Staff needed by role; merge duplicate roles and record the total as the
+  // course's staff requirement so the assigned/required pill reflects it.
+  const needByRole = new Map<string, number>();
+  for (const r of input.roleRequirements ?? []) {
+    const n = Math.max(1, Math.min(50, Math.round(Number(r.count) || 0)));
+    if (!r.roleTypeId) continue;
+    needByRole.set(r.roleTypeId, (needByRole.get(r.roleTypeId) ?? 0) + n);
+  }
+  let totalNeeded = 0;
+  for (const [roleTypeId, count] of needByRole) {
+    if (!(await t.roleType.findById(ctx, roleTypeId))) continue;
+    await t.courseRoleRequirement.insert(ctx, { courseId: course.id, roleTypeId, count });
+    totalNeeded += count;
+  }
+  if (totalNeeded > 0) await t.course.update(ctx, course.id, { staffRequired: totalNeeded });
 
   await writeAudit(repos, ctx, {
     action: "create",
     entity: "course",
     entityId: course.id,
-    after: { name: course.name, sessions: input.sessions.length },
+    after: { name: course.name, sessions: input.sessions.length, roles: totalNeeded, locations: locIds.length, equipment: input.equipmentIds?.length ?? 0 },
   });
 
   return { courseId: course.id };

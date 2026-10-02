@@ -15,6 +15,24 @@ export interface CourseEditorData {
   ratioOn: boolean;
   ratio?: { ok: boolean; understaffed: boolean; missingSafetyCover: boolean };
   computedRequired?: number;
+  roleNeeds?: RoleNeed[];
+}
+
+/** One "staff needed" line on a course: how many of a role, and how many filled. */
+export interface RoleNeed { roleName: string; count: number; filled: number }
+
+/** Build each course's role-needs lines from its requirements and assignments. */
+export function roleNeedsByCourse(
+  requirements: { courseId: string; roleTypeId: string; count: number }[],
+  assignments: { courseId: string; roleTypeId: string }[],
+  roleName: (id: string) => string,
+): Map<string, RoleNeed[]> {
+  const out = new Map<string, RoleNeed[]>();
+  for (const r of requirements) {
+    const filled = assignments.filter((a) => a.courseId === r.courseId && a.roleTypeId === r.roleTypeId).length;
+    out.set(r.courseId, [...(out.get(r.courseId) ?? []), { roleName: roleName(r.roleTypeId), count: r.count, filled }]);
+  }
+  return out;
 }
 
 const ms = (v: Date | number | string): number => (v instanceof Date ? v.getTime() : Number(v));
@@ -33,7 +51,7 @@ export async function getCourseEditorData(
   const course = await t.course.findById(ctx, courseId);
   if (!course) return null;
 
-  const [courseTypes, sessions, assignments, instructors, roles, settingsRows, staff, availStates] = await Promise.all([
+  const [courseTypes, sessions, assignments, instructors, roles, settingsRows, staff, availStates, requirements] = await Promise.all([
     t.courseType.list(ctx),
     t.courseSession.list(ctx),
     t.courseStaff.list(ctx),
@@ -42,6 +60,7 @@ export async function getCourseEditorData(
     t.orgSettings.list(ctx),
     listStaffWithFit(repos, ctx),
     getCourseAvailabilityStates(repos, ctx),
+    t.courseRoleRequirement.list(ctx),
   ]);
 
   const ct = courseTypes.find((c) => c.id === course.courseTypeId);
@@ -99,5 +118,10 @@ export async function getCourseEditorData(
     ratioOn,
     ratio: ratioOn ? { ok: ratio.ok, understaffed: ratio.understaffed, missingSafetyCover: ratio.missingSafetyCover } : undefined,
     computedRequired: ratio.requiredStaff,
+    roleNeeds: roleNeedsByCourse(
+      requirements.filter((r) => r.courseId === course.id),
+      mine,
+      (id) => roleById.get(id)?.name ?? "Role",
+    ).get(course.id),
   };
 }

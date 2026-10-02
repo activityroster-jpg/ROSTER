@@ -27,7 +27,7 @@ const fmtDate = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString
 const fmtTime = (ms: number) => new Date(ms).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
 
 export function CourseCard({
-  course, audience, sessions, assigned, instructors, roles, ratioOn, ratio, computedRequired, shade, defaultOpen = false, onChanged,
+  course, audience, sessions, assigned, instructors, roles, ratioOn, ratio, computedRequired, roleNeeds, shade, defaultOpen = false, onChanged,
 }: {
   course: { id: string; name: string; courseTypeName: string; status: string; staffRequired: number | null };
   audience: string;
@@ -38,6 +38,8 @@ export function CourseCard({
   ratioOn: boolean;
   ratio?: CardRatio;
   computedRequired?: number;
+  /** Staff needed by role, e.g. 2× Instructor (1 filled). */
+  roleNeeds?: { roleName: string; count: number; filled: number }[];
   /** Alternating day shade — true = tinted, false = plain white. */
   shade?: boolean;
   /** Start expanded (e.g. when opened from a calendar tile). */
@@ -157,7 +159,7 @@ export function CourseCard({
             <select value={course.staffRequired ?? ""} onChange={(ev) => run(() => setStaffRequiredAction(course.id, ev.target.value === "" ? null : Number(ev.target.value)))}
               className="rounded border border-slate-300 py-1 pl-1 pr-5 text-xs outline-none focus:border-teal">
               <option value="">auto</option>
-              {[1, 2, 3, 4, 5, 6, 8, 10].map((n) => <option key={n} value={n}>{n} staff</option>)}
+              {[...new Set([1, 2, 3, 4, 5, 6, 8, 10, ...(course.staffRequired ? [course.staffRequired] : [])])].sort((a, b) => a - b).map((n) => <option key={n} value={n}>{n} staff</option>)}
             </select>
           </label>
         )}
@@ -173,6 +175,13 @@ export function CourseCard({
             </span>
           );
         })()}
+
+        {open && roleNeeds?.length ? roleNeeds.map((r) => (
+          <span key={r.roleName} title={`${r.filled} of ${r.count} ${r.roleName} assigned`}
+            className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${r.filled >= r.count ? "bg-starboard/10 text-starboard" : "bg-slate-100 text-slate-600"}`}>
+            {r.roleName} {r.filled}/{r.count}
+          </span>
+        )) : null}
 
         <span className="ml-auto flex items-center gap-2">
           {ratioOn && ratio ? (

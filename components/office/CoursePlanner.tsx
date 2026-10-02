@@ -7,7 +7,9 @@ import { CourseEditorModal } from "@/components/office/CourseEditorModal";
 
 interface EventUi { id: string; courseId: string; date: string; slot: string; startAt: number; endAt: number; courseName: string; audience: string }
 interface CourseTypeUi { id: string; name: string; audience: "youth" | "adult" | "all" }
-interface Row { key: string; date: string; startTime: string; endTime: string; slot: string }
+interface Row { key: string; date: string; startTime: string; endTime: string; slot: string; useTimes?: boolean }
+interface Option { id: string; name: string }
+interface RoleNeed { key: string; roleTypeId: string; count: number }
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const SLOT_LABEL: Record<string, string> = { AM: "Morning", PM: "Afternoon", EV: "Evening" };
@@ -24,7 +26,10 @@ const fmtTime = (ms: number) => new Date(ms).toLocaleTimeString("en-GB", { hour:
 const fmtDay = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
 let seq = 0;
 
-export function CoursePlanner({ courseTypes, events, slotStyle }: { courseTypes: CourseTypeUi[]; events: EventUi[]; slotStyle: "slots" | "times" }) {
+export function CoursePlanner({ courseTypes, events, slotStyle, roles = [], locations = [], equipment = [] }: {
+  courseTypes: CourseTypeUi[]; events: EventUi[]; slotStyle: "slots" | "times";
+  roles?: Option[]; locations?: Option[]; equipment?: Option[];
+}) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const thisMonday = mondayOf(new Date());
@@ -34,6 +39,14 @@ export function CoursePlanner({ courseTypes, events, slotStyle }: { courseTypes:
   const [rows, setRows] = useState<Row[]>([]);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
+  const [needs, setNeeds] = useState<RoleNeed[]>([]);
+  const [locationIds, setLocationIds] = useState<string[]>([]);
+  const [equipmentIds, setEquipmentIds] = useState<string[]>([]);
+  const toggle = (set: (f: (v: string[]) => string[]) => void, id: string) => set((v) => (v.includes(id) ? v.filter((x) => x !== id) : [...v, id]));
+  const addNeed = () => setNeeds((n) => [...n, { key: `n${seq++}`, roleTypeId: roles.find((r) => !n.some((x) => x.roleTypeId === r.id))?.id ?? roles[0]?.id ?? "", count: 1 }]);
+  const updateNeed = (key: string, patch: Partial<RoleNeed>) => setNeeds((n) => n.map((x) => (x.key === key ? { ...x, ...patch } : x)));
+  const removeNeed = (key: string) => setNeeds((n) => n.filter((x) => x.key !== key));
+  const staffTotal = needs.reduce((a, n) => a + (n.roleTypeId ? n.count : 0), 0);
 
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDaysIso(monday, i)), [monday]);
   const eventsByDay = useMemo(() => {
@@ -56,7 +69,7 @@ export function CoursePlanner({ courseTypes, events, slotStyle }: { courseTypes:
     const startTime = last ? last.startTime : slotStyle === "times" ? "09:00" : "";
     const endTime = last ? last.endTime : slotStyle === "times" ? "12:00" : "";
     const slot = last ? last.slot : "AM";
-    return [...r, { key: `r${seq++}`, date, startTime, endTime, slot }];
+    return [...r, { key: `r${seq++}`, date, startTime, endTime, slot, useTimes: last?.useTimes }];
   });
   const updateRow = (key: string, patch: Partial<Row>) => setRows((r) => r.map((x) => (x.key === key ? { ...x, ...patch } : x)));
   const removeRow = (key: string) => setRows((r) => r.filter((x) => x.key !== key));
@@ -65,10 +78,13 @@ export function CoursePlanner({ courseTypes, events, slotStyle }: { courseTypes:
     setMsg(null);
     if (!courseTypeId) { setMsg({ ok: false, text: "Pick a course type first." }); return; }
     if (rows.length === 0) { setMsg({ ok: false, text: "Add at least one session (click a day in the calendar or ‘Add session’)." }); return; }
-    const sessions: FlexSession[] = rows.map((r) => ({ date: r.date, startTime: r.startTime || undefined, endTime: r.endTime || undefined, slot: r.slot }));
+    // Exact times apply in "set times" mode, or per row when ticked in slot mode.
+    const timed = (r: Row) => slotStyle === "times" || r.useTimes;
+    const sessions: FlexSession[] = rows.map((r) => ({ date: r.date, startTime: timed(r) ? r.startTime || undefined : undefined, endTime: timed(r) ? r.endTime || undefined : undefined, slot: r.slot }));
+    const roleReqs = needs.filter((n) => n.roleTypeId).map((n) => ({ roleTypeId: n.roleTypeId, count: n.count }));
     start(async () => {
-      const res = await createCourseFlexibleAction({ courseTypeId, name, sessions });
-      if (res.ok) { setRows([]); setName(""); setMsg({ ok: true, text: res.message ?? "Created" }); router.refresh(); }
+      const res = await createCourseFlexibleAction({ courseTypeId, name, sessions, roles: roleReqs, locationIds, equipmentIds });
+      if (res.ok) { setRows([]); setName(""); setNeeds([]); setLocationIds([]); setEquipmentIds([]); setMsg({ ok: true, text: res.message ?? "Created" }); router.refresh(); }
       else setMsg({ ok: false, text: res.error ?? "Could not create" });
     });
   };
@@ -108,7 +124,7 @@ export function CoursePlanner({ courseTypes, events, slotStyle }: { courseTypes:
                   ))}
                   {drafts.map((r) => (
                     <div key={r.key} className="rounded border border-dashed border-teal bg-teal/5 px-1.5 py-1 text-[11px] font-medium text-teal">
-                      new · {slotStyle === "times" ? (r.startTime || "—") : SLOT_LABEL[r.slot]}
+                      new · {slotStyle === "times" || r.useTimes ? (r.startTime || "—") : SLOT_LABEL[r.slot]}
                     </div>
                   ))}
                 </div>
@@ -124,7 +140,7 @@ export function CoursePlanner({ courseTypes, events, slotStyle }: { courseTypes:
       {/* Builder */}
       <div className="rounded-card border border-slate-200 bg-white p-4">
         <h2 className="font-semibold text-navy">Add a course</h2>
-        <p className="mb-3 text-xs text-slate-500">Give it a name, pick the type, then add each session — any days and times you like (e.g. two on Saturday, one Monday evening, one Wednesday).</p>
+        <p className="mb-3 text-xs text-slate-500">Pick the type, add each session (any days, exact times if you need them), then the staff, locations and equipment it needs.</p>
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-500">Course type</label>
@@ -159,6 +175,11 @@ export function CoursePlanner({ courseTypes, events, slotStyle }: { courseTypes:
                       <div><label className="mb-0.5 block text-[11px] text-slate-500">Start</label><input type="time" value={r.startTime} onChange={(e) => updateRow(r.key, { startTime: e.target.value })} className="rounded border border-slate-300 px-2 py-1 text-sm" /></div>
                       <div><label className="mb-0.5 block text-[11px] text-slate-500">End</label><input type="time" value={r.endTime} onChange={(e) => updateRow(r.key, { endTime: e.target.value })} className="rounded border border-slate-300 px-2 py-1 text-sm" /></div>
                     </>
+                  ) : r.useTimes ? (
+                    <>
+                      <div><label className="mb-0.5 block text-[11px] text-slate-500">Start</label><input type="time" value={r.startTime} onChange={(e) => updateRow(r.key, { startTime: e.target.value })} className="rounded border border-slate-300 px-2 py-1 text-sm" /></div>
+                      <div><label className="mb-0.5 block text-[11px] text-slate-500">End</label><input type="time" value={r.endTime} onChange={(e) => updateRow(r.key, { endTime: e.target.value })} className="rounded border border-slate-300 px-2 py-1 text-sm" /></div>
+                    </>
                   ) : (
                     <div>
                       <label className="mb-0.5 block text-[11px] text-slate-500">Slot</label>
@@ -167,11 +188,44 @@ export function CoursePlanner({ courseTypes, events, slotStyle }: { courseTypes:
                       </select>
                     </div>
                   )}
+                  {slotStyle !== "times" ? (
+                    <label className="flex items-center gap-1 pb-1 text-[11px] text-slate-500">
+                      <input type="checkbox" checked={Boolean(r.useTimes)} onChange={(e) => updateRow(r.key, { useTimes: e.target.checked, startTime: r.startTime || "09:00", endTime: r.endTime || "12:00" })} />
+                      Exact times
+                    </label>
+                  ) : null}
                   <button type="button" onClick={() => removeRow(r.key)} className="ml-auto text-xs text-slate-400 hover:text-port" aria-label={`Remove session on ${r.date}`}>Remove</button>
                 </li>
               ))}
             </ul>
           )}
+        </div>
+
+        <div className="mt-4 grid gap-4 lg:grid-cols-3">
+          <div>
+            <div className="mb-1 flex items-center justify-between">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Staff needed{staffTotal ? ` (${staffTotal})` : ""}</p>
+              {roles.length ? <button type="button" onClick={addNeed} className="text-xs font-semibold text-teal hover:underline">＋ Add role</button> : null}
+            </div>
+            {needs.length === 0 ? (
+              <p className="rounded-lg border border-dashed border-slate-200 p-3 text-xs text-slate-400">{roles.length ? "Optional — e.g. 2× Instructor, 1× Safety Boat." : "Add roles in Settings first."}</p>
+            ) : (
+              <ul className="space-y-1.5">
+                {needs.map((n) => (
+                  <li key={n.key} className="flex items-center gap-2">
+                    <input type="number" min={1} max={50} value={n.count} onChange={(e) => updateNeed(n.key, { count: Math.max(1, Math.min(50, Number(e.target.value) || 1)) })} aria-label="How many" className="w-14 rounded border border-slate-300 px-2 py-1 text-sm" />
+                    <span className="text-xs text-slate-400">×</span>
+                    <select value={n.roleTypeId} onChange={(e) => updateNeed(n.key, { roleTypeId: e.target.value })} aria-label="Role" className="min-w-0 flex-1 rounded border border-slate-300 px-2 py-1 text-sm">
+                      {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+                    </select>
+                    <button type="button" onClick={() => removeNeed(n.key)} className="text-xs text-slate-400 hover:text-port" aria-label="Remove role">✕</button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <PickList title="Locations" empty="No locations yet — add them on the Locations tab." options={locations} selected={locationIds} onToggle={(id) => toggle(setLocationIds, id)} />
+          <PickList title="Equipment" empty="No equipment yet — add it on the Equipment tab." options={equipment} selected={equipmentIds} onToggle={(id) => toggle(setEquipmentIds, id)} />
         </div>
 
         <div className="mt-4 flex items-center gap-3">
@@ -182,6 +236,26 @@ export function CoursePlanner({ courseTypes, events, slotStyle }: { courseTypes:
         </div>
       </div>
       {editing ? <CourseEditorModal courseId={editing} onClose={() => setEditing(null)} /> : null}
+    </div>
+  );
+}
+
+function PickList({ title, empty, options, selected, onToggle }: { title: string; empty: string; options: Option[]; selected: string[]; onToggle: (id: string) => void }) {
+  return (
+    <div>
+      <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">{title}{selected.length ? ` (${selected.length})` : ""}</p>
+      {options.length === 0 ? (
+        <p className="rounded-lg border border-dashed border-slate-200 p-3 text-xs text-slate-400">{empty}</p>
+      ) : (
+        <div className="max-h-40 space-y-1 overflow-y-auto rounded-lg border border-slate-200 p-2">
+          {options.map((o) => (
+            <label key={o.id} className="flex items-center gap-2 text-sm text-slate-700">
+              <input type="checkbox" checked={selected.includes(o.id)} onChange={() => onToggle(o.id)} />
+              <span className="truncate">{o.name}</span>
+            </label>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

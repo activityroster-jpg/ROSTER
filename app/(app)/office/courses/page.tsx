@@ -5,6 +5,7 @@ import { getCourseAvailabilityStates } from "@/lib/services/availability";
 import { Card } from "@/components/ui";
 import { CoursePlanner } from "@/components/office/CoursePlanner";
 import { CourseCard } from "@/components/office/CourseCard";
+import { roleNeedsByCourse } from "@/lib/services/course-editor";
 import { BulkAssignForm } from "@/components/office/BulkAssignForm";
 import { CourseUpdatesCheck } from "@/components/office/CourseUpdatesCheck";
 import { providerName, providerColor } from "@/lib/integrations/catalogue";
@@ -16,7 +17,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
   const sp = await searchParams;
   const view: "upcoming" | "past" = sp.view === "past" ? "past" : "upcoming";
   const monday = weekStart(new Date());
-  const [{ coverageByCourse }, courseTypes, staff, roles, assignments, instructors, settings, events] = await Promise.all([
+  const [{ coverageByCourse }, courseTypes, staff, roles, assignments, instructors, settings, events, locationRows, equipmentRows] = await Promise.all([
     getWeekSchedule(repos, ctx, monday),
     repos.tenant.courseType.list(ctx),
     listStaffWithFit(repos, ctx),
@@ -25,7 +26,11 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
     repos.tenant.instructor.list(ctx),
     repos.tenant.orgSettings.list(ctx),
     getSessionEvents(repos, ctx, addDays(monday, -28), addDays(monday, 7 * 26)),
+    repos.tenant.location.list(ctx),
+    repos.tenant.equipment.list(ctx),
   ]);
+  const plannerLocations = locationRows.filter((l) => l.active).map((l) => ({ id: l.id, name: l.name })).sort((a, b) => a.name.localeCompare(b.name));
+  const plannerEquipment = equipmentRows.filter((e) => e.status === "available").map((e) => ({ id: e.id, name: e.identifier ? `${e.name} (${e.identifier})` : e.name })).sort((a, b) => a.name.localeCompare(b.name));
   const slotStyle = settings[0]?.slotStyle ?? "slots";
   const licenceOn = Boolean(settings[0]?.enforceLicenceChecks);
   const ratioOn = Boolean(settings[0]?.enforceRatioChecks);
@@ -48,6 +53,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
   const roleName = new Map(roles.map((r) => [r.id, r.name]));
 
   const courseAvail = await getCourseAvailabilityStates(repos, ctx);
+  const roleNeeds = roleNeedsByCourse(await repos.tenant.courseRoleRequirement.list(ctx), assignments, (id) => roleName.get(id) ?? "Role");
 
   // Connected booking systems — so "Check for updates" lives next to the calendar.
   const integrationRows = await repos.tenant.integration.list(ctx);
@@ -138,6 +144,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
         ratioOn={ratioOn}
         ratio={ratioOn ? { ok: c.ratio.ok, understaffed: c.ratio.understaffed, missingSafetyCover: c.ratio.missingSafetyCover } : undefined}
         computedRequired={c.ratio.requiredStaff}
+        roleNeeds={roleNeeds.get(c.courseId)}
         shade={shade}
       />
     );
@@ -178,7 +185,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
 
       <CourseUpdatesCheck integrations={connectedIntegrations} />
 
-      <CoursePlanner courseTypes={activeTypes} events={events} slotStyle={slotStyle} />
+      <CoursePlanner courseTypes={activeTypes} events={events} slotStyle={slotStyle} roles={activeRoles} locations={plannerLocations} equipment={plannerEquipment} />
 
       <div className="mb-3 flex items-center gap-2">
         <h2 className="font-display text-lg font-semibold text-navy">Courses</h2>

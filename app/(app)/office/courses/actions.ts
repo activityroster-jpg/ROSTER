@@ -74,8 +74,19 @@ export async function createCourseAction(_prev: ActionState, formData: FormData)
 
 export interface FlexSession { date: string; startTime?: string; endTime?: string; slot?: string }
 
-/** Create a course with an arbitrary set of sessions (any days/times) and a name. */
-export async function createCourseFlexibleAction(input: { courseTypeId: string; name?: string; sessions: FlexSession[] }): Promise<ActionState> {
+const idList = (v: unknown): string[] =>
+  Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && x.length > 0 && x.length <= 64).slice(0, 100) : [];
+
+/** Create a course with an arbitrary set of sessions (any days/times) and a name,
+ * plus the staff it needs by role, its locations and its equipment. */
+export async function createCourseFlexibleAction(input: {
+  courseTypeId: string;
+  name?: string;
+  sessions: FlexSession[];
+  roles?: { roleTypeId: string; count: number }[];
+  locationIds?: string[];
+  equipmentIds?: string[];
+}): Promise<ActionState> {
   const { ctx, repos } = await requireTenant({ role: "admin" });
   if (!input.courseTypeId) return { ok: false, error: "Pick a course type" };
   const rawSessions = Array.isArray(input.sessions) ? input.sessions : [];
@@ -90,8 +101,22 @@ export async function createCourseFlexibleAction(input: { courseTypeId: string; 
   }
   if (sessions.length === 0) return { ok: false, error: "Add at least one session with a valid date" };
 
+  // Validate shapes only — ownership is checked in the service via tenant-scoped lookups.
+  const roleRequirements = (Array.isArray(input.roles) ? input.roles : [])
+    .filter((r) => r && typeof r.roleTypeId === "string" && r.roleTypeId.length > 0 && r.roleTypeId.length <= 64)
+    .map((r) => ({ roleTypeId: r.roleTypeId, count: Number(r.count) }))
+    .filter((r) => Number.isFinite(r.count) && r.count >= 1 && r.count <= 50)
+    .slice(0, 20);
+
   try {
-    await createCourseWithSessions(repos, ctx, { courseTypeId: input.courseTypeId, name: input.name?.trim() || undefined, sessions });
+    await createCourseWithSessions(repos, ctx, {
+      courseTypeId: input.courseTypeId,
+      name: input.name?.trim() || undefined,
+      sessions,
+      roleRequirements,
+      locationIds: idList(input.locationIds),
+      equipmentIds: idList(input.equipmentIds),
+    });
     revalidatePath("/office/courses");
     revalidatePath("/office");
     return { ok: true, message: `Course created with ${sessions.length} session${sessions.length === 1 ? "" : "s"}` };

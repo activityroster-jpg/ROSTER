@@ -30,6 +30,38 @@ describe("createCourseWithSessions", () => {
     expect(start.getUTCMinutes()).toBe(30);
   });
 
+  it("records staff needed by role, locations and equipment — only this centre's", async () => {
+    const { db } = createTestDb();
+    const { repos, ctx } = await seedFullOrg(db, { name: "Cove", slug: "cove", jurisdiction: "england" });
+    const other = await seedFullOrg(db, { name: "Elsewhere", slug: "elsewhere", jurisdiction: "england" });
+    const t = repos.tenant;
+    const ct = (await t.courseType.list(ctx))[0]!;
+    const [r1, r2] = await t.roleType.list(ctx);
+    const loc = (await t.location.list(ctx))[0]!;
+    const eq1 = (await t.equipment.list(ctx))[0]!;
+    const foreignLoc = (await other.repos.tenant.location.list(other.ctx))[0]!;
+    const foreignRole = (await other.repos.tenant.roleType.list(other.ctx))[0]!;
+
+    const { courseId } = await createCourseWithSessions(repos, ctx, {
+      courseTypeId: ct.id,
+      sessions: [{ date: "2026-07-13", slot: "AM", startTime: "10:15", endTime: "13:45" }],
+      roleRequirements: [
+        { roleTypeId: r1!.id, count: 2 },
+        { roleTypeId: r2!.id, count: 1 },
+        { roleTypeId: r1!.id, count: 1 }, // merged with the first
+        { roleTypeId: foreignRole.id, count: 5 }, // another centre's — ignored
+      ],
+      locationIds: [loc.id, foreignLoc.id],
+      equipmentIds: [eq1.id, eq1.id],
+    });
+
+    const reqs = (await t.courseRoleRequirement.list(ctx)).filter((r) => r.courseId === courseId);
+    expect(reqs.map((r) => [r.roleTypeId, r.count]).sort()).toEqual([[r1!.id, 3], [r2!.id, 1]].sort());
+    expect((await t.course.findById(ctx, courseId))!.staffRequired).toBe(4);
+    expect((await t.courseLocation.list(ctx)).filter((l) => l.courseId === courseId).map((l) => l.locationId)).toEqual([loc.id]);
+    expect((await t.courseEquipment.list(ctx)).filter((e) => e.courseId === courseId)).toHaveLength(1);
+  });
+
   it("deletes a course and cascades its sessions", async () => {
     const { db } = createTestDb();
     const { repos, ctx } = await seedFullOrg(db, { name: "Bay", slug: "bay", jurisdiction: "england" });

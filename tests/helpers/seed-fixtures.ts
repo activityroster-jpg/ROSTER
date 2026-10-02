@@ -140,6 +140,7 @@ export async function seedFullOrg(
     quantity: 1,
   });
   await t.courseLocation.insert(ctx, { courseId: course.id, locationId: location.id });
+  await t.courseRoleRequirement.insert(ctx, { courseId: course.id, roleTypeId: role.id, count: 2 });
 
   // Ops
   await t.availability.insert(ctx, {

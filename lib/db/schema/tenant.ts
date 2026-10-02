@@ -470,6 +470,26 @@ export const courseLocation = sqliteTable("course_location", {
   index("course_location_course_idx").on(t.courseId),
 ]);
 
+/**
+ * The staff a course needs, by role — e.g. 2× Instructor + 1× Safety Boat
+ * Driver. Set when the course is built; assignments are measured against it.
+ */
+export const courseRoleRequirement = sqliteTable("course_role_requirement", {
+  id: id(),
+  organisationId: orgFk(),
+  courseId: text("course_id")
+    .notNull()
+    .references(() => course.id, { onDelete: "cascade" }),
+  roleTypeId: text("role_type_id")
+    .notNull()
+    .references(() => roleType.id, { onDelete: "restrict" }),
+  count: integer("count").notNull().default(1),
+  createdAt: createdAt(),
+}, (t) => [
+  index("course_role_req_org_idx").on(t.organisationId),
+  index("course_role_req_course_idx").on(t.courseId),
+]);
+
 // --- Ops -------------------------------------------------------------------
 
 export const availability = sqliteTable("availability", {
