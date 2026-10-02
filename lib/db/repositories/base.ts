@@ -1,7 +1,8 @@
 import { and, eq, type SQL } from "drizzle-orm";
 import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
 import type { Database } from "@/lib/db/client";
-import type { AnyTenantContext } from "@/lib/tenant/context";
+import { isGhostContext, type AnyTenantContext } from "@/lib/tenant/context";
+import { GhostReadOnlyError } from "@/lib/auth/ghost";
 
 /**
  * A tenant-owned table must expose an `id` and an `organisationId` column.
@@ -29,6 +30,11 @@ export class TenantRepository<T extends TenantTable> {
     protected readonly db: Database,
     protected readonly table: T,
   ) {}
+
+  /** Ghost Mode contexts can read everything and write nothing — enforced here, not by vigilance. */
+  protected assertWritable(ctx: AnyTenantContext): void {
+    if (isGhostContext(ctx)) throw new GhostReadOnlyError();
+  }
 
   /** WHERE clause pinning to this tenant, optionally AND-ed with more. */
   protected scoped(ctx: AnyTenantContext, extra?: SQL | undefined): SQL {
@@ -60,6 +66,7 @@ export class TenantRepository<T extends TenantTable> {
     ctx: AnyTenantContext,
     values: Omit<T["$inferInsert"], "organisationId">,
   ): Promise<T["$inferSelect"]> {
+    this.assertWritable(ctx);
     const row = { ...values, organisationId: ctx.organisationId } as T["$inferInsert"];
     const inserted = await this.db.insert(this.table).values(row).returning();
     return (inserted as T["$inferSelect"][])[0]!;
@@ -70,6 +77,7 @@ export class TenantRepository<T extends TenantTable> {
     ctx: AnyTenantContext,
     rows: Omit<T["$inferInsert"], "organisationId">[],
   ): Promise<T["$inferSelect"][]> {
+    this.assertWritable(ctx);
     if (rows.length === 0) return [];
     const withOrg = rows.map((r) => ({ ...r, organisationId: ctx.organisationId })) as T["$inferInsert"][];
     const inserted = await this.db.insert(this.table).values(withOrg).returning();
@@ -87,6 +95,7 @@ export class TenantRepository<T extends TenantTable> {
     id: string,
     patch: Partial<Omit<T["$inferInsert"], "organisationId" | "id">>,
   ): Promise<T["$inferSelect"] | null> {
+    this.assertWritable(ctx);
     const { organisationId: _drop, id: _dropId, ...safe } = patch as Record<string, unknown>;
     void _drop;
     void _dropId;
@@ -100,6 +109,7 @@ export class TenantRepository<T extends TenantTable> {
 
   /** Delete a row by id, scoped to the tenant. Returns rows removed (0 or 1). */
   async delete(ctx: AnyTenantContext, id: string): Promise<number> {
+    this.assertWritable(ctx);
     const removed = await this.db
       .delete(this.table)
       .where(this.scoped(ctx, eq(this.table.id, id)))
@@ -113,6 +123,7 @@ export class TenantRepository<T extends TenantTable> {
    * tenant tables are satisfied. Still fully org-scoped.
    */
   async deleteAllForOrg(ctx: AnyTenantContext): Promise<number> {
+    this.assertWritable(ctx);
     const removed = await this.db.delete(this.table).where(this.scoped(ctx)).returning();
     return (removed as unknown[]).length;
   }

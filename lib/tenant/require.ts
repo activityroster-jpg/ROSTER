@@ -4,6 +4,7 @@ import { getRepositories } from "@/lib/cf/bindings";
 import type { Organisation } from "@/lib/db/schema";
 import { enforcePinGate } from "@/lib/auth/pin-gate";
 import { enforceDeviceGate } from "@/lib/auth/device-gate";
+import { GhostReadOnlyError } from "@/lib/auth/ghost";
 import type { TenantContext } from "./context";
 import { resolveTenant } from "./resolve";
 
@@ -41,6 +42,10 @@ export async function requireTenant(opts?: { role?: "admin"; skipMfaGate?: boole
   if (opts?.role === "admin" && res.ctx.role !== "admin") {
     redirect("/portal");
   }
+
+  // Ghost Mode is read-only: server actions (every mutation goes through one)
+  // are refused outright, before any control-plane side effect could run.
+  if (res.ctx.ghost && h.has("next-action")) throw new GhostReadOnlyError();
 
   // Unfamiliar device, country or IP → password again first; then the PIN.
   const landing = res.ctx.role === "admin" ? "/office" : "/portal";

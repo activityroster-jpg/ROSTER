@@ -7,7 +7,8 @@ export const dynamic = "force-dynamic";
 
 /** Redirect an admin to the Stripe Customer Portal for their centre. */
 export async function GET() {
-  const { organisation } = await requireTenant({ role: "admin" });
+  const { ctx, organisation } = await requireTenant({ role: "admin" });
+  if (ctx.ghost) return NextResponse.json({ error: "Ghost mode is read-only" }, { status: 403 });
   if (!organisation.stripeCustomerId) {
     return NextResponse.json({ error: "No billing account on file" }, { status: 400 });
   }

@@ -1,4 +1,4 @@
-import { and, eq, lt } from "drizzle-orm";
+import { and, eq, inArray, lt } from "drizzle-orm";
 import type { Database } from "@/lib/db/client";
 import {
   account,
@@ -392,5 +392,16 @@ export class ControlPlaneRepository {
   async forgetTrustedDevices(userId: string): Promise<number> {
     const rows = await this.db.delete(trustedDevice).where(eq(trustedDevice.userId, userId)).returning({ id: trustedDevice.id });
     return rows.length;
+  }
+
+  /** Ghost Mode visits to one centre (owner-side log), newest first. */
+  async listGhostVisits(organisationId: string, limit = 10) {
+    const rows = await this.db
+      .select({ id: securityEvent.id, kind: securityEvent.kind, userId: securityEvent.userId, createdAt: securityEvent.createdAt })
+      .from(securityEvent)
+      .where(and(eq(securityEvent.organisationId, organisationId), inArray(securityEvent.kind, ["ghost_start", "ghost_end"])))
+      .orderBy(desc(securityEvent.createdAt))
+      .limit(limit);
+    return rows;
   }
 }

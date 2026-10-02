@@ -1,5 +1,6 @@
 import { getEnv } from "@/lib/cf/bindings";
-import type { AnyTenantContext } from "@/lib/tenant/context";
+import { isGhostContext, type AnyTenantContext } from "@/lib/tenant/context";
+import { GhostReadOnlyError } from "@/lib/auth/ghost";
 
 /**
  * Org-scoped access to the private R2 documents bucket. Every key is prefixed
@@ -32,6 +33,7 @@ export async function putDocument(
   body: ArrayBuffer | ReadableStream | string,
   httpMetadata?: R2HTTPMetadata,
 ): Promise<string> {
+  if (isGhostContext(ctx)) throw new GhostReadOnlyError();
   const key = tenantKey(ctx, relativePath);
   await getEnv().DOCS.put(key, body, { httpMetadata });
   return key;
@@ -43,6 +45,7 @@ export async function getDocument(ctx: AnyTenantContext, key: string): Promise<R
 }
 
 export async function deleteDocument(ctx: AnyTenantContext, key: string): Promise<void> {
+  if (isGhostContext(ctx)) throw new GhostReadOnlyError();
   assertScoped(ctx, key);
   await getEnv().DOCS.delete(key);
 }

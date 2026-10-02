@@ -18,6 +18,9 @@ const EVENT_LABEL: Record<string, string> = {
   new_device: "Sign-in from a new device",
   reauth_passed: "Identity re-confirmed",
   reauth_failed: "Failed identity check",
+  invite_accepted: "Centre invite accepted",
+  ghost_start: "Ghost Mode started (platform owner)",
+  ghost_end: "Ghost Mode ended (platform owner)",
 };
 const WARN = new Set(["pin_reset_failed", "pin_failed", "pin_locked", "reauth_failed", "new_device"]);
 

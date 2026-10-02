@@ -19,6 +19,7 @@ import { getDb, getRepositories } from "@/lib/cf/bindings";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { Logo } from "@/components/Logo";
 import { TwoFactorNudge } from "@/components/office/TwoFactorNudge";
+import { GhostBanner } from "@/components/office/GhostBanner";
 
 const NAV = [
   {
@@ -114,7 +115,8 @@ export default async function OfficeLayout({ children }: { children: React.React
         </div>
       </aside>
       <div className="flex-1 overflow-x-hidden">
-        {show2fa ? <TwoFactorNudge /> : null}
+        {ctx.ghost ? <GhostBanner centreName={organisation.name} /> : null}
+        {show2fa && !ctx.ghost ? <TwoFactorNudge /> : null}
         {banner?.kind === "pastdue" ? (
           <Link href="/office/billing" className="block bg-port/15 px-6 py-2 text-center text-sm font-medium text-port hover:bg-port/20">
             Your last payment failed — update your card to keep your centre active →

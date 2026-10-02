@@ -8,6 +8,8 @@ import { tierMeta } from "@/lib/tiers";
 import { CentreControls } from "@/components/admin/CentreControls";
 import { PricingControls } from "@/components/admin/PricingControls";
 import { Card } from "@/components/ui";
+import { GhostModeCard, type GhostSessionRow } from "@/components/admin/GhostModeCard";
+import { getRepositories } from "@/lib/cf/bindings";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +30,14 @@ export default async function CentreDetailPage({ params }: { params: Promise<{ i
   }
 
   const [usage, members, pricing] = await Promise.all([platform.usageByOrg(), platform.membersFor(id), platform.getPricing()]);
+  const { control } = await getRepositories();
+  const ghostRows = await control.listGhostVisits(id, 10);
+  const ghostSessions: GhostSessionRow[] = await Promise.all(ghostRows.map(async (r) => ({
+    id: r.id,
+    kind: r.kind,
+    at: r.createdAt.toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" }),
+    who: (await control.userById(r.userId))?.email ?? null,
+  })));
   const u = usage.get(id) ?? { instructors: 0, courses: 0, bookings: 0, sessions: 0 };
   const apex = apexDomain();
   const eff = effectivePricing(org, pricing);
@@ -69,6 +79,11 @@ export default async function CentreDetailPage({ params }: { params: Promise<{ i
           <Row k="Jurisdiction" v={org.jurisdiction} />
         </Card>
       </div>
+
+      <Card className="mt-6">
+        <h2 className="mb-3 font-semibold text-navy">Ghost Mode</h2>
+        <GhostModeCard orgId={org.id} centreName={org.name} sessions={ghostSessions} />
+      </Card>
 
       <Card className="mt-6">
         <h2 className="mb-3 font-semibold text-navy">Manage</h2>

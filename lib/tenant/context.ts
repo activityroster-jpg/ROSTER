@@ -18,6 +18,12 @@ export interface TenantContext {
   readonly slug: string;
   readonly userId: string;
   readonly role: MembershipRole;
+  /**
+   * Ghost Mode: the platform owner viewing this centre read-only and invisibly
+   * (see lib/auth/ghost). The repository layer refuses every write for a ghost
+   * context, and audit logging is skipped, so the centre never sees the visit.
+   */
+  readonly ghost?: true;
 }
 
 /**
@@ -39,6 +45,10 @@ export type AnyTenantContext = TenantContext | SystemTenantContext;
 
 export function isSystemContext(ctx: AnyTenantContext): ctx is SystemTenantContext {
   return (ctx as SystemTenantContext).system === true;
+}
+
+export function isGhostContext(ctx: AnyTenantContext): boolean {
+  return !isSystemContext(ctx) && ctx.ghost === true;
 }
 
 export function actorUserId(ctx: AnyTenantContext): string | null {

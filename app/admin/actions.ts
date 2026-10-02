@@ -4,6 +4,12 @@ import { revalidatePath } from "next/cache";
 import { requirePlatformAdmin } from "@/lib/platform/admin";
 import { resolvePrices, PRICE_KINDS } from "@/lib/billing/prices";
 import { getDb, getEnv, getRepositories } from "@/lib/cf/bindings";
+import { cookies, headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { getAuth } from "@/lib/auth";
+import { GHOST_COOKIE, GHOST_TTL_S, signGhostToken } from "@/lib/auth/ghost";
+import { authSecret } from "@/lib/security/secrets";
+import { recordSecurityEvent } from "@/lib/security/events";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { createStripe } from "@/lib/billing/stripe";
 import { createPromotionCode, type CouponSpec } from "@/lib/billing/coupons";
@@ -155,4 +161,26 @@ export async function refreshStripePricesAction(): Promise<{ ok: boolean; messag
   } catch (err) {
     return { ok: false, error: (err as Error).message };
   }
+}
+
+/**
+ * Ghost Mode: open a centre's office read-only and invisibly. Issues a signed,
+ * 30-minute cookie bound to this admin + org, logs the start owner-side, and
+ * sends the admin to the centre's subdomain.
+ */
+export async function startGhostAction(orgId: string): Promise<Result> {
+  await requirePlatformAdmin();
+  const env = getEnv();
+  const { control } = await getRepositories();
+  const org = typeof orgId === "string" && orgId ? await control.organisationById(orgId) : null;
+  if (!org) return { ok: false, error: "Centre not found" };
+  const session = await (await getAuth()).api.getSession({ headers: new Headers(await headers()) });
+  if (!session?.user) return { ok: false, error: "Please sign in again" };
+
+  const exp = Math.floor(Date.now() / 1000) + GHOST_TTL_S;
+  const token = await signGhostToken(authSecret(env), { organisationId: org.id, adminUserId: session.user.id, exp });
+  const jar = await cookies();
+  jar.set(GHOST_COOKIE, token, { httpOnly: true, secure: true, sameSite: "lax", path: "/", domain: `.${env.APP_APEX_DOMAIN}`, maxAge: GHOST_TTL_S });
+  await recordSecurityEvent("ghost_start", { userId: session.user.id, organisationId: org.id, meta: { slug: org.slug } });
+  redirect(`https://${org.slug}.${env.APP_APEX_DOMAIN}/office`);
 }

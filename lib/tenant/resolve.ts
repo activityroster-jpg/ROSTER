@@ -3,6 +3,9 @@ import { getEnv, getRepositories } from "@/lib/cf/bindings";
 import type { Organisation } from "@/lib/db/schema";
 import { resolveHost } from "./host";
 import type { TenantContext } from "./context";
+import { GHOST_COOKIE, cookieFromHeader, verifyGhostToken } from "@/lib/auth/ghost";
+import { authSecret } from "@/lib/security/secrets";
+import { isPlatformAdminEmail } from "@/lib/platform/admin";
 
 export type TenantDenial =
   | "unknown-host"
@@ -48,6 +51,20 @@ export async function resolveTenant(headers: Headers): Promise<TenantResolution>
   const authSession = await auth.api.getSession({ headers });
   if (!authSession?.user) {
     return { ok: false, reason: "unauthenticated", slug: host.slug, organisation };
+  }
+
+  // Ghost Mode: a platform admin holding a valid ghost cookie for THIS org gets
+  // a read-only admin context without any membership. The cookie must have been
+  // issued to this very user (claims.adminUserId) and must not have expired.
+  const ghostClaims = await verifyGhostToken(authSecret(env), cookieFromHeader(headers.get("cookie"), GHOST_COOKIE));
+  if (
+    ghostClaims &&
+    ghostClaims.organisationId === organisation.id &&
+    ghostClaims.adminUserId === authSession.user.id &&
+    (await isPlatformAdminEmail(authSession.user.email))
+  ) {
+    const ctx: TenantContext = { organisationId: organisation.id, slug: organisation.slug, userId: authSession.user.id, role: "admin", ghost: true };
+    return { ok: true, ctx, organisation, sessionId: authSession.session?.id };
   }
 
   let membership = await control.membershipFor(authSession.user.id, organisation.id);

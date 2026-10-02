@@ -16,6 +16,7 @@ const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
  */
 export async function POST(req: Request) {
   const { ctx, repos } = await requireTenant();
+  if (ctx.ghost) return NextResponse.json({ error: "Ghost mode is read-only" }, { status: 403 });
 
   const form = await req.formData().catch(() => null);
   if (!form) return NextResponse.json({ error: "Expected multipart form data" }, { status: 400 });

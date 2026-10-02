@@ -1,5 +1,5 @@
 import type { Repositories } from "@/lib/db/repositories";
-import { actorUserId, type AnyTenantContext } from "@/lib/tenant/context";
+import { actorUserId, isGhostContext, type AnyTenantContext } from "@/lib/tenant/context";
 
 export interface AuditEntry {
   action: string;
@@ -19,6 +19,10 @@ export async function writeAudit(
   ctx: AnyTenantContext,
   entry: AuditEntry,
 ): Promise<void> {
+  // Ghost Mode is invisible to the centre: nothing is written to its audit log
+  // (and the repository would refuse the insert anyway). Owner-side logging
+  // happens in lib/security/events.
+  if (isGhostContext(ctx)) return;
   await repos.tenant.auditLog.insert(ctx, {
     actorUserId: actorUserId(ctx),
     action: entry.action,
