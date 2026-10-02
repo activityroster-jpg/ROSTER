@@ -4,9 +4,10 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createCourseFlexibleAction, type FlexSession } from "@/app/(app)/office/courses/actions";
 import { CourseEditorModal } from "@/components/office/CourseEditorModal";
+import { describeDefaultSchedule, expandDefaultSchedule, type DefaultSession } from "@/lib/domain/schedule-defaults";
 
 interface EventUi { id: string; courseId: string; date: string; slot: string; startAt: number; endAt: number; courseName: string; audience: string }
-interface CourseTypeUi { id: string; name: string; audience: "youth" | "adult" | "all" }
+interface CourseTypeUi { id: string; name: string; audience: "youth" | "adult" | "all"; schedule?: DefaultSession[] }
 interface Row { key: string; date: string; startTime: string; endTime: string; slot: string; useTimes?: boolean }
 interface Option { id: string; name: string }
 interface RoleNeed { key: string; roleTypeId: string; count: number }
@@ -40,6 +41,12 @@ export function CoursePlanner({ courseTypes, events, slotStyle, roles = [], loca
   const [otherType, setOtherType] = useState("");
   const [addToList, setAddToList] = useState(false);
   const isOther = courseTypeId === OTHER;
+  const typeSchedule = courseTypes.find((c) => c.id === courseTypeId)?.schedule ?? [];
+  const [scheduleStart, setScheduleStart] = useState(() => new Date().toISOString().slice(0, 10));
+  // Replace the draft sessions with the type's default schedule from a start date.
+  const fillFromDefault = () => setRows(expandDefaultSchedule(scheduleStart, typeSchedule).map((x) => ({
+    key: `r${seq++}`, date: x.date, startTime: x.start, endTime: x.end, slot: x.start < "12:00" ? "AM" : x.start < "17:00" ? "PM" : "EV", useTimes: true,
+  })));
   const [name, setName] = useState("");
   const [rows, setRows] = useState<Row[]>([]);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -158,6 +165,13 @@ export function CoursePlanner({ courseTypes, events, slotStyle, roles = [], loca
               {courseTypes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               <option value={OTHER}>＋ Other (type it in)…</option>
             </select>
+            {typeSchedule.length ? (
+              <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg bg-teal/5 px-2 py-1.5 text-xs text-slate-600">
+                <span>Default: {describeDefaultSchedule(typeSchedule)}</span>
+                <input type="date" value={scheduleStart} onChange={(e) => setScheduleStart(e.target.value)} aria-label="Default schedule start date" className="rounded border border-slate-300 px-1.5 py-0.5 text-xs" />
+                <button type="button" onClick={fillFromDefault} className="font-semibold text-teal hover:underline">Fill sessions</button>
+              </div>
+            ) : null}
             {isOther ? (
               <div className="mt-2 space-y-1.5">
                 <input value={otherType} onChange={(e) => setOtherType(e.target.value)} placeholder="e.g. Corporate team day" aria-label="Course type name" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal" />

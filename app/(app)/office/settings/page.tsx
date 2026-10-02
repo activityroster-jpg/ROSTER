@@ -2,19 +2,27 @@ import { requireTenant } from "@/lib/tenant/require";
 import { Card } from "@/components/ui";
 import { GeneralSettingsForm } from "@/components/office/GeneralSettingsForm";
 import { ConfigManager, type ConfigItem } from "@/components/office/ConfigManager";
+import { BreakPolicyForm } from "@/components/office/BreakPolicyForm";
+import { CourseScheduleDefaults } from "@/components/office/CourseScheduleDefaults";
+import { parseDefaultSchedule } from "@/lib/domain";
 
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
   const { ctx, repos } = await requireTenant({ role: "admin" });
   const t = repos.tenant;
-  const [settings, slots, roles, grades, compliance] = await Promise.all([
+  const [settings, slots, roles, grades, compliance, courseTypes] = await Promise.all([
     t.orgSettings.list(ctx),
     t.sessionSlot.list(ctx),
     t.roleType.list(ctx),
     t.qualificationType.list(ctx),
     t.complianceType.list(ctx),
+    t.courseType.list(ctx),
   ]);
+  const scheduleItems = courseTypes
+    .filter((c) => c.active && c.listed)
+    .map((c) => ({ id: c.id, name: c.name, schedule: parseDefaultSchedule(c.defaultSchedule) }))
+    .sort((a, b) => a.name.localeCompare(b.name));
   const s = settings[0];
 
   const toItems = <T extends { id: string; active: boolean }>(rows: T[], label: (r: T) => string, meta?: (r: T) => string, edit?: (r: T) => string): ConfigItem[] =>
@@ -41,6 +49,22 @@ export default async function SettingsPage() {
           enforceConflictChecks={Boolean(s?.enforceConflictChecks)}
         />
       </Card>
+
+      <div className="mb-6 grid gap-6 lg:grid-cols-2">
+        <Card>
+          <div className="mb-1 flex items-center justify-between">
+            <h2 className="font-semibold text-navy">Course default schedule</h2>
+            <a href="/learn?topic=settings" target="_blank" rel="noreferrer" className="text-xs font-medium text-teal hover:underline">📖 Read the guide</a>
+          </div>
+          <p className="mb-2 text-xs text-slate-500">How many sessions each course has and when they run. “Add a course” fills these in for you.</p>
+          <CourseScheduleDefaults items={scheduleItems} />
+        </Card>
+        <Card>
+          <h2 className="mb-1 font-semibold text-navy">Lunch breaks</h2>
+          <p className="mb-3 text-xs text-slate-500">Applied to worked hours in Payroll and its exports. Unpaid breaks are deducted from pay.</p>
+          <BreakPolicyForm afterMinutes={s?.breakAfterMinutes ?? 360} breakMinutes={s?.breakMinutes ?? 0} paid={Boolean(s?.breakPaid)} />
+        </Card>
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <ConfigManager

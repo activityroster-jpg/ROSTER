@@ -293,6 +293,14 @@ const SECTIONS: Section[] = [
         "Timesheets build automatically from clock events.",
         "Export payroll-ready hours when you run payroll.",
       ] },
+      { kind: "sub", text: "Payroll & exports" },
+      { kind: "steps", items: [
+        "Open Payroll. Pick a period (this week, this month, last month, custom dates or all time) and, if you like, one instructor. Then click Show.",
+        "You'll see totals per instructor and every shift, with start, finish, lunch break, paid hours and pay. Start and finish come from clock-in/out where there is one, otherwise from the schedule.",
+        "Download “Spreadsheet · every shift” or “Spreadsheet · totals”. These are CSV files that open in Excel or Google Sheets. Or click PDF to save the page as a PDF.",
+      ] },
+      { kind: "sub", text: "Lunch breaks" },
+      { kind: "p", text: "In Settings → Lunch breaks, set a break length, who gets it (anyone working over a number of hours) and whether it's paid. Unpaid breaks come off paid hours; paid breaks are shown but not deducted." },
     ],
   },
   {
@@ -378,6 +386,13 @@ const SECTIONS: Section[] = [
         "Activate or retire course types, qualification/instructor types and compliance checks — retired items keep their history and stop appearing for new records.",
         "Switch optional features on or off.",
         "Change how sessions run (slots vs explicit times) and your alert lead time for expiries.",
+        "Lunch breaks: set the break length, after how many hours it applies, and whether it's paid. Payroll uses this.",
+      ] },
+      { kind: "sub", text: "Course default schedule" },
+      { kind: "steps", items: [
+        "In Settings → Course default schedule, click Set next to a course type.",
+        "Add each session: which day of the course (Day 1, Day 2…) and its start and end times. A two-day course might be Day 1 09:00–17:00 and Day 2 09:00–17:00.",
+        "Save. Now, when you pick that type in “Add a course”, choose a start date and click “Fill sessions”. Every session is filled in for you, and you can still change any of them.",
       ] },
       { kind: "tip", text: "Configuration is deactivate-never-delete: old records keep pointing at retired settings and still render correctly." },
     ],

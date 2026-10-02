@@ -6,6 +6,7 @@ import { requireTenant } from "@/lib/tenant/require";
 import { writeAudit } from "@/lib/services/audit";
 import { deleteOrRetireCourseType, moveCoursesToType } from "@/lib/services/course-types";
 import { COURSE_AUDIENCES } from "@/lib/db/schema";
+import { normaliseDefaultSchedule } from "@/lib/domain";
 
 export type CourseTypeResult = { ok: boolean; error?: string; message?: string };
 
@@ -102,4 +103,18 @@ export async function moveCoursesToTypeAction(fromId: string, toId: string): Pro
   await writeAudit(repos, ctx, { action: "merge", entity: "course_type", entityId: fromId, after: { into: toId, moved: res.moved } });
   revalidate();
   return { ok: true, message: `Moved ${res.moved} course${res.moved === 1 ? "" : "s"} from “${res.from}” to “${res.to}”` };
+}
+
+/** Set (or clear, with an empty list) a course type's default schedule. */
+export async function setCourseTypeScheduleAction(id: string, sessions: unknown): Promise<CourseTypeResult> {
+  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const clean = normaliseDefaultSchedule(sessions);
+  if (Array.isArray(sessions) && sessions.length > 0 && clean.length !== sessions.length) {
+    return { ok: false, error: "Each session needs a day and an end time after its start" };
+  }
+  const updated = await repos.tenant.courseType.update(ctx, id, { defaultSchedule: clean.length ? JSON.stringify(clean) : null });
+  if (!updated) return { ok: false, error: "Course type not found" };
+  await writeAudit(repos, ctx, { action: "update_schedule", entity: "course_type", entityId: id, after: { sessions: clean } });
+  revalidate();
+  return { ok: true, message: `Default schedule saved for ${updated.name}` };
 }

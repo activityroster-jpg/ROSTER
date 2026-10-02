@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { requireTenant } from "@/lib/tenant/require";
 import { writeAudit } from "@/lib/services/audit";
 import {
@@ -190,4 +191,23 @@ export async function setConfigActiveAction(_prev: ActionState, formData: FormDa
   revalidatePath("/office/settings");
   revalidatePath("/office/course-setup");
   return { ok: true };
+}
+
+/** Lunch/rest break rule: break of N minutes after working more than M; paid or unpaid. */
+export async function updateBreakPolicyAction(input: { afterMinutes: number; breakMinutes: number; paid: boolean }): Promise<ActionState> {
+  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const parsed = z.object({
+    afterMinutes: z.coerce.number().int().min(0).max(24 * 60),
+    breakMinutes: z.coerce.number().int().min(0).max(240),
+    paid: z.boolean(),
+  }).safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Please check the break values" };
+  const patch = { breakAfterMinutes: parsed.data.afterMinutes, breakMinutes: parsed.data.breakMinutes, breakPaid: parsed.data.paid };
+  const existing = (await repos.tenant.orgSettings.list(ctx))[0];
+  if (existing) await repos.tenant.orgSettings.update(ctx, existing.id, patch);
+  else await repos.tenant.orgSettings.insert(ctx, patch);
+  await writeAudit(repos, ctx, { action: "update_breaks", entity: "org_settings", after: patch });
+  revalidatePath("/office/settings");
+  revalidatePath("/office/finance");
+  return { ok: true, message: "Break rule saved" };
 }

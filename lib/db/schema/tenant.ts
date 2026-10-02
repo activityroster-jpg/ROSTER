@@ -107,6 +107,11 @@ export const orgSettings = sqliteTable("org_settings", {
   enforceConflictChecks: boolCol("enforce_conflict_checks").default(false),
   currency: text("currency").notNull().default("GBP"),
   timezone: text("timezone").notNull().default("Europe/London"),
+  // --- Lunch / rest breaks: anyone working longer than breakAfterMinutes gets
+  // a break of breakMinutes, deducted from pay unless breakPaid. 0 = off.
+  breakAfterMinutes: integer("break_after_minutes").notNull().default(360),
+  breakMinutes: integer("break_minutes").notNull().default(0),
+  breakPaid: boolCol("break_paid").default(false),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 }, (t) => [uniqueIndex("org_settings_org_uq").on(t.organisationId)]);
@@ -216,6 +221,9 @@ export const courseType = sqliteTable("course_type", {
   /** On the centre's regular course list (dropdowns, Course setup). One-off
    * types entered manually or imported without a match are unlisted. */
   listed: boolCol("listed").default(true),
+  /** Default schedule as JSON: [{ day: 1, start: "09:00", end: "17:00" }, …] —
+   * how many sessions the course has and when each runs. Nullable = none. */
+  defaultSchedule: text("default_schedule"),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 }, (t) => [index("course_type_org_idx").on(t.organisationId)]);
