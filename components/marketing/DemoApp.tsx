@@ -9,25 +9,38 @@ import { Logo } from "@/components/Logo";
 type Slot = "AM" | "PM" | "EV";
 type Avail = "free" | "maybe" | "busy" | "none";
 type Panel =
-  | "dash" | "courses" | "rota" | "availability" | "timeclock" | "leave"
-  | "staff" | "equipment" | "locations" | "integrations" | "finance" | "settings";
+  | "dash" | "courses" | "availability" | "timeclock" | "leave"
+  | "staff" | "equipment" | "locations" | "finance"
+  | "settings" | "billing" | "coursesetup" | "changelog"
+  // Reached from within a panel (not the sidebar), mirroring the real app:
+  // the printable rota from the Dashboard, Integrations from Courses.
+  | "rota" | "integrations";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-const NAV: { label: string; key: Panel; group?: string }[] = [
-  { label: "Dashboard", key: "dash" },
-  { label: "Courses", key: "courses" },
-  { label: "Weekly rota", key: "rota" },
-  { label: "Availability", key: "availability" },
-  { label: "Time clock", key: "timeclock" },
-  { label: "Leave & cover", key: "leave" },
-  { label: "Staff (HR)", key: "staff" },
-  { label: "Equipment", key: "equipment" },
-  { label: "Locations", key: "locations" },
-  { label: "Integrations", key: "integrations" },
-  { label: "Payroll", key: "finance" },
-  { label: "Settings", key: "settings" },
+// Mirrors the real office sidebar exactly (app/(app)/office/layout.tsx).
+const NAV_GROUPS: { group: string; items: { label: string; key: Panel }[] }[] = [
+  { group: "Operate", items: [
+    { label: "Dashboard", key: "dash" },
+    { label: "Courses", key: "courses" },
+    { label: "Availability", key: "availability" },
+    { label: "Time clock", key: "timeclock" },
+    { label: "Leave & cover", key: "leave" },
+  ] },
+  { group: "Resources", items: [
+    { label: "Staff", key: "staff" },
+    { label: "Equipment", key: "equipment" },
+    { label: "Locations", key: "locations" },
+    { label: "Payroll", key: "finance" },
+  ] },
+  { group: "Configure", items: [
+    { label: "Settings", key: "settings" },
+    { label: "Billing", key: "billing" },
+    { label: "Course setup", key: "coursesetup" },
+    { label: "Change log", key: "changelog" },
+  ] },
 ];
+const NAV_FLAT = NAV_GROUPS.flatMap((g) => g.items);
 
 // ---------------------------------------------------------------------------
 // Shared example staff roster (used by both the Staff and Availability tabs).
@@ -160,25 +173,30 @@ export function DemoApp() {
             <aside className="hidden bg-navy p-4 text-white md:block">
               <Logo variant="onDark" size="sm" />
               <p className="mb-3 mt-1 border-b border-white/10 pb-3 text-xs text-white/60">Harbour Sailing Centre</p>
-              {NAV.map((item) => {
-                const active = panel === item.key;
-                return (
-                  <button
-                    key={item.key}
-                    onClick={() => setPanel(item.key)}
-                    className={`mb-0.5 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm ${active ? "bg-white/15 font-semibold text-white" : "text-white/80 hover:bg-white/10"}`}
-                  >
-                    <span className={`h-3.5 w-3.5 rounded ${active ? "bg-teal" : "bg-white/25"}`} />
-                    {item.label}
-                  </button>
-                );
-              })}
+              {NAV_GROUPS.map((section) => (
+                <div key={section.group} className="mb-4">
+                  <p className="px-2 pb-1.5 text-[10px] font-semibold uppercase tracking-wide text-white/40">{section.group}</p>
+                  {section.items.map((item) => {
+                    const active = panel === item.key;
+                    return (
+                      <button
+                        key={item.key}
+                        onClick={() => setPanel(item.key)}
+                        className={`mb-0.5 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm ${active ? "bg-white/15 font-semibold text-white" : "text-white/80 hover:bg-white/10"}`}
+                      >
+                        <span className={`h-3.5 w-3.5 rounded ${active ? "bg-teal" : "bg-white/25"}`} />
+                        {item.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
             </aside>
 
             <div className="bg-canvas p-5">
               {/* Mobile tab switcher — all sections */}
               <div className="mb-4 flex gap-2 overflow-x-auto pb-1 md:hidden">
-                {NAV.map((item) => (
+                {NAV_FLAT.map((item) => (
                   <button
                     key={item.key}
                     onClick={() => setPanel(item.key)}
@@ -189,18 +207,21 @@ export function DemoApp() {
                 ))}
               </div>
 
-              {panel === "dash" ? <DemoDashboard /> : null}
-              {panel === "courses" ? <DemoCourses /> : null}
-              {panel === "rota" ? <DemoRota /> : null}
+              {panel === "dash" ? <DemoDashboard onOpen={setPanel} /> : null}
+              {panel === "courses" ? <DemoCourses onOpen={setPanel} /> : null}
+              {panel === "rota" ? <DemoRota onBack={() => setPanel("dash")} /> : null}
               {panel === "availability" ? <DemoAvailability /> : null}
               {panel === "timeclock" ? <DemoTimeClock /> : null}
               {panel === "leave" ? <DemoLeave /> : null}
               {panel === "staff" ? <DemoStaff /> : null}
               {panel === "equipment" ? <DemoEquipment /> : null}
               {panel === "locations" ? <DemoLocations /> : null}
-              {panel === "integrations" ? <DemoIntegrations /> : null}
+              {panel === "integrations" ? <DemoIntegrations onBack={() => setPanel("courses")} /> : null}
               {panel === "finance" ? <DemoFinance /> : null}
               {panel === "settings" ? <DemoSettings /> : null}
+              {panel === "billing" ? <DemoBilling /> : null}
+              {panel === "coursesetup" ? <DemoCourseSetup /> : null}
+              {panel === "changelog" ? <DemoChangeLog /> : null}
             </div>
           </div>
         </div>
@@ -213,10 +234,13 @@ export function DemoApp() {
   );
 }
 
-function DemoDashboard() {
+function DemoDashboard({ onOpen }: { onOpen: (p: Panel) => void }) {
   return (
     <div>
-      <h2 className="font-display text-xl font-semibold text-navy">Dashboard</h2>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="font-display text-xl font-semibold text-navy">Dashboard</h2>
+        <button onClick={() => onOpen("rota")} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-navy hover:bg-slate-50">🖨 Open printable rota</button>
+      </div>
       <p className="text-sm text-slate-500">Harbour Sailing Centre · week of 21 Sep</p>
 
       <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">
@@ -330,13 +354,16 @@ const COURSES: Course[] = [
   },
 ];
 
-function DemoCourses() {
+function DemoCourses({ onOpen }: { onOpen: (p: Panel) => void }) {
   const [open, setOpen] = useState<string | null>("Powerboat Level 2");
   return (
     <div>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="font-display text-xl font-semibold text-navy">Courses</h2>
-        <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-400">+ New course</span>
+        <div className="flex gap-2">
+          <button onClick={() => onOpen("integrations")} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-navy hover:bg-slate-50">Connect a booking system</button>
+          <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-400">+ New course</span>
+        </div>
       </div>
       <p className="text-sm text-slate-500">This week&apos;s catalogue — click a course to open it.</p>
       <div className="mt-4 space-y-3">
@@ -622,7 +649,7 @@ function DemoStaff() {
   return (
     <div>
       <div className="flex items-center justify-between">
-        <h2 className="font-display text-xl font-semibold text-navy">Staff (HR)</h2>
+        <h2 className="font-display text-xl font-semibold text-navy">Staff</h2>
         <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-400">+ Add staff</span>
       </div>
       <p className="text-sm text-slate-500">{STAFF.length} instructors · click anyone to open their HR profile, documents &amp; onboarding.</p>
@@ -783,17 +810,17 @@ function DemoEquipment() {
   );
 }
 
-type PayRow = { n: string; sched: number; actual: number; rate: string };
+type PayRow = { n: string; sched: number; actual: number; rate: string; approved: boolean };
 
 const PAY: PayRow[] = [
-  { n: "Sarah Whitlock", sched: 24, actual: 24, rate: "£18.00" },
-  { n: "Tom Bergin", sched: 12, actual: 14, rate: "£16.50" },
-  { n: "Liam O'Connor", sched: 16, actual: 16, rate: "£15.00" },
-  { n: "Priya Nair", sched: 18, actual: 17, rate: "£17.00" },
-  { n: "Jack Turnbull", sched: 8, actual: 8, rate: "£16.50" },
-  { n: "Chloe Adeyemi", sched: 20, actual: 22, rate: "£18.00" },
-  { n: "Isla Fraser", sched: 10, actual: 10, rate: "£15.50" },
-  { n: "Noah Pereira", sched: 22, actual: 20, rate: "£17.50" },
+  { n: "Sarah Whitlock", sched: 24, actual: 24, rate: "£18.00", approved: true },
+  { n: "Tom Bergin", sched: 12, actual: 14, rate: "£16.50", approved: true },
+  { n: "Liam O'Connor", sched: 16, actual: 16, rate: "£15.00", approved: true },
+  { n: "Priya Nair", sched: 18, actual: 17, rate: "£17.00", approved: false },
+  { n: "Jack Turnbull", sched: 8, actual: 8, rate: "£16.50", approved: true },
+  { n: "Chloe Adeyemi", sched: 20, actual: 22, rate: "£18.00", approved: false },
+  { n: "Isla Fraser", sched: 10, actual: 10, rate: "£15.50", approved: true },
+  { n: "Noah Pereira", sched: 22, actual: 20, rate: "£17.50", approved: true },
 ];
 
 const TS_COURSES = ["Start Sailing", "Improving Skills", "Youth Stage 2", "Adult Improver", "Powerboat L2", "Start Windsurf"];
@@ -824,23 +851,21 @@ function DemoFinance() {
 
   return (
     <div>
-      <h2 className="font-display text-xl font-semibold text-navy">Finance</h2>
-      <p className="text-sm text-slate-500">Course income, outstanding invoices and staff pay — September.</p>
-
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
-        <Card><p className="text-sm font-semibold text-navy">Course revenue</p><p className="mt-1 text-3xl font-semibold text-navy">£14,280</p><p className="text-xs text-slate-500">This month, across all courses</p></Card>
-        <Card><p className="text-sm font-semibold text-navy">Outstanding invoices</p><p className="mt-1 text-3xl font-semibold text-amber">£1,940</p><p className="text-xs text-slate-500">4 awaiting payment</p></Card>
-        <Card><p className="text-sm font-semibold text-navy">Staff pay to process</p><p className="mt-1 text-3xl font-semibold text-navy">£{Math.round(grand).toLocaleString()}</p><p className="text-xs text-slate-500">{PAY.length} instructors, actual hours</p></Card>
+      <div className="flex items-center justify-between">
+        <h2 className="font-display text-xl font-semibold text-navy">Payroll</h2>
+        <span className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-navy">Export CSV</span>
       </div>
+      <p className="text-sm text-slate-500">Scheduled vs actual hours from session sign-off — September. Click anyone for their timesheet.</p>
+
+      <Card className="mt-4">
+        <p className="text-sm text-slate-500">Total pay (from recorded hours)</p>
+        <p className="mt-1 text-3xl font-semibold text-navy">£{grand.toFixed(2)}</p>
+      </Card>
 
       <Card className="mt-4 overflow-x-auto p-0">
-        <div className="flex items-center justify-between px-4 py-3">
-          <h3 className="font-semibold text-navy">Payroll — scheduled vs actual hours</h3>
-          <span className="rounded-lg bg-teal px-3 py-1.5 text-xs font-semibold text-white">Export CSV</span>
-        </div>
         <table className="w-full min-w-[560px] text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-            <tr><th className="px-4 py-3">Instructor</th><th className="px-4 py-3">Scheduled</th><th className="px-4 py-3">Actual</th><th className="px-4 py-3">Rate</th><th className="px-4 py-3">Pay</th></tr>
+            <tr><th className="px-4 py-3">Instructor</th><th className="px-4 py-3">Scheduled (h)</th><th className="px-4 py-3">Actual (h)</th><th className="px-4 py-3">Rate</th><th className="px-4 py-3">Pay</th><th className="px-4 py-3">Approved</th></tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {PAY.map((p) => (
@@ -850,6 +875,7 @@ function DemoFinance() {
                 <td className={`px-4 py-3 ${p.actual !== p.sched ? "font-semibold text-amber" : "text-slate-600"}`}>{p.actual} h</td>
                 <td className="px-4 py-3 text-slate-600">{p.rate}/h</td>
                 <td className="px-4 py-3 font-medium text-navy">£{payAmount(p.actual, p.rate).toFixed(2)}</td>
+                <td className="px-4 py-3"><StatusPill tone={p.approved ? "covered" : "neutral"}>{p.approved ? "Yes" : "No"}</StatusPill></td>
               </tr>
             ))}
           </tbody>
@@ -857,6 +883,7 @@ function DemoFinance() {
             <tr className="border-t border-slate-200 bg-slate-50">
               <td className="px-4 py-3 font-semibold text-navy" colSpan={4}>Total to pay</td>
               <td className="px-4 py-3 font-semibold text-navy">£{grand.toFixed(2)}</td>
+              <td className="px-4 py-3"></td>
             </tr>
           </tfoot>
         </table>
@@ -1105,7 +1132,7 @@ function DemoLeave() {
 // ---------------------------------------------------------------------------
 // Weekly rota (printable) + payroll export
 // ---------------------------------------------------------------------------
-function DemoRota() {
+function DemoRota({ onBack }: { onBack: () => void }) {
   const staffFor: Record<string, string[]> = {
     "Start Sailing": ["Sarah Whitlock (SI)", "Dan Rees (Safety Boat)"],
     "Improving Skills": ["Chloe Adeyemi (SI)", "Liam O'Connor (DI)"],
@@ -1116,6 +1143,7 @@ function DemoRota() {
   };
   return (
     <div>
+      <button onClick={onBack} className="mb-2 text-xs text-slate-400 hover:text-slate-600">← Dashboard</button>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="font-display text-xl font-semibold text-navy">Weekly rota</h2>
         <div className="flex gap-2">
@@ -1209,7 +1237,7 @@ function DemoLocations() {
 // ---------------------------------------------------------------------------
 // Integrations — read-only course feeds from booking systems & calendars
 // ---------------------------------------------------------------------------
-function DemoIntegrations() {
+function DemoIntegrations({ onBack }: { onBack: () => void }) {
   const feeds = [
     { n: "Bookwhen", kind: "Booking system", status: "connected" as const, last: "synced 8 min ago", courses: 18 },
     { n: "WebCollect", kind: "Membership & bookings", status: "connected" as const, last: "synced 1 h ago", courses: 24 },
@@ -1220,6 +1248,7 @@ function DemoIntegrations() {
   const tone = { connected: "covered", available: "neutral" } as const;
   return (
     <div>
+      <button onClick={onBack} className="mb-2 text-xs text-slate-400 hover:text-slate-600">← Courses</button>
       <div className="flex items-center justify-between">
         <h2 className="font-display text-xl font-semibold text-navy">Integrations</h2>
         <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-400">+ Connect a feed</span>
@@ -1247,6 +1276,146 @@ function DemoIntegrations() {
         </table>
       </Card>
       <p className="mt-2 text-xs text-slate-400">We never change anything in your booking system — we only read the course calendar and turn each event into a draft session for you to review.</p>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Billing
+// ---------------------------------------------------------------------------
+function DemoBilling() {
+  const invoices = [
+    { date: "1 Sep 2026", desc: "Standard plan — monthly", amount: "£65.00" },
+    { date: "1 Aug 2026", desc: "Standard plan — monthly", amount: "£65.00" },
+    { date: "1 Jul 2026", desc: "Standard plan — monthly", amount: "£65.00" },
+  ];
+  return (
+    <div>
+      <h2 className="font-display text-xl font-semibold text-navy">Billing</h2>
+      <p className="text-sm text-slate-500">Your plan, payment method and VAT invoices.</p>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <Card>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Current plan</p>
+          <p className="mt-1 text-2xl font-semibold text-navy">Standard · £65<span className="text-sm text-slate-400">/month</span></p>
+          <p className="mt-1 text-sm text-slate-500">Unlimited instructors &amp; volunteers · renews 1 Oct 2026</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <span className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-navy">Switch to annual (2 months free)</span>
+            <span className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-navy">Change plan</span>
+          </div>
+        </Card>
+        <Card>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Payment method</p>
+          <p className="mt-1 text-sm text-navy">Visa ···· 4242 · expires 03/28</p>
+          <p className="mt-1 text-xs text-slate-500">Billed in GBP · VAT handled at checkout</p>
+          <span className="mt-3 inline-block rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-navy">Update card</span>
+        </Card>
+      </div>
+
+      <Card className="mt-4 p-0">
+        <h3 className="px-4 pt-4 font-semibold text-navy">Invoices</h3>
+        <table className="mt-2 w-full text-left text-sm">
+          <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+            <tr><th className="px-4 py-3">Date</th><th className="px-4 py-3">Description</th><th className="px-4 py-3">Amount</th><th className="px-4 py-3">Status</th><th className="px-4 py-3"></th></tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {invoices.map((i) => (
+              <tr key={i.date}>
+                <td className="whitespace-nowrap px-4 py-3 text-slate-600">{i.date}</td>
+                <td className="px-4 py-3 text-navy">{i.desc}</td>
+                <td className="px-4 py-3 text-slate-600">{i.amount}</td>
+                <td className="px-4 py-3"><StatusPill tone="covered">Paid</StatusPill></td>
+                <td className="px-4 py-3 text-right"><span className="text-xs font-semibold text-teal">Download PDF</span></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Card>
+      <p className="mt-2 text-xs text-slate-400">Start with a free month — no card required. Proper VAT invoices are emailed and downloadable here.</p>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Course setup — the configurable course catalogue
+// ---------------------------------------------------------------------------
+function DemoCourseSetup() {
+  const types = [
+    { n: "RYA Start Sailing", aud: "Adult", scheme: "National Sailing", ratio: "1:6", quals: ["Dinghy Instructor"], safety: false },
+    { n: "RYA Youth Stage 2", aud: "Youth", scheme: "Youth Sailing", ratio: "1:6", quals: ["Dinghy Instructor", "First Aid"], safety: true },
+    { n: "RYA Powerboat Level 2", aud: "Adult", scheme: "Powerboat", ratio: "1:3", quals: ["Powerboat Instructor"], safety: true },
+    { n: "RYA Start Windsurfing", aud: "Adult", scheme: "Windsurfing", ratio: "1:6", quals: ["Windsurfing Instructor"], safety: false },
+  ];
+  return (
+    <div>
+      <div className="flex items-center justify-between">
+        <h2 className="font-display text-xl font-semibold text-navy">Course setup</h2>
+        <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-400">+ Add course type</span>
+      </div>
+      <p className="text-sm text-slate-500">Your course catalogue — each type sets the RYA scheme, ratio, required tickets and whether safety cover is needed.</p>
+
+      <Card className="mt-4 overflow-x-auto p-0">
+        <table className="w-full min-w-[640px] text-left text-sm">
+          <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+            <tr><th className="px-4 py-3">Course type</th><th className="px-4 py-3">Audience</th><th className="px-4 py-3">Ratio</th><th className="px-4 py-3">Required tickets</th><th className="px-4 py-3">Safety cover</th></tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {types.map((t) => (
+              <tr key={t.n} className="hover:bg-slate-50/50">
+                <td className="whitespace-nowrap px-4 py-3 font-medium text-navy">{t.n}<span className="block text-xs text-slate-400">RYA {t.scheme}</span></td>
+                <td className="px-4 py-3"><span className={`rounded px-1.5 py-0.5 text-xs font-semibold ${t.aud === "Youth" ? "bg-amber/15 text-amber" : "bg-teal/10 text-teal"}`}>{t.aud}</span></td>
+                <td className="px-4 py-3 text-slate-600">{t.ratio}</td>
+                <td className="px-4 py-3 text-slate-600">{t.quals.join(", ")}</td>
+                <td className="px-4 py-3">{t.safety ? <StatusPill tone="attention">Required</StatusPill> : <span className="text-xs text-slate-400">Not required</span>}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Card>
+
+      <Card className="mt-4">
+        <h3 className="font-semibold text-navy">Session times</h3>
+        <p className="mt-1 text-sm text-slate-500">Choose how your sessions are timed — the same choice is used across the planner and rota.</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <span className="rounded-lg border border-teal bg-teal/5 px-3 py-1.5 text-sm font-semibold text-teal">Morning / Afternoon / Evening slots ✓</span>
+          <span className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-500">Explicit start &amp; end times</span>
+        </div>
+      </Card>
+      <p className="mt-2 text-xs text-slate-400">Retired course types are deactivated, never deleted — past courses keep pointing at them and still read correctly.</p>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Change log — the per-centre audit trail
+// ---------------------------------------------------------------------------
+function DemoChangeLog() {
+  const rows = [
+    { when: "Today · 13:22", who: "Sarah Whitlock", what: "Assigned Dan Rees (Safety Boat) to Powerboat L2 · Sat" },
+    { when: "Today · 11:05", who: "Sarah Whitlock", what: "Approved annual leave — Liam O'Connor, 6–10 Oct" },
+    { when: "Yesterday · 16:40", who: "Megan Foyle", what: "Added instructor — Grace Hollis (Assistant)" },
+    { when: "Yesterday · 09:12", who: "System", what: "Flagged ticket expiring — Tom Bergin, Safeguarding (12 Oct)" },
+    { when: "27 Sep · 14:30", who: "Sarah Whitlock", what: "Marked Topper #4 out of action" },
+    { when: "26 Sep · 10:02", who: "Sarah Whitlock", what: "Updated pay rate — Chloe Adeyemi (£18.00/h)" },
+  ];
+  return (
+    <div>
+      <h2 className="font-display text-xl font-semibold text-navy">Change log</h2>
+      <p className="text-sm text-slate-500">Every roster, staff, resource and billing change is recorded — who did what, and when.</p>
+      <Card className="mt-4 p-0">
+        <ul className="divide-y divide-slate-100">
+          {rows.map((r) => (
+            <li key={r.when + r.what} className="flex gap-3 px-4 py-3">
+              <span className="mt-1.5 h-2 w-2 flex-none rounded-full bg-teal" />
+              <div>
+                <p className="text-sm text-navy">{r.what}</p>
+                <p className="text-xs text-slate-400">{r.who} · {r.when}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </Card>
+      <p className="mt-2 text-xs text-slate-400">The audit trail is scoped to your centre and can be exported if you ever need it.</p>
     </div>
   );
 }
@@ -1302,8 +1471,8 @@ function DemoPortal() {
           ))}
           <p className="mt-1.5 text-center text-[11px] text-slate-400">Tap to cycle: Free → Maybe → Busy → clear</p>
         </div>
-        <div className="flex justify-around border-t border-slate-200 bg-white py-2.5 text-[11px] text-slate-400">
-          {["Schedule", "Availability", "Hours", "Documents"].map((t, i) => (
+        <div className="flex justify-around border-t border-slate-200 bg-white py-2.5 text-[10px] text-slate-400">
+          {["Schedule", "Available", "Clock", "Leave", "Hours", "Docs"].map((t, i) => (
             <span key={t} className={i === 0 ? "font-semibold text-teal" : ""}>{t}</span>
           ))}
         </div>
