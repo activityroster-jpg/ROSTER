@@ -33,3 +33,23 @@ RESEND_API_KEY=re_...
 
 # --- Errors (Sentry, optional) -----------------------------------------------
 SENTRY_DSN=https://...ingest.sentry.io/...
+
+# --- Dev Center ---------------------------------------------------------------
+# Comma-separated emails allowed into /admin. Unset = nobody.
+PLATFORM_ADMIN_EMAILS=you@example.com
+
+# --- Push notifications (Firebase service account JSON, one line) -------------
+FCM_SERVICE_ACCOUNT_JSON=
+
+# --- Integration API keys at rest (optional) ---------------------------------
+# Dedicated AES key for booking-system tokens. Leave blank to derive one from
+# BETTER_AUTH_SECRET. Generate: `openssl rand -base64 32`
+TOKEN_ENCRYPTION_KEY=
+
+# --- Universal / app links (optional; see mobile/README.md §4) ----------------
+# Served at /.well-known/apple-app-site-association and /.well-known/assetlinks.json
+APPLE_TEAM_ID=
+IOS_BUNDLE_ID=com.activityroster.app
+ANDROID_PACKAGE=com.activityroster.app
+# Comma-separated SHA-256 signing-certificate fingerprints (AA:BB:...)
+ANDROID_SHA256_FINGERPRINTS=

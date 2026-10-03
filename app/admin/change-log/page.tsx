@@ -2,6 +2,7 @@ import { requirePlatformAdmin } from "@/lib/platform/admin";
 import { getDb } from "@/lib/cf/bindings";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { Card } from "@/components/ui";
+import { describeAudit } from "@/lib/services/changelog";
 
 export const dynamic = "force-dynamic";
 
@@ -23,8 +24,8 @@ export default async function AdminChangeLogPage() {
             <tr>
               <th className="px-4 py-3">When</th>
               <th className="px-4 py-3">Centre</th>
-              <th className="px-4 py-3">Action</th>
-              <th className="px-4 py-3">Entity</th>
+              <th className="px-4 py-3">What happened</th>
+              <th className="px-4 py-3 text-slate-400">Raw</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -34,8 +35,8 @@ export default async function AdminChangeLogPage() {
               <tr key={r.id} className="hover:bg-slate-50/60">
                 <td className="px-4 py-3 whitespace-nowrap text-slate-500">{when(r.createdAt)}</td>
                 <td className="px-4 py-3 font-medium text-navy">{r.org}</td>
-                <td className="px-4 py-3 text-slate-600">{r.action}</td>
-                <td className="px-4 py-3 text-slate-600">{r.entity}</td>
+                <td className="px-4 py-3 text-slate-700">{describeAudit(r.action, r.entity)}</td>
+                <td className="px-4 py-3 font-mono text-[11px] text-slate-400">{r.action} · {r.entity}</td>
               </tr>
             ))}
           </tbody>
