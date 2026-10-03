@@ -428,7 +428,7 @@ const SECTIONS: Section[] = [
       ] },
       { kind: "sub", text: "Second step at sign-in (optional)" },
       { kind: "steps", items: [
-        "Settings → Security → Second step. Choose an authenticator app (Google Authenticator, 1Password, Authy…), a code by email, or a code by text message, then confirm one code. Save the backup codes somewhere safe.",
+        "Settings → Security → Second step. Choose an authenticator app (Google Authenticator, 1Password, Authy…) or a code by email, then confirm one code. Save the backup codes somewhere safe.",
         "From then on, signing in with your password asks for the code — sent the way you chose. A backup code gets you in if you've lost the phone or the inbox; each one works once.",
         "Change the method or turn it off any time from the same place; it asks for your password first. Sign-in links still work as before.",
       ] },

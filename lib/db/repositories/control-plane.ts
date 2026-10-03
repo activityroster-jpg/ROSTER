@@ -305,22 +305,20 @@ export class ControlPlaneRepository {
     return { pinHash: r.pinHash ?? null, pinFailedCount: r.pinFailedCount ?? 0, pinLockedUntil: r.pinLockedUntil ?? null };
   }
 
-  /** Which second step a user chose (app / email / text) and the number for texts. */
-  async getTwoFactorPrefs(userId: string): Promise<{ enabled: boolean; method: TwoFactorMethod | null; phone: string | null } | null> {
+  /** Which second step a user chose (authenticator app or emailed code). */
+  async getTwoFactorPrefs(userId: string): Promise<{ enabled: boolean; method: TwoFactorMethod | null } | null> {
     const rows = await this.db
-      .select({ enabled: user.twoFactorEnabled, method: user.twoFactorMethod, phone: user.twoFactorPhone })
+      .select({ enabled: user.twoFactorEnabled, method: user.twoFactorMethod })
       .from(user)
       .where(eq(user.id, userId))
       .limit(1);
     const r = rows[0];
     if (!r) return null;
-    return { enabled: Boolean(r.enabled), method: r.method ?? null, phone: r.phone ?? null };
+    return { enabled: Boolean(r.enabled), method: r.method ?? null };
   }
 
-  async setTwoFactorPrefs(userId: string, prefs: { method: TwoFactorMethod | null; phone?: string | null }): Promise<void> {
-    const patch: { twoFactorMethod: TwoFactorMethod | null; twoFactorPhone?: string | null } = { twoFactorMethod: prefs.method };
-    if (prefs.phone !== undefined) patch.twoFactorPhone = prefs.phone;
-    await this.db.update(user).set(patch).where(eq(user.id, userId));
+  async setTwoFactorPrefs(userId: string, method: TwoFactorMethod | null): Promise<void> {
+    await this.db.update(user).set({ twoFactorMethod: method }).where(eq(user.id, userId));
   }
 
   async setUserPin(userId: string, pinHash: string): Promise<void> {

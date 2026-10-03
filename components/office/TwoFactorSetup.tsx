@@ -4,26 +4,23 @@ import { useState } from "react";
 import { authClient } from "@/lib/auth/client";
 import { clearTwoFactorPrefsAction, noteTwoFactorEnabledAction, setTwoFactorPrefsAction } from "@/app/(app)/security/actions";
 
-export type TwoFactorMethodChoice = "app" | "email" | "sms";
-type Step = "summary" | "choose" | "phone" | "password" | "verify" | "done";
+export type TwoFactorMethodChoice = "app" | "email";
+type Step = "summary" | "choose" | "password" | "verify" | "done";
 
-const LABEL: Record<TwoFactorMethodChoice, string> = { app: "Authenticator app", email: "Code by email", sms: "Code by text message" };
+const LABEL: Record<TwoFactorMethodChoice, string> = { app: "Authenticator app", email: "Code by email" };
 
 /**
  * Second-step enrolment with a choice of method. Better Auth always creates the
- * TOTP secret + backup codes on enable; for email / text the person verifies an
- * emailed or texted code instead of scanning anything, and we remember the
- * chosen method so sign-in sends the code the same way.
+ * TOTP secret + backup codes on enable; for email the person verifies an
+ * emailed code instead of scanning anything, and we remember the chosen method
+ * so sign-in asks the same way.
  */
-export function TwoFactorSetup({ smsAvailable, country = "GB", current, redirectTo = "/office" }: {
-  smsAvailable: boolean;
-  country?: "GB" | "IE";
+export function TwoFactorSetup({ current, redirectTo = "/office" }: {
   current?: { enabled: boolean; method: TwoFactorMethodChoice | null; hint: string | null };
   redirectTo?: string;
 }) {
   const [step, setStep] = useState<Step>(current?.enabled ? "summary" : "choose");
   const [method, setMethod] = useState<TwoFactorMethodChoice>("app");
-  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const [totpUri, setTotpUri] = useState<string | null>(null);
@@ -35,13 +32,13 @@ export function TwoFactorSetup({ smsAvailable, country = "GB", current, redirect
   const field = "w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-teal";
   const primary = "w-full rounded-lg bg-teal px-4 py-2.5 font-semibold text-white hover:bg-teal-700 disabled:opacity-50";
 
-  const choose = (m: TwoFactorMethodChoice) => { setMethod(m); setError(null); setStep(m === "sms" ? "phone" : "password"); };
+  const choose = (m: TwoFactorMethodChoice) => { setMethod(m); setError(null); setStep("password"); };
 
   const start = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null); setBusy(true);
     try {
-      const pref = await setTwoFactorPrefsAction({ method, phone: method === "sms" ? phone : undefined, country });
+      const pref = await setTwoFactorPrefsAction({ method });
       if (!pref.ok) { setError(pref.error ?? "Could not save your choice"); return; }
       const res = await authClient.twoFactor.enable({ password });
       if (res.error) { setError(res.error.message ?? "Could not start set-up — check your password"); return; }
@@ -50,7 +47,7 @@ export function TwoFactorSetup({ smsAvailable, country = "GB", current, redirect
       if (method !== "app") {
         const sent = await authClient.twoFactor.sendOtp();
         if (sent.error) { setError(sent.error.message ?? "Could not send the code"); return; }
-        setNote(method === "sms" ? "We've texted you a 6-digit code." : "We've emailed you a 6-digit code.");
+        setNote("We've emailed you a 6-digit code.");
       }
       setStep("verify");
     } finally { setBusy(false); }
@@ -123,10 +120,10 @@ export function TwoFactorSetup({ smsAvailable, country = "GB", current, redirect
   }
 
   if (step === "choose") {
-    const card = (m: TwoFactorMethodChoice, title: string, body: string, disabled = false, why?: string) => (
-      <button key={m} type="button" onClick={() => choose(m)} disabled={disabled} className="w-full rounded-lg border border-slate-200 p-3 text-left hover:border-teal disabled:cursor-not-allowed disabled:opacity-60">
+    const card = (m: TwoFactorMethodChoice, title: string, body: string) => (
+      <button key={m} type="button" onClick={() => choose(m)} className="w-full rounded-lg border border-slate-200 p-3 text-left hover:border-teal">
         <span className="block text-sm font-semibold text-navy">{title}</span>
-        <span className="block text-xs text-slate-500">{disabled && why ? why : body}</span>
+        <span className="block text-xs text-slate-500">{body}</span>
       </button>
     );
     return (
@@ -134,22 +131,8 @@ export function TwoFactorSetup({ smsAvailable, country = "GB", current, redirect
         <p className="text-sm text-slate-600">Choose how you&apos;d like to get your second step at sign-in.</p>
         {card("app", "Authenticator app (most secure)", "Google Authenticator, 1Password, Authy… a code that changes every 30 seconds, works offline.")}
         {card("email", "Code by email", "We email a 6-digit code to your sign-in address each time.")}
-        {card("sms", "Code by text message", "We text a 6-digit code to your mobile each time.", !smsAvailable, "Text messages aren't set up on this platform yet.")}
         {error ? <p className="text-sm text-port">{error}</p> : null}
       </div>
-    );
-  }
-
-  if (step === "phone") {
-    return (
-      <form onSubmit={(e) => { e.preventDefault(); setStep("password"); }} className="space-y-3">
-        <p className="text-sm text-slate-600">Which mobile should we text?</p>
-        <input value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" autoComplete="tel" placeholder={country === "IE" ? "087 123 4567" : "07700 900123"} required className={field} />
-        <div className="flex gap-2">
-          <button className={primary}>Continue</button>
-          <button type="button" onClick={() => setStep("choose")} className="text-sm text-slate-500">Back</button>
-        </div>
-      </form>
     );
   }
 
@@ -161,7 +144,7 @@ export function TwoFactorSetup({ smsAvailable, country = "GB", current, redirect
         {error ? <p className="text-sm text-port">{error}</p> : null}
         <div className="flex gap-2">
           <button disabled={busy} className={primary}>{busy ? "Please wait…" : method === "app" ? "Show my set-up code" : "Send me a code"}</button>
-          <button type="button" onClick={() => setStep(method === "sms" ? "phone" : "choose")} className="text-sm text-slate-500">Back</button>
+          <button type="button" onClick={() => setStep("choose")} className="text-sm text-slate-500">Back</button>
         </div>
       </form>
     );

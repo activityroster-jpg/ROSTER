@@ -7,7 +7,7 @@ import { TwoFactorSetup, type TwoFactorMethodChoice } from "@/components/office/
 
 const safeNext = (n: string | undefined) => (n && n.startsWith("/admin") && !n.startsWith("//") ? n : "/admin");
 
-/** Enter this session's second-step code: authenticator, or an emailed / texted code. */
+/** Enter this session's second-step code: authenticator, or an emailed code. */
 export function AdminTotpVerify({ next, method, hint }: { next?: string; method: TwoFactorMethodChoice; hint: string | null }) {
   const router = useRouter();
   const [code, setCode] = useState("");
@@ -15,13 +15,12 @@ export function AdminTotpVerify({ next, method, hint }: { next?: string; method:
   const [note, setNote] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const sentOnce = useRef(false);
-  const channel = method === "sms" ? "text" : "email";
 
   const send = () => start(async () => {
     setErr(null);
     const r = await sendAdminOtpAction();
     if (!r.ok) setErr(r.error ?? "Could not send the code");
-    else setNote(`Code sent by ${channel}${hint ? ` to ${hint}` : ""}.`);
+    else setNote(`Code emailed${hint ? ` to ${hint}` : ""}.`);
   });
   useEffect(() => { if (method !== "app" && !sentOnce.current) { sentOnce.current = true; send(); } /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [method]);
 
@@ -46,7 +45,7 @@ export function AdminTotpVerify({ next, method, hint }: { next?: string; method:
 }
 
 /** Enrol a second step (choice of method), setting a password first when the account has none. */
-export function AdminTotpEnrol({ hasPassword, smsAvailable }: { hasPassword: boolean; smsAvailable: boolean }) {
+export function AdminTotpEnrol({ hasPassword }: { hasPassword: boolean }) {
   const router = useRouter();
   const [pw, setPw] = useState("");
   const [pw2, setPw2] = useState("");
@@ -64,5 +63,5 @@ export function AdminTotpEnrol({ hasPassword, smsAvailable }: { hasPassword: boo
       </form>
     );
   }
-  return <TwoFactorSetup smsAvailable={smsAvailable} redirectTo="/admin/security" />;
+  return <TwoFactorSetup redirectTo="/admin/security" />;
 }

@@ -5,8 +5,7 @@ import { getRepositories } from "@/lib/cf/bindings";
 import { requirePlatformAdmin } from "@/lib/platform/admin";
 import { Card } from "@/components/ui";
 import { AdminTotpEnrol, AdminTotpVerify } from "@/components/admin/AdminTotp";
-import { smsConfigured } from "@/lib/sms";
-import { maskEmail, maskPhone } from "@/lib/security/phone";
+import { maskEmail } from "@/lib/security/mask";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Security" };
@@ -26,7 +25,7 @@ export default async function AdminSecurityPage({ searchParams }: { searchParams
   const enrolled = Boolean(me?.twoFactorEnabled);
   const prefs = s?.user ? await control.getTwoFactorPrefs(s.user.id) : null;
   const method = prefs?.method ?? "app";
-  const hint = method === "sms" && prefs?.phone ? maskPhone(prefs.phone) : method === "email" && me?.email ? maskEmail(me.email) : null;
+  const hint = method === "email" && me?.email ? maskEmail(me.email) : null;
   let hasPassword = false;
   try {
     const accounts = await auth.api.listUserAccounts({ headers: h });
@@ -37,18 +36,18 @@ export default async function AdminSecurityPage({ searchParams }: { searchParams
   return (
     <div className="mx-auto max-w-md">
       <h1 className="mb-1 font-display text-2xl font-bold text-navy">Security</h1>
-      <p className="mb-6 text-sm text-slate-500">The Dev Center spans every centre, so it needs a second step on top of your password and PIN: an authenticator app, a code by email or a code by text.</p>
+      <p className="mb-6 text-sm text-slate-500">The Dev Center spans every centre, so it needs a second step on top of your password and PIN: an authenticator app or a code by email.</p>
 
       {!enrolled ? (
         <Card>
           <h2 className="mb-1 font-semibold text-navy">Set up your second step</h2>
           <p className="mb-4 text-xs text-slate-500">One-off. Pick a method, confirm a code, and keep the backup codes somewhere safe.</p>
-          <AdminTotpEnrol hasPassword={hasPassword} smsAvailable={smsConfigured()} />
+          <AdminTotpEnrol hasPassword={hasPassword} />
           <p className="mt-4 text-xs text-slate-400">Once this is on, every sign-in with your password asks for a code, and the Dev Center asks once per session.</p>
         </Card>
       ) : (
         <Card>
-          <h2 className="mb-1 font-semibold text-navy">{method === "app" ? "Enter your authenticator code" : method === "sms" ? "Enter the code we texted you" : "Enter the code we emailed you"}</h2>
+          <h2 className="mb-1 font-semibold text-navy">{method === "app" ? "Enter your authenticator code" : "Enter the code we emailed you"}</h2>
           <p className="mb-4 text-xs text-slate-500">{method === "app" ? "Open your authenticator app and type the current 6-digit code for ActivityRoster." : "It's 6 digits and expires after a few minutes."}</p>
           <AdminTotpVerify next={next} method={method} hint={hint} />
           <p className="mt-4 text-xs text-slate-400">Lost the phone or the inbox? Use a backup code at sign-in, then change your method here. <Link href="/security" className="underline">Centre security page</Link> has the same controls for your own centre.</p>

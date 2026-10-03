@@ -16,7 +16,7 @@ import { boolCol, createdAt, id, updatedAt } from "./_shared";
 
 // --- Better Auth core ------------------------------------------------------
 
-export const TWO_FACTOR_METHODS = ["app", "email", "sms"] as const;
+export const TWO_FACTOR_METHODS = ["app", "email"] as const;
 export type TwoFactorMethod = (typeof TWO_FACTOR_METHODS)[number];
 
 export const user = sqliteTable("user", {
@@ -32,11 +32,10 @@ export const user = sqliteTable("user", {
   phone: text("phone"),
   // twoFactor plugin
   twoFactorEnabled: integer("two_factor_enabled", { mode: "boolean" }),
-  // Which second step the person chose: authenticator app, emailed code or text
-  // message. Null = not chosen yet (treated as "app" for accounts enrolled before
-  // the choice existed). The phone is E.164 and used only for the text message.
+  // Which second step the person chose: authenticator app or emailed code.
+  // Null = not chosen yet (treated as "app" for accounts enrolled before the
+  // choice existed).
   twoFactorMethod: text("two_factor_method", { enum: TWO_FACTOR_METHODS }),
-  twoFactorPhone: text("two_factor_phone"),
   // 4-digit login PIN (a second factor for centre admins + the platform owner).
   // Stored as a PBKDF2 hash; instructors never set one. Lockout after repeated
   // wrong attempts via the two counters below.

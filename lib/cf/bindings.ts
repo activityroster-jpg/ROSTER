@@ -36,10 +36,6 @@ export interface CloudflareEnv {
   STRIPE_PRICE_FULL?: string;
   SENTRY_DSN?: string;
   RESEND_API_KEY?: string;
-  // Text-message second step (optional). TWILIO_FROM = a number or an MG… service SID.
-  TWILIO_ACCOUNT_SID?: string;
-  TWILIO_AUTH_TOKEN?: string;
-  TWILIO_FROM?: string;
   // Shown in the legal footer of every email (optional — set for compliance).
   COMPANY_LEGAL_NAME?: string;
   COMPANY_ADDRESS?: string;

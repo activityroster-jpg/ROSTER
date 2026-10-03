@@ -27,11 +27,7 @@ export const availabilityEntrySchema = z.object({
 });
 export const availabilityBulkSchema = z.array(availabilityEntrySchema).min(1, "Nothing to set").max(50);
 
-export const twoFactorPrefsSchema = z.object({
-  method: z.enum(TWO_FACTOR_METHODS),
-  phone: z.string().trim().max(40).optional(),
-  country: z.enum(["GB", "IE"]).optional(),
-});
+export const twoFactorPrefsSchema = z.object({ method: z.enum(TWO_FACTOR_METHODS) });
 export const otpCodeSchema = z.string().trim().regex(/^\d{6}$/, "Enter the 6-digit code");
 
 export const studentsSchema = z.coerce.number().int().min(1, "Enter how many students (at least 1)").max(500);

@@ -53,10 +53,3 @@ IOS_BUNDLE_ID=com.activityroster.app
 ANDROID_PACKAGE=com.activityroster.app
 # Comma-separated SHA-256 signing-certificate fingerprints (AA:BB:...)
 ANDROID_SHA256_FINGERPRINTS=
-
-# --- Text-message second step (Twilio, optional) ------------------------------
-# Leave blank and the "code by text" option simply isn't offered.
-TWILIO_ACCOUNT_SID=
-TWILIO_AUTH_TOKEN=
-# A Twilio number (+44…) or a Messaging Service SID (MG…)
-TWILIO_FROM=

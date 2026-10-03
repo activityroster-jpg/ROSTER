@@ -3,9 +3,9 @@
 import { headers } from "next/headers";
 import { getRepositories } from "@/lib/cf/bindings";
 import { rateLimit } from "@/lib/security/rate-limit";
-import { maskEmail, maskPhone } from "@/lib/security/phone";
+import { maskEmail } from "@/lib/security/mask";
 
-export type TwoFactorHint = { method: "app" | "email" | "sms" | null; hint: string | null };
+export type TwoFactorHint = { method: "app" | "email" | null; hint: string | null };
 
 /**
  * After a correct password, tell the second-step page which method this
@@ -23,6 +23,6 @@ export async function twoFactorHintAction(email: string): Promise<TwoFactorHint>
   if (!user?.twoFactorEnabled) return { method: null, hint: null };
   const prefs = await control.getTwoFactorPrefs(user.id);
   const method = prefs?.method ?? "app";
-  const hint = method === "sms" && prefs?.phone ? maskPhone(prefs.phone) : method === "email" ? maskEmail(user.email) : null;
+  const hint = method === "email" ? maskEmail(user.email) : null;
   return { method, hint };
 }

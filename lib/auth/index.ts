@@ -7,9 +7,6 @@ import { getDb, getEnv, type CloudflareEnv } from "@/lib/cf/bindings";
 import { sendEmail } from "@/lib/mail";
 import { notifySecurityChange, recordSecurityEvent } from "@/lib/security/events";
 import { authSecret } from "@/lib/security/secrets";
-import { ControlPlaneRepository } from "@/lib/db/repositories/control-plane";
-import { rateLimit } from "@/lib/security/rate-limit";
-import { sendSms, smsConfigured } from "@/lib/sms";
 
 /**
  * Better Auth is the source of truth for authentication (email/password, magic
@@ -121,24 +118,10 @@ export function createAuth(db: Database, env: CloudflareEnv) {
         },
       }),
       // Two-factor is optional. People choose their second step: an
-      // authenticator app (TOTP), a code by email, or a code by text message.
-      // The one-time code is delivered by whichever channel they chose; a text
-      // that cannot be sent falls back to email so nobody is locked out.
+      // authenticator app (TOTP) or a one-time code by email.
       twoFactor({
         otpOptions: {
           async sendOTP({ user, otp }) {
-            const prefs = await new ControlPlaneRepository(db).getTwoFactorPrefs(user.id).catch(() => null);
-            if (prefs?.method === "sms" && prefs.phone && smsConfigured(env)) {
-              const cap = await rateLimit(`otp-sms:${user.id}`, 6, 15 * 60);
-              if (cap.allowed) {
-                try {
-                  await sendSms({ to: prefs.phone, body: `Your ActivityRoster code is ${otp}. It expires shortly. If you didn't request it, ignore this message.` }, env);
-                  return;
-                } catch (err) {
-                  console.error("[2fa] text message failed, falling back to email:", (err as Error).message);
-                }
-              }
-            }
             await sendEmail({
               to: user.email,
               subject: "Your ActivityRoster verification code",

@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "0b56fa1b-d327-4019-bda1-bd250171720d",
+  "id": "6ce5275d-f5c4-40b3-ba34-660dc52693fe",
   "prevId": "78580d08-4ace-4511-9e54-fde540801232",
   "tables": {
     "account": {
@@ -1813,13 +1813,6 @@
         },
         "two_factor_method": {
           "name": "two_factor_method",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "two_factor_phone": {
-          "name": "two_factor_phone",
           "type": "text",
           "primaryKey": false,
           "notNull": false,

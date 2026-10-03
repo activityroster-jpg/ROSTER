@@ -7,8 +7,6 @@ import { notifySecurityChange, recordSecurityEvent } from "@/lib/security/events
 import { escapeHtml } from "@/lib/mail";
 import { headers } from "next/headers";
 import { getAuth } from "@/lib/auth";
-import { smsConfigured } from "@/lib/sms";
-import { normaliseMobile } from "@/lib/security/phone";
 import { firstIssue, twoFactorPrefsSchema } from "@/lib/validation/actions";
 
 const schema = z.object({ recoveryEmail: z.string().trim().email().max(200) });
@@ -44,20 +42,13 @@ async function me() {
  * Record which second step this person wants, before Better Auth's enable /
  * verify dance. Called by the enrolment component for the signed-in user only.
  */
-export async function setTwoFactorPrefsAction(input: { method: string; phone?: string; country?: string }): Promise<Result> {
+export async function setTwoFactorPrefsAction(input: { method: string }): Promise<Result> {
   const s = await me();
   if (!s) return { ok: false, error: "Please sign in again." };
   const parsed = twoFactorPrefsSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
-  const { method, country } = parsed.data;
-  let phone: string | null = null;
-  if (method === "sms") {
-    if (!smsConfigured()) return { ok: false, error: "Text messages aren't set up on this platform yet — choose email or an authenticator app." };
-    phone = normaliseMobile(parsed.data.phone ?? "", country ?? "GB");
-    if (!phone) return { ok: false, error: "Enter a mobile number we can text, e.g. 07700 900123." };
-  }
   const { control } = await getRepositories();
-  await control.setTwoFactorPrefs(s.userId, { method, phone });
+  await control.setTwoFactorPrefs(s.userId, parsed.data.method);
   return { ok: true };
 }
 
@@ -76,7 +67,7 @@ export async function clearTwoFactorPrefsAction(): Promise<Result> {
   const s = await me();
   if (!s) return { ok: false, error: "Please sign in again." };
   const { control } = await getRepositories();
-  await control.setTwoFactorPrefs(s.userId, { method: null, phone: null });
+  await control.setTwoFactorPrefs(s.userId, null);
   await recordSecurityEvent("two_factor_disabled", { userId: s.userId });
   return { ok: true };
 }

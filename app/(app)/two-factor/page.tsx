@@ -10,7 +10,7 @@ type Mode = "totp" | "otp" | "backup";
 function TwoFactorInner() {
   const sp = useSearchParams();
   const next = safeNext(sp.get("next"));
-  const preferred = sp.get("m") === "email" ? "email" : sp.get("m") === "sms" ? "sms" : "app";
+  const preferred = sp.get("m") === "email" ? "email" : "app";
   const hint = sp.get("h");
   const [mode, setMode] = useState<Mode>(preferred === "app" ? "totp" : "otp");
   const [code, setCode] = useState("");
@@ -19,18 +19,17 @@ function TwoFactorInner() {
   const [busy, setBusy] = useState(false);
   const sentOnce = useRef(false);
 
-  const channelWord = preferred === "sms" ? "text" : "email";
   const sendCode = async (quiet = false) => {
     setErr(null); if (!quiet) setNote(null);
     setBusy(true);
     try {
       const res = await authClient.twoFactor.sendOtp();
       if (res.error) setErr(res.error.message ?? "Could not send a code");
-      else { setMode("otp"); setNote(`We've sent a code by ${channelWord}${hint ? ` to ${hint}` : ""}.`); }
+      else { setMode("otp"); setNote(`We've emailed a code${hint ? ` to ${hint}` : ""}.`); }
     } finally { setBusy(false); }
   };
 
-  // Email / text users get their code the moment the page opens.
+  // Email users get their code the moment the page opens.
   useEffect(() => {
     if (preferred !== "app" && !sentOnce.current) { sentOnce.current = true; void sendCode(true); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -56,7 +55,7 @@ function TwoFactorInner() {
       <div className="rounded-card border border-slate-200 bg-white p-6">
         <h1 className="font-display text-xl font-semibold text-navy">One more step</h1>
         <p className="mt-1 mb-4 text-sm text-slate-500">
-          {mode === "totp" ? "Enter the 6-digit code from your authenticator app." : mode === "otp" ? `Enter the 6-digit code we sent by ${channelWord}.` : "Enter one of your backup codes."}
+          {mode === "totp" ? "Enter the 6-digit code from your authenticator app." : mode === "otp" ? "Enter the 6-digit code we emailed you." : "Enter one of your backup codes."}
         </p>
         <form onSubmit={submit} className="space-y-3">
           <input value={code} onChange={(e) => setCode(e.target.value)} inputMode={mode === "backup" ? "text" : "numeric"} autoComplete="one-time-code" autoFocus placeholder={mode === "backup" ? "backup code" : "123456"} className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-center font-mono text-xl tracking-widest outline-none focus:border-teal" aria-label="Code" />
@@ -68,7 +67,7 @@ function TwoFactorInner() {
           {mode === "otp" ? (
             <button type="button" onClick={() => void sendCode()} disabled={busy} className="font-medium text-teal hover:underline disabled:opacity-50">Send it again</button>
           ) : (
-            <button type="button" onClick={() => void sendCode()} disabled={busy} className="font-medium text-teal hover:underline disabled:opacity-50">{preferred === "sms" ? "Text me a code" : "Email me a code"}{preferred === "app" ? " instead" : ""}</button>
+            <button type="button" onClick={() => void sendCode()} disabled={busy} className="font-medium text-teal hover:underline disabled:opacity-50">Email me a code{preferred === "app" ? " instead" : ""}</button>
           )}
           {preferred === "app" && mode !== "totp" ? <button type="button" onClick={() => { setMode("totp"); setNote(null); }} className="font-medium text-teal hover:underline">Use my authenticator app</button> : null}
           {mode !== "backup" ? <button type="button" onClick={() => { setMode("backup"); setNote(null); }} className="font-medium text-slate-500 hover:text-navy">Use a backup code</button> : null}
