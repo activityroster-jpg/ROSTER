@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { headers } from "next/headers";
+import { PortalSignOut } from "@/components/portal/PortalSignOut";
 import { apexDomain } from "@/lib/config";
 import { eq } from "drizzle-orm";
 import { Bell, CalendarCheck, CalendarClock, CalendarOff, Clock, FileCheck, Settings, Timer } from "lucide-react";
@@ -27,6 +29,7 @@ export default async function PortalLayout({ children }: { children: React.React
   const portalSettings = (await repos.tenant.orgSettings.list(ctx))[0];
   const clockOn = Boolean(portalSettings?.timeclockEnabled);
   const privacyUrl = portalSettings?.privacyNoticeUrl ?? null;
+  const onApex = ((await headers()).get("host") ?? "").split(":")[0] === apexDomain();
   const tabs = TABS.filter((t) => clockOn || t.href !== "/portal/timeclock");
 
   return (
@@ -39,6 +42,7 @@ export default async function PortalLayout({ children }: { children: React.React
         </div>
         <div className="flex items-center gap-1">
         <Link href="/portal/settings" className="rounded-full p-2 hover:bg-white/10" aria-label="Settings"><Settings className="h-5 w-5" /></Link>
+        <PortalSignOut to={onApex ? "/app" : "/sign-in"} />
         <Link href="/portal/notifications" className="relative rounded-full p-2 hover:bg-white/10" aria-label={`Notifications${unread ? ` (${unread} unread)` : ""}`}>
           <Bell className="h-5 w-5" />
           {unread > 0 ? (

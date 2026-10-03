@@ -56,7 +56,7 @@ export function AdminTotpEnrol({ hasPassword }: { hasPassword: boolean }) {
     return (
       <form onSubmit={(e) => { e.preventDefault(); if (pw !== pw2) { setErr("The two passwords don't match."); return; } start(async () => { const r = await setAdminPasswordAction(pw); if (!r.ok) setErr(r.error ?? "Failed"); else { setDone(true); router.refresh(); } }); }} className="space-y-3">
         <p className="text-sm text-slate-600">Your account has no password yet (you&apos;ve been using sign-in links). Second-step set-up needs one, so choose a password first — you can keep using links to sign in.</p>
-        <input type="password" value={pw} onChange={(e) => setPw(e.target.value)} placeholder="New password (10+ characters)" autoComplete="new-password" className="w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-teal" />
+        <input type="password" value={pw} onChange={(e) => setPw(e.target.value)} placeholder="New password (8+ characters, letters and numbers)" autoComplete="new-password" className="w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-teal" />
         <input type="password" value={pw2} onChange={(e) => setPw2(e.target.value)} placeholder="Repeat it" autoComplete="new-password" className="w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-teal" />
         {err ? <p className="text-sm text-port">{err}</p> : null}
         <button type="submit" disabled={pending || pw.length < 10} className="w-full rounded-lg bg-navy px-4 py-2.5 font-semibold text-white disabled:opacity-50">{pending ? "Saving…" : "Set password"}</button>

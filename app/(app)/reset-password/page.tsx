@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
+import { PasswordStrength } from "@/components/auth/PasswordStrength";
 import { useSearchParams } from "next/navigation";
 import { authClient } from "@/lib/auth/client";
 import { passwordAcceptableAction } from "./actions";
@@ -26,7 +27,7 @@ function ResetPasswordInner() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (pw.length < 12) { setError("Use at least 12 characters."); return; }
+    if (pw.length < 8 || !/[A-Za-z]/.test(pw) || !/\d/.test(pw)) { setError("Use at least 8 characters with a mix of letters and numbers."); return; }
     if (pw !== confirm) { setError("The two passwords don't match."); return; }
     setBusy(true);
     try {
@@ -70,7 +71,8 @@ function ResetPasswordInner() {
       <h1 className="mb-1 font-display text-2xl font-semibold text-navy">Choose a new password</h1>
       <p className="mb-6 text-sm text-slate-500">Set a password you&apos;ll remember — at least 8 characters.</p>
       <form onSubmit={submit} className="space-y-3 rounded-card border border-slate-200 bg-white p-5">
-        <input type="password" value={pw} onChange={(e) => setPw(e.target.value)} placeholder="New password" autoComplete="new-password" className="w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-teal" />
+        <input type="password" value={pw} onChange={(e) => setPw(e.target.value)} placeholder="New password (8+ characters, letters and numbers)" autoComplete="new-password" className="w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-teal" />
+        <PasswordStrength password={pw} />
         <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Confirm new password" autoComplete="new-password" className="w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-teal" />
         {error ? <p className="text-sm text-port">{error}</p> : null}
         <button type="submit" disabled={busy} className="w-full rounded-lg bg-teal px-4 py-2.5 font-semibold text-white hover:bg-teal-700 disabled:opacity-50">

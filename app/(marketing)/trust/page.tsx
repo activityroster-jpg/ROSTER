@@ -23,7 +23,7 @@ export default function SecurityPage() {
       <P>Every record carries the centre it belongs to, and every read and write goes through one data-access layer that enforces that. An automated test creates two centres and proves one cannot read, list, change or export the other&rsquo;s records; it runs before every deployment.</P>
 
       <H>Signing in</H>
-      <P>Passwords are at least 12 characters, checked against known breached-password lists, and stored only as salted slow hashes. Centre admins sign in with email and password, then confirm a code we email the first time on a device and after 12 hours away. Everyone sets a 4-digit PIN that is asked for after 30 minutes without activity. Optional two-factor authentication with an authenticator app is available. New devices and countries trigger an extra check and an email. Sign-ins are rate-limited.</P>
+      <P>Passwords are at least 8 characters with letters and numbers, checked against known breached-password lists, and stored only as salted slow hashes. Centre admins sign in with email and password, then confirm a code we email the first time on a device and after 12 hours away. Everyone sets a 4-digit PIN that is asked for after 30 minutes without activity. Optional two-factor authentication with an authenticator app is available. New devices and countries trigger an extra check and an email. Sign-ins are rate-limited.</P>
 
       <H>Encryption and hardening</H>
       <P>All traffic is HTTPS with HSTS. Database queries are parameterised. Every input is validated on the server. Security headers (Content-Security-Policy, frame-ancestors none, nosniff, referrer and permissions policies) are set on every response. Card details never touch our systems: payments run through Stripe Checkout.</P>

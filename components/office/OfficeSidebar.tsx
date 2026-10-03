@@ -5,8 +5,9 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   CalendarDays, CalendarOff, ClipboardList, Clock, CreditCard, History, LayoutDashboard, LifeBuoy, MapPin, Menu, Settings, Ship, Users, Wallet, X,
-} from "lucide-react";
+ LogOut } from "lucide-react";
 import { Logo } from "@/components/Logo";
+import { signOut } from "@/lib/auth/client";
 
 const NAV = [
   {
@@ -46,6 +47,7 @@ const NAV = [
  * slipway as well as at the desk.
  */
 export function OfficeSidebar({ orgName, clockOn, hasInstructorRecord }: { orgName: string; clockOn: boolean; hasInstructorRecord: boolean }) {
+  const doSignOut = async () => { try { await signOut(); } finally { window.location.href = "/sign-in"; } };
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   useEffect(() => { setOpen(false); }, [pathname]);
@@ -78,6 +80,9 @@ export function OfficeSidebar({ orgName, clockOn, hasInstructorRecord }: { orgNa
         ) : (
           <span title="This admin login has no instructor record. To use the instructor app yourself, add yourself on the Instructors page with a personal email.">The instructor app is for your team</span>
         )}
+        <button type="button" onClick={doSignOut} className="mt-3 flex w-full items-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-sm font-medium text-white/80 hover:bg-white/10 hover:text-white">
+          <LogOut className="h-4 w-4" /> Sign out
+        </button>
       </div>
     </>
   );

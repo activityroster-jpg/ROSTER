@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { PasswordStrength } from "@/components/auth/PasswordStrength";
 import Link from "next/link";
 import { authClient, signIn, signUp } from "@/lib/auth/client";
 
@@ -89,7 +90,8 @@ export function AppSignup() {
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" autoComplete="name" required className={field} />
         <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Mobile number" autoComplete="tel" inputMode="tel" required className={field} />
         <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" autoComplete="email" inputMode="email" required className={field} />
-        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password (10+ characters)" autoComplete="new-password" required className={field} />
+        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password (8+ characters, letters and numbers)" autoComplete="new-password" required className={field} />
+        <PasswordStrength password={password} />
         <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Confirm password" autoComplete="new-password" required className={field} />
         {err ? <p className="text-sm text-port">{err}</p> : null}
         <button type="submit" disabled={busy} className="w-full rounded-xl bg-teal px-4 py-3.5 text-base font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{busy ? "Creating…" : "Continue"}</button>

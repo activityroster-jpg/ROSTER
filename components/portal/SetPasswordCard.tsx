@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { PasswordStrength } from "@/components/auth/PasswordStrength";
 import { KeyRound } from "lucide-react";
 import { setMyPasswordAction } from "@/app/(app)/portal/welcome/actions";
 
@@ -48,7 +49,8 @@ export function SetPasswordCard() {
           <p className="text-sm text-slate-600">You&apos;re signed in with your emailed link. Set a password if you&apos;d like to sign in with one next time (you can always use a link instead).</p>
           {open ? (
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
-              <input type="password" value={pw} onChange={(e) => setPw(e.target.value)} placeholder="New password (8+ chars)" autoComplete="new-password" className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal" />
+              <input type="password" value={pw} onChange={(e) => setPw(e.target.value)} placeholder="New password (8+ characters, letters and numbers)" autoComplete="new-password" className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal" />
+              <PasswordStrength password={pw} />
               <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Confirm password" autoComplete="new-password" className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal" />
               <div className="sm:col-span-2 flex items-center gap-3">
                 <button type="button" onClick={save} disabled={pending} className="rounded-lg bg-teal px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{pending ? "Saving…" : "Save password"}</button>

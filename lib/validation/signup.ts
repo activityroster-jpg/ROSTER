@@ -35,7 +35,7 @@ export const trialSignupSchema = z.object({
     .regex(SLUG_PATTERN, "Use 3–63 letters, numbers or hyphens")
     .refine((s) => !RESERVED_SUBDOMAINS.has(s), "That subdomain is reserved"),
   ownerEmail: z.string().trim().toLowerCase().email(),
-  password: z.string().min(12, "Use at least 12 characters").max(200),
+  password: z.string().min(8, "Use at least 8 characters with a mix of letters and numbers.").max(200).regex(/[A-Za-z]/, "Include at least one letter.").regex(/\d/, "Include at least one number."),
   jurisdiction: z.enum(JURISDICTIONS),
   setupMode: z.enum(SETUP_MODES),
   acceptedTerms: z.literal(true, {

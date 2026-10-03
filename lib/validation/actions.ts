@@ -8,7 +8,7 @@ import { AVAILABILITY_STATUSES, SLOT_CODES, TWO_FACTOR_METHODS } from "@/lib/db/
  */
 export const idSchema = z.string().regex(/^[A-Za-z0-9_-]{1,64}$/, "Invalid id");
 export const isoDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected YYYY-MM-DD");
-export const passwordSchema = z.string().min(12, "Use at least 12 characters.").max(200);
+export const passwordSchema = z.string().min(8, "Use at least 8 characters with a mix of letters and numbers.").max(200).regex(/[A-Za-z]/, "Include at least one letter.").regex(/\d/, "Include at least one number.");
 
 export const profileSchema = z.object({
   name: z.string().trim().min(2, "Enter your name").max(120),
