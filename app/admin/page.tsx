@@ -206,7 +206,6 @@ export default async function AdminOverviewPage({ searchParams }: { searchParams
               <th className="px-4 py-3">Trial</th>
               <th className="px-4 py-3">Staff</th>
               <th className="px-4 py-3">Courses</th>
-              <th className="px-4 py-3">Bookings</th>
               <th className="px-4 py-3">Last active</th>
               <th className="px-4 py-3">Joined</th>
             </tr>
@@ -216,7 +215,7 @@ export default async function AdminOverviewPage({ searchParams }: { searchParams
               <tr><td colSpan={11} className="px-4 py-10 text-center text-slate-400">{allOrgs.length === 0 ? "No centres yet." : "No centres match."}</td></tr>
             ) : (
               orgs.map((o) => {
-                const u = usage.get(o.id) ?? { instructors: 0, courses: 0, bookings: 0, sessions: 0 };
+                const u = usage.get(o.id) ?? { instructors: 0, courses: 0, sessions: 0 };
                 const tr = trialState(o, pricing.trialDays);
                 const trialCell = tr.kind === "paid" ? <span className="text-slate-400">—</span>
                   : tr.kind === "trial" ? <span className={tr.daysLeft <= 7 ? "font-medium text-amber" : "text-slate-600"}>{tr.daysLeft}d left</span>
@@ -239,7 +238,6 @@ export default async function AdminOverviewPage({ searchParams }: { searchParams
                     <td className="px-4 py-3 text-sm">{trialCell}</td>
                     <td className="px-4 py-3 text-slate-600">{u.instructors}</td>
                     <td className="px-4 py-3 text-slate-600">{u.courses}</td>
-                    <td className="px-4 py-3 text-slate-600">{u.bookings}</td>
                     <td className={`px-4 py-3 ${quiet(o) ? "text-slate-400" : "text-slate-600"}`}>{ago(lastActivity.get(o.id), now)}</td>
                     <td className="px-4 py-3 text-slate-500">{o.createdAt.toISOString().slice(0, 10)}</td>
                   </tr>

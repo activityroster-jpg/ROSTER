@@ -24,7 +24,6 @@ in `docs/retention.md`. Sub-processors in `docs/subprocessors.md`.
 | `onboarding_item`, `org_settings`, `session_slot`, `role_type`, `qualification_type`, `compliance_type`, `equipment_type`, `location_type`, `course_type*`, `equipment`, `location` | Configuration | – | None | – | Admins |
 | `integration` | Connected calendar/accounting tokens (AES-GCM encrypted) | – | Secret | Contract | Nobody directly |
 | `audit_log` | Who changed what and when in the centre; append-only (database triggers) | Staff (actor), subjects of changes | Standard | Legitimate interests (accountability) | Admins (plain-English change log) |
-| `booking` | **Unused.** Customer name, email, headcount, amount from a retired feature | Customers | Standard | – | Nobody; scheduled for removal |
 | R2 bucket `activityroster-docs` | Uploaded certificate and vetting documents, keyed by centre | Staff | High | As `compliance_item` | Admins, via authenticated download only |
 
 Held since P0-E (3 October 2026): dates of birth, parent or guardian details and

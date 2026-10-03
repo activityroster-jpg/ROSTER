@@ -6,7 +6,6 @@ import {
   user,
   instructor,
   course,
-  booking,
   courseSession,
   auditLog,
   marketingProspect,
@@ -64,7 +63,6 @@ import { parseProspectStatuses, primaryProspectStatus, prospectStatusRank } from
 export interface OrgUsage {
   instructors: number;
   courses: number;
-  bookings: number;
   sessions: number;
 }
 
@@ -95,21 +93,19 @@ export class PlatformRepository {
 
   /** Usage counts per organisation, for the admin overview. */
   async usageByOrg(): Promise<Map<string, OrgUsage>> {
-    const [ins, crs, bk, ses] = await Promise.all([
+    const [ins, crs, ses] = await Promise.all([
       this.db.select({ org: instructor.organisationId, n: sql<number>`count(*)` }).from(instructor).groupBy(instructor.organisationId),
       this.db.select({ org: course.organisationId, n: sql<number>`count(*)` }).from(course).groupBy(course.organisationId),
-      this.db.select({ org: booking.organisationId, n: sql<number>`count(*)` }).from(booking).groupBy(booking.organisationId),
       this.db.select({ org: courseSession.organisationId, n: sql<number>`count(*)` }).from(courseSession).groupBy(courseSession.organisationId),
     ]);
     const map = new Map<string, OrgUsage>();
     const ensure = (id: string): OrgUsage => {
       let u = map.get(id);
-      if (!u) { u = { instructors: 0, courses: 0, bookings: 0, sessions: 0 }; map.set(id, u); }
+      if (!u) { u = { instructors: 0, courses: 0, sessions: 0 }; map.set(id, u); }
       return u;
     };
     for (const r of ins) ensure(r.org).instructors = Number(r.n);
     for (const r of crs) ensure(r.org).courses = Number(r.n);
-    for (const r of bk) ensure(r.org).bookings = Number(r.n);
     for (const r of ses) ensure(r.org).sessions = Number(r.n);
     return map;
   }

@@ -186,14 +186,6 @@ export async function seedFullOrg(
     sortOrder: 0,
     completedAt: new Date(start),
   });
-  await t.booking.insert(ctx, {
-    courseId: course.id,
-    customerName: `Customer ${opts.slug}`,
-    customerEmail: `customer@${opts.slug}.test`,
-    headcount: 2,
-    amount: 120,
-    status: "confirmed",
-  });
   await t.integration.insert(ctx, {
     provider: "ics_generic",
     kind: "ics",

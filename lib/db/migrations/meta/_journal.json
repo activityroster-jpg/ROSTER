@@ -330,6 +330,13 @@
       "when": 1791062666341,
       "tag": "0046_append_only_logs",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "6",
+      "when": 1791063173138,
+      "tag": "0047_elite_squirrel_girl",
+      "breakpoints": true
     }
   ]
 }

@@ -42,7 +42,7 @@ export default async function CentreDetailPage({ params }: { params: Promise<{ i
     at: r.createdAt.toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" }),
     who: (await control.userById(r.userId))?.email ?? null,
   })));
-  const u = usage.get(id) ?? { instructors: 0, courses: 0, bookings: 0, sessions: 0 };
+  const u = usage.get(id) ?? { instructors: 0, courses: 0, sessions: 0 };
   const apex = apexDomain();
   const eff = effectivePricing(org, pricing);
   const trial = trialState(org, pricing.trialDays);
@@ -82,7 +82,6 @@ export default async function CentreDetailPage({ params }: { params: Promise<{ i
           <Row k="Instructors" v={tierMeta(org.tier).userCap ? `${u.instructors} / ${tierMeta(org.tier).userCap}` : String(u.instructors)} />
           <Row k="Courses" v={String(u.courses)} />
           <Row k="Sessions" v={String(u.sessions)} />
-          <Row k="Bookings" v={String(u.bookings)} />
           <Row k="Jurisdiction" v={org.jurisdiction} />
         </Card>
       </div>
