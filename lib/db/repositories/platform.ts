@@ -14,6 +14,8 @@ import {
   blogPost,
   integration,
   platformTask,
+  financeTransaction,
+  financeSettings,
   callAvailability,
   callBooking,
   type CallAvailability,
@@ -29,6 +31,9 @@ import {
   type PlatformPricing,
   type PlatformTask,
   type NewPlatformTask,
+  type FinanceTransaction,
+  type NewFinanceTransaction,
+  type FinanceSettings,
   type TaskStatus,
   type ProspectStatus,
 } from "@/lib/db/schema";
@@ -369,6 +374,50 @@ export class PlatformRepository {
     if (updated.length === 0) {
       await this.db.insert(platformPricing).values({ ...DEFAULT_PRICING, ...patch, updatedAt: new Date() });
     }
+  }
+
+  // --- Finance (owner's books) ----------------------------------------------
+
+  async listFinanceTransactions(range?: { from?: string; to?: string }): Promise<FinanceTransaction[]> {
+    const conds = [];
+    if (range?.from) conds.push(gte(financeTransaction.date, range.from));
+    if (range?.to) conds.push(lte(financeTransaction.date, range.to));
+    const base = this.db.select().from(financeTransaction);
+    const rows = conds.length ? await base.where(and(...conds)).orderBy(desc(financeTransaction.date), desc(financeTransaction.createdAt)) : await base.orderBy(desc(financeTransaction.date), desc(financeTransaction.createdAt));
+    return rows;
+  }
+
+  async insertFinanceTransaction(values: Omit<NewFinanceTransaction, "id" | "createdAt" | "updatedAt">): Promise<FinanceTransaction> {
+    const rows = await this.db.insert(financeTransaction).values(values).returning();
+    return rows[0]!;
+  }
+
+  /** Insert unless a row with this external id exists (Stripe idempotency). Returns the row and whether it was new. */
+  async upsertFinanceByExternalId(values: Omit<NewFinanceTransaction, "id" | "createdAt" | "updatedAt"> & { externalId: string }): Promise<{ row: FinanceTransaction; created: boolean }> {
+    const existing = await this.db.select().from(financeTransaction).where(eq(financeTransaction.externalId, values.externalId)).limit(1);
+    if (existing[0]) return { row: existing[0], created: false };
+    const rows = await this.db.insert(financeTransaction).values(values).returning();
+    return { row: rows[0]!, created: true };
+  }
+
+  async updateFinanceTransaction(id: string, patch: Partial<Omit<NewFinanceTransaction, "id" | "createdAt">>): Promise<FinanceTransaction | null> {
+    const rows = await this.db.update(financeTransaction).set({ ...patch, updatedAt: new Date() }).where(eq(financeTransaction.id, id)).returning();
+    return rows[0] ?? null;
+  }
+
+  async deleteFinanceTransaction(id: string): Promise<boolean> {
+    const rows = await this.db.delete(financeTransaction).where(eq(financeTransaction.id, id)).returning({ id: financeTransaction.id });
+    return rows.length > 0;
+  }
+
+  async getFinanceSettings(): Promise<FinanceSettings> {
+    const rows = await this.db.select().from(financeSettings).where(eq(financeSettings.id, "default")).limit(1);
+    return rows[0] ?? { id: "default", fyStartMonth: 1, reportingCurrency: "GBP", eurToGbp: 0.86, openingCashMinor: 0, openingCashDate: null, updatedAt: new Date() };
+  }
+
+  async upsertFinanceSettings(patch: Partial<Omit<FinanceSettings, "id" | "updatedAt">>): Promise<void> {
+    const updated = await this.db.update(financeSettings).set({ ...patch, updatedAt: new Date() }).where(eq(financeSettings.id, "default")).returning({ id: financeSettings.id });
+    if (updated.length === 0) await this.db.insert(financeSettings).values({ id: "default", ...patch, updatedAt: new Date() });
   }
 
   // --- Blog / CMS ----------------------------------------------------------

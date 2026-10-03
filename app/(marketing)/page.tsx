@@ -140,11 +140,11 @@ export default function MarketingHome() {
       {/* Hero — the photo shows through more on phones, where there's no demo */}
       <section className="relative overflow-hidden bg-navy text-white">
         <div
-          className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-50 md:opacity-20"
+          className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-55 md:opacity-30"
           style={{ backgroundImage: `url('${PHOTOS.hero}')` }}
           aria-hidden
         />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-navy/60 via-navy/75 to-navy md:bg-[linear-gradient(90deg,#0A2E52_35%,rgba(10,46,82,0.72)_100%)]" aria-hidden />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-navy/60 via-navy/75 to-navy md:bg-[linear-gradient(90deg,#0A2E52_30%,rgba(10,46,82,0.6)_100%)]" aria-hidden />
         <div className="relative mx-auto grid max-w-6xl items-center gap-8 px-4 py-14 md:grid-cols-2 md:py-20">
           <div>
             <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-[#4fd1c5]">

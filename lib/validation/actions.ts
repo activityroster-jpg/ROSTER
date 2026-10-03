@@ -30,6 +30,26 @@ export const availabilityBulkSchema = z.array(availabilityEntrySchema).min(1, "N
 export const twoFactorPrefsSchema = z.object({ method: z.enum(TWO_FACTOR_METHODS) });
 export const otpCodeSchema = z.string().trim().regex(/^\d{6}$/, "Enter the 6-digit code");
 
+export const financeTransactionSchema = z.object({
+  date: isoDateSchema,
+  category: z.string().min(1).max(60),
+  description: z.string().trim().min(1, "Say what it was for").max(200),
+  counterparty: z.string().trim().max(120).optional().transform((v) => v || null),
+  /** Major units as typed, e.g. "12.50" or "-20"; converted to minor units by the action. */
+  amount: z.string().trim().regex(/^-?\d{1,9}(\.\d{1,2})?$/, "Enter an amount like 12.50"),
+  vat: z.string().trim().regex(/^\d{1,9}(\.\d{1,2})?$/, "Enter VAT like 2.50").optional().or(z.literal("")),
+  currency: z.enum(["GBP", "EUR"]),
+  receiptRef: z.string().trim().max(300).optional().transform((v) => v || null),
+  notes: z.string().trim().max(1000).optional().transform((v) => v || null),
+});
+export const financeSettingsSchema = z.object({
+  fyStartMonth: z.coerce.number().int().min(1).max(12),
+  reportingCurrency: z.enum(["GBP", "EUR"]),
+  eurToGbp: z.coerce.number().min(0.3).max(3),
+  openingCash: z.string().trim().regex(/^-?\d{1,10}(\.\d{1,2})?$/, "Enter an amount like 1500.00").optional().or(z.literal("")),
+  openingCashDate: isoDateSchema.optional().or(z.literal("")),
+});
+
 export const studentsSchema = z.coerce.number().int().min(1, "Enter how many students (at least 1)").max(500);
 export const trialDaysSchema = z.coerce.number().int().min(1, "Enter 1–365 days").max(365);
 

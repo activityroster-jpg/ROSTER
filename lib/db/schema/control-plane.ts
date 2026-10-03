@@ -477,6 +477,57 @@ export type NewBlogPost = typeof blogPost.$inferInsert;
 export type PlatformTask = typeof platformTask.$inferSelect;
 export type NewPlatformTask = typeof platformTask.$inferInsert;
 
+// --- Finance (platform owner's own books) -----------------------------------
+
+export const FINANCE_CURRENCIES = ["GBP", "EUR"] as const;
+export type FinanceCurrency = (typeof FINANCE_CURRENCIES)[number];
+export const FINANCE_SOURCES = ["manual", "stripe"] as const;
+
+/**
+ * One line in the owner's transaction log: an expense typed in by hand, or
+ * revenue / a processing fee picked up automatically from Stripe. Amounts are
+ * minor units (pence / cents), positive for money in on revenue categories and
+ * money out on cost categories; a negative amount is a refund or credit.
+ */
+export const financeTransaction = sqliteTable("finance_transaction", {
+  id: id(),
+  date: text("date").notNull(), // YYYY-MM-DD
+  category: text("category").notNull(), // key from lib/finance/categories
+  description: text("description").notNull(),
+  counterparty: text("counterparty"), // supplier or customer
+  amountMinor: integer("amount_minor").notNull(),
+  vatMinor: integer("vat_minor"),
+  currency: text("currency", { enum: FINANCE_CURRENCIES }).notNull().default("GBP"),
+  source: text("source", { enum: FINANCE_SOURCES }).notNull().default("manual"),
+  /** Stripe invoice / charge id so webhooks and backfills never double-count. */
+  externalId: text("external_id"),
+  receiptRef: text("receipt_ref"), // invoice number, link or file name
+  notes: text("notes"),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, (t) => [
+  index("finance_tx_date_idx").on(t.date),
+  index("finance_tx_category_idx").on(t.category),
+  uniqueIndex("finance_tx_external_uq").on(t.externalId),
+]);
+export type FinanceTransaction = typeof financeTransaction.$inferSelect;
+export type NewFinanceTransaction = typeof financeTransaction.$inferInsert;
+
+/** Singleton: how the books are presented. */
+export const financeSettings = sqliteTable("finance_settings", {
+  id: text("id").primaryKey().default("default"),
+  /** Month the financial year starts, 1–12 (1 = January, 4 = April…). */
+  fyStartMonth: integer("fy_start_month").notNull().default(1),
+  reportingCurrency: text("reporting_currency", { enum: FINANCE_CURRENCIES }).notNull().default("GBP"),
+  /** 1 EUR = this many GBP, used to report EUR lines in GBP (and the inverse). */
+  eurToGbp: real("eur_to_gbp").notNull().default(0.86),
+  /** Bank balance at the start of the records, minor units in the reporting currency. */
+  openingCashMinor: integer("opening_cash_minor").notNull().default(0),
+  openingCashDate: text("opening_cash_date"),
+  updatedAt: updatedAt(),
+});
+export type FinanceSettings = typeof financeSettings.$inferSelect;
+
 // --- Security events --------------------------------------------------------
 
 export const SECURITY_EVENT_KINDS = [

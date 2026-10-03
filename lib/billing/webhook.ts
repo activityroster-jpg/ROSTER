@@ -1,4 +1,6 @@
 import type Stripe from "stripe";
+import { getDb } from "@/lib/cf/bindings";
+import { recordChargeRefunded, recordInvoicePaid } from "./finance-sync";
 import type { Repositories } from "@/lib/db/repositories";
 import type { CloudflareEnv } from "@/lib/cf/bindings";
 import type { SubscriptionStatus } from "@/lib/db/schema";
@@ -105,9 +107,17 @@ async function routeEvent(env: CloudflareEnv, repos: Repositories, event: Stripe
     case "invoice.paid": {
       const invoice = event.data.object as Stripe.Invoice;
       const customerId = typeof invoice.customer === "string" ? invoice.customer : null;
-      if (!customerId) return;
-      const org = await repos.control.organisationByStripeCustomer(customerId);
-      if (org) await repos.control.updateOrganisation(org.id, { subscriptionStatus: "active", status: "active" });
+      if (customerId) {
+        const org = await repos.control.organisationByStripeCustomer(customerId);
+        if (org) await repos.control.updateOrganisation(org.id, { subscriptionStatus: "active", status: "active" });
+      }
+      // Books: revenue + Stripe fee (idempotent; never fails the webhook).
+      try { await recordInvoicePaid(await getDb(), repos, env, invoice); } catch (err) { console.error("[finance] invoice.paid not booked:", (err as Error).message); }
+      return;
+    }
+
+    case "charge.refunded": {
+      try { await recordChargeRefunded(await getDb(), repos, event.data.object as Stripe.Charge); } catch (err) { console.error("[finance] refund not booked:", (err as Error).message); }
       return;
     }
 
