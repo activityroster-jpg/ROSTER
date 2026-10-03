@@ -59,3 +59,22 @@ Keep Bot Fight Mode **off** (Security → Bots). Bots are handled by Turnstile o
 public forms and sign-in, the per-IP rate limits, and Cloudflare's always-on DDoS
 protection and managed rules. The workflow now says so in plain words when it sees
 the challenge header.
+
+## Dependency updates (Dependabot)
+
+Dependabot opens pull requests against the working branch every Monday, plus
+security fixes as they appear. Conor does not merge them by hand:
+
+- Claude folds the safe ones (patch and minor versions, tooling, GitHub Actions)
+  into the working branch with the tests run, so they reach staging and then
+  production through the normal deploy. Dependabot closes its own pull request
+  once the branch already carries the update.
+- Major versions (a new Next.js, Tailwind, Zod and the like) are planned as
+  their own piece of work, never merged from the bot. Until then the open pull
+  request is left alone or told to ignore that major version.
+- `npm audit` findings that only affect build or test tooling (not the deployed
+  Worker) are noted here and fixed when the major update happens.
+
+As of 3 October 2026 the remaining audit findings are all build-time
+(Tailwind 3's file watcher, Next 15's bundled PostCSS, drizzle-kit's bundler);
+none ship in the Worker. They clear with the Tailwind 4 and Next 16 upgrades.
