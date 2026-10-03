@@ -6,7 +6,12 @@
  */
 import type { PushPlatform } from "@/lib/db/schema";
 
-interface CapacitorGlobal { isNativePlatform?: () => boolean; getPlatform?: () => string }
+interface CapacitorGlobal {
+  isNativePlatform?: () => boolean;
+  getPlatform?: () => string;
+  /** Runtime plugin registry — lets us use core plugins without a web-bundle dependency. */
+  Plugins?: { App?: { addListener: (event: "appUrlOpen", cb: (ev: { url: string }) => void) => Promise<{ remove: () => Promise<void> }> | { remove: () => Promise<void> } } };
+}
 const cap = (): CapacitorGlobal | undefined => (typeof window !== "undefined" ? (window as unknown as { Capacitor?: CapacitorGlobal }).Capacitor : undefined);
 
 export const isNative = (): boolean => Boolean(cap()?.isNativePlatform?.());
@@ -114,4 +119,25 @@ export async function unlockPinWithBiometrics(): Promise<string | null> {
   } catch {
     return null;
   }
+}
+
+// --- Universal / app links ---------------------------------------------------
+
+const APP_HOST_RE = /^https:\/\/([a-z0-9-]+\.)?activityroster\.com(\/|$)/i;
+let deepLinksReady = false;
+
+/**
+ * When iOS/Android hand the app one of our links (a sign-in link, a device
+ * confirmation, a roster notification), load it inside the app instead of
+ * dropping the user on the home screen. Only our own domain is followed.
+ * Safe in a browser: does nothing.
+ */
+export function initDeepLinks(): void {
+  if (!isNative() || deepLinksReady) return;
+  const app = cap()?.Plugins?.App;
+  if (!app) return;
+  deepLinksReady = true;
+  void app.addListener("appUrlOpen", ({ url }) => {
+    if (typeof url === "string" && APP_HOST_RE.test(url)) window.location.href = url;
+  });
 }

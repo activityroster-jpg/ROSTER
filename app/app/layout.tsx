@@ -1,4 +1,5 @@
 import { Logo } from "@/components/Logo";
+import { NativeBridge } from "@/components/mobile/NativeBridge";
 
 export const metadata = {
   title: "ActivityRoster app",
@@ -13,6 +14,7 @@ export const metadata = {
 export default function AppShellLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col bg-canvas">
+      <NativeBridge />
       <header className="bg-navy px-5 pb-5 pt-[max(1.25rem,env(safe-area-inset-top))] text-white">
         <Logo variant="onDark" size="md" />
         <p className="mt-1 text-sm text-white/70">Instructor app</p>
