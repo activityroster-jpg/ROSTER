@@ -39,7 +39,7 @@ jobs:
             exit 0
           fi
           echo "provisioned=true" >> "$GITHUB_ENV"
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         if: env.provisioned == 'true'
         with:
           node-version: 22
