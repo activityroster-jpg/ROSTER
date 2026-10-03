@@ -6,7 +6,7 @@ import { enforcePinGate } from "@/lib/auth/pin-gate";
 import { enforceDeviceGate } from "@/lib/auth/device-gate";
 
 /**
- * Platform-owner (super-admin) access control. This is the ONE surface that
+ * Dev Center (platform-owner) access control. This is the ONE surface that
  * legitimately spans all organisations — for the platform owner to manage
  * centres, billing and usage. It is gated by an explicit email allowlist held
  * in the PLATFORM_ADMIN_EMAILS worker var; if that is unset, nobody is admin.

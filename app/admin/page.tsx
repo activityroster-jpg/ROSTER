@@ -79,7 +79,7 @@ export default async function AdminOverviewPage() {
   return (
     <div>
       <h1 className="mb-1 font-display text-2xl font-bold text-navy">Overview</h1>
-      <p className="mb-6 text-sm text-slate-500">All centres on the platform, their billing and usage.</p>
+      <p className="mb-6 text-sm text-slate-500">Dev Center · all centres on the platform, their billing and usage.</p>
 
       <div className="mb-8 grid gap-3 sm:grid-cols-4">
         <Card><p className="text-xs font-semibold text-navy">Centres</p><p className="mt-1 text-2xl font-semibold text-navy">{total}</p></Card>

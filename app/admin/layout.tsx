@@ -4,6 +4,9 @@ import { Logo } from "@/components/Logo";
 
 export const dynamic = "force-dynamic";
 
+export const metadata = { title: { default: "Dev Center · ActivityRoster", template: "%s · Dev Center" } };
+
+/** Dev Center: the platform owner's area (centres, billing, marketing, blog, errors). Lives at /admin on the apex. */
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const { email } = await requirePlatformAdmin();
 
@@ -13,7 +16,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-4">
             <Logo variant="onDark" size="sm" />
-            <span className="rounded-full bg-white/15 px-2.5 py-0.5 text-xs font-semibold">Platform admin</span>
+            <span className="rounded-full bg-white/15 px-2.5 py-0.5 text-xs font-semibold">Dev Center</span>
           </div>
           <nav className="flex items-center gap-5 text-sm">
             <Link href="/admin" className="text-white/80 hover:text-white">Overview</Link>
