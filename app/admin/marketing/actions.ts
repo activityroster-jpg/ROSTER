@@ -151,8 +151,8 @@ export async function seedSampleProspectsAction(): Promise<ProspectResult> {
  */
 export async function loadRyaDirectoryAction(): Promise<ProspectResult> {
   const repo = await platform();
-  const rows = (RYA_DIRECTORY as Array<Record<string, string>>).map((r) => ({
-    name: r.name,
+  const rows = (RYA_DIRECTORY as Array<Record<string, string | undefined>>).filter((r) => Boolean(r.name)).map((r) => ({
+    name: r.name as string,
     region: r.region || null,
     addressLine1: r.addressLine1 || null,
     addressLine2: r.addressLine2 || null,
