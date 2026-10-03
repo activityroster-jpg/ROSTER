@@ -140,6 +140,8 @@ export const orgSettings = sqliteTable("org_settings", {
   workingTimeMode: text("working_time_mode", { enum: WORKING_TIME_MODES }).notNull().default("block_override"),
   /** JSON array of {from,to,label?} ISO date ranges that count as school term time. Empty = treat every week as term time (the stricter caps). */
   termDates: text("term_dates").notNull().default("[]"),
+  /** JSON RotaTemplateSettings (lib/rota/template): range, orientation and fields for the rota PDF. */
+  rotaTemplate: text("rota_template").notNull().default("{}"),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 }, (t) => [uniqueIndex("org_settings_org_uq").on(t.organisationId)]);

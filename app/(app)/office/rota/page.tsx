@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { requireTenant } from "@/lib/tenant/require";
 import { addDays, getWeekRota, weekStart } from "@/lib/services/schedule";
-import { PrintButton } from "@/components/office/PrintButton";
+import { RotaDownload } from "@/components/office/RotaDownload";
+import { parseRotaTemplate } from "@/lib/rota/template";
 import { RotaView } from "@/components/office/RotaView";
 import { PublishWeek } from "@/components/office/PublishWeek";
 import { publishedWeeks } from "@/lib/services/roster";
@@ -15,7 +16,8 @@ export default async function RotaPage({ searchParams }: { searchParams: Promise
   const thisMonday = weekStart(new Date());
   const sp = await searchParams;
   const monday = typeof sp.week === "string" && ISO.test(sp.week) ? weekStart(new Date(`${sp.week}T00:00:00Z`)) : thisMonday;
-  const [rota, published] = await Promise.all([getWeekRota(repos, ctx, monday), publishedWeeks(repos, ctx)]);
+  const [rota, published, settingsRows] = await Promise.all([getWeekRota(repos, ctx, monday), publishedWeeks(repos, ctx), repos.tenant.orgSettings.list(ctx)]);
+  const rotaTemplate = parseRotaTemplate(settingsRows[0]?.rotaTemplate);
   const publishedAt = published.get(monday) ?? null;
   // One assignment per course, however many sessions it has.
   const perCourse = new Map<string, { status: string }[]>();
@@ -38,7 +40,8 @@ export default async function RotaPage({ searchParams }: { searchParams: Promise
           <Link href={`/office/rota?week=${addDays(monday, 7)}`} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-navy hover:bg-slate-50">Next →</Link>
           <Link href="/office/rota/emergency" className="rounded-lg border border-port/40 px-3 py-1.5 text-sm font-medium text-port hover:bg-port/5">Emergency sheet</Link>
           <a href="/learn?topic=rota" target="_blank" rel="noreferrer" className="text-sm font-medium text-teal hover:underline">📖 Guide</a>
-          <PrintButton downloadName={`${organisation.name} roster ${monday}`} />
+          <RotaDownload weekStart={monday} defaultRange={rotaTemplate.range} />
+          <Link href="/office/settings#rota-pdf" className="text-xs text-slate-400 hover:text-navy">Change layout</Link>
         </div>
       </div>
 

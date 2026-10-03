@@ -1,0 +1,1 @@
+ALTER TABLE `org_settings` ADD `rota_template` text DEFAULT '{}' NOT NULL;

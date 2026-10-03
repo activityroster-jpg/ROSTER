@@ -10,6 +10,8 @@ import { parseDefaultSchedule } from "@/lib/domain";
 import { packKeyFor } from "@/lib/rules/working-time/packs";
 import { loadPack } from "@/lib/rules/working-time/load";
 import { termRangesOf } from "@/lib/services/working-time";
+import { RotaTemplateForm } from "@/components/office/RotaTemplateForm";
+import { parseRotaTemplate } from "@/lib/rota/template";
 
 export const dynamic = "force-dynamic";
 
@@ -75,6 +77,17 @@ export default async function SettingsPage() {
           enforceAvailabilityChecks={s?.enforceAvailabilityChecks ?? true}
         />
       </Card>
+
+      <div id="rota-pdf" className="mb-6">
+      <Card>
+        <div className="mb-1 flex items-center justify-between">
+          <h2 className="font-semibold text-navy">Rota PDF</h2>
+          <a href="/learn?topic=rota" target="_blank" rel="noreferrer" className="text-xs font-medium text-teal hover:underline">📖 Read the guide</a>
+        </div>
+        <p className="mb-3 text-xs text-slate-500">What the downloaded rota shows and how it is laid out. You chose this when you set up; change it here any time.</p>
+        <RotaTemplateForm initial={parseRotaTemplate(s?.rotaTemplate)} />
+      </Card>
+      </div>
 
       <div className="mb-6 grid gap-6 lg:grid-cols-3">
         <Card>

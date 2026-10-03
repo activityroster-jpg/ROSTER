@@ -2,6 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
+import { RotaTemplateForm } from "./RotaTemplateForm";
+import { DEFAULT_ROTA_TEMPLATE } from "@/lib/rota/template";
 import {
   addCustomCourseAction,
   addDefaultCoursesAction,
@@ -32,7 +34,7 @@ const AUDIENCE_ORDER: { key: CourseAudience; label: string; hint: string }[] = [
   { key: "all", label: "All ages", hint: "Runs for any age group" },
 ];
 
-const STEP_LABELS = ["How you run", "Courses", "Team", "Finish"];
+const STEP_LABELS = ["How you run", "Courses", "Team", "Rota PDF", "Finish"];
 
 export function OnboardingWizard({
   centreName,
@@ -433,8 +435,21 @@ export function OnboardingWizard({
         </div>
       ) : null}
 
-      {/* STEP 4 — finish + funnel for chosen extras */}
+      {/* STEP 4 — rota PDF layout */}
       {step === 4 ? (
+        <div className="rounded-card border border-slate-200 bg-white p-6">
+          <h2 className="font-semibold text-navy">Your rota PDF</h2>
+          <p className="mb-4 mt-1 text-sm text-slate-500">The roster you download and pin up or email. Choose what goes on it and how it is laid out; you can change this later under Settings → Rota PDF.</p>
+          <RotaTemplateForm initial={DEFAULT_ROTA_TEMPLATE} compact onSaved={() => setStep(5)} />
+          <div className="mt-6 flex justify-between">
+            <button onClick={() => setStep(3)} className="text-sm font-semibold text-slate-500 hover:text-navy">← Back</button>
+            <button onClick={() => setStep(5)} className="text-sm font-semibold text-slate-500 hover:text-navy">Keep the defaults →</button>
+          </div>
+        </div>
+      ) : null}
+
+      {/* STEP 5 — finish + funnel for chosen extras */}
+      {step === 5 ? (
         <div className="rounded-card border border-slate-200 bg-white p-8">
           <p className="text-center font-display text-2xl font-semibold text-navy">🎉 You&apos;re ready to roster</p>
           <p className="mx-auto mt-2 max-w-md text-center text-sm text-slate-600">

@@ -12,6 +12,7 @@ import {
   sessionSlotSchema,
 } from "@/lib/validation/entities";
 import type { TenantRepositories } from "@/lib/db/repositories";
+import { rotaTemplateSchema } from "@/lib/rota/template";
 
 export type ActionState = { ok: boolean; error?: string; message?: string };
 
@@ -259,4 +260,20 @@ export async function regenerateJoinCodeAction(): Promise<ActionState> {
   await writeAudit(repos, ctx, { action: "regenerate_join_code", entity: "org_settings", before: { code: before }, after: { code: after } });
   revalidatePath("/office/settings");
   return { ok: true, message: "New company code issued" };
+}
+
+/** Save how the rota PDF is laid out (onboarding step and Settings → Rota PDF). */
+export async function setRotaTemplateAction(input: unknown): Promise<ActionState> {
+  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const parsed = rotaTemplateSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Please check the rota layout choices" };
+  const value = { ...parsed.data, fields: { ...parsed.data.fields, roles: parsed.data.fields.roles && parsed.data.fields.instructors } };
+  const existing = (await repos.tenant.orgSettings.list(ctx))[0];
+  const rotaTemplate = JSON.stringify(value);
+  if (existing) await repos.tenant.orgSettings.update(ctx, existing.id, { rotaTemplate });
+  else await repos.tenant.orgSettings.insert(ctx, { rotaTemplate });
+  await writeAudit(repos, ctx, { action: "update", entity: "org_settings", after: { rotaTemplate: value } });
+  revalidatePath("/office/settings");
+  revalidatePath("/office/rota");
+  return { ok: true, message: "Saved" };
 }

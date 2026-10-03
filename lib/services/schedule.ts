@@ -271,12 +271,23 @@ export async function getWeekRota(
   ctx: AnyTenantContext,
   mondayIso: string,
 ): Promise<RotaDay[]> {
+  return getRotaDays(repos, ctx, mondayIso, 7);
+}
+
+/** The same assembled rota for any run of consecutive days (a day, a week, a month). */
+export async function getRotaDays(
+  repos: Repositories,
+  ctx: AnyTenantContext,
+  fromIso: string,
+  dayCount: number,
+): Promise<RotaDay[]> {
+  const mondayIso = fromIso;
   const t = repos.tenant;
   const [courses, courseTypes, sessions, staffAssignments, roleTypes, instructors, courseLocations, locations, courseEquipment, equipment] =
     await Promise.all([
       t.course.list(ctx),
       t.courseType.list(ctx),
-      t.courseSession.list(ctx, and(gte(courseSessionTable.date, mondayIso), lt(courseSessionTable.date, addDays(mondayIso, 7)))),
+      t.courseSession.list(ctx, and(gte(courseSessionTable.date, fromIso), lt(courseSessionTable.date, addDays(fromIso, dayCount)))),
       t.courseStaff.list(ctx),
       t.roleType.list(ctx),
       t.instructor.list(ctx),
@@ -286,7 +297,12 @@ export async function getWeekRota(
       t.equipment.list(ctx),
     ]);
 
-  const { coverageByCourse } = await getWeekSchedule(repos, ctx, mondayIso);
+  // Coverage is computed per week; merge the weeks the range touches.
+  const coverageByCourse = new Map<string, { ratio: { ok: boolean; understaffed: boolean; missingSafetyCover: boolean } }>();
+  for (let w = weekStart(new Date(`${fromIso}T00:00:00Z`)); w < addDays(fromIso, dayCount); w = addDays(w, 7)) {
+    const { coverageByCourse: cov } = await getWeekSchedule(repos, ctx, w);
+    for (const [k, v] of cov) if (!coverageByCourse.has(k)) coverageByCourse.set(k, v);
+  }
   const courseById = new Map(courses.map((c) => [c.id, c]));
   const ctById = new Map(courseTypes.map((c) => [c.id, c]));
   const roleName = new Map(roleTypes.map((r) => [r.id, r.name]));
@@ -315,12 +331,12 @@ export async function getWeekRota(
     equipByCourse.set(ce.courseId, [...(equipByCourse.get(ce.courseId) ?? []), ce.quantity > 1 ? `${n} ×${ce.quantity}` : n]);
   }
 
-  const sunday = addDays(mondayIso, 7);
+  const sunday = addDays(mondayIso, dayCount);
   const inWeek = sessions.filter((s) => s.date >= mondayIso && s.date < sunday);
   const slotRank: Record<SlotCode, number> = { AM: 0, PM: 1, EV: 2 };
 
   const days: RotaDay[] = [];
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < dayCount; i++) {
     const date = addDays(mondayIso, i);
     const label = new Date(`${date}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short", timeZone: "UTC" });
     const daySessions: RotaSession[] = inWeek
