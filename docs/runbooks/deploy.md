@@ -46,7 +46,8 @@ the source of truth and this table is a convenience copy.
 | Date (UTC) | Commit | Bookmark | Contents |
 |---|---|---|---|
 | 2026-10-03 | 7c39fcd | (see run summary, tag `prod-20261003-1929`) | Password rule, strength meter, sign-out buttons, migrations 0040–0043 |
-| 2026-10-03 | 7838db1 | `000001ca-00000000-000050f9-ff60ef9ec57b5ded297c390416b7680b` | **Failed and rolled back.** Smoke test got HTTP 403 from Cloudflare (Bot Fight Mode challenging the runner); production stayed on 7c39fcd. Re-run once Bot Fight Mode is off. |
+| 2026-10-03 | 7838db1 | `000001ca-00000000-000050f9-ff60ef9ec57b5ded297c390416b7680b` | **Failed and rolled back.** Smoke test got HTTP 403 from Cloudflare (Bot Fight Mode challenging the runner); production stayed on 7c39fcd. |
+| 2026-10-03 | 0c414fa | `000001ca-00000000-000050f9-ff60ef9ec57b5ded297c390416b7680b` (unchanged: no writes since the attempt above) | Re-run after Bot Fight Mode was turned off; tag `prod-20261003-2107`. Turnstile, status page link, young workers' hours (migration 0044: `rule_pack`, `org_settings.working_time_mode`, `org_settings.term_dates`), email resilience code |
 
 ### Bot Fight Mode breaks the deploy checks
 
