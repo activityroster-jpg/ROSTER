@@ -3,6 +3,7 @@ import { resolveHost } from "@/lib/tenant/host";
 import { PIN_COOKIE, PIN_IDLE_MAX_AGE_S } from "@/lib/auth/pin";
 import { DEVICE_COOKIE, DEVICE_HEADER, DEVICE_MAX_AGE_S, PATH_HEADER, isDeviceId } from "@/lib/auth/device";
 import { CENTRE_COOKIE } from "@/lib/auth/centre-cookie";
+import { isNonceCspPath, makeNonce, noncePolicy } from "@/lib/security/csp";
 
 /**
  * Slide the "PIN verified" cookie forward on each authenticated app request, so
@@ -47,8 +48,14 @@ export function middleware(req: NextRequest) {
   const fwd = new Headers(req.headers);
   fwd.set(DEVICE_HEADER, deviceId);
   fwd.set(PATH_HEADER, path);
+  // Nonce CSP for the signed-in surfaces, report-only for now (lib/security/csp).
+  // The request header lets Next stamp the nonce on its own inline scripts; the
+  // response header has the browser evaluate the policy and report violations.
+  const cspReportOnly = isNonceCspPath(path) ? noncePolicy(makeNonce()) : null;
+  if (cspReportOnly) fwd.set("content-security-policy-report-only", cspReportOnly);
   const next = () => {
     const res = NextResponse.next({ request: { headers: fwd } });
+    if (cspReportOnly) res.headers.set("Content-Security-Policy-Report-Only", cspReportOnly);
     if (deviceId !== existing) {
       res.cookies.set(DEVICE_COOKIE, deviceId, { httpOnly: true, secure: true, sameSite: "lax", path: "/", domain: `.${APEX}`, maxAge: DEVICE_MAX_AGE_S });
     }

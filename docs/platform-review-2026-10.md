@@ -180,8 +180,12 @@ centre with a Ghost button; "Merge duplicates" for prospects; availability
 "Same as last week" / "All free" / "Clear week"; document Replace (old file
 removed); profile (name, mobile) and password cards in the app Settings.
 
-Still open (low): CSP nonces for inline scripts (static marketing pages make a
-per-request nonce awkward; revisit with a browser test).
+CSP nonces: the signed-in app now gets a nonce + strict-dynamic policy in
+REPORT-ONLY mode (middleware → `lib/security/csp.ts`), with violations landing
+in Dev Center → Errors tagged `csp-report-only`. After a quiet week, enforce it
+(move the nonce policy to the enforced header and drop `'unsafe-inline'` from
+script-src in next.config). Marketing pages stay on the static policy because
+they are prerendered.
 
 User-side: run `d1-roster-payroll-trial-migration.sql`; set `BETTER_AUTH_SECRET`
 (and optionally `TOKEN_ENCRYPTION_KEY`), rotate the exposed Stripe keys, set

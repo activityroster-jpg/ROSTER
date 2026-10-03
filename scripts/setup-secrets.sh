@@ -28,6 +28,8 @@ SECRETS=(
   STRIPE_PRICE_FULL
   RESEND_API_KEY
   SENTRY_DSN
+  TOKEN_ENCRYPTION_KEY
+  FCM_SERVICE_ACCOUNT_JSON
 )
 
 echo "Uploading secrets from $ENV_FILE to Cloudflare…"

@@ -224,8 +224,12 @@ New controls since the fix round:
 - **Audit** now covers email-preference changes, profile edits, publish/confirm
   and payroll overrides.
 
-Still open: nonce-based CSP for inline scripts (static marketing pages make a
-per-request nonce awkward); dependency bumps for dev tooling.
+- **Nonce CSP (report-only)** on every signed-in path: `script-src 'nonce-…'
+  'strict-dynamic'`, reported to `/api/csp-report` and listed in Dev Center →
+  Errors. Enforce once reports stay empty (see `lib/security/csp.ts`).
+
+Still open: dependency bumps for dev tooling (vitest/vite/esbuild, tailwind's
+glob chain, next's bundled postcss — all build-time only).
 
 **Operator action:** run `d1-roster-payroll-trial-migration.sql` in D1; set
 `TOKEN_ENCRYPTION_KEY` (optional) and rotate the Stripe keys that were pasted

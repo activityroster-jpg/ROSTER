@@ -12,6 +12,9 @@ const csp = [
   "img-src 'self' data: https:",
   "font-src 'self' https://fonts.gstatic.com data:",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  // Inline scripts are still allowed here because the marketing pages are
+  // prerendered. The signed-in app also receives a nonce policy (report-only)
+  // from middleware — see lib/security/csp.ts for how to enforce it.
   "script-src 'self' 'unsafe-inline'",
   // Only the hosts the browser actually talks to: our own origin, Stripe.js (if
   // ever embedded) and Sentry's EU/US ingest. Everything else is server-side.
