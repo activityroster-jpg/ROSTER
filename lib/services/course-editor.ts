@@ -9,7 +9,7 @@ export interface CourseEditorData {
   course: { id: string; name: string; courseTypeName: string; status: string; staffRequired: number | null };
   audience: string;
   sessions: { id: string; date: string; startMs: number; endMs: number }[];
-  assigned: { id: string; instructorName: string; roleName: string; isOverride: boolean }[];
+  assigned: { id: string; instructorName: string; roleName: string; isOverride: boolean; status: "assigned" | "confirmed" | "declined"; declineNote?: string | null }[];
   instructors: { id: string; name: string; fit: boolean; reason?: string; avail?: string }[];
   roles: { id: string; name: string }[];
   ratioOn: boolean;
@@ -101,6 +101,8 @@ export async function getCourseEditorData(
       instructorName: nameById.get(a.instructorId) ?? "Instructor",
       roleName: roleById.get(a.roleTypeId)?.name ?? "role",
       isOverride: Boolean(a.isOverride),
+      status: a.status,
+      declineNote: a.declineNote,
     })),
     instructors: instructors
       .filter((i) => i.status === "active")

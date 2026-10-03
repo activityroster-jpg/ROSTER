@@ -133,6 +133,8 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
       instructorName: nameById.get(a.instructorId) ?? "Instructor",
       roleName: roleName.get(a.roleTypeId) ?? "role",
       isOverride: Boolean(a.isOverride),
+      status: a.status,
+      declineNote: a.declineNote,
     }));
     return (
       <CourseCard

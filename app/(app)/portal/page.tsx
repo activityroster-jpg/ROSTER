@@ -1,9 +1,11 @@
 import { eq } from "drizzle-orm";
 import { requireTenant } from "@/lib/tenant/require";
 import { addDays, getSessionEvents, weekStart } from "@/lib/services/schedule";
+import { publishedWeeks, weekOf } from "@/lib/services/roster";
 import { instructor as instructorTable, courseStaff as courseStaffTable } from "@/lib/db/schema";
 import { todayIso } from "@/lib/domain";
 import { Card, StatusPill } from "@/components/ui";
+import { ConfirmAssignment } from "@/components/portal/ConfirmAssignment";
 
 export const dynamic = "force-dynamic";
 
@@ -11,10 +13,13 @@ export const dynamic = "force-dynamic";
 const fmtTime = (ms: number) => new Date(ms).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
 const fmtDay = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short", timeZone: "UTC" });
 const SLOT_LABEL: Record<string, string> = { AM: "Morning", PM: "Afternoon", EV: "Evening" };
+const joinNames = (names: string[]) => (names.length <= 2 ? names.join(" and ") : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`);
 
 /**
- * My schedule: every session I'm rostered on from today to the end of the
- * centre's availability horizon, grouped by day, this week first.
+ * My schedule: every session I'm rostered on in a PUBLISHED week, from today
+ * to the end of the centre's availability horizon, grouped by day. Each course
+ * is confirmed once (the first card carries the buttons); who else is on it
+ * and how many students are shown once the week is published.
  */
 export default async function PortalSchedulePage() {
   const { ctx, repos } = await requireTenant();
@@ -36,17 +41,30 @@ export default async function PortalSchedulePage() {
   const weeksAhead = Math.max(1, Math.min(26, settings?.availabilityWeeksAhead ?? 4));
   const horizonEnd = addDays(monday, weeksAhead * 7);
 
-  const [events, myStaff] = await Promise.all([
+  const [events, myStaff, allStaff, instructors, courses, published] = await Promise.all([
     getSessionEvents(repos, ctx, today, horizonEnd),
     repos.tenant.courseStaff.list(ctx, eq(courseStaffTable.instructorId, me.id)),
+    repos.tenant.courseStaff.list(ctx),
+    repos.tenant.instructor.list(ctx),
+    repos.tenant.course.list(ctx),
+    publishedWeeks(repos, ctx),
   ]);
-  const myCourseIds = new Set(myStaff.map((s) => s.courseId));
-  const mine = events.filter((e) => myCourseIds.has(e.courseId)).sort((a, b) => a.startAt - b.startAt);
+  const myByCourse = new Map(myStaff.map((s) => [s.courseId, s]));
+  const nameById = new Map(instructors.map((i) => [i.id, i.name]));
+  const studentsByCourse = new Map(courses.map((c) => [c.id, c.capacity]));
+  const colleaguesOf = (courseId: string) =>
+    allStaff.filter((s) => s.courseId === courseId && s.instructorId !== me.id && s.status !== "declined").map((s) => nameById.get(s.instructorId) ?? "Instructor");
+
+  const mineAll = events.filter((e) => myByCourse.has(e.courseId)).sort((a, b) => a.startAt - b.startAt);
+  const mine = mineAll.filter((e) => published.has(weekOf(e.date)));
+  const pencilled = mineAll.length - mine.length;
 
   const byDay = new Map<string, typeof mine>();
   for (const s of mine) byDay.set(s.date, [...(byDay.get(s.date) ?? []), s]);
   const nextMonday = addDays(monday, 7);
   const thisWeek = mine.filter((s) => s.date < nextMonday).length;
+  const toConfirm = new Set(mine.filter((s) => myByCourse.get(s.courseId)?.status === "assigned").map((s) => s.courseId)).size;
+  const seen = new Set<string>();
 
   return (
     <div>
@@ -54,10 +72,19 @@ export default async function PortalSchedulePage() {
       <p className="mb-4 text-sm text-slate-500">
         {thisWeek === 0 ? "Nothing this week." : `${thisWeek} session${thisWeek === 1 ? "" : "s"} this week.`} Showing the next {weeksAhead} weeks.
       </p>
+      {toConfirm > 0 ? (
+        <div className="mb-4 rounded-card border border-amber/50 bg-amber/10 px-4 py-3 text-sm text-navy">
+          <span className="font-semibold">{toConfirm} course{toConfirm === 1 ? "" : "s"} to confirm.</span> Tap “I&apos;ll be there” on each so your centre knows you&apos;ve seen it.
+        </div>
+      ) : null}
       <div className="space-y-4">
         {mine.length === 0 ? (
           <Card>
-            <p className="text-sm text-slate-500">No sessions assigned yet. Your centre will roster you once the schedule is set — set your availability so they know when you&apos;re free.</p>
+            <p className="text-sm text-slate-500">
+              {pencilled > 0
+                ? "Your centre has pencilled you in but hasn't published the roster yet — you'll get a notification as soon as it's out."
+                : "No sessions on your roster yet. Set your availability so your centre knows when you're free."}
+            </p>
           </Card>
         ) : (
           [...byDay.entries()].map(([date, sessions]) => (
@@ -66,19 +93,42 @@ export default async function PortalSchedulePage() {
                 {date === today ? "Today · " : date === addDays(today, 1) ? "Tomorrow · " : ""}{fmtDay(date)}
               </p>
               <div className="space-y-2">
-                {sessions.map((s) => (
-                  <Card key={s.id} className="flex items-center justify-between">
-                    <div>
-                      <p className="font-semibold text-navy">{fmtTime(s.startAt)}–{fmtTime(s.endAt)}</p>
-                      <p className="mt-0.5 text-sm text-slate-500">{s.courseName}</p>
-                    </div>
-                    <StatusPill tone="neutral">{SLOT_LABEL[s.slot] ?? s.slot}</StatusPill>
-                  </Card>
-                ))}
+                {sessions.map((s) => {
+                  const mineRow = myByCourse.get(s.courseId)!;
+                  const first = !seen.has(s.courseId);
+                  seen.add(s.courseId);
+                  const others = colleaguesOf(s.courseId);
+                  const students = studentsByCourse.get(s.courseId) ?? 0;
+                  return (
+                    <Card key={s.id}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-semibold text-navy">{fmtTime(s.startAt)}–{fmtTime(s.endAt)}</p>
+                          <p className="mt-0.5 text-sm text-slate-600">{s.courseName}</p>
+                          <p className="mt-0.5 text-xs text-slate-500">
+                            {others.length ? `With ${joinNames(others)}` : "Just you so far"}
+                            {students > 0 ? ` · ${students} student${students === 1 ? "" : "s"}` : ""}
+                          </p>
+                        </div>
+                        <StatusPill tone="neutral">{SLOT_LABEL[s.slot] ?? s.slot}</StatusPill>
+                      </div>
+                      {first ? (
+                        <ConfirmAssignment assignmentId={mineRow.id} status={mineRow.status} declineNote={mineRow.declineNote} />
+                      ) : (
+                        <p className={`mt-2 text-xs ${mineRow.status === "confirmed" ? "text-starboard" : mineRow.status === "declined" ? "text-port" : "text-slate-400"}`}>
+                          {mineRow.status === "confirmed" ? "✓ Confirmed" : mineRow.status === "declined" ? "You can't make this course" : "Confirm this course on its first session above"}
+                        </p>
+                      )}
+                    </Card>
+                  );
+                })}
               </div>
             </div>
           ))
         )}
+        {mine.length > 0 && pencilled > 0 ? (
+          <p className="text-center text-xs text-slate-400">{pencilled} more session{pencilled === 1 ? "" : "s"} pencilled in for weeks your centre hasn&apos;t published yet.</p>
+        ) : null}
       </div>
     </div>
   );

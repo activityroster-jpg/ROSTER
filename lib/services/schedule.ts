@@ -138,6 +138,7 @@ export async function getWeekSchedule(
 
   const assignedByCourse = new Map<string, AssignedRole[]>();
   for (const sa of staffAssignments) {
+    if (sa.status === "declined") continue; // someone who can't make it doesn't count as cover
     const role = roleById.get(sa.roleTypeId);
     const arr = assignedByCourse.get(sa.courseId) ?? [];
     arr.push({
@@ -248,7 +249,7 @@ export interface RotaSession {
   coverageOk: boolean;
   understaffed: boolean;
   missingSafetyCover: boolean;
-  staff: { name: string; role: string }[];
+  staff: { name: string; role: string; status: "assigned" | "confirmed" | "declined" }[];
   locations: string[];
   /** Equipment on the course, e.g. "Safety RIB 1", "Pico ×2". */
   equipment: string[];
@@ -291,10 +292,10 @@ export async function getWeekRota(
   const instructorName = new Map(instructors.map((i) => [i.id, i.name]));
   const locationName = new Map(locations.map((l) => [l.id, l.name]));
 
-  const staffByCourse = new Map<string, { name: string; role: string }[]>();
+  const staffByCourse = new Map<string, RotaSession["staff"]>();
   for (const sa of staffAssignments) {
     const arr = staffByCourse.get(sa.courseId) ?? [];
-    arr.push({ name: instructorName.get(sa.instructorId) ?? "—", role: roleName.get(sa.roleTypeId) ?? "Staff" });
+    arr.push({ name: instructorName.get(sa.instructorId) ?? "—", role: roleName.get(sa.roleTypeId) ?? "Staff", status: sa.status });
     staffByCourse.set(sa.courseId, arr);
   }
   const locsByCourse = new Map<string, string[]>();

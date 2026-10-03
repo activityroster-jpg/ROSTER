@@ -13,6 +13,7 @@ import { Card, StatusPill } from "@/components/ui";
 import { WeekCalendarView } from "@/components/office/WeekCalendarView";
 import { todayIso } from "@/lib/domain";
 import { GuideLink } from "@/components/GuideLink";
+import { confirmationSummary } from "@/lib/services/roster";
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +51,7 @@ export default async function DashboardPage() {
     repos.tenant.orgSettings.list(ctx),
   ]);
   const { sessions, coverageByCourse } = schedule;
+  const confirmations = await confirmationSummary(repos, ctx, today);
   const licenceOn = Boolean(settingsRows[0]?.enforceLicenceChecks);
   const ratioOn = Boolean(settingsRows[0]?.enforceRatioChecks);
   const clockOn = Boolean(settingsRows[0]?.timeclockEnabled);
@@ -139,12 +141,13 @@ export default async function DashboardPage() {
 
       {/* Needs attention */}
       <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Needs attention</p>
-      <div className="mb-8 grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {licenceOn ? <Tile href="/office/staff" label="Not cleared to roster" value={blocked} sub="Missing or expired certs" tone={blocked > 0 ? "port" : "navy"} /> : null}
         <Tile href="/office/staff" label="Certs expiring" value={expiring} sub="Within lead time" tone={expiring > 0 ? "amber" : "navy"} />
         {ratioOn ? <Tile href="/office/courses" label="Courses to cover" value={uncovered} sub="Understaffed / no cover" tone={uncovered > 0 ? "amber" : "navy"} /> : null}
         <Tile href="/office/leave" label="Leave to approve" value={pendingLeave} sub="Pending requests" tone={pendingLeave > 0 ? "amber" : "navy"} />
         <Tile href="/office/leave" label="Open shifts" value={openShifts} sub="Need cover" tone={openShifts > 0 ? "amber" : "navy"} />
+        <Tile href="/office/rota" label="Awaiting confirmation" value={confirmations.awaiting} sub={confirmations.declined ? `${confirmations.declined} can't make it` : "On published weeks"} tone={confirmations.declined > 0 ? "port" : confirmations.awaiting > 0 ? "amber" : "navy"} />
       </div>
 
       {/* Calendar — the visual heart of the week */}
@@ -183,7 +186,7 @@ export default async function DashboardPage() {
                         {s.locations.length ? <span className="text-xs text-slate-400"> · {s.locations.join(", ")}</span> : null}
                       </span>
                       <span className="text-xs text-slate-500">
-                        {s.staff.length ? s.staff.map((m) => m.name).join(", ") : <span className="font-semibold text-port">Unassigned</span>}
+                        {s.staff.length ? s.staff.map((m) => (m.status === "confirmed" ? `${m.name} ✓` : m.status === "declined" ? `${m.name} ✕` : m.name)).join(", ") : <span className="font-semibold text-port">Unassigned</span>}
                       </span>
                       {!s.coverageOk ? <StatusPill tone="attention">Needs cover</StatusPill> : null}
                     </li>

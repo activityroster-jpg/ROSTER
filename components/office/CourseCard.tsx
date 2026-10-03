@@ -11,7 +11,7 @@ import {
 } from "@/app/(app)/office/courses/actions";
 
 export interface CardSession { id: string; date: string; startMs: number; endMs: number }
-export interface CardAssigned { id: string; instructorName: string; roleName: string; isOverride: boolean }
+export interface CardAssigned { id: string; instructorName: string; roleName: string; isOverride: boolean; status: "assigned" | "confirmed" | "declined"; declineNote?: string | null }
 export interface CardInstructor { id: string; name: string; fit: boolean; reason?: string; avail?: string }
 export interface CardRole { id: string; name: string }
 export interface CardRatio { ok: boolean; understaffed: boolean; missingSafetyCover: boolean }
@@ -200,8 +200,8 @@ export function CourseCard({
           {assigned.length > 0 ? (
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
               {assigned.map((a) => (
-                <span key={a.id} className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700">
-                  {a.instructorName} · {a.roleName}{a.isOverride ? <span className="text-amber">(o)</span> : null}
+                <span key={a.id} title={a.status === "declined" ? `Can't make it${a.declineNote ? `: ${a.declineNote}` : ""}` : a.status === "confirmed" ? "Confirmed by the instructor" : "Waiting for the instructor to confirm (once the week is published)"} className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs ${a.status === "declined" ? "bg-port/10 text-port" : a.status === "confirmed" ? "bg-starboard/15 text-starboard" : "bg-slate-100 text-slate-700"}`}>
+                  {a.status === "confirmed" ? "✓ " : null}{a.instructorName} · {a.roleName}{a.isOverride ? <span className="text-amber">(o)</span> : null}{a.status === "declined" ? <span className="font-semibold"> · can&apos;t make it</span> : null}
                   <button type="button" onClick={() => run(() => removeStaffAction(course.id, a.id))} title="Remove" className="ml-0.5 text-slate-400 hover:text-port">✕</button>
                 </span>
               ))}

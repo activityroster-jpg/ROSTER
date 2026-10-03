@@ -153,6 +153,7 @@ const SECTIONS: Section[] = [
       { kind: "sub", text: "What the app adds" },
       { kind: "bullets", items: [
         "Phone notifications for roster changes, new open shifts, leave decisions and expiring certs (they can switch these off).",
+        "One-tap “I'll be there” on each published course — or “Can't make it” with a reason, so the office can find cover. Colleagues and student numbers show once the week is published.",
         "Face ID / fingerprint instead of typing the PIN every time; the PIN stays as the fallback.",
         "Clock in and out records an approximate location — shown as a 📍 map link on your Time clock page.",
         "A camera button on Documents to photograph a certificate straight into their record.",
@@ -274,6 +275,13 @@ const SECTIONS: Section[] = [
     blurb: "A clean, printable roster for the wall or the inbox.",
     blocks: [
       { kind: "p", text: "The Roster page shows the whole week: each day, each session, who's working, their role, the location/classroom and the times." },
+      { kind: "sub", text: "Publish the week" },
+      { kind: "steps", items: [
+        "Build the week on Courses — add courses and sessions, then put instructors on them. Until you publish, instructors see nothing for that week, so you can move people around freely.",
+        "On the Roster page press “Publish week”. Everyone on that week gets a notification (and an email if they allow it) asking them to confirm.",
+        "Instructors tap “I'll be there” in the app. If someone can't make it they must say why; you get an email, the course shows “can't make it” and the dashboard counts it under Awaiting confirmation so you can find cover or post an open shift.",
+        "Changed something after publishing? Anyone you add, remove or move in a published week is told straight away. “Re-publish & remind everyone” nudges the whole week again.",
+      ] },
       { kind: "sub", text: "Three templates" },
       { kind: "bullets", items: [
         "By week — a table for each day. The classic wall roster.",

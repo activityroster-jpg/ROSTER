@@ -47,8 +47,10 @@ function Staff({ s, f, compact = false }: { s: RotaSession; f: Fields; compact?:
   if (s.staff.length === 0) return <span className="text-xs text-port">Unassigned</span>;
   const items = s.staff.map((m, i) => (
     <li key={i} className={compact ? "inline" : ""}>
-      {f.staff ? <span className="text-navy">{m.name}</span> : null}
+      {f.staff ? <span className={m.status === "declined" ? "text-slate-400 line-through" : "text-navy"}>{m.name}</span> : null}
       {f.role ? <span className={`text-xs text-slate-400 ${f.staff ? "ml-1" : ""}`}>{m.role}</span> : null}
+      {m.status === "confirmed" ? <span className="ml-1 text-[10px] font-semibold text-starboard" title="Confirmed by the instructor">✓</span> : null}
+      {m.status === "declined" ? <span className="ml-1 rounded bg-port/10 px-1 text-[10px] font-semibold text-port">can&apos;t make it</span> : null}
       {compact && i < s.staff.length - 1 ? <span className="text-slate-300">, </span> : null}
     </li>
   ));
