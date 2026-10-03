@@ -260,6 +260,13 @@
       "when": 1790995069570,
       "tag": "0036_woozy_johnny_storm",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "6",
+      "when": 1791019905792,
+      "tag": "0037_zippy_wiccan",
+      "breakpoints": true
     }
   ]
 }

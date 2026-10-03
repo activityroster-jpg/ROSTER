@@ -8,7 +8,7 @@ import { authSecret } from "@/lib/security/secrets";
 import { TOTP_COOKIE, TOTP_MAX_AGE_S, totpCookieValue } from "@/lib/auth/pin";
 import { recordSecurityEvent } from "@/lib/security/events";
 import { isPwnedPassword, PWNED_MESSAGE } from "@/lib/security/pwned";
-import { firstIssue, passwordSchema } from "@/lib/validation/actions";
+import { firstIssue, otpCodeSchema, passwordSchema } from "@/lib/validation/actions";
 
 type Result = { ok: boolean; error?: string };
 
@@ -41,6 +41,42 @@ export async function verifyAdminTotpAction(code: string): Promise<Result> {
     httpOnly: true, secure: true, sameSite: "lax", path: "/", domain: `.${env.APP_APEX_DOMAIN}`, maxAge: TOTP_MAX_AGE_S,
   });
   await recordSecurityEvent("reauth_passed", { userId: s.userId });
+  return { ok: true };
+}
+
+async function markVerified(sessionId: string, userId: string) {
+  const env = getEnv();
+  (await cookies()).set(TOTP_COOKIE, await totpCookieValue(authSecret(env), sessionId), {
+    httpOnly: true, secure: true, sameSite: "lax", path: "/", domain: `.${env.APP_APEX_DOMAIN}`, maxAge: TOTP_MAX_AGE_S,
+  });
+  await recordSecurityEvent("reauth_passed", { userId });
+}
+
+/** Email / text users: have Better Auth send the one-time code to the chosen channel. */
+export async function sendAdminOtpAction(): Promise<Result> {
+  const s = await adminSession();
+  if (!s?.sessionId) return { ok: false, error: "Please sign in again." };
+  try {
+    await s.auth.api.sendTwoFactorOTP({ headers: s.h });
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: (err as Error).message || "Could not send the code" };
+  }
+}
+
+/** Check an emailed / texted code for this Dev Center session. */
+export async function verifyAdminOtpAction(code: string): Promise<Result> {
+  const s = await adminSession();
+  if (!s?.sessionId) return { ok: false, error: "Please sign in again." };
+  const parsed = otpCodeSchema.safeParse(code);
+  if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
+  try {
+    await s.auth.api.verifyTwoFactorOTP({ body: { code: parsed.data }, headers: s.h });
+  } catch {
+    await recordSecurityEvent("reauth_failed", { userId: s.userId });
+    return { ok: false, error: "That code isn't right or has expired — send a new one." };
+  }
+  await markVerified(s.sessionId, s.userId);
   return { ok: true };
 }
 

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { AVAILABILITY_STATUSES, SLOT_CODES } from "@/lib/db/schema";
+import { AVAILABILITY_STATUSES, SLOT_CODES, TWO_FACTOR_METHODS } from "@/lib/db/schema";
 
 /**
  * Small Zod schemas shared by server actions that take plain arguments rather
@@ -26,6 +26,13 @@ export const availabilityEntrySchema = z.object({
   status: z.enum(AVAILABILITY_STATUSES).nullable(),
 });
 export const availabilityBulkSchema = z.array(availabilityEntrySchema).min(1, "Nothing to set").max(50);
+
+export const twoFactorPrefsSchema = z.object({
+  method: z.enum(TWO_FACTOR_METHODS),
+  phone: z.string().trim().max(40).optional(),
+  country: z.enum(["GB", "IE"]).optional(),
+});
+export const otpCodeSchema = z.string().trim().regex(/^\d{6}$/, "Enter the 6-digit code");
 
 export const studentsSchema = z.coerce.number().int().min(1, "Enter how many students (at least 1)").max(500);
 export const trialDaysSchema = z.coerce.number().int().min(1, "Enter 1–365 days").max(365);

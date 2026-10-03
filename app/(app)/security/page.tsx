@@ -5,6 +5,8 @@ import { TwoFactorSetup } from "@/components/office/TwoFactorSetup";
 import { RecoveryEmailForm } from "@/components/office/RecoveryEmailForm";
 import { describeAgent } from "@/lib/security/events";
 import { TrustedDevices } from "@/components/office/TrustedDevices";
+import { smsConfigured } from "@/lib/sms";
+import { maskEmail, maskPhone } from "@/lib/security/phone";
 
 const EVENT_LABEL: Record<string, string> = {
   pin_set: "PIN set",
@@ -21,6 +23,8 @@ const EVENT_LABEL: Record<string, string> = {
   invite_accepted: "Centre invite accepted",
   ghost_start: "Ghost Mode started (platform owner)",
   ghost_end: "Ghost Mode ended (platform owner)",
+  two_factor_enabled: "Second step turned on",
+  two_factor_disabled: "Second step turned off",
 };
 const WARN = new Set(["pin_reset_failed", "pin_failed", "pin_locked", "reauth_failed", "new_device"]);
 
@@ -37,6 +41,13 @@ export default async function SecurityPage() {
   const me = await control.userById(ctx.userId);
   const recoveryEmail = me?.recoveryEmail ?? null;
   const events = await control.listSecurityEvents(ctx.userId, 12);
+  const prefs = await control.getTwoFactorPrefs(ctx.userId);
+  const twoFactor = prefs ? {
+    enabled: prefs.enabled,
+    method: prefs.method,
+    hint: prefs.method === "sms" && prefs.phone ? maskPhone(prefs.phone) : prefs.method === "email" && me?.email ? maskEmail(me.email) : null,
+  } : undefined;
+  const country = organisation.jurisdiction === "ireland" ? "IE" : "GB";
   const devices = (await control.listTrustedDevices(ctx.userId)).map((d) => ({
     id: d.id,
     device: describeAgent(d.userAgent),
@@ -59,9 +70,9 @@ export default async function SecurityPage() {
       </div>
 
       <div className="mt-5 rounded-card border border-slate-200 bg-white p-5">
-        <h2 className="mb-1 font-semibold text-navy">Two-factor authentication</h2>
-        <p className="mb-3 text-xs text-slate-500">Add a second step at sign-in — an authenticator app or a code by email.</p>
-        <TwoFactorSetup />
+        <h2 className="mb-1 font-semibold text-navy">Second step at sign-in</h2>
+        <p className="mb-3 text-xs text-slate-500">Choose an authenticator app, a code by email or a code by text message. You&apos;ll be asked for it when you sign in with your password.</p>
+        <TwoFactorSetup smsAvailable={smsConfigured()} country={country} current={twoFactor} redirectTo="/office" />
       </div>
 
       <div className="mt-5 rounded-card border border-slate-200 bg-white p-5">

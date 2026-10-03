@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { twoFactorHintAction } from "@/app/(app)/sign-in/actions";
 import Link from "next/link";
 import { authClient, signIn } from "@/lib/auth/client";
 import { appLandingAction } from "@/app/app/actions";
@@ -20,7 +21,14 @@ export function AppSignIn() {
     try {
       const res = await signIn.email({ email: email.trim(), password });
       if (res.error) { setErr(res.error.message ?? "Sign-in failed"); return; }
-      if (res.data && "twoFactorRedirect" in res.data && res.data.twoFactorRedirect) { window.location.href = "/two-factor?next=%2Fapp"; return; }
+      if (res.data && "twoFactorRedirect" in res.data && res.data.twoFactorRedirect) {
+        const hint = await twoFactorHintAction(email.trim()).catch(() => ({ method: null, hint: null }));
+        const q = new URLSearchParams({ next: "/app" });
+        if (hint.method) q.set("m", hint.method);
+        if (hint.hint) q.set("h", hint.hint);
+        window.location.href = `/two-factor?${q.toString()}`;
+        return;
+      }
       window.location.href = await appLandingAction();
     } finally { setBusy(false); }
   };

@@ -5,6 +5,11 @@ import { requireTenant } from "@/lib/tenant/require";
 import { getRepositories } from "@/lib/cf/bindings";
 import { notifySecurityChange, recordSecurityEvent } from "@/lib/security/events";
 import { escapeHtml } from "@/lib/mail";
+import { headers } from "next/headers";
+import { getAuth } from "@/lib/auth";
+import { smsConfigured } from "@/lib/sms";
+import { normaliseMobile } from "@/lib/security/phone";
+import { firstIssue, twoFactorPrefsSchema } from "@/lib/validation/actions";
 
 const schema = z.object({ recoveryEmail: z.string().trim().email().max(200) });
 
@@ -23,4 +28,55 @@ export async function setRecoveryEmailAction(_prev: RecoveryState, formData: For
   // Tell the account email, the new recovery address and (if different) the old one.
   await notifySecurityChange(ctx.userId, "Your ActivityRoster recovery email was changed", `<p>The recovery email on your account is now <strong>${escapeHtml(next)}</strong>.</p>`, previous && previous !== next ? [previous] : []);
   return { ok: true, message: "Recovery email saved" };
+}
+
+// --- Second step (two-factor) preferences — any signed-in user, self-scoped ----
+
+type Result = { ok: boolean; error?: string };
+
+async function me() {
+  const h = new Headers(await headers());
+  const s = await (await getAuth()).api.getSession({ headers: h });
+  return s?.user ? { userId: s.user.id } : null;
+}
+
+/**
+ * Record which second step this person wants, before Better Auth's enable /
+ * verify dance. Called by the enrolment component for the signed-in user only.
+ */
+export async function setTwoFactorPrefsAction(input: { method: string; phone?: string; country?: string }): Promise<Result> {
+  const s = await me();
+  if (!s) return { ok: false, error: "Please sign in again." };
+  const parsed = twoFactorPrefsSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
+  const { method, country } = parsed.data;
+  let phone: string | null = null;
+  if (method === "sms") {
+    if (!smsConfigured()) return { ok: false, error: "Text messages aren't set up on this platform yet — choose email or an authenticator app." };
+    phone = normaliseMobile(parsed.data.phone ?? "", country ?? "GB");
+    if (!phone) return { ok: false, error: "Enter a mobile number we can text, e.g. 07700 900123." };
+  }
+  const { control } = await getRepositories();
+  await control.setTwoFactorPrefs(s.userId, { method, phone });
+  return { ok: true };
+}
+
+/** After Better Auth confirms the second step, note it in the security log. */
+export async function noteTwoFactorEnabledAction(): Promise<Result> {
+  const s = await me();
+  if (!s) return { ok: false, error: "Please sign in again." };
+  const { control } = await getRepositories();
+  const prefs = await control.getTwoFactorPrefs(s.userId);
+  await recordSecurityEvent("two_factor_enabled", { userId: s.userId, meta: { method: prefs?.method ?? "app" } });
+  return { ok: true };
+}
+
+/** After Better Auth turns 2FA off, forget the chosen method and number. */
+export async function clearTwoFactorPrefsAction(): Promise<Result> {
+  const s = await me();
+  if (!s) return { ok: false, error: "Please sign in again." };
+  const { control } = await getRepositories();
+  await control.setTwoFactorPrefs(s.userId, { method: null, phone: null });
+  await recordSecurityEvent("two_factor_disabled", { userId: s.userId });
+  return { ok: true };
 }

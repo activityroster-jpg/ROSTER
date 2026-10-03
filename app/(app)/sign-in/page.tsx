@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { signIn, authClient } from "@/lib/auth/client";
+import { twoFactorHintAction } from "./actions";
 
 type Mode = "link" | "password";
 
@@ -43,7 +44,11 @@ export default function SignInPage() {
         setUnverified(notVerified);
         setError(notVerified ? "Please confirm your email first — we sent you a link when you signed up." : res.error.message ?? "Sign-in failed");
       } else if (res.data && "twoFactorRedirect" in res.data && res.data.twoFactorRedirect) {
-        window.location.href = "/two-factor?next=%2Foffice";
+        const hint = await twoFactorHintAction(email).catch(() => ({ method: null, hint: null }));
+        const q = new URLSearchParams({ next: "/office" });
+        if (hint.method) q.set("m", hint.method);
+        if (hint.hint) q.set("h", hint.hint);
+        window.location.href = `/two-factor?${q.toString()}`;
       } else window.location.href = "/office";
     } finally { setBusy(false); }
   };

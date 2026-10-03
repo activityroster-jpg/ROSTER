@@ -16,6 +16,9 @@ import { boolCol, createdAt, id, updatedAt } from "./_shared";
 
 // --- Better Auth core ------------------------------------------------------
 
+export const TWO_FACTOR_METHODS = ["app", "email", "sms"] as const;
+export type TwoFactorMethod = (typeof TWO_FACTOR_METHODS)[number];
+
 export const user = sqliteTable("user", {
   id: id(),
   name: text("name").notNull(),
@@ -29,6 +32,11 @@ export const user = sqliteTable("user", {
   phone: text("phone"),
   // twoFactor plugin
   twoFactorEnabled: integer("two_factor_enabled", { mode: "boolean" }),
+  // Which second step the person chose: authenticator app, emailed code or text
+  // message. Null = not chosen yet (treated as "app" for accounts enrolled before
+  // the choice existed). The phone is E.164 and used only for the text message.
+  twoFactorMethod: text("two_factor_method", { enum: TWO_FACTOR_METHODS }),
+  twoFactorPhone: text("two_factor_phone"),
   // 4-digit login PIN (a second factor for centre admins + the platform owner).
   // Stored as a PBKDF2 hash; instructors never set one. Lockout after repeated
   // wrong attempts via the two counters below.
@@ -476,6 +484,7 @@ export const SECURITY_EVENT_KINDS = [
   "pin_set", "pin_reset", "pin_reset_failed", "pin_failed", "pin_locked", "pin_reset_code_sent",
   "recovery_email_set", "password_changed", "new_device", "reauth_passed", "reauth_failed", "invite_accepted",
   "ghost_start", "ghost_end", "join_requested", "join_code_failed",
+  "two_factor_enabled", "two_factor_disabled",
 ] as const;
 export type SecurityEventKind = (typeof SECURITY_EVENT_KINDS)[number];
 

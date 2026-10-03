@@ -426,11 +426,11 @@ const SECTIONS: Section[] = [
         "Too many wrong attempts locks the PIN for a cool-off period.",
         "Forgotten it? “Reset it” asks for your password — or emails a one-time code to your account and recovery addresses — before letting you choose a new one. Being signed in isn't enough on its own.",
       ] },
-      { kind: "sub", text: "Authenticator app (optional)" },
+      { kind: "sub", text: "Second step at sign-in (optional)" },
       { kind: "steps", items: [
-        "Settings → Security → Two-factor authentication. Scan the code with Google Authenticator, 1Password, Authy or similar and confirm a 6-digit code. Save the backup codes somewhere safe.",
-        "From then on, signing in with your password asks for the current code — or an emailed code, or a backup code if you've lost the phone. You can tick “trust this device” to skip it for 30 days.",
-        "Sign-in links still work as before; the authenticator protects password sign-ins.",
+        "Settings → Security → Second step. Choose an authenticator app (Google Authenticator, 1Password, Authy…), a code by email, or a code by text message, then confirm one code. Save the backup codes somewhere safe.",
+        "From then on, signing in with your password asks for the code — sent the way you chose. A backup code gets you in if you've lost the phone or the inbox; each one works once.",
+        "Change the method or turn it off any time from the same place; it asks for your password first. Sign-in links still work as before.",
       ] },
       { kind: "sub", text: "New device or country? Password first" },
       { kind: "bullets", items: [
