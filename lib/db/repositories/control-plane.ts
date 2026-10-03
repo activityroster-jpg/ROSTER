@@ -91,6 +91,15 @@ export class ControlPlaneRepository {
     return rows[0] ?? null;
   }
 
+  async sessionById(id: string) {
+    const rows = await this.db.select().from(session).where(eq(session.id, id)).limit(1);
+    return rows[0] ?? null;
+  }
+  /** End one session (e.g. an office session idle for 12 hours). The cookie the browser still holds stops working. */
+  async deleteSessionById(id: string): Promise<void> {
+    await this.db.delete(session).where(eq(session.id, id));
+  }
+
   async userById(id: string) {
     const rows = await this.db.select().from(user).where(eq(user.id, id)).limit(1);
     return rows[0] ?? null;

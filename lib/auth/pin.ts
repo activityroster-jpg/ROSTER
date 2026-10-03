@@ -28,7 +28,7 @@ function b64(bytes: Uint8Array): string {
 function unb64(s: string): Uint8Array {
   return Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 }
-function timingSafeEqual(a: string, b: string): boolean {
+export function timingSafeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
   let r = 0;
   for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
@@ -59,19 +59,19 @@ export async function verifyPin(pin: string, stored: string): Promise<boolean> {
 
 // --- Signed "PIN verified this session" cookie ----------------------------
 
-async function hmac(secret: string, msg: string): Promise<string> {
+export async function hmacSign(secret: string, msg: string): Promise<string> {
   const key = await crypto.subtle.importKey("raw", enc.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
   const sig = await crypto.subtle.sign("HMAC", key, enc.encode(msg));
   return b64(new Uint8Array(sig));
 }
 
 export function pinCookieValue(secret: string, sessionId: string): Promise<string> {
-  return hmac(secret, `pin:${sessionId}`);
+  return hmacSign(secret, `pin:${sessionId}`);
 }
 
 export async function verifyPinCookie(secret: string, sessionId: string, value: string | undefined): Promise<boolean> {
   if (!value) return false;
-  const expected = await hmac(secret, `pin:${sessionId}`);
+  const expected = await hmacSign(secret, `pin:${sessionId}`);
   return timingSafeEqual(expected, value);
 }
 
@@ -80,11 +80,11 @@ export const TOTP_COOKIE = "ar_totp";
 export const TOTP_MAX_AGE_S = 12 * 60 * 60;
 
 export function totpCookieValue(secret: string, sessionId: string): Promise<string> {
-  return hmac(secret, `totp:${sessionId}`);
+  return hmacSign(secret, `totp:${sessionId}`);
 }
 
 export async function verifyTotpCookie(secret: string, sessionId: string, value: string | undefined): Promise<boolean> {
   if (!value) return false;
-  const expected = await hmac(secret, `totp:${sessionId}`);
+  const expected = await hmacSign(secret, `totp:${sessionId}`);
   return timingSafeEqual(expected, value);
 }

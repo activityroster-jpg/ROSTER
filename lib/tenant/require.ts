@@ -4,6 +4,7 @@ import { getRepositories } from "@/lib/cf/bindings";
 import type { Organisation } from "@/lib/db/schema";
 import { enforcePinGate } from "@/lib/auth/pin-gate";
 import { enforceDeviceGate } from "@/lib/auth/device-gate";
+import { enforceLoginVerified } from "@/lib/auth/login-gate";
 import { GhostReadOnlyError } from "@/lib/auth/ghost";
 import { TrialReadOnlyError, type TrialState } from "@/lib/billing/trial";
 import { PATH_HEADER } from "@/lib/auth/device";
@@ -59,6 +60,13 @@ export async function requireTenant(opts?: { role?: "admin"; skipMfaGate?: boole
   const billing = LOCKED_ALLOWED.some((p) => path.startsWith(p)) || opts?.allowReadOnly === true;
   if (res.ctx.locked && !billing) redirect(res.ctx.role === "admin" ? "/office/billing?locked=1" : "/trial-ended");
   if (res.ctx.readOnly && !billing && h.has("next-action")) throw new TrialReadOnlyError();
+
+  // Centre admins: every office sign-in is email + password, then an emailed
+  // code (or their 2FA step), then "stay signed in?". The proof lapses after
+  // 12 hours away, or when the browser closes on a "just this once" sign-in,
+  // and then the whole sign-in starts again. Ghost Mode is the platform
+  // owner looking in from the Dev Center, which has its own gates.
+  if (res.ctx.role === "admin" && !res.ctx.ghost) await enforceLoginVerified(res.sessionId);
 
   // Unfamiliar device, country or IP → password again first; then the PIN.
   const landing = res.ctx.role === "admin" ? "/office" : "/portal";
