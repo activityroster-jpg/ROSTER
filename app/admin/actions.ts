@@ -14,6 +14,7 @@ import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { createStripe } from "@/lib/billing/stripe";
 import { createPromotionCode, type CouponSpec } from "@/lib/billing/coupons";
 import { TIERS } from "@/lib/tiers";
+import { trialEndsAt } from "@/lib/billing/trial";
 import { ORG_STATUSES, SUBSCRIPTION_STATUSES, PLANS, ORG_TIERS, ERROR_REPORT_STATUSES, type OrgStatus, type SubscriptionStatus, type Plan, type OrgTier, type ErrorReportStatus } from "@/lib/db/schema";
 
 type Result = { ok: boolean; error?: string };
@@ -187,4 +188,38 @@ export async function startGhostAction(orgId: string): Promise<Result> {
   jar.set(GHOST_COOKIE, token, { httpOnly: true, secure: true, sameSite: "lax", path: "/", domain: `.${env.APP_APEX_DOMAIN}`, maxAge: GHOST_TTL_S });
   await recordSecurityEvent("ghost_start", { userId: session.user.id, organisationId: org.id, meta: { slug: org.slug } });
   redirect(`https://${org.slug}.${env.APP_APEX_DOMAIN}/office`);
+}
+
+
+/** Set when a centre's free trial ends (null = back to the default length from sign-up). */
+export async function setTrialEndsAtAction(id: string, isoDate: string | null): Promise<Result> {
+  await requirePlatformAdmin();
+  let when: Date | null = null;
+  if (isoDate) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) return { ok: false, error: "Pick a date" };
+    when = new Date(`${isoDate}T23:59:59.999Z`);
+  }
+  const { control } = await getRepositories();
+  const updated = await control.updateOrganisation(id, { trialEndsAt: when });
+  if (!updated) return { ok: false, error: "Not found" };
+  revalidatePath("/admin");
+  revalidatePath(`/admin/centres/${id}`);
+  return { ok: true };
+}
+
+/** Extend a centre's trial by N days from today (or from its current end if that is later). */
+export async function extendTrialAction(id: string, days: number): Promise<Result> {
+  await requirePlatformAdmin();
+  const n = Math.round(Number(days));
+  if (!Number.isFinite(n) || n < 1 || n > 365) return { ok: false, error: "Enter 1–365 days" };
+  const { control } = await getRepositories();
+  const org = await control.organisationById(id);
+  if (!org) return { ok: false, error: "Not found" };
+  const pricing = await new PlatformRepository(await getDb()).getPricing().catch(() => null);
+  const current = trialEndsAt(org, pricing?.trialDays ?? 30);
+  const base = Math.max(current, Date.now());
+  await control.updateOrganisation(id, { trialEndsAt: new Date(base + n * 24 * 60 * 60 * 1000), subscriptionStatus: org.subscriptionStatus ?? "trialing", status: "active" });
+  revalidatePath("/admin");
+  revalidatePath(`/admin/centres/${id}`);
+  return { ok: true };
 }

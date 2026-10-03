@@ -12,8 +12,8 @@ export const dynamic = "force-dynamic";
 const money = (n: number, c: string) => fmtMoney(n, c);
 const fmtDate = (ms: number) => new Date(ms).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
-export default async function BillingPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
-  const { organisation } = await requireTenant({ role: "admin" });
+export default async function BillingPage({ searchParams }: { searchParams: Promise<{ status?: string; locked?: string }> }) {
+  const { organisation, trial } = await requireTenant({ role: "admin", allowReadOnly: true });
   const sp = await searchParams;
   const pricing = await new PlatformRepository(await getDb()).getPricing();
   const eff = effectivePricing(organisation, pricing);
@@ -30,6 +30,11 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
       <h1 className="mb-1 font-display text-2xl font-semibold text-navy">Billing</h1>
       <p className="mb-5 text-sm text-slate-500">Your plan, payments and VAT invoices.</p>
 
+      {trial.kind === "locked" || sp.locked === "1" ? (
+        <Card className="mb-5 border-port/40 bg-port/5"><p className="text-sm font-medium text-port">Your free trial has ended and your centre is locked. Choose a plan below and everything comes straight back — nothing has been deleted.</p></Card>
+      ) : trial.kind === "read_only" ? (
+        <Card className="mb-5 border-amber/40 bg-amber/10"><p className="text-sm text-slate-700">Your free trial ended. Your centre is read-only for {trial.daysUntilLock} more day{trial.daysUntilLock === 1 ? "" : "s"}, then it locks. Choose a plan to carry on.</p></Card>
+      ) : null}
       {sp.status === "success" ? (
         <Card className="mb-5 border-starboard/40 bg-starboard/5"><p className="text-sm font-medium text-starboard">Payment set up — thank you! Your subscription is active and your invoice is below and on its way by email.</p></Card>
       ) : sp.status === "cancelled" ? (

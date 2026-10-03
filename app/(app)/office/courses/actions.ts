@@ -11,7 +11,9 @@ import { normaliseTime, timeToSlot } from "@/lib/import/parse";
 import { getCourseEditorData, type CourseEditorData } from "@/lib/services/course-editor";
 import { createCourseTypeResolver, TYPE_NEW, TYPE_ONEOFF } from "@/lib/services/course-type-resolve";
 import { syncHoursForCourse } from "@/lib/services/hours";
-import { assignBlockMessage } from "@/lib/services/assignment";
+import { assignBlockMessage, notifyRosterChange } from "@/lib/services/assignment";
+import { eq } from "drizzle-orm";
+import { courseSession as courseSessionTable, courseStaff as courseStaffTable } from "@/lib/db/schema";
 
 export type ActionState = { ok: boolean; error?: string; message?: string };
 
@@ -206,12 +208,17 @@ export async function updateSessionTimesAction(
   const endTime = end || cfg?.endTime || "12:00";
   const at = (time: string) => new Date(Date.parse(`${date}T${time}:00.000Z`));
 
+  const before = await repos.tenant.courseSession.findById(ctx, sessionId);
   const updated = await repos.tenant.courseSession.update(ctx, sessionId, {
     date, slot, startAt: at(startTime), endAt: at(endTime),
   });
   if (!updated) return { ok: false, error: "Session not found" };
   await writeAudit(repos, ctx, { action: "update_session", entity: "course", entityId: courseId, after: { sessionId, date, startTime, endTime } });
   await syncHoursForCourse(repos, ctx, courseId);
+  // Everyone on the course hears when a published session moves.
+  const course = await repos.tenant.course.findById(ctx, courseId);
+  const assigned = await repos.tenant.courseStaff.list(ctx, eq(courseStaffTable.courseId, courseId));
+  for (const a of assigned) await notifyRosterChange(repos, ctx, a.instructorId, course?.name ?? "a course", [date, ...(before?.date ? [before.date] : [])], "moved");
   revalidatePath("/office/courses");
   revalidatePath(`/office/courses/${courseId}`);
   revalidatePath("/office");
@@ -258,10 +265,15 @@ export async function removeSessionAction(courseId: string, sessionId: string): 
 /** Remove a staff assignment from a course. */
 export async function removeStaffAction(courseId: string, assignmentId: string): Promise<ActionState> {
   const { ctx, repos } = await requireTenant({ role: "admin" });
+  const assignment = await repos.tenant.courseStaff.findById(ctx, assignmentId);
   const removed = await repos.tenant.courseStaff.delete(ctx, assignmentId);
   if (removed === 0) return { ok: false, error: "Assignment not found" };
   await writeAudit(repos, ctx, { action: "remove_staff", entity: "course", entityId: courseId, after: { assignmentId } });
   await syncHoursForCourse(repos, ctx, courseId);
+  if (assignment) {
+    const [course, sessions] = await Promise.all([repos.tenant.course.findById(ctx, courseId), repos.tenant.courseSession.list(ctx, eq(courseSessionTable.courseId, courseId))]);
+    await notifyRosterChange(repos, ctx, assignment.instructorId, course?.name ?? "a course", sessions.map((s) => s.date), "removed");
+  }
   revalidatePath(`/office/courses/${courseId}`);
   revalidatePath("/office/courses");
   revalidatePath("/office");

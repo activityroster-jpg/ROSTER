@@ -24,6 +24,14 @@ export interface TenantContext {
    * context, and audit logging is skipped, so the centre never sees the visit.
    */
   readonly ghost?: true;
+  /**
+   * The centre's free trial has ended and no payment is set up: everything is
+   * visible, nothing can be changed (the repository layer refuses writes), and
+   * billing stays reachable. See lib/billing/trial.
+   */
+  readonly readOnly?: "trial";
+  /** Trial grace period over: admins are sent to Billing, instructors to /trial-ended. */
+  readonly locked?: true;
 }
 
 /**
@@ -49,6 +57,11 @@ export function isSystemContext(ctx: AnyTenantContext): ctx is SystemTenantConte
 
 export function isGhostContext(ctx: AnyTenantContext): boolean {
   return !isSystemContext(ctx) && ctx.ghost === true;
+}
+
+/** Ghost Mode or a lapsed trial: reads only. */
+export function isReadOnlyContext(ctx: AnyTenantContext): boolean {
+  return !isSystemContext(ctx) && (ctx.ghost === true || ctx.readOnly != null);
 }
 
 export function actorUserId(ctx: AnyTenantContext): string | null {

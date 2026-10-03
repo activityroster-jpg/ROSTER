@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { resolveHost } from "@/lib/tenant/host";
 import { PIN_COOKIE, PIN_IDLE_MAX_AGE_S } from "@/lib/auth/pin";
-import { DEVICE_COOKIE, DEVICE_HEADER, DEVICE_MAX_AGE_S, isDeviceId } from "@/lib/auth/device";
+import { DEVICE_COOKIE, DEVICE_HEADER, DEVICE_MAX_AGE_S, PATH_HEADER, isDeviceId } from "@/lib/auth/device";
 import { CENTRE_COOKIE } from "@/lib/auth/centre-cookie";
 
 /**
@@ -46,6 +46,7 @@ export function middleware(req: NextRequest) {
   const deviceId = existing && isDeviceId(existing) ? existing : crypto.randomUUID();
   const fwd = new Headers(req.headers);
   fwd.set(DEVICE_HEADER, deviceId);
+  fwd.set(PATH_HEADER, path);
   const next = () => {
     const res = NextResponse.next({ request: { headers: fwd } });
     if (deviceId !== existing) {

@@ -13,6 +13,7 @@ import { PRICE_KINDS, priceLabel, resolvePrices } from "@/lib/billing/prices";
 import { TIERS } from "@/lib/tiers";
 import { ON_SITE_DAY_PRICE } from "@/lib/pricing";
 import { Card, StatusPill } from "@/components/ui";
+import { trialState } from "@/lib/billing/trial";
 
 export const dynamic = "force-dynamic";
 
@@ -115,6 +116,7 @@ export default async function AdminOverviewPage() {
               <th className="px-4 py-3">Plan</th>
               <th className="px-4 py-3">Billing</th>
               <th className="px-4 py-3">Status</th>
+              <th className="px-4 py-3">Trial</th>
               <th className="px-4 py-3">Staff</th>
               <th className="px-4 py-3">Courses</th>
               <th className="px-4 py-3">Bookings</th>
@@ -123,10 +125,15 @@ export default async function AdminOverviewPage() {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {orgs.length === 0 ? (
-              <tr><td colSpan={9} className="px-4 py-10 text-center text-slate-400">No centres yet.</td></tr>
+              <tr><td colSpan={10} className="px-4 py-10 text-center text-slate-400">No centres yet.</td></tr>
             ) : (
               orgs.map((o) => {
                 const u = usage.get(o.id) ?? { instructors: 0, courses: 0, bookings: 0, sessions: 0 };
+                const tr = trialState(o, pricing.trialDays);
+                const trialCell = tr.kind === "paid" ? <span className="text-slate-400">—</span>
+                  : tr.kind === "trial" ? <span className={tr.daysLeft <= 7 ? "font-medium text-amber" : "text-slate-600"}>{tr.daysLeft}d left</span>
+                  : tr.kind === "read_only" ? <StatusPill tone="attention">read-only · {tr.daysUntilLock}d</StatusPill>
+                  : <StatusPill tone="conflict">locked</StatusPill>;
                 return (
                   <tr key={o.id} className="hover:bg-slate-50/60">
                     <td className="px-4 py-3">
@@ -141,6 +148,7 @@ export default async function AdminOverviewPage() {
                     <td className="px-4 py-3 capitalize text-slate-600">{o.plan}</td>
                     <td className="px-4 py-3"><StatusPill tone={subTone(o.subscriptionStatus)}>{o.subscriptionStatus ?? "—"}</StatusPill></td>
                     <td className="px-4 py-3"><StatusPill tone={statusTone(o.status)}>{o.status}</StatusPill></td>
+                    <td className="px-4 py-3 text-sm">{trialCell}</td>
                     <td className="px-4 py-3 text-slate-600">{u.instructors}</td>
                     <td className="px-4 py-3 text-slate-600">{u.courses}</td>
                     <td className="px-4 py-3 text-slate-600">{u.bookings}</td>

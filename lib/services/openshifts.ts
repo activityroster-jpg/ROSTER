@@ -4,6 +4,8 @@ import type { OpenShift, OpenShiftStatus } from "@/lib/db/schema";
 import { writeAudit } from "./audit";
 import { notifyInstructor } from "./notifications";
 import { assignStaff } from "./assignment";
+import { emailAdmins } from "./admin-mail";
+import { escapeHtml } from "@/lib/mail";
 
 export interface OpenShiftRow {
   id: string;
@@ -46,7 +48,17 @@ export async function claimOpenShift(
   const shift = await repos.tenant.openShift.findById(ctx, shiftId);
   if (!shift || shift.status !== "open") return null;
   const updated = await repos.tenant.openShift.update(ctx, shiftId, { status: "offered", claimedByInstructorId: instructorId });
-  if (updated) await writeAudit(repos, ctx, { action: "open_shift_claim", entity: "open_shift", entityId: shiftId, after: { instructorId } });
+  if (updated) {
+    await writeAudit(repos, ctx, { action: "open_shift_claim", entity: "open_shift", entityId: shiftId, after: { instructorId } });
+    const [who, session] = await Promise.all([repos.tenant.instructor.findById(ctx, instructorId), repos.tenant.courseSession.findById(ctx, shift.courseSessionId)]);
+    const course = session ? await repos.tenant.course.findById(ctx, session.courseId) : null;
+    await emailAdmins(repos, ctx, {
+      subject: `${who?.name ?? "An instructor"} can cover ${course?.name ?? "an open shift"}${session ? ` on ${session.date}` : ""}`,
+      html: `<p><strong>${escapeHtml(who?.name ?? "An instructor")}</strong> has put their hand up for the open shift${course ? ` on <strong>${escapeHtml(course.name ?? "")}</strong>` : ""}${session ? ` (${session.date} ${session.slot})` : ""}. Confirm them and they're rostered.</p>`,
+      path: "/office/leave",
+      cta: "Confirm the cover",
+    });
+  }
   return updated;
 }
 

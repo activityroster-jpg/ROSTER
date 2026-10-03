@@ -9,6 +9,8 @@ import { CentreControls } from "@/components/admin/CentreControls";
 import { PricingControls } from "@/components/admin/PricingControls";
 import { Card } from "@/components/ui";
 import { GhostModeCard, type GhostSessionRow } from "@/components/admin/GhostModeCard";
+import { TrialControls } from "@/components/admin/TrialControls";
+import { trialEndsAt, trialState } from "@/lib/billing/trial";
 import { getRepositories } from "@/lib/cf/bindings";
 
 export const dynamic = "force-dynamic";
@@ -41,6 +43,9 @@ export default async function CentreDetailPage({ params }: { params: Promise<{ i
   const u = usage.get(id) ?? { instructors: 0, courses: 0, bookings: 0, sessions: 0 };
   const apex = apexDomain();
   const eff = effectivePricing(org, pricing);
+  const trial = trialState(org, pricing.trialDays);
+  const trialEnds = new Date(trialEndsAt(org, pricing.trialDays));
+  const trialLabel = trial.kind === "paid" ? "Paying — the trial clock doesn't apply." : trial.kind === "trial" ? `On trial — ${trial.daysLeft} day${trial.daysLeft === 1 ? "" : "s"} left (ends ${trialEnds.toLocaleDateString("en-GB")}).` : trial.kind === "read_only" ? `Trial ended ${trialEnds.toLocaleDateString("en-GB")} — read-only, locks in ${trial.daysUntilLock} day${trial.daysUntilLock === 1 ? "" : "s"}.` : `Trial ended ${trialEnds.toLocaleDateString("en-GB")} — locked.`;
 
   const Row = ({ k, v }: { k: string; v: string }) => (
     <div className="flex justify-between border-t border-slate-100 py-2 text-sm first:border-t-0">
@@ -79,6 +84,12 @@ export default async function CentreDetailPage({ params }: { params: Promise<{ i
           <Row k="Jurisdiction" v={org.jurisdiction} />
         </Card>
       </div>
+
+      <Card className="mt-6">
+        <h2 className="mb-1 font-semibold text-navy">Free trial</h2>
+        <p className="mb-3 text-xs text-slate-500">After the trial the centre goes read-only for two weeks, then locks until they add payment. Extend it here when you&apos;ve agreed to.</p>
+        <TrialControls id={org.id} state={trialLabel} endsIso={trialEnds.toISOString().slice(0, 10)} />
+      </Card>
 
       <Card className="mt-6">
         <h2 className="mb-3 font-semibold text-navy">Ghost Mode</h2>

@@ -7,6 +7,8 @@
  */
 export const DEVICE_COOKIE = "ar_dev";
 export const DEVICE_HEADER = "x-ar-device";
+/** The request path, forwarded by the middleware so server code can route on it (e.g. the trial lock). */
+export const PATH_HEADER = "x-ar-path";
 export const DEVICE_MAX_AGE_S = 400 * 24 * 60 * 60; // browsers cap cookies at ~400 days
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

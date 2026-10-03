@@ -5,6 +5,8 @@ import type { Organisation } from "@/lib/db/schema";
 import { enforcePinGate } from "@/lib/auth/pin-gate";
 import { enforceDeviceGate } from "@/lib/auth/device-gate";
 import { GhostReadOnlyError } from "@/lib/auth/ghost";
+import { TrialReadOnlyError, type TrialState } from "@/lib/billing/trial";
+import { PATH_HEADER } from "@/lib/auth/device";
 import type { TenantContext } from "./context";
 import { resolveTenant } from "./resolve";
 
@@ -12,6 +14,7 @@ export interface RequiredTenant {
   ctx: TenantContext;
   organisation: Organisation;
   repos: Awaited<ReturnType<typeof getRepositories>>;
+  trial: TrialState;
 }
 
 /**
@@ -19,7 +22,10 @@ export interface RequiredTenant {
  * authorises the tenant or redirects appropriately. Never returns an
  * unauthorised context.
  */
-export async function requireTenant(opts?: { role?: "admin"; skipMfaGate?: boolean }): Promise<RequiredTenant> {
+/** Paths an admin may still use once the trial has locked: billing, so they can pay. */
+const LOCKED_ALLOWED = ["/office/billing", "/api/billing"];
+
+export async function requireTenant(opts?: { role?: "admin"; skipMfaGate?: boolean; allowReadOnly?: boolean }): Promise<RequiredTenant> {
   const h = new Headers(await headers());
   const res = await resolveTenant(h);
 
@@ -47,6 +53,13 @@ export async function requireTenant(opts?: { role?: "admin"; skipMfaGate?: boole
   // are refused outright, before any control-plane side effect could run.
   if (res.ctx.ghost && h.has("next-action")) throw new GhostReadOnlyError();
 
+  // Free trial over: read-only, and after the grace period locked to Billing
+  // (admins) or a "trial ended" page (instructors). Billing itself stays usable.
+  const path = h.get(PATH_HEADER) ?? "";
+  const billing = LOCKED_ALLOWED.some((p) => path.startsWith(p)) || opts?.allowReadOnly === true;
+  if (res.ctx.locked && !billing) redirect(res.ctx.role === "admin" ? "/office/billing?locked=1" : "/trial-ended");
+  if (res.ctx.readOnly && !billing && h.has("next-action")) throw new TrialReadOnlyError();
+
   // Unfamiliar device, country or IP → password again first; then the PIN.
   const landing = res.ctx.role === "admin" ? "/office" : "/portal";
   await enforceDeviceGate(res.ctx.userId, landing, res.ctx.organisationId);
@@ -61,5 +74,5 @@ export async function requireTenant(opts?: { role?: "admin"; skipMfaGate?: boole
   // accepted for backwards compatibility and no longer changes behaviour.
   void opts?.skipMfaGate;
 
-  return { ctx: res.ctx, organisation: res.organisation, repos };
+  return { ctx: res.ctx, organisation: res.organisation, repos, trial: res.trial };
 }

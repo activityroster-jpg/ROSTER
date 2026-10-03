@@ -3,6 +3,8 @@ import { actorUserId, type AnyTenantContext } from "@/lib/tenant/context";
 import type { LeaveRequest, LeaveType } from "@/lib/db/schema";
 import { writeAudit } from "./audit";
 import { notifyInstructor } from "./notifications";
+import { emailAdmins } from "./admin-mail";
+import { escapeHtml } from "@/lib/mail";
 
 export interface LeaveInput {
   type: LeaveType;
@@ -45,6 +47,14 @@ export async function requestLeave(
     entity: "leave_request",
     entityId: row.id,
     after: { instructorId, ...input },
+  });
+  const who = (await repos.tenant.instructor.findById(ctx, instructorId))?.name ?? "An instructor";
+  const span = input.endDate !== input.startDate ? `${input.startDate} to ${input.endDate}` : input.startDate;
+  await emailAdmins(repos, ctx, {
+    subject: `${who} has asked for ${input.type} leave (${span})`,
+    html: `<p><strong>${escapeHtml(who)}</strong> has asked for <strong>${escapeHtml(input.type)}</strong> leave, ${span} (${input.days} day${input.days === 1 ? "" : "s"}).${input.reason ? ` Reason: ${escapeHtml(input.reason)}` : ""}</p>`,
+    path: "/office/leave",
+    cta: "Approve or decline",
   });
   return row;
 }

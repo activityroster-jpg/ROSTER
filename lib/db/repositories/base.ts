@@ -1,8 +1,9 @@
 import { and, eq, type SQL } from "drizzle-orm";
 import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
 import type { Database } from "@/lib/db/client";
-import { isGhostContext, type AnyTenantContext } from "@/lib/tenant/context";
+import { isGhostContext, isReadOnlyContext, type AnyTenantContext } from "@/lib/tenant/context";
 import { GhostReadOnlyError } from "@/lib/auth/ghost";
+import { TrialReadOnlyError } from "@/lib/billing/trial";
 
 /**
  * A tenant-owned table must expose an `id` and an `organisationId` column.
@@ -31,9 +32,10 @@ export class TenantRepository<T extends TenantTable> {
     protected readonly table: T,
   ) {}
 
-  /** Ghost Mode contexts can read everything and write nothing — enforced here, not by vigilance. */
+  /** Ghost Mode and lapsed-trial contexts can read everything and write nothing — enforced here, not by vigilance. */
   protected assertWritable(ctx: AnyTenantContext): void {
     if (isGhostContext(ctx)) throw new GhostReadOnlyError();
+    if (isReadOnlyContext(ctx)) throw new TrialReadOnlyError();
   }
 
   /** WHERE clause pinning to this tenant, optionally AND-ed with more. */

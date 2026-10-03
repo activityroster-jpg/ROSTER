@@ -12,6 +12,8 @@ import {
 import { courseStaff as courseStaffTable, availability as availabilityTable } from "@/lib/db/schema";
 import { writeAudit } from "./audit";
 import { syncHoursForCourse } from "./hours";
+import { notifyInstructor } from "./notifications";
+import { publishedWeeks, weekOf } from "./roster";
 
 export interface AssignInput {
   courseId: string;
@@ -153,6 +155,9 @@ export async function assignStaff(
   // Hours come from the roster: give every session of this course an hours record.
   await syncHoursForCourse(repos, ctx, input.courseId);
 
+  // Tell them — but only once the week is published (publishing itself notifies).
+  await notifyRosterChange(repos, ctx, input.instructorId, course.name ?? "a course", targetSessions.map((s) => s.date), "added");
+
   return { ok: true, courseStaffId: row.id, overridden };
 }
 
@@ -227,4 +232,35 @@ export async function bulkAssignStaff(
   }
 
   return { assigned, overridden, already, skipped, outcomes };
+}
+
+
+/**
+ * In-app + push (and email, if they allow it) about a roster change, for the
+ * dates whose week has been published. Unpublished weeks stay quiet: the
+ * instructor hears about those when the week is published.
+ */
+export async function notifyRosterChange(
+  repos: Repositories,
+  ctx: AnyTenantContext,
+  instructorId: string,
+  courseName: string,
+  dates: string[],
+  change: "added" | "removed" | "moved",
+): Promise<void> {
+  try {
+    const published = await publishedWeeks(repos, ctx);
+    const affected = [...new Set(dates)].filter((d) => published.has(weekOf(d))).sort();
+    if (affected.length === 0) return;
+    const when = affected.length === 1 ? `on ${affected[0]}` : `on ${affected.length} dates from ${affected[0]}`;
+    const title = change === "added" ? `You're on ${courseName}` : change === "removed" ? `You're off ${courseName}` : `${courseName} has moved`;
+    const body = change === "added"
+      ? `You've been rostered on ${courseName} ${when}. Open the app to see the details and confirm.`
+      : change === "removed"
+        ? `You're no longer on ${courseName} ${when}.`
+        : `The time or date of ${courseName} has changed ${when} — check your schedule.`;
+    await notifyInstructor(repos, ctx, instructorId, { title, body, email: true });
+  } catch (err) {
+    console.error("[roster-notify] failed:", (err as Error).message);
+  }
 }

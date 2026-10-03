@@ -15,8 +15,7 @@ import {
   CreditCard,
 } from "lucide-react";
 import { requireTenant } from "@/lib/tenant/require";
-import { getDb, getRepositories } from "@/lib/cf/bindings";
-import { PlatformRepository } from "@/lib/db/repositories/platform";
+import { getRepositories } from "@/lib/cf/bindings";
 import { Logo } from "@/components/Logo";
 import { TwoFactorNudge } from "@/components/office/TwoFactorNudge";
 import { GhostBanner } from "@/components/office/GhostBanner";
@@ -55,7 +54,7 @@ const NAV = [
 ];
 
 export default async function OfficeLayout({ children }: { children: React.ReactNode }) {
-  const { ctx, organisation } = await requireTenant({ role: "admin" });
+  const { ctx, organisation, trial } = await requireTenant({ role: "admin", allowReadOnly: true });
   let clockOn = false;
 
   // Nudge the admin to turn on 2FA once they've added staff (dismissible).
@@ -74,19 +73,13 @@ export default async function OfficeLayout({ children }: { children: React.React
   } catch { show2fa = false; }
   const nav = NAV.map((g) => ({ ...g, items: g.items.filter((i) => clockOn || i.href !== "/office/timeclock") }));
 
-  // Billing nudge: distinguish an active free trial from a failed payment.
+  // Billing nudge: failed payment, or where the free trial is.
   const sub = organisation.subscriptionStatus;
-  let banner: { kind: "trial" | "pastdue"; daysLeft: number } | null = null;
-  if (sub === "past_due" || sub === "unpaid") {
-    banner = { kind: "pastdue", daysLeft: 0 };
-  } else if (sub === "trialing" || sub == null) {
-    try {
-      const pricing = await new PlatformRepository(await getDb()).getPricing();
-      const created = organisation.createdAt instanceof Date ? organisation.createdAt.getTime() : Number(organisation.createdAt);
-      const ends = created + pricing.trialDays * 24 * 60 * 60 * 1000;
-      banner = { kind: "trial", daysLeft: Math.max(0, Math.ceil((ends - Date.now()) / (24 * 60 * 60 * 1000))) };
-    } catch { banner = null; }
-  }
+  let banner: { kind: "trial" | "pastdue" | "readonly" | "locked"; daysLeft: number } | null = null;
+  if (sub === "past_due" || sub === "unpaid") banner = { kind: "pastdue", daysLeft: 0 };
+  else if (trial.kind === "trial") banner = { kind: "trial", daysLeft: trial.daysLeft };
+  else if (trial.kind === "read_only") banner = { kind: "readonly", daysLeft: trial.daysUntilLock };
+  else if (trial.kind === "locked") banner = { kind: "locked", daysLeft: 0 };
 
   return (
     <div className="flex min-h-screen bg-canvas">
@@ -133,6 +126,14 @@ export default async function OfficeLayout({ children }: { children: React.React
         {banner?.kind === "pastdue" ? (
           <Link href="/office/billing" className="block bg-port/15 px-6 py-2 text-center text-sm font-medium text-port hover:bg-port/20">
             Your last payment failed — update your card to keep your centre active →
+          </Link>
+        ) : banner?.kind === "locked" ? (
+          <Link href="/office/billing" className="block bg-port/15 px-6 py-2 text-center text-sm font-medium text-port hover:bg-port/20">
+            Your free trial has ended and the centre is locked — choose a plan to carry on →
+          </Link>
+        ) : banner?.kind === "readonly" ? (
+          <Link href="/office/billing" className="block bg-amber/25 px-6 py-2 text-center text-sm font-medium text-navy hover:bg-amber/30">
+            Your free trial has ended — everything is read-only, and locks in {banner.daysLeft} day{banner.daysLeft === 1 ? "" : "s"}. Choose a plan →
           </Link>
         ) : banner?.kind === "trial" ? (
           <Link href="/office/billing" className="block bg-amber/15 px-6 py-2 text-center text-sm font-medium text-navy hover:bg-amber/20">

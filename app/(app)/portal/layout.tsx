@@ -6,6 +6,7 @@ import { instructor as instructorTable } from "@/lib/db/schema";
 import { unreadCount } from "@/lib/services/notifications";
 import { Logo } from "@/components/Logo";
 import { NativeBridge } from "@/components/mobile/NativeBridge";
+import { ensureExpiryReminders } from "@/lib/services/reminders";
 
 const TABS = [
   { href: "/portal", label: "Schedule", icon: CalendarCheck },
@@ -17,8 +18,10 @@ const TABS = [
 ];
 
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
-  const { ctx, organisation, repos } = await requireTenant();
+  const { ctx, organisation, repos, trial } = await requireTenant();
   const me = (await repos.tenant.instructor.list(ctx, eq(instructorTable.userId, ctx.userId)))[0];
+  // Cert-expiry reminders are raised lazily, on the instructor's own visits.
+  if (me && !ctx.readOnly) await ensureExpiryReminders(repos, ctx, me.id).catch(() => undefined);
   const unread = me ? await unreadCount(repos, ctx, me.id) : 0;
   const clockOn = Boolean((await repos.tenant.orgSettings.list(ctx))[0]?.timeclockEnabled);
   const tabs = TABS.filter((t) => clockOn || t.href !== "/portal/timeclock");
@@ -43,6 +46,9 @@ export default async function PortalLayout({ children }: { children: React.React
         </Link>
         </div>
       </header>
+      {trial.kind === "read_only" ? (
+        <p className="bg-amber/25 px-4 py-2 text-center text-xs font-medium text-navy">Your centre&apos;s free trial has ended, so nothing can be changed for now. Please let whoever runs your centre know.</p>
+      ) : null}
       <main className="flex-1 px-4 py-5 pb-24">{children}</main>
       <nav className="fixed inset-x-0 bottom-0 mx-auto flex max-w-md items-center justify-around border-t border-slate-200 bg-white py-2">
         {tabs.map((tab) => (

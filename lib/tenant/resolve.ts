@@ -7,6 +7,9 @@ import { GHOST_COOKIE, cookieFromHeader, verifyGhostToken } from "@/lib/auth/gho
 import { authSecret } from "@/lib/security/secrets";
 import { isPlatformAdminEmail } from "@/lib/platform/admin";
 import { centreCookieFromHeader, verifyCentreCookie } from "@/lib/auth/centre-cookie";
+import { PlatformRepository } from "@/lib/db/repositories/platform";
+import { trialState, type TrialState } from "@/lib/billing/trial";
+import { DEFAULT_PRICING } from "@/lib/pricing";
 
 export type TenantDenial =
   | "unknown-host"
@@ -16,8 +19,22 @@ export type TenantDenial =
   | "not-a-member";
 
 export type TenantResolution =
-  | { ok: true; ctx: TenantContext; organisation: Organisation; sessionId?: string }
+  | { ok: true; ctx: TenantContext; organisation: Organisation; sessionId?: string; trial: TrialState }
   | { ok: false; reason: TenantDenial; slug?: string; organisation?: Organisation };
+
+/** Where the centre is in its free trial (paid centres: "paid"). */
+async function trialFor(db: Awaited<ReturnType<typeof getRepositories>>["db"], organisation: Organisation): Promise<TrialState> {
+  let trialDays: number = DEFAULT_PRICING.trialDays;
+  try { trialDays = (await new PlatformRepository(db).getPricing()).trialDays; } catch { /* default */ }
+  return trialState(organisation, trialDays);
+}
+
+/** Apply the trial state to a context: read-only after the trial, locked after the grace period. */
+function withTrial(ctx: TenantContext, trial: TrialState): TenantContext {
+  if (trial.kind === "read_only") return { ...ctx, readOnly: "trial" };
+  if (trial.kind === "locked") return { ...ctx, readOnly: "trial", locked: true };
+  return ctx;
+}
 
 /**
  * Resolve and AUTHORISE the tenant for a request from its headers.
@@ -34,7 +51,7 @@ export type TenantResolution =
 export async function resolveTenant(headers: Headers): Promise<TenantResolution> {
   const env = getEnv();
   const host = resolveHost(headers.get("host"), env.APP_APEX_DOMAIN);
-  const { control } = await getRepositories();
+  const { control, db } = await getRepositories();
 
   // The mobile app runs on the apex domain (one origin, so the native bridge
   // works on every page). There the centre comes from a signed "selected
@@ -80,7 +97,7 @@ export async function resolveTenant(headers: Headers): Promise<TenantResolution>
     (await isPlatformAdminEmail(authSession.user.email))
   ) {
     const ctx: TenantContext = { organisationId: organisation.id, slug: organisation.slug, userId: authSession.user.id, role: "admin", ghost: true };
-    return { ok: true, ctx, organisation, sessionId: authSession.session?.id };
+    return { ok: true, ctx, organisation, sessionId: authSession.session?.id, trial: await trialFor(db, organisation) };
   }
 
   let membership = await control.membershipFor(authSession.user.id, organisation.id);
@@ -103,11 +120,12 @@ export async function resolveTenant(headers: Headers): Promise<TenantResolution>
     return { ok: false, reason: "not-a-member", slug: slugHint, organisation };
   }
 
-  const ctx: TenantContext = {
+  const trial = await trialFor(db, organisation);
+  const ctx: TenantContext = withTrial({
     organisationId: organisation.id,
     slug: organisation.slug,
     userId: authSession.user.id,
     role: membership.role,
-  };
-  return { ok: true, ctx, organisation, sessionId: authSession.session?.id };
+  }, trial);
+  return { ok: true, ctx, organisation, sessionId: authSession.session?.id, trial };
 }
