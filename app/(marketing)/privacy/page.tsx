@@ -14,7 +14,7 @@ export default function PrivacyPage() {
       <UL items={[
         "Account details: name, email, and a hashed password / login PIN.",
         "Centre details: centre name, subdomain, region and jurisdiction.",
-        "Staff records entered by a centre: instructor names, contact details, qualifications, DBS/vetting and other compliance records, availability, hours and leave.",
+        "Staff records entered by a centre: instructor names, contact details, certs (qualifications), DBS/vetting and other compliance records, availability, hours and leave.",
         "Billing data: we store only Stripe identifiers and invoice metadata — never card numbers (Stripe handles card data).",
         "Usage & technical data: log data, IP address and cookies strictly needed to run the service.",
       ]} />

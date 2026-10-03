@@ -34,7 +34,7 @@ export default function ContactPage() {
             </div>
             <h2 className="mt-1 font-display text-2xl font-bold text-navy">Schedule a call</h2>
             <p className="mt-2 text-slate-600">
-              A free 30-minute walkthrough of rostering, qualifications and safety cover for your centre. Times are
+              A free 30-minute walkthrough of rostering, certs and safety cover for your centre. Times are
               shown in <strong>GMT</strong>.
             </p>
           </div>

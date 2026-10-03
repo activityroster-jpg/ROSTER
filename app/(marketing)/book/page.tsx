@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Book a call — ActivityRoster",
-  description: "Book a free 30-minute call to see how ActivityRoster can handle rostering, qualifications and safety-cover compliance for your RYA centre.",
+  description: "Book a free 30-minute call to see how ActivityRoster can handle rostering, certs and safety-cover compliance for your RYA centre.",
   alternates: { canonical: "/book" },
 };
 
@@ -31,7 +31,7 @@ export default async function BookCallPage() {
         <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-teal">Talk to us</p>
         <h1 className="font-display text-3xl font-bold text-navy sm:text-4xl">Book a 30-minute call</h1>
         <p className="mt-3 max-w-2xl text-slate-600">
-          A quick, no-pressure walkthrough of how ActivityRoster handles rostering, qualifications and safety-cover
+          A quick, no-pressure walkthrough of how ActivityRoster handles rostering, certs and safety-cover
           compliance for RYA centres and clubs. Pick a time that suits you — all times are shown in <strong>GMT</strong>.
         </p>
         <div className="mt-8">

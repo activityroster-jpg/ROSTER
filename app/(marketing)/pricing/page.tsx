@@ -19,9 +19,9 @@ const INCLUDED = [
   "Youth & adult courses kept cleanly separate throughout",
   "Time & attendance — clock in/out, auto timesheets",
   "Availability, leave & open-shift cover",
-  "Licence, ticket & vetting tracking with expiry alerts",
+  "Cert, ticket & vetting tracking with expiry alerts",
   "Staff HR, onboarding & encrypted document vault",
-  "Printable weekly rota (PDF) & payroll-ready hours export",
+  "Printable weekly roster (PDF) & payroll-ready hours export",
   "Import your existing courses from a spreadsheet or calendar",
   "Instructor app with clock-in, leave & notifications",
   "Hosted on Cloudflare (EU), UK GDPR-ready, export any time — strictly isolated per centre",
@@ -32,7 +32,7 @@ const SETUP_INCLUDED = [
   "We tailor the platform to your way of working — your courses, grades, roles, ratios, checks and session times, set up your way",
   "Custom features and tweaks built around what you actually need — tell us how you want it and we'll make it work like that",
   "We import your existing schedule, staff and tickets from your spreadsheets",
-  "We invite your instructors and set up availability & the weekly rota",
+  "We invite your instructors and set up availability & the weekly roster",
   "A walk-through so you and your team are confident from day one",
 ];
 

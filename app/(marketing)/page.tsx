@@ -15,7 +15,7 @@ const PLATFORM = [
   { icon: CalendarOff, title: "Availability & leave", body: "Staff set it in the app; you approve in a tap." },
   { icon: Repeat, title: "Open shifts & swaps", body: "Uncovered sessions claimed by fit, free staff." },
   { icon: ShieldCheck, title: "Compliance engine", body: "Ratios, safety cover and tickets enforced." },
-  { icon: FileCheck, title: "Licence tracking", body: "Every RYA cert and vetting check, with expiry alerts." },
+  { icon: FileCheck, title: "Cert tracking", body: "Every RYA cert and vetting check, with expiry alerts." },
   { icon: UserPlus, title: "HR & onboarding", body: "Records, contracts and a new-starter checklist." },
   { icon: FolderLock, title: "Document vault", body: "Certificates held privately, encrypted, in the EU." },
   { icon: Wallet, title: "Payroll export", body: "Real hours × pay rates, one click a month." },
@@ -34,7 +34,7 @@ const SAFETY = [
 ];
 
 const AUDIENCES = [
-  { icon: Anchor, title: "Yacht clubs", body: "Volunteer rotas and racing safety cover, without the committee spreadsheet." },
+  { icon: Anchor, title: "Yacht clubs", body: "Volunteer rosters and racing safety cover, without the committee spreadsheet." },
   { icon: Ship, title: "Sailing schools", body: "Back-to-back RYA courses, a big freelance pool, every ticket tracked." },
   { icon: Waves, title: "Activity centres", body: "Dinghy, windsurf, powerboat and kayak — one roster, one compliance picture." },
 ];
@@ -130,7 +130,7 @@ export default function MarketingHome() {
         applicationCategory: "BusinessApplication",
         operatingSystem: "Web",
         offers: { "@type": "Offer", price: "35", priceCurrency: "GBP" },
-        description: "Flat per-centre pricing (from £35/mo) for staff rostering, qualifications and safety-cover compliance at RYA centres.",
+        description: "Flat per-centre pricing (from £35/mo) for instructor rostering, certs and safety-cover compliance at RYA centres.",
       },
     ],
   };

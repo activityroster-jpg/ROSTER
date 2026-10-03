@@ -111,7 +111,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
 
       <div className="mt-12 rounded-card border border-teal bg-navy p-8 text-center text-white">
         <h2 className="font-display text-2xl font-bold">Run your centre the easy way</h2>
-        <p className="mx-auto mt-2 max-w-xl text-sm text-white/80">ActivityRoster handles rostering, qualifications, safety-cover checks and more — purpose-built for RYA sailing and watersports centres.</p>
+        <p className="mx-auto mt-2 max-w-xl text-sm text-white/80">ActivityRoster handles rostering, certs, safety-cover checks and more — purpose-built for RYA sailing and watersports centres.</p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
           <a href="/#get-demo" className="rounded-lg bg-teal px-6 py-3 font-semibold text-white hover:bg-teal-700">Start a free month</a>
           <Link href="/learn" className="rounded-lg border border-white/30 px-6 py-3 font-semibold text-white hover:bg-white/10">Learning Centre</Link>

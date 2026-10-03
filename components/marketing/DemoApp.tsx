@@ -289,7 +289,7 @@ function DemoDashboard({ onOpen }: { onOpen: (p: Panel) => void }) {
       <div className="mb-6 grid gap-3 sm:grid-cols-3">
         <Tile label="On the water now" value={2} sub="Clocked in" tone="starboard" />
         <Tile label="Hours logged today" value="6.5" sub="4 started" />
-        <Tile label="Sessions this week" value={9} sub="View / print rota" tone="teal" />
+        <Tile label="Sessions this week" value={9} sub="View / print roster" tone="teal" />
       </div>
 
       <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Needs attention</p>
@@ -308,8 +308,8 @@ function DemoDashboard({ onOpen }: { onOpen: (p: Panel) => void }) {
       <div className="mb-8"><WeekCalendar /></div>
 
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-display text-lg font-semibold text-navy">This week&apos;s rota</h2>
-        <button onClick={() => onOpen("rota")} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-navy hover:bg-slate-50">Full rota · print / PDF →</button>
+        <h2 className="font-display text-lg font-semibold text-navy">This week&apos;s roster</h2>
+        <button onClick={() => onOpen("rota")} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-navy hover:bg-slate-50">Full roster · print / PDF →</button>
       </div>
       <Card className="p-0">
         <div className="divide-y divide-slate-100">
@@ -380,7 +380,7 @@ function DemoCourses({ onOpen }: { onOpen: (p: Panel) => void }) {
       </div>
       <p className="mb-6 text-sm text-slate-500">
         Add a course, then assign staff to it. Youth and adult courses are labelled so they never get mixed up. We check
-        instructor qualifications, ratios &amp; safety-boat cover and double-bookings as you go — anything short is flagged.
+        instructor certs, ratios &amp; safety-boat cover and double-bookings as you go — anything short is flagged.
       </p>
 
       {/* Planner: calendar + builder */}
@@ -500,7 +500,7 @@ function DemoRota({ onBack }: { onBack: () => void }) {
     <div>
       <button onClick={onBack} className="mb-2 text-xs text-slate-400 hover:text-slate-600">← Dashboard</button>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="font-display text-2xl font-semibold text-navy">Weekly rota</h1>
+        <h1 className="font-display text-2xl font-semibold text-navy">Weekly roster</h1>
         <div className="flex gap-2">
           <span className="rounded-lg bg-teal px-3 py-1.5 text-xs font-semibold text-white">🖨 Print / Save PDF</span>
           <span className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-navy">Export hours (CSV)</span>
@@ -533,7 +533,7 @@ function DemoRota({ onBack }: { onBack: () => void }) {
           </tbody>
         </table>
       </Card>
-      <p className="mt-2 text-xs text-slate-400">Print a clean one-page rota for the wall, or export actual hours straight to payroll. Flip to any week, past or future.</p>
+      <p className="mt-2 text-xs text-slate-400">Print a clean one-page roster for the wall, or export actual hours straight to payroll. Flip to any week, past or future.</p>
     </div>
   );
 }
@@ -771,14 +771,14 @@ function DemoStaff() {
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-bold text-navy">Staff</h1>
-          <p className="text-sm text-slate-500">{STAFF.length} instructors · fit-to-roster and the courses each can teach, from the qualifications they hold</p>
+          <p className="text-sm text-slate-500">{STAFF.length} instructors · fit-to-roster and the courses each can teach, from the certs they hold</p>
         </div>
         <span className="flex-none rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-navy">Import from spreadsheet</span>
       </div>
 
       <Card className="mb-5">
         <h2 className="mb-1 font-semibold text-navy">Add an instructor</h2>
-        <p className="mb-3 text-xs text-slate-500">Enter their details and what they teach — we email them an invite to set up their account and upload their licences.</p>
+        <p className="mb-3 text-xs text-slate-500">Enter their details and what they teach — we email them an invite to set up their account and upload their certs.</p>
         <div className="grid gap-3 sm:grid-cols-3">
           <div><label className="mb-1 block text-xs font-medium text-slate-500">Name</label><div className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-400">Full name</div></div>
           <div><label className="mb-1 block text-xs font-medium text-slate-500">Email</label><div className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-400">name@centre.co.uk</div></div>
@@ -831,7 +831,7 @@ function DemoStaff() {
                   <td className="px-4 py-3 text-slate-500">{r.email ?? "—"}</td>
                   <td className="px-4 py-3 capitalize text-slate-600">{r.emp}</td>
                   <td className="px-4 py-3">
-                    {r.teaches.length === 0 ? <span className="text-xs text-slate-400">Add a qualification</span> : (
+                    {r.teaches.length === 0 ? <span className="text-xs text-slate-400">Add a cert</span> : (
                       <div className="flex flex-col gap-1">
                         <div className="flex flex-wrap gap-1">
                           {r.youth ? <span className="rounded-full bg-amber/15 px-2 py-0.5 text-[11px] font-semibold text-amber">Youth</span> : null}
@@ -1064,7 +1064,7 @@ function DemoSettings() {
           <div><label className="mb-1 block text-xs font-medium text-slate-500">Timezone</label><div className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-600">Europe/London</div></div>
         </div>
         <div className="mt-3 flex flex-wrap gap-4 text-sm text-slate-600">
-          {["Enforce licence checks", "Enforce ratio & safety cover", "Enforce double-booking checks"].map((t) => (
+          {["Check certs before rostering", "Check ratios & safety cover", "Check for double-bookings"].map((t) => (
             <label key={t} className="flex items-center gap-2"><span className="h-4 w-7 rounded-full bg-teal/30"><span className="ml-3.5 block h-4 w-3.5 rounded-full bg-teal" /></span>{t}</label>
           ))}
         </div>

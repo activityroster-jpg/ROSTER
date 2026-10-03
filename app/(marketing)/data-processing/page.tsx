@@ -5,7 +5,7 @@ export const metadata = { title: "Data Processing · ActivityRoster" };
 export default function DataProcessingPage() {
   return (
     <LegalPage title="Data Processing Terms" updated="29 September 2026">
-      <P>These terms apply where ActivityRoster processes personal data on behalf of a centre (the &ldquo;Controller&rdquo;) — for example the staff, qualification and compliance records a centre stores in the platform. They form part of our agreement with each centre and reflect Article 28 UK/EU GDPR.</P>
+      <P>These terms apply where ActivityRoster processes personal data on behalf of a centre (the &ldquo;Controller&rdquo;) — for example the instructor, cert (qualification) and compliance records a centre stores in the platform. They form part of our agreement with each centre and reflect Article 28 UK/EU GDPR.</P>
 
       <H2>Roles</H2>
       <P>The centre is the Controller of its staff/operational data. ActivityRoster is the Processor and processes that data only on the centre&apos;s documented instructions (using the platform as intended).</P>
@@ -15,13 +15,13 @@ export default function DataProcessingPage() {
 
       <H2>Nature &amp; purpose</H2>
       <UL items={[
-        "Storing and displaying staff records, qualifications, vetting/DBS status, availability, hours and leave.",
+        "Storing and displaying instructor records, certs (qualifications), vetting/DBS status, availability, hours and leave.",
         "Sending service notifications (e.g. shift offers, leave decisions) on the centre's behalf.",
-        "Generating rotas, timesheets and payroll-ready exports.",
+        "Generating rosters, timesheets and payroll-ready exports.",
       ]} />
 
       <H2>Types of data &amp; data subjects</H2>
-      <P>Data subjects: the centre&apos;s instructors and staff. Data: contact details, employment type, qualifications, compliance/vetting records (which may be special-category or criminal-offence data such as DBS status), working time and leave.</P>
+      <P>Data subjects: the centre&apos;s instructors and staff. Data: contact details, employment type, certs (qualifications), compliance/vetting records (which may be special-category or criminal-offence data such as DBS status), working time and leave.</P>
 
       <H2>Our obligations</H2>
       <UL items={[
