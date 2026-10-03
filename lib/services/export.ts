@@ -22,6 +22,10 @@ export async function exportOrganisationData(
   for (const [name, repo] of Object.entries(tenant)) {
     out[name] = await repo.list(ctx);
   }
+  // Third-party API keys never leave the server, encrypted or not.
+  if (Array.isArray(out.integration)) {
+    out.integration = (out.integration as Record<string, unknown>[]).map((r) => ({ ...r, token: r.token ? "[redacted]" : null }));
+  }
   return out;
 }
 

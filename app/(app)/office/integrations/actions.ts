@@ -10,6 +10,7 @@ import { fetchIntegrationDrafts, applyChanges, diffFeed, type FeedDiff } from "@
 import { assertSafeFeedUrl } from "@/lib/integrations/url-guard";
 import { isSafeFeedUrl } from "@/lib/integrations/url-guard";
 import { writeAudit } from "@/lib/services/audit";
+import { openToken, sealToken } from "@/lib/security/token-crypto";
 
 export type IntegrationResult = { ok: boolean; error?: string; message?: string };
 
@@ -46,7 +47,7 @@ export async function connectIntegrationAction(input: { provider: string; kind?:
     };
   }
 
-  const patch = { kind, feedUrl: kind === "ics" ? feedUrl : null, token: kind === "api" ? token : null, status: "connected" as const, lastResult: verifiedCount != null ? `Verified — ${verifiedCount} upcoming event${verifiedCount === 1 ? "" : "s"} in the feed` : null };
+  const patch = { kind, feedUrl: kind === "ics" ? feedUrl : null, token: kind === "api" ? await sealToken(token) : null, status: "connected" as const, lastResult: verifiedCount != null ? `Verified — ${verifiedCount} upcoming event${verifiedCount === 1 ? "" : "s"} in the feed` : null };
   const existing = (await repos.tenant.integration.list(ctx, eq(integrationTable.provider, input.provider)))[0];
   if (existing) {
     await repos.tenant.integration.update(ctx, existing.id, patch);
@@ -84,7 +85,7 @@ export async function previewIntegrationChangesAction(id: string): Promise<Previ
   const row = (await repos.tenant.integration.list(ctx, eq(integrationTable.id, id)))[0];
   if (!row) return { ok: false, error: "Not found" };
   try {
-    const drafts = await fetchIntegrationDrafts(row);
+    const drafts = await fetchIntegrationDrafts({ ...row, token: await openToken(row.token) });
     const diff = await diffFeed(repos, ctx, drafts, `integration:${row.provider}`);
     await repos.tenant.integration.update(ctx, id, { status: "connected", lastResult: `${diff.toAdd.length} new · ${diff.toRemove.length} removed · ${diff.unchanged} unchanged` });
     const types = (await repos.tenant.courseType.list(ctx))
@@ -106,7 +107,7 @@ export async function applyIntegrationChangesAction(id: string, addKeys: string[
   if (!row) return { ok: false, error: "Not found" };
   if ((addKeys?.length ?? 0) === 0 && (removeCourseIds?.length ?? 0) === 0) return { ok: false, error: "Nothing selected" };
   try {
-    const drafts = await fetchIntegrationDrafts(row);
+    const drafts = await fetchIntegrationDrafts({ ...row, token: await openToken(row.token) });
     const out = await applyChanges(repos, ctx, drafts, `integration:${row.provider}`, addKeys ?? [], removeCourseIds ?? [], sanitiseTypeChoices(typeChoices));
     const summary = `${out.added} added · ${out.removed} removed`;
     await repos.tenant.integration.update(ctx, id, { status: "connected", lastSyncedAt: new Date(), lastResult: summary });

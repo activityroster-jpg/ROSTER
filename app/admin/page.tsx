@@ -30,11 +30,34 @@ const statusTone = (s: string): "covered" | "attention" | "conflict" | "neutral"
   return "neutral";
 };
 
-export default async function AdminOverviewPage() {
+const DAY = 86_400_000;
+const ago = (d: Date | undefined, now: number) => {
+  if (!d) return "—";
+  const days = Math.floor((now - d.getTime()) / DAY);
+  return days <= 0 ? "today" : days === 1 ? "yesterday" : days < 30 ? `${days}d ago` : days < 365 ? `${Math.floor(days / 30)}mo ago` : `${Math.floor(days / 365)}y ago`;
+};
+
+export default async function AdminOverviewPage({ searchParams }: { searchParams: Promise<{ q?: string; show?: string }> }) {
   await requirePlatformAdmin();
+  const sp = await searchParams;
+  const q = (typeof sp.q === "string" ? sp.q : "").trim().toLowerCase();
+  const show = sp.show === "attention" ? "attention" : sp.show === "trial" ? "trial" : sp.show === "quiet" ? "quiet" : "all";
   const db = await getDb();
   const platform = new PlatformRepository(db);
-  const [orgs, usage, pricing, owners] = await Promise.all([platform.listOrganisations(), platform.usageByOrg(), platform.getPricing(), platform.ownerEmailByOrg()]);
+  const [allOrgs, usage, pricing, owners, lastActivity] = await Promise.all([platform.listOrganisations(), platform.usageByOrg(), platform.getPricing(), platform.ownerEmailByOrg(), platform.lastActivityByOrg()]);
+  const now = Date.now();
+  const needsAttention = (o: (typeof allOrgs)[number]) => {
+    const tr = trialState(o, pricing.trialDays);
+    return o.status === "suspended" || o.subscriptionStatus === "past_due" || o.subscriptionStatus === "unpaid" || tr.kind === "read_only" || tr.kind === "locked" || (tr.kind === "trial" && tr.daysLeft <= 7);
+  };
+  const quiet = (o: (typeof allOrgs)[number]) => { const d = lastActivity.get(o.id); return !d || now - d.getTime() > 14 * DAY; };
+  const orgs = allOrgs.filter((o) => {
+    if (q && !`${o.name} ${o.slug} ${owners.get(o.id) ?? ""}`.toLowerCase().includes(q)) return false;
+    if (show === "attention") return needsAttention(o);
+    if (show === "trial") return trialState(o, pricing.trialDays).kind !== "paid";
+    if (show === "quiet") return quiet(o);
+    return true;
+  });
 
   // Marketing promo codes (best-effort; needs Stripe configured).
   let promoCodes: PromoCodeRow[] = [];
@@ -69,11 +92,12 @@ export default async function AdminOverviewPage() {
     };
   });
 
-  const total = orgs.length;
-  const active = orgs.filter((o) => o.subscriptionStatus === "active").length;
-  const trialing = orgs.filter((o) => o.subscriptionStatus === "trialing").length;
-  const suspended = orgs.filter((o) => o.status === "suspended").length;
-  const mrr = orgs
+  const total = allOrgs.length;
+  const active = allOrgs.filter((o) => o.subscriptionStatus === "active").length;
+  const trialing = allOrgs.filter((o) => o.subscriptionStatus === "trialing").length;
+  const suspended = allOrgs.filter((o) => o.status === "suspended").length;
+  const attention = allOrgs.filter(needsAttention).length;
+  const mrr = allOrgs
     .filter((o) => o.subscriptionStatus === "active")
     .reduce((sum, o) => sum + effectivePricing(o, pricing).monthly, 0);
 
@@ -107,8 +131,18 @@ export default async function AdminOverviewPage() {
         <PromoCodes codes={promoCodes} stripeReady={stripeReady} />
       </Card>
 
+      <form method="get" className="mb-3 flex flex-wrap items-center gap-2">
+        <input name="q" defaultValue={q} placeholder="Search centres, web address or email…" className="w-64 rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none focus:border-teal" aria-label="Search centres" />
+        <div className="flex rounded-lg border border-slate-200 p-0.5 text-sm">
+          {([["all", `All (${total})`], ["attention", `Needs attention (${attention})`], ["trial", "On trial"], ["quiet", "Quiet 14d+"]] as const).map(([k, label]) => (
+            <button key={k} type="submit" name="show" value={k} className={`rounded-md px-3 py-1 font-medium ${show === k ? "bg-navy text-white" : "text-slate-500 hover:text-navy"}`}>{label}</button>
+          ))}
+        </div>
+        {q || show !== "all" ? <Link href="/admin" className="text-sm text-slate-500 hover:text-navy">Clear</Link> : null}
+      </form>
+
       <Card className="overflow-x-auto p-0">
-        <table className="w-full min-w-[820px] text-left text-sm">
+        <table className="w-full min-w-[920px] text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
             <tr>
               <th className="px-4 py-3">Centre</th>
@@ -120,12 +154,13 @@ export default async function AdminOverviewPage() {
               <th className="px-4 py-3">Staff</th>
               <th className="px-4 py-3">Courses</th>
               <th className="px-4 py-3">Bookings</th>
+              <th className="px-4 py-3">Last active</th>
               <th className="px-4 py-3">Joined</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {orgs.length === 0 ? (
-              <tr><td colSpan={10} className="px-4 py-10 text-center text-slate-400">No centres yet.</td></tr>
+              <tr><td colSpan={11} className="px-4 py-10 text-center text-slate-400">{allOrgs.length === 0 ? "No centres yet." : "No centres match."}</td></tr>
             ) : (
               orgs.map((o) => {
                 const u = usage.get(o.id) ?? { instructors: 0, courses: 0, bookings: 0, sessions: 0 };
@@ -152,6 +187,7 @@ export default async function AdminOverviewPage() {
                     <td className="px-4 py-3 text-slate-600">{u.instructors}</td>
                     <td className="px-4 py-3 text-slate-600">{u.courses}</td>
                     <td className="px-4 py-3 text-slate-600">{u.bookings}</td>
+                    <td className={`px-4 py-3 ${quiet(o) ? "text-slate-400" : "text-slate-600"}`}>{ago(lastActivity.get(o.id), now)}</td>
                     <td className="px-4 py-3 text-slate-500">{o.createdAt.toISOString().slice(0, 10)}</td>
                   </tr>
                 );

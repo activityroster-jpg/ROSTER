@@ -37,6 +37,8 @@ export default function SignInPage() {
         const notVerified = res.error.status === 403 || /verif/i.test(res.error.message ?? "");
         setUnverified(notVerified);
         setError(notVerified ? "Please confirm your email first — we sent you a link when you signed up." : res.error.message ?? "Sign-in failed");
+      } else if (res.data && "twoFactorRedirect" in res.data && res.data.twoFactorRedirect) {
+        window.location.href = "/two-factor?next=%2Foffice";
       } else window.location.href = "/office";
     } finally { setBusy(false); }
   };

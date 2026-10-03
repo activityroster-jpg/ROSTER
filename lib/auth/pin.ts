@@ -74,3 +74,17 @@ export async function verifyPinCookie(secret: string, sessionId: string, value: 
   const expected = await hmac(secret, `pin:${sessionId}`);
   return timingSafeEqual(expected, value);
 }
+
+// --- Signed "authenticator code verified this session" cookie (Dev Center) --
+export const TOTP_COOKIE = "ar_totp";
+export const TOTP_MAX_AGE_S = 12 * 60 * 60;
+
+export function totpCookieValue(secret: string, sessionId: string): Promise<string> {
+  return hmac(secret, `totp:${sessionId}`);
+}
+
+export async function verifyTotpCookie(secret: string, sessionId: string, value: string | undefined): Promise<boolean> {
+  if (!value) return false;
+  const expected = await hmac(secret, `totp:${sessionId}`);
+  return timingSafeEqual(expected, value);
+}

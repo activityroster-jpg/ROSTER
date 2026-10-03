@@ -16,6 +16,8 @@ export interface CloudflareEnv {
 
   // Secrets (server-only).
   BETTER_AUTH_SECRET?: string;
+  /** Optional dedicated key for encrypting integration API tokens at rest (falls back to the auth secret). */
+  TOKEN_ENCRYPTION_KEY?: string;
   BETTER_AUTH_URL?: string;
   STRIPE_SECRET_KEY?: string;
   STRIPE_WEBHOOK_SECRET?: string;
@@ -40,6 +42,12 @@ export interface CloudflareEnv {
   SUPPORT_EMAIL?: string;
   // Comma-separated emails allowed into the platform-owner admin area (/admin).
   PLATFORM_ADMIN_EMAILS?: string;
+  // Universal / app links for the native apps (served at /.well-known/*). All optional.
+  APPLE_TEAM_ID?: string;
+  IOS_BUNDLE_ID?: string;
+  ANDROID_PACKAGE?: string;
+  /** Comma-separated SHA-256 signing-certificate fingerprints (AA:BB:…). */
+  ANDROID_SHA256_FINGERPRINTS?: string;
   /** Free stock-photo API keys for self-hosted blog cover images. Either works;
    *  Pixabay keys are issued instantly, Pexels keys are sometimes paused. */
   PEXELS_API_KEY?: string;

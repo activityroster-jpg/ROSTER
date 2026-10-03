@@ -149,7 +149,37 @@ the keystore safe, you can never change it):
   Availability, Clock, Documents, Settings). Apple needs 6.7" and 6.5" sizes;
   Play needs at least 2 phone screenshots.
 
-## 4. Updating
+## 4. Universal links (open our links in the app)
+
+Without this, a magic link or "confirm device" email opens Safari/Chrome
+instead of the app. The site already serves both verification files from
+environment variables — set them and the links start opening in the app.
+
+1. **Worker vars** (Cloudflare → Worker → Settings → Variables):
+   `APPLE_TEAM_ID` (10 characters, from developer.apple.com → Membership),
+   `IOS_BUNDLE_ID` (e.g. `com.activityroster.app`), `ANDROID_PACKAGE`
+   (same id), `ANDROID_SHA256_FINGERPRINTS` (comma-separated; get them from
+   Play Console → Setup → App signing: both the *upload* and the *app signing*
+   certificate SHA-256). Redeploy, then check
+   `https://activityroster.com/.well-known/apple-app-site-association` and
+   `https://activityroster.com/.well-known/assetlinks.json` return JSON.
+2. **Xcode**: target → Signing & Capabilities → “+ Capability” → Associated
+   Domains → add `applinks:activityroster.com` and
+   `webcredentials:activityroster.com` (also add `applinks:*.activityroster.com`
+   so centre subdomains work).
+3. **Android** (`android/app/src/main/AndroidManifest.xml`, inside the main
+   activity): an intent filter with `android:autoVerify="true"`, action VIEW,
+   categories DEFAULT + BROWSABLE, and `<data android:scheme="https"
+   android:host="activityroster.com" />` plus one with
+   `android:host="*.activityroster.com"`.
+4. The Capacitor `App` plugin’s `appUrlOpen` listener routes the opened URL
+   inside the web view (see `lib/mobile/native.ts`), so no further code is
+   needed.
+5. Test: email yourself a sign-in link, open it on the phone — it should land in
+   the app, not the browser. Apple caches the association file; a fresh install
+   re-fetches it.
+
+## 5. Updating
 
 Web changes need nothing — the app shows the live site. Only change the native
 projects when a plugin or Capacitor version changes: bump `package.json`,

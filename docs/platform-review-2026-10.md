@@ -152,3 +152,31 @@ morning view, real default price, preferred vocabulary.
 - Trial end: read-only, then locked out; no sample data.
 - Real prices: £35 Small Club, £65 Standard — remove dead default monthly/annual fields.
 - Vocabulary: "certs", "instructors", "roster" (URLs unchanged).
+
+## Progress (2026-10-03, branch `claude/new-session-2wxbwe`)
+
+Done: launch crash; device trust by device+country; geolocation/camera header;
+schedule horizon; UK times everywhere; pay rates (per instructor, per role,
+hour/session/day); roster-first hours with optional clock and per-line roster vs
+clock choice; payroll review/approve; staff edit + leaver; wizard step 2 fix;
+tier cap on all three paths; open shifts first-come + via `assignStaff`; trial
+end → read-only (14 days) → locked, Dev Center trial controls; roster-change,
+expiry and admin notifications; vocabulary pass; plain-English settings; course
+capacity; Restore RYA courses; planner "More options"; billing/change-log
+wording; guide links on every page; responsive office navigation; publish week +
+instructor confirm/decline; integration tokens encrypted at rest and redacted
+from export; date-windowed schedule/attendance queries; `connect-src` narrowed;
+two-factor step at sign-in + authenticator required for the Dev Center; Dev
+Center search / needs-attention / last-active; universal-link files served from
+env; passwords 10+; Learning Centre updated for all of the above.
+
+Still open (low): CSP nonces for inline scripts; HIBP breach check; import row
+cap and batched inserts; scoped `findById` before equipment/location/course_staff
+inserts; audit for email-preference changes; possible duplicate prospect rows
+after the RYA load; Dev Center errors → link to the centre and Ghost Mode.
+
+User-side: run `d1-roster-payroll-trial-migration.sql`; set `BETTER_AUTH_SECRET`
+(and optionally `TOKEN_ENCRYPTION_KEY`), rotate the exposed Stripe keys, set
+`FCM_SERVICE_ACCOUNT_JSON`; enrol an authenticator app at `/admin/security` on
+first Dev Center visit; Apple/Google accounts and universal-link vars per
+`mobile/README.md`.

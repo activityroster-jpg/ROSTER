@@ -8,7 +8,7 @@ import {
   type RatioResult,
   type ResourceBooking,
 } from "@/lib/domain";
-import type { CourseAudience, SlotCode } from "@/lib/db/schema";
+import { and, gte, lt, courseSessionTable, type CourseAudience, type SlotCode } from "@/lib/db/schema-helpers";
 
 export interface CourseCoverage {
   courseId: string;
@@ -125,10 +125,11 @@ export async function getWeekSchedule(
   mondayIso: string,
 ): Promise<{ sessions: WeekSession[]; coverageByCourse: Map<string, CourseCoverage> }> {
   const t = repos.tenant;
+  const weekEnd = addDays(mondayIso, 7);
   const [courses, courseTypes, sessions, staffAssignments, roleTypes] = await Promise.all([
     t.course.list(ctx),
     t.courseType.list(ctx),
-    t.courseSession.list(ctx),
+    t.courseSession.list(ctx, and(gte(courseSessionTable.date, mondayIso), lt(courseSessionTable.date, weekEnd))),
     t.courseStaff.list(ctx),
     t.roleType.list(ctx),
   ]);
@@ -212,7 +213,7 @@ export async function getSessionEvents(
 ): Promise<SessionEvent[]> {
   const t = repos.tenant;
   const [sessions, courses, courseTypes] = await Promise.all([
-    t.courseSession.list(ctx),
+    t.courseSession.list(ctx, and(gte(courseSessionTable.date, fromIso), lt(courseSessionTable.date, toIso))),
     t.course.list(ctx),
     t.courseType.list(ctx),
   ]);
@@ -275,7 +276,7 @@ export async function getWeekRota(
     await Promise.all([
       t.course.list(ctx),
       t.courseType.list(ctx),
-      t.courseSession.list(ctx),
+      t.courseSession.list(ctx, and(gte(courseSessionTable.date, mondayIso), lt(courseSessionTable.date, addDays(mondayIso, 7)))),
       t.courseStaff.list(ctx),
       t.roleType.list(ctx),
       t.instructor.list(ctx),

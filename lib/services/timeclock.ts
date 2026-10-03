@@ -1,7 +1,7 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, gte, isNull, lt } from "drizzle-orm";
 import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
-import { hoursRecord as hoursRecordTable, timeEntry as timeEntryTable, type TimeEntry } from "@/lib/db/schema";
+import { courseSession as courseSessionTable, hoursRecord as hoursRecordTable, timeEntry as timeEntryTable, type TimeEntry } from "@/lib/db/schema";
 import { durationMinutes, isoDateInTz } from "@/lib/domain";
 import { writeAudit } from "./audit";
 import { payRatesByInstructor, pickPayRate } from "./pay-rates";
@@ -172,10 +172,15 @@ export async function getAttendanceBoard(
   dayIso: string,
   now: number = Date.now(),
 ): Promise<AttendanceBoard> {
+  // A London calendar day sits inside this UTC window whatever the offset.
+  const dayStart = new Date(`${dayIso}T00:00:00Z`).getTime();
+  const DAY = 86_400_000;
+  const dayBefore = new Date(dayStart - DAY).toISOString().slice(0, 10);
+  const dayAfterNext = new Date(dayStart + 2 * DAY).toISOString().slice(0, 10);
   const [entries, instructors, sessions, courses] = await Promise.all([
-    repos.tenant.timeEntry.list(ctx),
+    repos.tenant.timeEntry.list(ctx, and(gte(timeEntryTable.clockInAt, new Date(dayStart - DAY)), lt(timeEntryTable.clockInAt, new Date(dayStart + 2 * DAY)))),
     repos.tenant.instructor.list(ctx),
-    repos.tenant.courseSession.list(ctx),
+    repos.tenant.courseSession.list(ctx, and(gte(courseSessionTable.date, dayBefore), lt(courseSessionTable.date, dayAfterNext))),
     repos.tenant.course.list(ctx),
   ]);
 

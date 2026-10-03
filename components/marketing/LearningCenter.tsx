@@ -331,18 +331,23 @@ const SECTIONS: Section[] = [
     id: "time",
     icon: "⏱️",
     label: "Time & attendance",
-    blurb: "Clock in/out and get payroll-ready hours.",
+    blurb: "Hours from the roster, an optional clock, pay rates and a payroll review you approve before export.",
     blocks: [
-      { kind: "p", text: "Instructors clock in and out from their app. The office sees who's on the water now and the hours logged today." },
-      { kind: "bullets", items: [
-        "Timesheets build automatically from clock events.",
-        "Export payroll-ready hours when you run payroll.",
-      ] },
-      { kind: "sub", text: "Payroll & exports" },
+      { kind: "p", text: "Hours come from the roster: every session an instructor is on becomes a line on the payroll page automatically, with its scheduled time. Nothing extra to do." },
+      { kind: "sub", text: "Pay rates" },
       { kind: "steps", items: [
-        "Open Payroll. Pick a period (this week, this month, last month, custom dates or all time) and, if you like, one instructor. Then click Show.",
-        "You'll see totals per instructor and every shift, with start, finish, lunch break, paid hours and pay. Start and finish come from clock-in/out where there is one, otherwise from the schedule.",
-        "Download “Spreadsheet · every shift” or “Spreadsheet · totals”. These are CSV files that open in Excel or Google Sheets. Or click PDF to save the page as a PDF.",
+        "Open an instructor's page → Pay. Choose how they're paid — per hour, per session or per day — and the rate. Volunteers simply have no rate.",
+        "Add a different rate for a particular role if you need to (e.g. Senior Instructor days). The role rate wins when they work in that role.",
+        "Rates apply from the next payroll line onwards; lines you've already approved keep the pay they were approved at.",
+      ] },
+      { kind: "sub", text: "The time clock (optional)" },
+      { kind: "p", text: "Settings → Time clock & pay switches on clock in / out in the app. Instructors see the session they're clocking in to; clocking in with no session needs a short note. The office sees who's on the water now. Choose whether pay follows the roster or the clock — and change it line by line on the payroll page." },
+      { kind: "sub", text: "Payroll review & export" },
+      { kind: "steps", items: [
+        "Open Payroll. Pick a period (this week, this month, last month, custom dates or all time) and, if you like, one instructor.",
+        "Every line shows the rostered time and, where the clock was used, the clocked time side by side. Pick which to pay per line, or use the main switch at the top for the whole period. Any field can be overridden — minutes, pay, a note.",
+        "Tick Approve on each line (or Approve all). Approved lines are locked: later roster changes don't touch them.",
+        "Download “Spreadsheet · every shift” or “Spreadsheet · totals” (CSV for Excel or Google Sheets), or print to PDF.",
       ] },
       { kind: "sub", text: "Lunch breaks" },
       { kind: "p", text: "In Settings → Lunch breaks, set a break length, who gets it (anyone working over a number of hours) and whether it's paid. Unpaid breaks come off paid hours; paid breaks are shown but not deducted." },
@@ -396,6 +401,7 @@ const SECTIONS: Section[] = [
     blurb: "Manage your subscription and get VAT invoices.",
     blocks: [
       { kind: "p", text: "Your centre starts with a free month — no card required. When you're ready, choose monthly or annual (annual includes several months free) and enter card details through secure checkout." },
+      { kind: "p", text: "If the trial ends before you choose a plan, nothing is deleted: the centre goes read-only for two weeks (everyone can still look, nobody can change anything), then locks until a plan is chosen. Choosing a plan brings everything straight back." },
       { kind: "bullets", items: [
         "VAT is handled automatically at checkout for business customers.",
         "After payment you get a proper VAT invoice — downloadable as PDF and emailed to you.",

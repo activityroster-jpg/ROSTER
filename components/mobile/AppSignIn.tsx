@@ -20,6 +20,7 @@ export function AppSignIn() {
     try {
       const res = await signIn.email({ email: email.trim(), password });
       if (res.error) { setErr(res.error.message ?? "Sign-in failed"); return; }
+      if (res.data && "twoFactorRedirect" in res.data && res.data.twoFactorRedirect) { window.location.href = "/two-factor?next=%2Fapp"; return; }
       window.location.href = await appLandingAction();
     } finally { setBusy(false); }
   };

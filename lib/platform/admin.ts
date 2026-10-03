@@ -4,6 +4,8 @@ import { getAuth } from "@/lib/auth";
 import { getEnv } from "@/lib/cf/bindings";
 import { enforcePinGate } from "@/lib/auth/pin-gate";
 import { enforceDeviceGate } from "@/lib/auth/device-gate";
+import { enforceTotpGate } from "@/lib/auth/totp-gate";
+import { PATH_HEADER } from "@/lib/auth/device";
 
 /**
  * Dev Center (platform-owner) access control. This is the ONE surface that
@@ -30,7 +32,10 @@ export async function requirePlatformAdmin(): Promise<{ email: string }> {
   if (!(await isPlatformAdminEmail(email))) redirect("/sign-in");
   // Unfamiliar device/network → password again; then the 4-digit PIN.
   await enforceDeviceGate(session!.user.id, "/admin", null);
-  // The money-facing admin also requires the 4-digit PIN each session.
+  // The money-facing admin also requires the 4-digit PIN each session…
   await enforcePinGate(session!.user.id, session!.session?.id, "/admin");
+  // …and an authenticator-app code (TOTP), enrolled once and entered per session.
+  const path = h.get(PATH_HEADER) || "/admin";
+  await enforceTotpGate(session!.user.id, session!.session?.id, path.startsWith("/admin") ? path : "/admin");
   return { email: email! };
 }

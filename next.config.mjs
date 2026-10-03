@@ -13,7 +13,9 @@ const csp = [
   "font-src 'self' https://fonts.gstatic.com data:",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "script-src 'self' 'unsafe-inline'",
-  "connect-src 'self' https:",
+  // Only the hosts the browser actually talks to: our own origin, Stripe.js (if
+  // ever embedded) and Sentry's EU/US ingest. Everything else is server-side.
+  "connect-src 'self' https://api.stripe.com https://*.ingest.sentry.io https://*.ingest.de.sentry.io",
   "form-action 'self' https://checkout.stripe.com https://billing.stripe.com",
   "frame-src https://js.stripe.com https://hooks.stripe.com",
   "upgrade-insecure-requests",

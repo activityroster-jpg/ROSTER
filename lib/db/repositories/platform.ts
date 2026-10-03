@@ -87,6 +87,17 @@ export class PlatformRepository {
     return map;
   }
 
+  /** When each centre last did anything (latest audit-log entry), for the overview. */
+  async lastActivityByOrg(): Promise<Map<string, Date>> {
+    const rows = await this.db
+      .select({ org: auditLog.organisationId, last: sql<number>`max(${auditLog.createdAt})` })
+      .from(auditLog)
+      .groupBy(auditLog.organisationId);
+    const out = new Map<string, Date>();
+    for (const r of rows) if (r.last != null) out.set(r.org, new Date(Number(r.last)));
+    return out;
+  }
+
   /** The signup/owner email per organisation (the earliest admin member). */
   async ownerEmailByOrg(): Promise<Map<string, string>> {
     const rows = await this.db
