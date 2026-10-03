@@ -95,11 +95,12 @@ Effort is a rough guide: S = under half a day, M = one to two days, L = a week o
   the roster and in Settings; Learning Centre guide (`/learn?topic=young-workers`).
 - Verified by Conor against GOV.UK on 3 October: the 16–17 band (22:00–06:00, 30-minute
   break after 4.5 hours, 12 hours' daily and 48 hours' weekly rest) and the 15–16 holiday
-  caps (8 hours weekdays and Saturdays, 2 on Sundays, 35 a week). GOV.UK gives 13–14-year-olds
-  lower caps (5 hours a day, 25 a week in the holidays, 5 on term-time Saturdays): entered as a
-  separate band, still marked unverified.
-- **Conor:** confirm the 13–14 figures on the same GOV.UK page; then the Northern Ireland
-  pack (Education Authority) and the Ireland pack (WRC).
+  caps (8 hours weekdays and Saturdays, 2 on Sundays, 35 a week). The GB pack is now marked
+  verified. Decision (Conor, 3 October): under-15s are not rostered as workers on the
+  platform; they may only volunteer, so no 13–14 band is carried and the engine raises a
+  notice (a warning if they are recorded as employed) instead of applying caps.
+- **Conor:** the Northern Ireland pack (Education Authority) and the Ireland pack (WRC)
+  still carry unverified figures.
   Then in Dev Center → Rules remove each checked field from the band's `unverified` list,
   add the source to `citations`, bump `version`, and set `verified` to true once every list
   is empty. Until then every warning carries "figure not yet verified".

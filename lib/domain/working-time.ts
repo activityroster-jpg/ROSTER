@@ -164,8 +164,27 @@ export function evaluateWorkingTime(input: WorkingTimeInput): WtFinding[] {
   const proposedDates = new Set(input.proposed.map((s) => s.date));
   const touchedWeeks = new Set(input.proposed.map((s) => mondayOf(s.date)));
   const inScope = all.filter((s) => touchedWeeks.has(mondayOf(s.date)));
-  const band = selectBand(pack, input.dateOfBirth, input.proposed[0]?.date ?? input.existing[0]!.date);
-  if (!band) return out; // adult
+  const onDate = input.proposed[0]?.date ?? input.existing[0]!.date;
+  const band = selectBand(pack, input.dateOfBirth, onDate);
+  if (!band) {
+    // Younger than any band in the pack: the platform does not roster them as
+    // workers (minimum age is the youngest band's minAge), so no caps are
+    // applied; say so, loudly if they are recorded as employed.
+    const age = ageOn(input.dateOfBirth, new Date(`${onDate}T12:00:00Z`));
+    const minAge = Math.min(...pack.bands.map((b) => b.minAge));
+    if (age !== null && age < minAge) {
+      const volunteer = input.employmentType === "volunteer";
+      out.push({
+        code: "under-minimum-age",
+        severity: volunteer ? "info" : "warn",
+        message: volunteer
+          ? `Aged ${age}: under ${minAge}, so no working-time caps are applied; under-${minAge}s may only volunteer, never be employed, and the centre remains responsible for their supervision.`
+          : `Aged ${age} and recorded as ${input.employmentType}: ActivityRoster does not roster under-${minAge}s as workers and applies no hour caps to them. Change their employment type to volunteer, or do not roster them.`,
+        verified: true,
+      });
+    }
+    return out; // adult, or below the minimum age
+  }
   const unv = (field: string) => !band.unverified.includes(field);
   if (input.employmentType === "volunteer" && !pack.volunteersCovered) {
     out.push({ code: "volunteer", severity: "info", message: `${pack.name}: the rules are framed around employment; applied to volunteers as best practice.`, verified: true });

@@ -11,8 +11,8 @@ export const BUILTIN_PACKS: Record<string, WorkingTimePack> = {
   gb: {
     key: "gb",
     name: "Great Britain (England, Scotland, Wales)",
-    version: "2026-10-03.2",
-    verified: false,
+    version: "2026-10-03.3",
+    verified: true,
     schoolLeaving: "gb",
     volunteersCovered: false,
     citations: [
@@ -24,18 +24,6 @@ export const BUILTIN_PACKS: Record<string, WorkingTimePack> = {
     ],
     bands: [
       {
-        id: "gb-child-13-14", label: "children aged 13–14 (GB)", minAge: 13, maxAge: 14,
-        termTime: { maxHoursPerDay: 2, maxHoursPerWeek: 12, maxHoursSchoolDay: 2, maxHoursSaturday: 5, maxHoursSunday: 2 },
-        holiday: { maxHoursPerDay: 5, maxHoursPerWeek: 25, maxHoursSunday: 2 },
-        earliestStart: "07:00", latestFinish: "19:00",
-        breakMinutes: 60, breakAfterHours: 4,
-        dailyRestHours: null, weeklyRestDays: null, weeklyRestHours: null,
-        annualBreak: "2 consecutive weeks off work during the school holidays each year",
-        paperwork: "Council work permit applied for within 1 week of starting, plus written parental consent",
-        unverified: ["maxHoursPerDay", "maxHoursPerWeek", "maxHoursSaturday"],
-        notes: "GOV.UK gives 13–14-year-olds lower caps than 15–16-year-olds: 5 hours on weekdays and Saturdays and 25 hours a week in the holidays. Conor verified the 15–16 figures on 3 October; these need the same check. Council byelaws can be stricter. Under-13s may not be employed.",
-      },
-      {
         id: "gb-child-15-16", label: "children aged 15–16, still of school age (GB)", minAge: 15, maxAge: 16, until: "schoolLeaving",
         termTime: { maxHoursPerDay: 2, maxHoursPerWeek: 12, maxHoursSchoolDay: 2, maxHoursSaturday: 8, maxHoursSunday: 2 },
         holiday: { maxHoursPerDay: 8, maxHoursPerWeek: 35, maxHoursSunday: 2 },
@@ -45,7 +33,7 @@ export const BUILTIN_PACKS: Record<string, WorkingTimePack> = {
         annualBreak: "2 consecutive weeks off work during the school holidays each year",
         paperwork: "Council work permit applied for within 1 week of starting, plus written parental consent",
         unverified: [],
-        notes: "Holiday figures (8 hours on weekdays and Saturdays, 2 on Sundays, 35 a week) verified against GOV.UK by Conor, 3 October 2026. Council byelaws can be stricter; Scottish councils and Scottish school-leaving dates need separate checking.",
+        notes: "Holiday figures (8 hours on weekdays and Saturdays, 2 on Sundays, 35 a week) verified against GOV.UK by Conor, 3 October 2026; term-time figures, 07:00–19:00 and the 1-hour break are from the compliance spec's table. Under-15s are not rostered as workers on ActivityRoster (Conor, 3 October): they may only volunteer and no hour caps are applied to them, so GOV.UK's lower 13–14 figures are deliberately not carried. Council byelaws can be stricter; Scottish councils and Scottish school-leaving dates need separate checking.",
       },
       {
         id: "gb-young", label: "young workers (16–17, past school-leaving age)", minAge: 15, maxAge: 17, from: "schoolLeaving",

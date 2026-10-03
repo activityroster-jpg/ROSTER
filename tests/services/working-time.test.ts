@@ -9,7 +9,7 @@ import type { SystemTenantContext } from "@/lib/tenant/context";
 /**
  * The fixture course has one 3-hour session on Monday 5 January 2026, 09:00–12:00
  * UTC. With no term dates set every week counts as term time, so for a GB
- * school-age child that is a school day capped at 2 hours.
+ * school-age child (15, still at school) that is a school day capped at 2 hours.
  */
 describe("working-time checks on assignment", () => {
   let repos: Repositories;
@@ -34,7 +34,7 @@ describe("working-time checks on assignment", () => {
   });
 
   it("blocks a school-age child on a 3-hour school day (default: block with override)", async () => {
-    const kid = await addInstructor("Kid", "2011-06-01");
+    const kid = await addInstructor("Kid", "2010-06-01");
     const res = await assignStaff(repos, ctx, { courseId, instructorId: kid.id, roleTypeId: roleId });
     expect(res.ok).toBe(false);
     if (!res.ok) {
@@ -51,7 +51,7 @@ describe("working-time checks on assignment", () => {
 
   it("warn mode assigns but returns the finding as a warning", async () => {
     await setMode("warn");
-    const kid = await addInstructor("Kid", "2011-06-01");
+    const kid = await addInstructor("Kid", "2010-06-01");
     const res = await assignStaff(repos, ctx, { courseId, instructorId: kid.id, roleTypeId: roleId });
     expect(res.ok).toBe(true);
     if (res.ok) {
@@ -62,7 +62,7 @@ describe("working-time checks on assignment", () => {
 
   it("block mode refuses even with an override", async () => {
     await setMode("block");
-    const kid = await addInstructor("Kid", "2011-06-01");
+    const kid = await addInstructor("Kid", "2010-06-01");
     const res = await assignStaff(repos, ctx, { courseId, instructorId: kid.id, roleTypeId: roleId, override: true, overrideNote: "please" });
     expect(res.ok).toBe(false);
     if (!res.ok) { expect(res.reason).toBe("working-time"); expect(res.noOverride).toBe(true); }
@@ -81,7 +81,7 @@ describe("working-time checks on assignment", () => {
     const st = (await repos.tenant.orgSettings.list(ctx))[0]!;
     // Term runs later in January, so 5 January is a holiday week: 8h/day allowed.
     await repos.tenant.orgSettings.update(ctx, st.id, { termDates: JSON.stringify([{ from: "2026-01-12", to: "2026-03-27", label: "Spring" }]) });
-    const kid = await addInstructor("Kid", "2011-06-01");
+    const kid = await addInstructor("Kid", "2010-06-01");
     const check = await checkWorkingTime(repos, ctx, { instructorId: kid.id, courseId });
     expect(check.active).toBe(true);
     expect(check.blocks).toEqual([]);
@@ -95,11 +95,11 @@ describe("working-time checks on assignment", () => {
 
   it("the young-worker register lists the child's sessions and logs the view", async () => {
     await setMode("warn");
-    const kid = await addInstructor("Kid", "2011-06-01");
+    const kid = await addInstructor("Kid", "2010-06-01");
     await assignStaff(repos, ctx, { courseId, instructorId: kid.id, roleTypeId: roleId });
     const rows = await youngWorkerRegister(repos, ctx, "2026-01-01", "2026-01-31");
     expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ date: "2026-01-05", instructor: "Kid", age: 14, hours: 3, status: "assigned" });
+    expect(rows[0]).toMatchObject({ date: "2026-01-05", instructor: "Kid", age: 15, hours: 3, status: "assigned" });
     const csv = registerToCsv(rows);
     expect(csv.split("\n")[0]).toMatch(/^Date,Instructor,Age on day/);
     const audit = await repos.tenant.auditLog.list(ctx);

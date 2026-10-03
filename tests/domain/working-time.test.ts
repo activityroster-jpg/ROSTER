@@ -16,7 +16,7 @@ describe("school-leaving and bands", () => {
   });
   it("picks the child band before leaving and the young-worker band after", () => {
     expect(selectBand(gb, "2010-03-10", "2026-06-01")?.id).toBe("gb-child-15-16");
-    expect(selectBand(gb, "2012-02-01", "2026-06-01")?.id).toBe("gb-child-13-14");
+    expect(selectBand(gb, "2012-02-01", "2026-06-01")).toBeNull(); // 14: under the platform minimum, no band
     expect(selectBand(gb, "2010-03-10", "2026-07-01")?.id).toBe("gb-young");
     expect(selectBand(gb, "2005-01-01", "2026-07-01")).toBeNull();
     expect(selectBand(ie, "2011-05-05", "2026-07-01")?.id).toBe("ie-child");
@@ -52,13 +52,16 @@ describe("GB school-age child in term time", () => {
     const over = evaluateWorkingTime({ pack: gb, dateOfBirth: dob, employmentType: "employed", termRanges: term, existing: four, proposed: [at("2026-08-14", 9, 13)] });
     expect(codes(over)).toEqual(["weekly-hours"]);
   });
-  it("13–14-year-olds have the lower holiday caps (5 hours a day, 25 a week)", () => {
+  it("under-15s get no caps, only a notice (warning if recorded as employed)", () => {
     const young = "2012-02-01"; // 14 in 2026
-    const six = evaluateWorkingTime({ pack: gb, dateOfBirth: young, employmentType: "employed", termRanges: term, existing: [], proposed: [at("2026-08-10", 9, 15)] });
-    expect(codes(six)).toEqual(["daily-hours"]);
-    expect(six.find((f) => f.code === "daily-hours")?.verified).toBe(false); // Conor has not verified the 13–14 figures yet
-    const five = evaluateWorkingTime({ pack: gb, dateOfBirth: young, employmentType: "employed", termRanges: term, existing: [], proposed: [at("2026-08-10", 9, 14)] });
-    expect(codes(five)).toEqual([]);
+    const employed = evaluateWorkingTime({ pack: gb, dateOfBirth: young, employmentType: "employed", termRanges: term, existing: [], proposed: [at("2026-08-10", 9, 15)] });
+    expect(codes(employed)).toEqual([]); // nothing blocks
+    expect(employed.map((f) => f.code)).toEqual(["under-minimum-age"]);
+    expect(employed[0]?.severity).toBe("warn");
+    const volunteer = evaluateWorkingTime({ pack: gb, dateOfBirth: young, employmentType: "volunteer", termRanges: term, existing: [], proposed: [at("2026-08-10", 9, 15)] });
+    expect(volunteer[0]?.severity).toBe("info");
+    expect(gb.verified).toBe(true);
+    expect(gb.bands.every((b) => b.unverified.length === 0)).toBe(true);
   });
 });
 

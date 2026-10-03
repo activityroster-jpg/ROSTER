@@ -11,10 +11,10 @@ describe("built-in rule packs", () => {
     }
   });
   it("a pack cannot be marked verified while a band still lists unverified figures", () => {
-    const gb = structuredClone(BUILTIN_PACKS.gb!);
-    gb.verified = true;
-    expect(gb.bands.some((b) => b.unverified.length > 0)).toBe(true);
-    const r = parsePack(JSON.stringify(gb));
+    const ni = structuredClone(BUILTIN_PACKS.ni!);
+    ni.verified = true;
+    expect(ni.bands.some((b) => b.unverified.length > 0)).toBe(true);
+    const r = parsePack(JSON.stringify(ni));
     expect(r.ok).toBe(false);
   });
   it("rejects malformed figures with a readable path", () => {
