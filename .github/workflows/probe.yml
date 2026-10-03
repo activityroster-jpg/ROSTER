@@ -15,3 +15,11 @@ jobs:
             if [ "$code" != "200" ] && [ "$code" != "404" ] && [ "$code" != "302" ] && [ "$code" != "307" ]; then head -c 600 /tmp/body; echo; fi
           done
           curl -sS https://activityroster.com/api/health; echo
+      - name: Which build is live (markers in the Learning Centre page)
+        run: |
+          for host in activityroster.com staging.activityroster.com; do
+            curl -sS --max-time 30 "https://$host/learn" -o /tmp/learn.html || true
+            for m in "produces a proper document" "16th birthday" "Under-15s are not rostered" "young-workers"; do
+              if grep -q "$m" /tmp/learn.html; then echo "$host: HAS '$m'"; else echo "$host: no '$m'"; fi
+            done
+          done
