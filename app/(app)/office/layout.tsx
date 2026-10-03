@@ -1,57 +1,11 @@
 import Link from "next/link";
-import {
-  CalendarDays,
-  CalendarOff,
-  ClipboardList,
-  Clock,
-  History,
-  LayoutDashboard,
-  LifeBuoy,
-  MapPin,
-  Settings,
-  Ship,
-  Users,
-  Wallet,
-  CreditCard,
-} from "lucide-react";
 import { requireTenant } from "@/lib/tenant/require";
 import { getRepositories } from "@/lib/cf/bindings";
-import { Logo } from "@/components/Logo";
+import { OfficeSidebar } from "@/components/office/OfficeSidebar";
 import { TwoFactorNudge } from "@/components/office/TwoFactorNudge";
 import { GhostBanner } from "@/components/office/GhostBanner";
 import { eq } from "drizzle-orm";
 import { instructor as instructorTable } from "@/lib/db/schema";
-
-const NAV = [
-  {
-    group: "Operate",
-    items: [
-      { href: "/office", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/office/courses", label: "Courses", icon: CalendarDays },
-      { href: "/office/availability", label: "Availability", icon: ClipboardList },
-      { href: "/office/timeclock", label: "Time clock", icon: Clock },
-      { href: "/office/leave", label: "Leave & cover", icon: CalendarOff },
-    ],
-  },
-  {
-    group: "Resources",
-    items: [
-      { href: "/office/staff", label: "Staff", icon: Users },
-      { href: "/office/equipment", label: "Equipment", icon: Ship },
-      { href: "/office/locations", label: "Locations", icon: MapPin },
-      { href: "/office/finance", label: "Payroll", icon: Wallet },
-    ],
-  },
-  {
-    group: "Configure",
-    items: [
-      { href: "/office/settings", label: "Settings", icon: Settings },
-      { href: "/office/billing", label: "Billing", icon: CreditCard },
-      { href: "/office/course-setup", label: "Course setup", icon: LifeBuoy },
-      { href: "/office/change-log", label: "Change log", icon: History },
-    ],
-  },
-];
 
 export default async function OfficeLayout({ children }: { children: React.ReactNode }) {
   const { ctx, organisation, trial } = await requireTenant({ role: "admin", allowReadOnly: true });
@@ -71,7 +25,6 @@ export default async function OfficeLayout({ children }: { children: React.React
     hasInstructorRecord = (await tenant.instructor.count(ctx, eq(instructorTable.userId, ctx.userId))) > 0;
     clockOn = Boolean((await tenant.orgSettings.list(ctx))[0]?.timeclockEnabled);
   } catch { show2fa = false; }
-  const nav = NAV.map((g) => ({ ...g, items: g.items.filter((i) => clockOn || i.href !== "/office/timeclock") }));
 
   // Billing nudge: failed payment, or where the free trial is.
   const sub = organisation.subscriptionStatus;
@@ -83,44 +36,8 @@ export default async function OfficeLayout({ children }: { children: React.React
 
   return (
     <div className="flex min-h-screen bg-canvas">
-      <aside className="flex w-60 flex-none flex-col bg-navy text-white">
-        <div className="border-b border-white/10 px-5 py-5">
-          <Logo variant="onDark" size="sm" />
-          <p className="mt-1 truncate text-sm text-white/70">{organisation.name}</p>
-        </div>
-        <nav className="flex-1 overflow-y-auto px-3 py-4">
-          {nav.map((section) => (
-            <div key={section.group} className="mb-5">
-              <p className="px-2 pb-2 text-xs font-semibold uppercase tracking-wide text-white/40">
-                {section.group}
-              </p>
-              <ul className="space-y-0.5">
-                {section.items.map((item) => (
-                  <li key={item.href}>
-                    <Link
-                      href={item.href}
-                      className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-white/80 transition hover:bg-white/10 hover:text-white"
-                    >
-                      <item.icon className="h-4 w-4" />
-                      {item.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </nav>
-        <div className="border-t border-white/10 px-5 py-4 text-xs text-white/50">
-          {hasInstructorRecord ? (
-            <Link href="/portal" className="hover:text-white">
-              Switch to instructor view →
-            </Link>
-          ) : (
-            <span title="This admin login has no instructor record. To use the instructor app yourself, add yourself on the Instructors page with a personal email.">The instructor app is for your team</span>
-          )}
-        </div>
-      </aside>
-      <div className="flex-1 overflow-x-hidden">
+      <OfficeSidebar orgName={organisation.name} clockOn={clockOn} hasInstructorRecord={hasInstructorRecord} />
+      <div className="flex-1 overflow-x-hidden pt-14 lg:pt-0">
         {ctx.ghost ? <GhostBanner centreName={organisation.name} /> : null}
         {show2fa && !ctx.ghost ? <TwoFactorNudge /> : null}
         {banner?.kind === "pastdue" ? (
@@ -142,7 +59,7 @@ export default async function OfficeLayout({ children }: { children: React.React
               : "Your free trial has ended — add payment to keep your centre active →"}
           </Link>
         ) : null}
-        <div className="mx-auto max-w-6xl px-6 py-8">{children}</div>
+        <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">{children}</div>
       </div>
     </div>
   );

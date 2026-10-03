@@ -12,6 +12,7 @@ import { getSetupStatus } from "@/lib/services/setup";
 import { Card, StatusPill } from "@/components/ui";
 import { WeekCalendarView } from "@/components/office/WeekCalendarView";
 import { todayIso } from "@/lib/domain";
+import { GuideLink } from "@/components/GuideLink";
 
 export const dynamic = "force-dynamic";
 
@@ -69,9 +70,12 @@ export default async function DashboardPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="font-display text-2xl font-semibold text-navy">Dashboard</h1>
-        <p className="text-sm text-slate-500">{organisation.name} · week of {monday}</p>
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="font-display text-2xl font-semibold text-navy">Dashboard</h1>
+          <p className="text-sm text-slate-500">{organisation.name} · week of {monday}</p>
+        </div>
+        <GuideLink topic="dashboard" />
       </div>
 
       {/* Getting started — shown until the checklist is complete */}
@@ -107,6 +111,22 @@ export default async function DashboardPage() {
         </Card>
       ) : null}
 
+      {/* First course — once the team is in but nothing is on the calendar */}
+      {hasStaff && events.length === 0 ? (
+        <Card className="mb-6 border-teal/40">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="font-display text-lg font-semibold text-navy">Next: build your first week</h2>
+              <p className="text-sm text-slate-600">Add a course, drop in its sessions, then put instructors on it. Publish the week and your team sees it in the app.</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <Link href="/office/courses" className="rounded-lg bg-teal px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700">Add a course</Link>
+              <Link href="/office/import" className="text-sm font-medium text-teal hover:underline">Import a spreadsheet</Link>
+            </div>
+          </div>
+        </Card>
+      ) : null}
+
       {/* Today */}
       <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Today</p>
       <div className="mb-6 grid gap-3 sm:grid-cols-3">
@@ -120,8 +140,8 @@ export default async function DashboardPage() {
       {/* Needs attention */}
       <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Needs attention</p>
       <div className="mb-8 grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {licenceOn ? <Tile href="/office/staff" label="Not cleared to roster" value={blocked} sub="Missing / expired checks" tone={blocked > 0 ? "port" : "navy"} /> : null}
-        <Tile href="/office/staff" label="Checks expiring" value={expiring} sub="Within lead time" tone={expiring > 0 ? "amber" : "navy"} />
+        {licenceOn ? <Tile href="/office/staff" label="Not cleared to roster" value={blocked} sub="Missing or expired certs" tone={blocked > 0 ? "port" : "navy"} /> : null}
+        <Tile href="/office/staff" label="Certs expiring" value={expiring} sub="Within lead time" tone={expiring > 0 ? "amber" : "navy"} />
         {ratioOn ? <Tile href="/office/courses" label="Courses to cover" value={uncovered} sub="Understaffed / no cover" tone={uncovered > 0 ? "amber" : "navy"} /> : null}
         <Tile href="/office/leave" label="Leave to approve" value={pendingLeave} sub="Pending requests" tone={pendingLeave > 0 ? "amber" : "navy"} />
         <Tile href="/office/leave" label="Open shifts" value={openShifts} sub="Need cover" tone={openShifts > 0 ? "amber" : "navy"} />
@@ -140,9 +160,9 @@ export default async function DashboardPage() {
 
       {/* This week's rota */}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-display text-lg font-semibold text-navy">This week&apos;s rota</h2>
+        <h2 className="font-display text-lg font-semibold text-navy">This week&apos;s roster</h2>
         <Link href="/office/rota" className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-navy hover:bg-slate-50">
-          Full rota · print / PDF →
+          Full roster · print / PDF →
         </Link>
       </div>
       <Card className="p-0">

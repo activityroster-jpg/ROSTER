@@ -67,7 +67,7 @@ export function DocumentManager({ items, admin }: { items: DocItem[]; admin: boo
   return (
     <div>
       {items.length === 0 ? (
-        <p className="mb-4 text-sm text-slate-400">No licences or checks required yet.</p>
+        <p className="mb-4 text-sm text-slate-400">No certs or checks listed yet.</p>
       ) : (
         <ul className="mb-5 divide-y divide-slate-100">
           {items.map((d) => {
@@ -99,10 +99,10 @@ export function DocumentManager({ items, admin }: { items: DocItem[]; admin: boo
 
       {items.length > 0 ? (
         <form onSubmit={upload} className="rounded-lg bg-canvas p-3">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">{admin ? "Upload a document" : "Upload a licence photo or PDF"}</p>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">{admin ? "Upload a document" : "Upload a cert photo or PDF"}</p>
           <div className="flex flex-wrap items-end gap-2">
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-500">Which licence?</label>
+              <label className="mb-1 block text-xs font-medium text-slate-500">Which cert?</label>
               <select value={sel} onChange={(e) => setSel(e.target.value)} className={field}>
                 {items.map((d) => <option key={`${d.kind}:${d.itemId}`} value={`${d.kind}:${d.itemId}`}>{d.name}</option>)}
               </select>

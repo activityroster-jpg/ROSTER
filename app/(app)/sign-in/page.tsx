@@ -13,6 +13,7 @@ export default function SignInPage() {
   const [note, setNote] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [unverified, setUnverified] = useState(false);
 
   const sendLink = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,8 +33,20 @@ export default function SignInPage() {
     setBusy(true);
     try {
       const res = await signIn.email({ email, password, callbackURL: "/office" });
-      if (res.error) setError(res.error.message ?? "Sign-in failed");
-      else window.location.href = "/office";
+      if (res.error) {
+        const notVerified = res.error.status === 403 || /verif/i.test(res.error.message ?? "");
+        setUnverified(notVerified);
+        setError(notVerified ? "Please confirm your email first — we sent you a link when you signed up." : res.error.message ?? "Sign-in failed");
+      } else window.location.href = "/office";
+    } finally { setBusy(false); }
+  };
+
+  const resendConfirmation = async () => {
+    setError(null); setNote(null); setBusy(true);
+    try {
+      const res = await authClient.sendVerificationEmail({ email, callbackURL: "/office" });
+      if (res.error) setError(res.error.message ?? "Could not resend");
+      else setNote("Confirmation email sent again — check your inbox and spam.");
     } finally { setBusy(false); }
   };
 
@@ -86,6 +99,7 @@ export default function SignInPage() {
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" required autoComplete="email" className="w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-teal" />
             <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" autoComplete="current-password" className="w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-teal" />
             {error ? <p className="text-sm text-port">{error}</p> : null}
+            {unverified ? <button type="button" onClick={resendConfirmation} disabled={busy} className="text-sm font-semibold text-teal hover:underline disabled:opacity-50">Resend the confirmation email</button> : null}
             {note ? <p className="text-sm text-starboard">{note}</p> : null}
             <button type="submit" disabled={busy} className="w-full rounded-lg bg-teal px-4 py-2.5 font-semibold text-white hover:bg-teal-700 disabled:opacity-50">
               {busy ? "Signing in…" : "Sign in"}

@@ -3,6 +3,7 @@ import { addDays, getSessionEvents, getWeekSchedule, weekStart } from "@/lib/ser
 import { fitReason, listStaffWithFit } from "@/lib/services/staff";
 import { getCourseAvailabilityStates } from "@/lib/services/availability";
 import { Card } from "@/components/ui";
+import { RestoreCourseTypes } from "@/components/office/RestoreCourseTypes";
 import { CoursePlanner } from "@/components/office/CoursePlanner";
 import { CourseCard } from "@/components/office/CourseCard";
 import { roleNeedsByCourse } from "@/lib/services/course-editor";
@@ -177,14 +178,16 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
       <p className="mb-6 text-sm text-slate-500">
         Add a course, then assign staff to it. Youth and adult courses are labelled so they never get mixed up.
         {(() => {
-          const checks = [licenceOn && "instructor qualifications", ratioOn && "ratios & safety-boat cover", conflictOn && "double-bookings"].filter(Boolean);
+          const checks = [licenceOn && "instructor certs", ratioOn && "ratios & safety-boat cover", conflictOn && "double-bookings"].filter(Boolean);
           return checks.length
             ? ` We check ${checks.join(", ").replace(/, ([^,]*)$/, " and $1")} as you go — anything short is flagged.`
-            : " Optional compliance checks (qualifications, ratios, safety cover) can be switched on in Settings.";
+            : " Optional checks (certs, ratios, safety cover) can be switched on in Settings.";
         })()}
       </p>
 
       <CourseUpdatesCheck integrations={connectedIntegrations} />
+
+      {activeTypes.length === 0 ? <RestoreCourseTypes /> : null}
 
       <CoursePlanner courseTypes={activeTypes} events={events} slotStyle={slotStyle} roles={activeRoles} locations={plannerLocations} equipment={plannerEquipment} />
 

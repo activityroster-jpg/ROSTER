@@ -254,7 +254,7 @@ export async function approveJoinRequestAction(instructorId: string): Promise<Ac
   await repos.tenant.instructor.update(ctx, inst.id, { status: "active" });
   if (inst.userId) await repos.control.setMembershipStatus(inst.userId, ctx.organisationId, "active");
   await writeAudit(repos, ctx, { action: "approve_join_request", entity: "instructor", entityId: inst.id, after: { email: inst.email } });
-  await notifyInstructor(repos, ctx, inst.id, { title: "You're in — your centre approved your request", body: "Open the ActivityRoster app to see your schedule, set your availability and upload your licences.", email: true });
+  await notifyInstructor(repos, ctx, inst.id, { title: "You're in — your centre approved your request", body: "Open the ActivityRoster app to see your roster, set your availability and upload your certs.", email: true });
   revalidatePath("/office/staff");
   return { ok: true, message: `${inst.name} approved` };
 }

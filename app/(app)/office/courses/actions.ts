@@ -175,6 +175,20 @@ export async function deleteCourseAction(courseId: string): Promise<ActionState>
   return { ok: true, message: "Course deleted" };
 }
 
+/** Set how many students are booked on a course (drives the ratio check). */
+export async function setCourseStudentsAction(courseId: string, students: number): Promise<ActionState> {
+  const { ctx, repos } = await requireTenant({ role: "admin" });
+  if (!Number.isFinite(students) || students < 1) return { ok: false, error: "Enter how many students (at least 1)" };
+  const n = Math.min(500, Math.round(students));
+  const updated = await repos.tenant.course.update(ctx, courseId, { capacity: n });
+  if (!updated) return { ok: false, error: "Course not found" };
+  await writeAudit(repos, ctx, { action: "set_students", entity: "course", entityId: courseId, after: { capacity: n } });
+  revalidatePath("/office/courses");
+  revalidatePath(`/office/courses/${courseId}`);
+  revalidatePath("/office");
+  return { ok: true, message: "Saved" };
+}
+
 /** Set how many staff a course needs (0/blank clears back to the ratio default). */
 export async function setStaffRequiredAction(courseId: string, count: number | null): Promise<ActionState> {
   const { ctx, repos } = await requireTenant({ role: "admin" });

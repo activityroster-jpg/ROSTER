@@ -54,6 +54,7 @@ export function CoursePlanner({ courseTypes, events, slotStyle, roles = [], loca
   const [needs, setNeeds] = useState<RoleNeed[]>([]);
   const [locationIds, setLocationIds] = useState<string[]>([]);
   const [equipmentIds, setEquipmentIds] = useState<string[]>([]);
+  const [showMore, setShowMore] = useState(false);
   const toggle = (set: (f: (v: string[]) => string[]) => void, id: string) => set((v) => (v.includes(id) ? v.filter((x) => x !== id) : [...v, id]));
   const addNeed = () => setNeeds((n) => [...n, { key: `n${seq++}`, roleTypeId: roles.find((r) => !n.some((x) => x.roleTypeId === r.id))?.id ?? roles[0]?.id ?? "", count: 1 }]);
   const updateNeed = (key: string, patch: Partial<RoleNeed>) => setNeeds((n) => n.map((x) => (x.key === key ? { ...x, ...patch } : x)));
@@ -156,7 +157,7 @@ export function CoursePlanner({ courseTypes, events, slotStyle, roles = [], loca
       {/* Builder */}
       <div className="rounded-card border border-slate-200 bg-white p-4">
         <h2 className="font-semibold text-navy">Add a course</h2>
-        <p className="mb-3 text-xs text-slate-500">Pick the type, add each session (any days, exact times if you need them), then the staff, locations and equipment it needs.</p>
+        <p className="mb-3 text-xs text-slate-500">Pick the type and add each session (any days, exact times if you need them). Staff, locations and equipment are optional under “More options”.</p>
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-500">Course type</label>
@@ -235,7 +236,10 @@ export function CoursePlanner({ courseTypes, events, slotStyle, roles = [], loca
           )}
         </div>
 
-        <div className="mt-4 grid gap-4 lg:grid-cols-3">
+        <button type="button" onClick={() => setShowMore((v) => !v)} aria-expanded={showMore} className="mt-4 text-sm font-semibold text-teal hover:underline">
+          {showMore ? "▾ Fewer options" : "▸ More options"}{!showMore && (needs.length || locationIds.length || equipmentIds.length) ? ` (${[needs.length ? `${staffTotal || needs.length} staff` : "", locationIds.length ? `${locationIds.length} location${locationIds.length === 1 ? "" : "s"}` : "", equipmentIds.length ? `${equipmentIds.length} equipment` : ""].filter(Boolean).join(", ")})` : " — staff needed, locations, equipment"}
+        </button>
+        <div className={`mt-3 grid gap-4 lg:grid-cols-3 ${showMore ? "" : "hidden"}`}>
           <div>
             <div className="mb-1 flex items-center justify-between">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Staff needed{staffTotal ? ` (${staffTotal})` : ""}</p>

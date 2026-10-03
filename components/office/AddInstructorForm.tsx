@@ -68,11 +68,11 @@ export function AddInstructorForm({ courses, quals, checks }: { courses: CourseC
         </div>
       </div>
 
-      <Field title="RYA tickets / licences they hold" hint="Pick the licences they hold — we'll suggest the courses they can teach below. They upload a photo of each for you to verify.">
-        <MultiSelect placeholder="Select licences…" options={quals} selected={selQuals} onToggle={toggleQual} onSelectAll={allOf(quals, setSelQuals)} onClear={clear(setSelQuals)} />
+      <Field title="Certs they hold" hint="RYA tickets, licences and qualifications. Pick them and we'll suggest the courses they can teach below. They upload a photo of each for you to verify.">
+        <MultiSelect placeholder="Select certs…" options={quals} selected={selQuals} onToggle={toggleQual} onSelectAll={allOf(quals, setSelQuals)} onClear={clear(setSelQuals)} />
       </Field>
 
-      <Field title="Courses this instructor can teach" hint="Pre-filled from the licences above — add or remove any.">
+      <Field title="Courses this instructor can teach" hint="Pre-filled from the certs above — add or remove any.">
         <MultiSelect placeholder="Select courses…" options={courses} selected={selCourses} onToggle={toggler(setSelCourses)} onSelectAll={allOf(courses, setSelCourses)} onClear={clear(setSelCourses)} />
       </Field>
 
@@ -91,7 +91,7 @@ export function AddInstructorForm({ courses, quals, checks }: { courses: CourseC
         {state.error ? <p className="text-sm text-port">{state.error}</p> : null}
         {state.ok ? <p className="text-sm text-starboard">{state.message}</p> : null}
       </div>
-      <p className="text-xs text-slate-400">Saving emails the instructor a link to set up their account and upload their licence photos. You can also upload documents for them from their profile.</p>
+      <p className="text-xs text-slate-400">Saving emails the instructor a link to set up their account and upload photos of their certs. You can also upload documents for them from their page.</p>
     </form>
   );
 }

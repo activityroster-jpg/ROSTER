@@ -5,6 +5,7 @@ import { LeaveRequests } from "@/components/office/LeaveRequests";
 import { OpenShiftsAdmin } from "@/components/office/OpenShiftsAdmin";
 import { Card } from "@/components/ui";
 import { todayIso } from "@/lib/domain";
+import { GuideLink } from "@/components/GuideLink";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +31,10 @@ export default async function LeavePage() {
 
   return (
     <div>
-      <h1 className="mb-1 font-display text-2xl font-semibold text-navy">Leave &amp; cover</h1>
+      <div className="mb-1 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="font-display text-2xl font-semibold text-navy">Leave &amp; cover</h1>
+        <GuideLink topic="leave" />
+      </div>
       <p className="mb-6 text-sm text-slate-500">Approve leave and fill the gaps it leaves with open shifts staff can claim.</p>
 
       <h2 className="mb-2 font-semibold text-navy">Leave requests</h2>

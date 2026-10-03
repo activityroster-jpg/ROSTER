@@ -6,10 +6,12 @@ import { listInvoices, type InvoiceRow } from "@/lib/billing/invoices";
 import { PlanChoice } from "@/components/office/PlanChoice";
 import { SetupServiceCard } from "@/components/office/SetupServiceCard";
 import { Card, StatusPill } from "@/components/ui";
+import { GuideLink } from "@/components/GuideLink";
 
 export const dynamic = "force-dynamic";
 
 const money = (n: number, c: string) => fmtMoney(n, c);
+const STATUS_WORDS: Record<string, string> = { trialing: "Free trial", active: "Paid and active", past_due: "Payment failed", unpaid: "Payment failed", canceled: "Cancelled", cancelled: "Cancelled", incomplete: "Setting up" };
 const fmtDate = (ms: number) => new Date(ms).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
 export default async function BillingPage({ searchParams }: { searchParams: Promise<{ status?: string; locked?: string }> }) {
@@ -27,7 +29,10 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
 
   return (
     <div className="mx-auto max-w-3xl">
-      <h1 className="mb-1 font-display text-2xl font-semibold text-navy">Billing</h1>
+      <div className="mb-1 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="font-display text-2xl font-semibold text-navy">Billing</h1>
+        <GuideLink topic="billing" />
+      </div>
       <p className="mb-5 text-sm text-slate-500">Your plan, payments and VAT invoices.</p>
 
       {trial.kind === "locked" || sp.locked === "1" ? (
@@ -45,10 +50,10 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <p className="text-sm text-slate-500">Current status</p>
-            <p className="mt-0.5 text-lg font-semibold text-navy capitalize">{organisation.subscriptionStatus ?? "trialing"}</p>
+            <p className="mt-0.5 text-lg font-semibold text-navy">{STATUS_WORDS[organisation.subscriptionStatus ?? "trialing"] ?? organisation.subscriptionStatus}{trial.kind === "trial" ? <span className="ml-2 text-sm font-normal text-slate-500">{trial.daysLeft} day{trial.daysLeft === 1 ? "" : "s"} left</span> : null}</p>
           </div>
           <StatusPill tone={isPaid ? "covered" : organisation.subscriptionStatus === "past_due" ? "conflict" : "attention"}>
-            {isPaid ? "Active" : organisation.subscriptionStatus === "past_due" ? "Payment failed" : "On trial"}
+            {isPaid ? "Active" : organisation.subscriptionStatus === "past_due" ? "Payment failed" : trial.kind === "trial" ? "Free trial" : "Trial ended"}
           </StatusPill>
         </div>
         {organisation.stripeCustomerId ? (
@@ -94,7 +99,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
                   <td className="px-4 py-3 font-medium text-navy">{inv.number}</td>
                   <td className="px-4 py-3 text-slate-600">{fmtDate(inv.created)}</td>
                   <td className="px-4 py-3 text-slate-600">{money(inv.amountPaid, inv.currency)}</td>
-                  <td className="px-4 py-3 capitalize text-slate-600">{inv.status}</td>
+                  <td className="px-4 py-3 text-slate-600">{inv.status === "paid" ? "Paid" : inv.status === "open" ? "Awaiting payment" : inv.status === "void" ? "Cancelled" : inv.status === "draft" ? "Draft" : (inv.status ?? "")}</td>
                   <td className="px-4 py-3 text-right">
                     {inv.pdfUrl ? <a href={inv.pdfUrl} className="font-semibold text-teal hover:underline">Download</a> : inv.hostedUrl ? <a href={inv.hostedUrl} className="font-semibold text-teal hover:underline">View</a> : "—"}
                   </td>

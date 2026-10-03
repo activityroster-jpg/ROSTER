@@ -65,7 +65,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
       </div>
       <p className="mb-6 -mt-4 text-sm text-slate-500">{ct?.name}{ct?.scheme ? ` · ${ct.scheme}` : ""}</p>
 
-      <Card className="mb-6"><h2 className="mb-3 font-semibold text-navy">Manage</h2><CourseManage id={course.id} name={course.name ?? ct?.name ?? ""} status={course.status} /></Card>
+      <Card className="mb-6"><h2 className="mb-3 font-semibold text-navy">Manage</h2><CourseManage id={course.id} name={course.name ?? ct?.name ?? ""} status={course.status} students={course.capacity} /></Card>
 
       <Card className="mb-6">
         <h2 className="mb-1 font-semibold text-navy">Sessions</h2>
@@ -74,7 +74,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
       </Card>
 
       <Card>
-        <h2 className="mb-3 font-semibold text-navy">Staff</h2>
+        <h2 className="mb-3 font-semibold text-navy">Instructors</h2>
         {assignments.length > 0 ? (
           <ul className="mb-3 flex flex-wrap gap-2">
             {assignments.map((a) => (
@@ -85,7 +85,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
               </li>
             ))}
           </ul>
-        ) : <p className="mb-3 text-xs text-slate-400">No staff assigned yet.</p>}
+        ) : <p className="mb-3 text-xs text-slate-400">No instructors assigned yet.</p>}
         <AssignStaffForm courseId={course.id} instructors={instructorOptions} roles={activeRoles} />
       </Card>
     </div>

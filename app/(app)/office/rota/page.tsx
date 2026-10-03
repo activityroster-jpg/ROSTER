@@ -21,14 +21,14 @@ export default async function RotaPage({ searchParams }: { searchParams: Promise
     <div className="mx-auto max-w-4xl">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3 print:mb-3">
         <div>
-          <h1 className="font-display text-2xl font-bold text-navy">Weekly rota</h1>
+          <h1 className="font-display text-2xl font-bold text-navy">Weekly roster</h1>
           <p className="text-sm text-slate-500">{organisation.name} · {range} · {total} session{total === 1 ? "" : "s"}</p>
         </div>
         <div className="flex items-center gap-2 print:hidden">
           <Link href={`/office/rota?week=${addDays(monday, -7)}`} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-navy hover:bg-slate-50">← Prev</Link>
           <Link href={`/office/rota?week=${addDays(monday, 7)}`} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-navy hover:bg-slate-50">Next →</Link>
           <a href="/learn?topic=rota" target="_blank" rel="noreferrer" className="text-sm font-medium text-teal hover:underline">📖 Guide</a>
-          <PrintButton downloadName={`${organisation.name} rota ${monday}`} />
+          <PrintButton downloadName={`${organisation.name} roster ${monday}`} />
         </div>
       </div>
 

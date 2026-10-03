@@ -354,7 +354,7 @@ export function OnboardingWizard({
       {step === 3 ? (
         <div className="rounded-card border border-slate-200 bg-white p-6">
           <h2 className="font-display text-lg font-semibold text-navy">Add your team</h2>
-          <p className="mt-1 text-sm text-slate-500">Add each instructor, tick the qualifications they hold and the courses they can teach. Add their email and we&apos;ll send them an invite to upload their licences themselves.</p>
+          <p className="mt-1 text-sm text-slate-500">Add each instructor, tick the certs they hold and the courses they can teach. Add their email and we&apos;ll send them an invite to upload their certs themselves. Got a spreadsheet? <a href="/office/staff/import" className="font-semibold text-teal hover:underline">Import your instructors</a> instead.</p>
 
           <form onSubmit={addMember} className="mt-4 rounded-lg bg-canvas p-4">
             <div className="grid gap-3 sm:grid-cols-3">
@@ -365,7 +365,7 @@ export function OnboardingWizard({
               </select>
             </div>
             <div className="mt-3 flex items-center justify-between">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Qualifications / instructor type</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Certs / instructor type</p>
               <button type="button" onClick={addAllTypes} disabled={pending} className="text-xs font-semibold text-teal hover:underline disabled:opacity-50">+ Add all RYA types</button>
             </div>
             <div className="mt-2 flex flex-wrap gap-2">

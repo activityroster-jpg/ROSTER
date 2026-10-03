@@ -75,7 +75,7 @@ function ByWeek({ rota, f }: { rota: RotaDay[]; f: Fields }) {
                 <tr>
                   {f.times ? <th className="px-4 py-2 font-semibold">Time</th> : null}
                   <th className="px-4 py-2 font-semibold">Course</th>
-                  {f.staff || f.role ? <th className="px-4 py-2 font-semibold">Staff</th> : null}
+                  {f.staff || f.role ? <th className="px-4 py-2 font-semibold">Instructors</th> : null}
                   {f.location ? <th className="px-4 py-2 font-semibold">Location</th> : null}
                   {f.equipment ? <th className="px-4 py-2 font-semibold">Equipment</th> : null}
                 </tr>
@@ -146,7 +146,7 @@ function ByDay({ rota, f }: { rota: RotaDay[]; f: Fields }) {
                     {f.times ? <div className="whitespace-nowrap text-right"><div className="font-semibold text-navy">{fmtTime(s.startAt)}–{fmtTime(s.endAt)}</div><div className="text-xs text-slate-400">{SLOT_LABEL[s.slot] ?? s.slot}</div></div> : null}
                   </div>
                   <dl className="mt-3 grid gap-x-4 gap-y-1.5 text-sm sm:grid-cols-[auto_1fr]">
-                    {f.staff || f.role ? <><dt className="text-xs font-semibold uppercase text-slate-400">Staff</dt><dd><Staff s={s} f={f} /></dd></> : null}
+                    {f.staff || f.role ? <><dt className="text-xs font-semibold uppercase text-slate-400">Instructors</dt><dd><Staff s={s} f={f} /></dd></> : null}
                     {f.location ? <><dt className="text-xs font-semibold uppercase text-slate-400">Location</dt><dd className="text-slate-700">{s.locations.join(", ") || "—"}</dd></> : null}
                     {f.equipment ? <><dt className="text-xs font-semibold uppercase text-slate-400">Equipment</dt><dd className="text-slate-700">{s.equipment.join(", ") || "—"}</dd></> : null}
                     {f.cover ? <><dt className="text-xs font-semibold uppercase text-slate-400">Cover</dt><dd><CoverBadge s={s} /></dd></> : null}
@@ -232,7 +232,7 @@ export function RotaView({ rota }: { rota: RotaDay[] }) {
   }, [template, fields, ready]);
 
   const tabs: { id: RotaTemplate; label: string; hint: string }[] = [
-    { id: "week", label: "By week", hint: "A table per day — the classic wall rota" },
+    { id: "week", label: "By week", hint: "A table per day — the classic wall roster" },
     { id: "day", label: "By day", hint: "Big cards, one day per page" },
     { id: "grid", label: "Compact grid", hint: "Whole week on one page" },
   ];
@@ -240,7 +240,7 @@ export function RotaView({ rota }: { rota: RotaDay[] }) {
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-card border border-slate-200 bg-white px-3 py-2 print:hidden">
-        <div className="flex items-center gap-1" role="tablist" aria-label="Rota template">
+        <div className="flex items-center gap-1" role="tablist" aria-label="Roster template">
           {tabs.map((t) => (
             <button key={t.id} type="button" role="tab" aria-selected={template === t.id} title={t.hint} onClick={() => setTemplate(t.id)}
               className={`rounded-lg px-3 py-1.5 text-sm font-medium ${template === t.id ? "bg-navy text-white" : "text-navy hover:bg-slate-100"}`}>

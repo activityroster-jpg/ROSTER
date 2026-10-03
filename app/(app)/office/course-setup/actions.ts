@@ -7,6 +7,7 @@ import { writeAudit } from "@/lib/services/audit";
 import { deleteOrRetireCourseType, moveCoursesToType } from "@/lib/services/course-types";
 import { COURSE_AUDIENCES } from "@/lib/db/schema";
 import { normaliseDefaultSchedule } from "@/lib/domain";
+import { DEFAULT_COURSE_TYPES } from "@/lib/seed/catalogue";
 
 export type CourseTypeResult = { ok: boolean; error?: string; message?: string };
 
@@ -82,6 +83,33 @@ export async function reactivateCourseTypeAction(id: string): Promise<CourseType
   await writeAudit(repos, ctx, { action: "reactivate", entity: "course_type", entityId: id });
   revalidate();
   return { ok: true };
+}
+
+/**
+ * Bring the RYA course list back when a centre has retired or unlisted
+ * everything (usually by accident in the setup wizard). Reactivates and lists
+ * every existing type and re-adds any RYA default that is missing entirely.
+ */
+export async function restoreCourseTypesAction(): Promise<CourseTypeResult> {
+  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const existing = await repos.tenant.courseType.list(ctx);
+  let restored = 0;
+  for (const t of existing) {
+    if (t.active && t.listed) continue;
+    await repos.tenant.courseType.update(ctx, t.id, { active: true, listed: true });
+    restored++;
+  }
+  const have = new Set(existing.map((t) => t.name.trim().toLowerCase()));
+  let added = 0;
+  for (const ct of DEFAULT_COURSE_TYPES) {
+    if (have.has(ct.name.trim().toLowerCase())) continue;
+    await repos.tenant.courseType.insert(ctx, { ...ct, active: true });
+    added++;
+  }
+  await writeAudit(repos, ctx, { action: "restore_defaults", entity: "course_type", after: { restored, added } });
+  revalidate();
+  const n = restored + added;
+  return { ok: true, message: n ? `${n} course type${n === 1 ? "" : "s"} back on your list` : "Your course list was already complete" };
 }
 
 /** Put a one-off course type on the regular list (or take one off it). */

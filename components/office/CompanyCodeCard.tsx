@@ -30,7 +30,7 @@ export function CompanyCodeCard({ code }: { code: string }) {
       </div>
       <p className="mt-2 text-xs text-slate-500">
         Instructors download the <strong>ActivityRoster</strong> app, create their account and enter this code to join your centre.
-        Anyone already on your Staff list (matching email) is linked instantly; anyone else appears under <strong>Staff → Join requests</strong> for you to approve.
+        Anyone already on your Instructors list (matching email) is linked instantly; anyone else appears under <strong>Instructors → Join requests</strong> for you to approve.
       </p>
     </div>
   );

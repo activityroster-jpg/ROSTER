@@ -43,7 +43,8 @@ export default async function PortalSettingsPage() {
 
       <Card>
         <h2 className="mb-1 font-semibold text-navy">Account</h2>
-        <p className="mb-3 text-xs text-slate-500">Forgotten your PIN? You&apos;ll be asked for it on your next sign-in and can reset it there with your password.</p>
+        <p className="mb-2 text-xs text-slate-500">Your PIN is the quick second check when you sign in. Change it any time; if you&apos;ve forgotten it, you can reset it on the PIN screen at your next sign-in.</p>
+        <Link href="/set-pin?next=/portal/settings" className="mb-4 inline-block text-sm font-semibold text-teal">Change my PIN →</Link>
         <SignOutButton to={onApex ? "/app" : "/sign-in"} />
       </Card>
     </div>

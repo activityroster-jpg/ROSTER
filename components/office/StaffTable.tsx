@@ -128,7 +128,7 @@ export function StaffTable({ rows }: { rows: StaffRow[] }) {
                   <td className="px-4 py-3 capitalize text-slate-600">{r.employment}</td>
                   <td className="px-4 py-3">
                     {r.teaches.length === 0 ? (
-                      <span className="text-xs text-slate-400">Add a qualification</span>
+                      <span className="text-xs text-slate-400">Add a cert</span>
                     ) : (
                       <div className="flex flex-col gap-1">
                         <div className="flex flex-wrap gap-1">

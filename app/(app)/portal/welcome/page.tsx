@@ -54,9 +54,9 @@ export default async function PortalWelcomePage() {
         <div className="flex items-start gap-3 rounded-card border border-slate-200 bg-white p-4">
           <span className="mt-0.5 flex h-9 w-9 flex-none items-center justify-center rounded-full bg-teal/15 text-teal"><FileCheck className="h-5 w-5" /></span>
           <div className="flex-1">
-            <p className="font-semibold text-navy">1. Add your licences &amp; tickets</p>
+            <p className="font-semibold text-navy">1. Add your certs</p>
             <p className="text-sm text-slate-600">
-              Upload a photo or PDF of each qualification and check, and add its expiry date. Your centre confirms them.
+              Upload a photo or PDF of each cert and check, and add its expiry date. Your centre confirms them.
               {outstanding > 0 ? <span className="font-medium text-navy"> {outstanding} still to add.</span> : docs.length ? <span className="font-medium text-starboard"> All uploaded — nice one.</span> : null}
             </p>
           </div>

@@ -4,6 +4,7 @@ import { AddEquipmentForm } from "@/components/office/AddEquipmentForm";
 import { EquipmentTypeManager, type EquipmentTypeRow } from "@/components/office/EquipmentTypeManager";
 import { FeatureNotice } from "@/components/office/FeatureNotice";
 import { hasFeature } from "@/lib/features";
+import { GuideLink } from "@/components/GuideLink";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,10 @@ export default async function EquipmentPage() {
 
   return (
     <div>
-      <h1 className="mb-6 font-display text-2xl font-semibold text-navy">Equipment</h1>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="font-display text-2xl font-semibold text-navy">Equipment</h1>
+        <GuideLink topic="equipment" />
+      </div>
       <FeatureNotice feature="equipment" enabled={enabled} />
 
       <h2 className="mb-1 font-semibold text-navy">Equipment types</h2>

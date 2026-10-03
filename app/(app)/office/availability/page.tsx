@@ -4,6 +4,7 @@ import { getWeekAvailabilityMatrix } from "@/lib/services/availability";
 import { addDays, weekStart } from "@/lib/services/schedule";
 import { Card } from "@/components/ui";
 import { AvailabilityMatrix } from "@/components/office/AvailabilityMatrix";
+import { GuideLink } from "@/components/GuideLink";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +29,10 @@ export default async function AvailabilityPage({ searchParams }: { searchParams:
 
   return (
     <div>
-      <h1 className="mb-1 font-display text-2xl font-semibold text-navy">Availability</h1>
+      <div className="mb-1 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="font-display text-2xl font-semibold text-navy">Availability</h1>
+        <GuideLink topic="availability" />
+      </div>
       <p className="mb-4 text-sm text-slate-500">
         Who&apos;s available — submitted by instructors in their app. Hover a <span className="font-medium text-navy">●</span> to see what they&apos;re rostered on, or <span className="font-medium text-navy">click any slot</span> to fill an open shift with that instructor.
       </p>

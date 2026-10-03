@@ -2,6 +2,7 @@ import { requireTenant } from "@/lib/tenant/require";
 import { getAttendanceBoard } from "@/lib/services/timeclock";
 import { Card, StatusPill } from "@/components/ui";
 import { fmtClockTime, todayIso } from "@/lib/domain";
+import { GuideLink } from "@/components/GuideLink";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,10 @@ export default async function TimeClockPage() {
 
   return (
     <div>
-      <h1 className="mb-1 font-display text-2xl font-semibold text-navy">Time clock</h1>
+      <div className="mb-1 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="font-display text-2xl font-semibold text-navy">Time clock</h1>
+        <GuideLink topic="time" />
+      </div>
       <p className="mb-6 text-sm text-slate-500">Attendance for {today} — built from instructor clock-ins.</p>
 
       <div className="mb-4 grid gap-3 sm:grid-cols-3">

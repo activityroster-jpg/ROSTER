@@ -35,7 +35,7 @@ export default async function SettingsPage() {
     <div>
       <h1 className="mb-1 font-display text-2xl font-semibold text-navy">Settings</h1>
       <p className="mb-6 text-sm text-slate-500">
-        Shape ActivityRoster to how your centre runs — courses, grades, roles, checks and slots are all yours to edit.
+        Shape ActivityRoster to how your centre runs — courses, certs, roles, checks and slots are all yours to edit.
         Retiring an item hides it from new records but keeps your history intact (nothing is deleted).
       </p>
 
@@ -49,7 +49,7 @@ export default async function SettingsPage() {
 
       <Card className="mb-6">
         <h2 className="mb-1 font-semibold text-navy">General</h2>
-        <p className="mb-3 text-xs text-slate-500">Alert lead time controls how early expiring tickets are flagged.</p>
+        <p className="mb-3 text-xs text-slate-500">How early to warn about expiring certs, and which checks to enforce when rostering.</p>
         <GeneralSettingsForm
           schedulingMode={s?.schedulingMode ?? "session"}
           alertLeadDays={s?.alertLeadDays ?? 30}
@@ -89,7 +89,7 @@ export default async function SettingsPage() {
           kind="slot"
           items={toItems(slots, (x) => `${x.code} · ${x.label}`, (x) => `${x.startTime}–${x.endTime}`, (x) => x.label)}
           extraFields={[
-            { name: "code", label: "Code (AM/PM/EV)", type: "text", placeholder: "AM" },
+            { name: "code", label: "Short code (AM, PM or EV)", type: "text", placeholder: "AM" },
             { name: "startTime", label: "Start", type: "time" },
             { name: "endTime", label: "End", type: "time" },
           ]}
@@ -97,30 +97,30 @@ export default async function SettingsPage() {
         <ConfigManager
           title="Roles"
           kind="role"
-          items={toItems(roles, (r) => r.name, (r) => [r.countsTowardRatio ? "ratio" : "", r.isSafetyCover ? "safety" : "", r.isFirstAider ? "first-aid" : ""].filter(Boolean).join(", "))}
+          items={toItems(roles, (r) => r.name, (r) => [r.countsTowardRatio ? "counts in ratio" : "", r.isSafetyCover ? "safety cover" : "", r.isFirstAider ? "first aider" : ""].filter(Boolean).join(" · "))}
           extraFields={[
-            { name: "countsTowardRatio", label: "Ratio", type: "checkbox" },
-            { name: "isSafetyCover", label: "Safety", type: "checkbox" },
-            { name: "isFirstAider", label: "First aid", type: "checkbox" },
+            { name: "countsTowardRatio", label: "Counts in ratio", type: "checkbox" },
+            { name: "isSafetyCover", label: "Safety cover", type: "checkbox" },
+            { name: "isFirstAider", label: "First aider", type: "checkbox" },
           ]}
         />
         <ConfigManager
-          title="Grades"
+          title="Certs"
           kind="grade"
           items={toItems(grades, (g) => g.name, (g) => g.discipline ?? "")}
           extraFields={[
             { name: "discipline", label: "Discipline", type: "text" },
             { name: "rank", label: "Rank", type: "number" },
-            { name: "expiryTracked", label: "Expiry", type: "checkbox" },
+            { name: "expiryTracked", label: "Has an expiry date", type: "checkbox" },
           ]}
         />
         <ConfigManager
-          title="Compliance checks"
+          title="Checks (DBS, first aid, safeguarding…)"
           kind="compliance"
-          items={toItems(compliance, (c) => c.name, (c) => (c.mandatory ? "mandatory" : ""))}
+          items={toItems(compliance, (c) => c.name, (c) => (c.mandatory ? "must have" : "optional"))}
           extraFields={[
-            { name: "mandatory", label: "Mandatory", type: "checkbox" },
-            { name: "expiryTracked", label: "Expiry", type: "checkbox" },
+            { name: "mandatory", label: "Must have to be rostered", type: "checkbox" },
+            { name: "expiryTracked", label: "Has an expiry date", type: "checkbox" },
           ]}
         />
       </div>
@@ -139,7 +139,7 @@ export default async function SettingsPage() {
             { href: "/office/equipment", label: "Equipment & boats", desc: "Equipment types, quantities & your fleet" },
             { href: "/office/locations", label: "Locations", desc: "Location categories, sites & operating areas" },
             { href: "/office/course-setup", label: "Course setup", desc: "Course types, ratios & defaults" },
-            { href: "/office/staff", label: "Staff & pay rates", desc: "Instructors, qualifications & pay rates" },
+            { href: "/office/staff", label: "Instructors & pay", desc: "Instructors, their certs & pay rates" },
           ].map((l) => (
             <a key={l.href} href={l.href} className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-sm hover:border-teal hover:bg-slate-50">
               <span><span className="font-medium text-navy">{l.label}</span><span className="block text-xs text-slate-400">{l.desc}</span></span>

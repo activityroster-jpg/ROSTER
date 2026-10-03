@@ -101,7 +101,7 @@ export async function joinCentreByCodeAction(code: string, phone?: string): Prom
       to,
       subject: `${user.name || user.email} wants to join ${org.name} on ActivityRoster`,
       html: `<p><strong>${escapeHtml(user.name || user.email)}</strong> (${escapeHtml(user.email)}${cleanPhone ? `, ${escapeHtml(cleanPhone)}` : ""}) entered your company code in the ActivityRoster app and asked to join <strong>${escapeHtml(org.name)}</strong>.</p>
-        <p>Approve or decline them under Staff → Join requests:</p>
+        <p>Approve or decline them under Instructors → Join requests:</p>
         <p><a href="https://${org.slug}.${env.APP_APEX_DOMAIN}/office/staff" style="display:inline-block;background:#0C6B74;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none">Review join request</a></p>`,
     }).catch(() => {})));
   } catch { /* ignore */ }

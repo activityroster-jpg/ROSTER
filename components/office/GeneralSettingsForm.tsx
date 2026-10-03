@@ -28,17 +28,12 @@ export function GeneralSettingsForm({
 
   return (
     <form action={action} className="grid gap-3 sm:grid-cols-4 sm:items-end">
-      <div>
-        <label className="mb-1 block text-xs font-medium text-slate-500">Scheduling mode</label>
-        <select name="schedulingMode" defaultValue={schedulingMode} className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal">
-          <option value="session">Session</option>
-          <option value="hours">Hours</option>
-          <option value="day">Day</option>
-        </select>
-      </div>
-      <div>
-        <label className="mb-1 block text-xs font-medium text-slate-500">Alert lead days</label>
-        <input name="alertLeadDays" type="number" defaultValue={alertLeadDays} min={0} max={365} className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal" />
+      {/* Kept for the saved record; neither changes anything a centre sees. */}
+      <input type="hidden" name="schedulingMode" value={schedulingMode || "session"} />
+      <input type="hidden" name="timezone" value={timezone || "Europe/London"} />
+      <div className="sm:col-span-2">
+        <label className="mb-1 block text-xs font-medium text-slate-500">Warn me this many days before a cert or check expires</label>
+        <input name="alertLeadDays" type="number" defaultValue={alertLeadDays} min={0} max={365} className="w-28 rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal" />
       </div>
       <div>
         <label className="mb-1 block text-xs font-medium text-slate-500">Currency</label>
@@ -48,28 +43,24 @@ export function GeneralSettingsForm({
           <option value="USD">USD ($)</option>
         </select>
       </div>
-      <div>
-        <label className="mb-1 block text-xs font-medium text-slate-500">Timezone</label>
-        <input name="timezone" defaultValue={timezone} className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal" />
-      </div>
       <fieldset className="sm:col-span-4 rounded-lg border border-slate-200 p-3">
-        <legend className="px-1 text-xs font-semibold text-slate-500">Optional compliance checks</legend>
+        <legend className="px-1 text-xs font-semibold text-slate-500">Checks when rostering</legend>
         <p className="mb-2 text-xs text-slate-400">
-          Off by default to keep things simple. Licence expiry is always shown on the Staff tab. Turn these on to have
-          the Courses tab enforce them as you roster.
+          Cert expiry is always shown on the Instructors tab. These decide what the Courses tab stops you doing as you roster
+          (you can always override with a note).
         </p>
         <div className="grid gap-2 sm:grid-cols-3">
           <label className="flex items-start gap-2 text-sm text-slate-600">
             <input type="checkbox" name="enforceLicenceChecks" defaultChecked={enforceLicenceChecks} className="mt-0.5 h-4 w-4 rounded border-slate-300" />
-            <span>Block rostering an instructor with a missing/expired mandatory licence <span className="text-slate-400">(override allowed)</span></span>
+            <span>Block rostering an instructor with a missing or expired must-have cert or check <span className="text-slate-400">(override allowed)</span></span>
           </label>
           <label className="flex items-start gap-2 text-sm text-slate-600">
             <input type="checkbox" name="enforceRatioChecks" defaultChecked={enforceRatioChecks} className="mt-0.5 h-4 w-4 rounded border-slate-300" />
-            <span>Show ratio &amp; safety-cover flags on courses</span>
+            <span>Flag courses that are short of instructors or safety-boat cover</span>
           </label>
           <label className="flex items-start gap-2 text-sm text-slate-600">
             <input type="checkbox" name="enforceConflictChecks" defaultChecked={enforceConflictChecks} className="mt-0.5 h-4 w-4 rounded border-slate-300" />
-            <span>Warn when an instructor is double-booked <span className="text-slate-400">(override allowed)</span></span>
+            <span>Stop an instructor being double-booked <span className="text-slate-400">(override allowed)</span></span>
           </label>
           <label className="flex items-start gap-2 text-sm text-slate-600">
             <input type="checkbox" name="enforceAvailabilityChecks" defaultChecked={enforceAvailabilityChecks} className="mt-0.5 h-4 w-4 rounded border-slate-300" />

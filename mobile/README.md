@@ -136,11 +136,11 @@ the keystore safe, you can never change it):
 ### Listing copy
 
 - **Name**: ActivityRoster
-- **Subtitle / short description**: Your rota, hours and licences — for RYA centre staff.
+- **Subtitle / short description**: Your roster, hours and certs — for RYA centre instructors.
 - **Description**: ActivityRoster is the staff app for sailing and watersports
   centres that run on ActivityRoster. See your sessions for the week, set your
   availability, clock in and out, request leave, pick up open shifts and keep
-  your RYA tickets and vetting documents up to date — straight from your phone.
+  your RYA certs and vetting documents up to date — straight from your phone.
   Phone notifications tell you when your rota changes. Join your centre with
   its company code; work for more than one? Switch between them in Settings.
   Your centre must use ActivityRoster (activityroster.com).

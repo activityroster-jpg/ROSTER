@@ -17,6 +17,7 @@ export function PortalLeave({ myLeave, shifts }: { myLeave: LeaveRow[]; shifts: 
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const [days, setDays] = useState("1");
+  const [daysEdited, setDaysEdited] = useState(false);
   const [reason, setReason] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -26,9 +27,21 @@ export function PortalLeave({ myLeave, shifts }: { myLeave: LeaveRow[]; shifts: 
     startTransition(async () => {
       const res = await requestLeaveAction({ type: type as never, startDate: start, endDate: end || start, days: Number(days), reason });
       if (!res.ok) setMsg(res.error ?? "Could not submit");
-      else { setMsg("Request submitted"); setStart(""); setEnd(""); setDays("1"); setReason(""); router.refresh(); }
+      else { setMsg("Request submitted"); setStart(""); setEnd(""); setDays("1"); setDaysEdited(false); setReason(""); router.refresh(); }
     });
   };
+
+  // Days follow the dates unless the instructor types their own (half days etc.).
+  const autoDays = (s: string, e: string) => {
+    if (!s) return;
+    const a = new Date(`${s}T00:00:00Z`).getTime();
+    const b = new Date(`${(e || s)}T00:00:00Z`).getTime();
+    if (!Number.isFinite(a) || !Number.isFinite(b)) return;
+    const n = Math.max(1, Math.round((b - a) / 86_400_000) + 1);
+    if (!daysEdited) setDays(String(n));
+  };
+  const onStart = (v: string) => { setStart(v); if (end && end < v) { setEnd(v); autoDays(v, v); } else autoDays(v, end); };
+  const onEnd = (v: string) => { setEnd(v); autoDays(start, v); };
 
   const claim = (id: string) => startTransition(async () => {
     const res = await claimOpenShiftAction(id);
@@ -44,10 +57,10 @@ export function PortalLeave({ myLeave, shifts }: { myLeave: LeaveRow[]; shifts: 
             {LEAVE_TYPES.map((t) => <option key={t} value={t} className="capitalize">{t}</option>)}
           </select>
           <div className="grid grid-cols-2 gap-2">
-            <label className="text-xs text-slate-500">From<input type="date" required value={start} onChange={(e) => setStart(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" /></label>
-            <label className="text-xs text-slate-500">To<input type="date" value={end} onChange={(e) => setEnd(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" /></label>
+            <label className="text-xs text-slate-500">From<input type="date" required value={start} onChange={(e) => onStart(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" /></label>
+            <label className="text-xs text-slate-500">To<input type="date" value={end} min={start || undefined} onChange={(e) => onEnd(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" /></label>
           </div>
-          <label className="text-xs text-slate-500">Days<input type="number" min="0.5" step="0.5" value={days} onChange={(e) => setDays(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" /></label>
+          <label className="text-xs text-slate-500">Days <span className="text-slate-400">(worked out from the dates — change it for half days)</span><input type="number" min="0.5" step="0.5" value={days} onChange={(e) => { setDays(e.target.value); setDaysEdited(true); }} className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" /></label>
           <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Reason (optional)" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
         </div>
         <button disabled={pending} className="mt-3 w-full rounded-lg bg-teal px-4 py-2.5 font-semibold text-white hover:bg-teal-700 disabled:opacity-60">Submit request</button>

@@ -6,6 +6,7 @@ import { LocationItem } from "@/components/office/LocationItem";
 import { LocationCategoryHeader, RetiredLocationCategory } from "@/components/office/LocationCategoryControls";
 import { FeatureNotice } from "@/components/office/FeatureNotice";
 import { hasFeature } from "@/lib/features";
+import { GuideLink } from "@/components/GuideLink";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +35,10 @@ export default async function LocationsPage() {
 
   return (
     <div>
-      <h1 className="mb-1 font-display text-2xl font-semibold text-navy">Locations</h1>
+      <div className="mb-1 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="font-display text-2xl font-semibold text-navy">Locations</h1>
+        <GuideLink topic="locations" />
+      </div>
       <FeatureNotice feature="locations" enabled={locationsEnabled} />
       <p className="mb-6 text-sm text-slate-500">
         Everywhere activity happens — launch areas, classrooms, pontoons, operating areas. Group them into categories

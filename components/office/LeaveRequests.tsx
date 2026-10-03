@@ -24,7 +24,7 @@ export function LeaveRequests({ rows: initial }: { rows: LeaveRow[] }) {
   return (
     <table className="w-full text-left text-sm">
       <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-        <tr><th className="px-4 py-3">Staff</th><th className="px-4 py-3">Type</th><th className="px-4 py-3">Dates</th><th className="px-4 py-3">Status</th><th className="px-4 py-3"></th></tr>
+        <tr><th className="px-4 py-3">Instructor</th><th className="px-4 py-3">Type</th><th className="px-4 py-3">Dates</th><th className="px-4 py-3">Status</th><th className="px-4 py-3"></th></tr>
       </thead>
       <tbody className="divide-y divide-slate-100">
         {rows.map((r) => (

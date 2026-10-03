@@ -34,8 +34,8 @@ export default async function PortalDocumentsPage() {
 
   return (
     <div>
-      <h1 className="mb-1 font-display text-xl font-semibold text-navy">My licences &amp; documents</h1>
-      <p className="mb-4 text-sm text-slate-500">Upload a photo or PDF of each licence, pick which one it is, and add its expiry date. Your centre checks and confirms them.</p>
+      <h1 className="mb-1 font-display text-xl font-semibold text-navy">My certs &amp; documents</h1>
+      <p className="mb-4 text-sm text-slate-500">Upload a photo or PDF of each cert, pick which one it is, and add its expiry date. Your centre checks and confirms them.</p>
       <div className="mb-4"><AddLicence types={addableTypes} /></div>
       <Card>
         <DocumentManager items={items} admin={false} />

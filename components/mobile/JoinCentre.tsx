@@ -29,7 +29,7 @@ export function JoinCentre({ pendingCentre, canSkip }: { pendingCentre: string |
       <div className="rounded-xl border border-slate-200 bg-white p-5 text-center">
         <p className="text-3xl">✅</p>
         <h1 className="mt-2 font-display text-xl font-bold text-navy">Request sent to {result.centre}</h1>
-        <p className="mt-2 text-sm text-slate-600">Your email didn&apos;t match anyone on their staff list yet, so an admin needs to approve you. We&apos;ve let them know — you&apos;ll get an email as soon as they do, then just open the app again.</p>
+        <p className="mt-2 text-sm text-slate-600">Your email didn&apos;t match anyone on their instructor list yet, so an admin needs to approve you. We&apos;ve let them know — you&apos;ll get an email as soon as they do, then just open the app again.</p>
       </div>
     );
   }

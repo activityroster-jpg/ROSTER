@@ -38,7 +38,7 @@ export function AppSignIn() {
   return (
     <div>
       <h1 className="font-display text-2xl font-bold text-navy">Sign in</h1>
-      <p className="mb-5 text-sm text-slate-500">Your rota, availability, hours and licences — all in your pocket.</p>
+      <p className="mb-5 text-sm text-slate-500">Your roster, availability, hours and certs — all in your pocket.</p>
       <form onSubmit={submit} className="space-y-3">
         <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" autoComplete="email" inputMode="email" required className={field} />
         <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" autoComplete="current-password" required className={field} />

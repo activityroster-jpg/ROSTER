@@ -24,7 +24,7 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
     return (
       <Card>
         <p className="text-sm text-slate-600">That staff member wasn&apos;t found.</p>
-        <Link href="/office/staff" className="mt-2 inline-block text-sm font-semibold text-teal hover:underline">← Back to staff</Link>
+        <Link href="/office/staff" className="mt-2 inline-block text-sm font-semibold text-teal hover:underline">← Back to instructors</Link>
       </Card>
     );
   }
@@ -43,7 +43,7 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
 
   return (
     <div>
-      <Link href="/office/staff" className="text-sm text-slate-400 hover:text-slate-600">← Staff</Link>
+      <Link href="/office/staff" className="text-sm text-slate-400 hover:text-slate-600">← Instructors</Link>
       <div className="mb-6 mt-1 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-semibold text-navy">{instructor.name}{left ? <span className="ml-2 align-middle rounded-full bg-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-600">Left</span> : null}</h1>
@@ -59,14 +59,14 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
       <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
         <div className="space-y-6">
           <Card>
-            <h2 className="mb-3 font-semibold text-navy">Licences &amp; documents</h2>
+            <h2 className="mb-3 font-semibold text-navy">Certs &amp; documents</h2>
             <DocumentManager items={docItems} admin />
           </Card>
 
           <Card>
             <h2 className="mb-2 font-semibold text-navy">Courses they can teach</h2>
             {approvedCourses.length === 0 ? (
-              <p className="text-sm text-slate-400">None set. Add courses when editing this instructor, or they&apos;re inferred from tickets held.</p>
+              <p className="text-sm text-slate-400">None set yet — they&apos;re suggested from the certs they hold when you add them.</p>
             ) : (
               <ul className="flex flex-wrap gap-2">
                 {approvedCourses.map((c) => <li key={c.id} className="rounded-full bg-teal/10 px-3 py-1 text-xs font-medium text-teal">{c.name}</li>)}

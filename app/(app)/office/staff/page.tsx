@@ -5,6 +5,7 @@ import { Card } from "@/components/ui";
 import { JoinRequests, type JoinRequestRow } from "@/components/office/JoinRequests";
 import { AddInstructorForm } from "@/components/office/AddInstructorForm";
 import { StaffTable, type StaffRow } from "@/components/office/StaffTable";
+import { GuideLink } from "@/components/GuideLink";
 
 export const dynamic = "force-dynamic";
 
@@ -64,17 +65,20 @@ export default async function StaffPage() {
     <div>
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-bold text-navy">Staff</h1>
+          <h1 className="font-display text-2xl font-bold text-navy">Instructors</h1>
           <p className="text-sm text-slate-500">{currentCount} instructor{currentCount === 1 ? "" : "s"} · fit-to-roster and the courses each can teach, from the certs they hold</p>
         </div>
-        <a href="/office/staff/import" className="flex-none rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-navy hover:bg-slate-50">Import from spreadsheet</a>
+        <div className="flex flex-none items-center gap-3">
+          <GuideLink topic="staff" />
+          <a href="/office/staff/import" className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-navy hover:bg-slate-50">Import from spreadsheet</a>
+        </div>
       </div>
 
       <JoinRequests rows={pendingRequests} />
 
       <Card className="mb-5">
         <h2 className="mb-1 font-semibold text-navy">Add an instructor</h2>
-        <p className="mb-3 text-xs text-slate-500">Enter their details and what they teach — we email them an invite to set up their account and upload their licences. Or give them your company code (Settings) and they can join from the app.</p>
+        <p className="mb-3 text-xs text-slate-500">Enter their details and what they teach — we email them an invite to set up their account and upload their certs. Or give them your company code (Settings) and they can join from the app.</p>
         <AddInstructorForm courses={courseChoices} quals={qualChoices} checks={checkChoices} />
       </Card>
 

@@ -139,7 +139,7 @@ export function PinForm({ mode, next, hasPassword = true, userId }: { mode: "ent
             </h1>
             <p className="mx-auto mt-1 mb-5 max-w-xs text-center text-sm text-slate-500">
               {mode === "set"
-                ? "Choose a 4-digit PIN. You'll enter it each time you sign in, as a second layer of security."
+                ? "One more step: choose a 4-digit PIN. It's a quick second check when you sign in, so a stolen password alone can't get into your centre. In the app you can use Face ID instead."
                 : "Enter your 4-digit PIN to continue."}
             </p>
 

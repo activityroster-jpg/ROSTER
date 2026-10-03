@@ -49,7 +49,7 @@ const SECTIONS: Section[] = [
       { kind: "sub", text: "The week calendar" },
       { kind: "p", text: "Below the tiles is a colour-coded week calendar — youth courses in amber, adult in teal. Use the ← → buttons to move between weeks, or “This week” to jump back. Click any course block to open it." },
       { kind: "sub", text: "This week's rota" },
-      { kind: "p", text: "Under the calendar is the written rota for the week — every session, who's on it, where and when — with a link to the full printable rota." },
+      { kind: "p", text: "Under the calendar is the written roster for the week — every session, who's on it, where and when — with a link to the full printable roster." },
       { kind: "tip", text: "The “＋ New course” button on the calendar takes you straight to the course planner." },
     ],
   },
@@ -135,9 +135,9 @@ const SECTIONS: Section[] = [
     id: "app",
     icon: "📱",
     label: "The instructor app",
-    blurb: "ActivityRoster on the App Store and Google Play — your rota, hours and licences in your pocket.",
+    blurb: "ActivityRoster on the App Store and Google Play — your roster, hours and certs in your pocket.",
     blocks: [
-      { kind: "p", text: "Instructors and volunteers use the free ActivityRoster app (iPhone and Android). Everything in the instructor portal is in it — schedule, availability, clock in/out, leave, hours, documents — plus phone notifications, Face ID / fingerprint unlock and a camera button for licence photos." },
+      { kind: "p", text: "Instructors and volunteers use the free ActivityRoster app (iPhone and Android). Everything in the instructor portal is in it — schedule, availability, clock in/out, leave, hours, documents — plus phone notifications, Face ID / fingerprint unlock and a camera button for cert photos." },
       { kind: "sub", text: "Your company code" },
       { kind: "steps", items: [
         "Open Settings → “Company code · instructor app”. Each centre has its own 6-character code — copy it and share it with your team (a notice board, a WhatsApp group, your welcome email).",
@@ -147,12 +147,12 @@ const SECTIONS: Section[] = [
       { kind: "steps", items: [
         "Install the app and tap “Create your account”: name, mobile number, email and a password.",
         "Enter the 6-digit code we email them to confirm the address, then choose a 4-digit PIN.",
-        "Type in your company code. If their email is already on your Staff list, they're in straight away. If not, they appear under Staff → Join requests for you to approve or decline — so a leaked code never lets a stranger in.",
+        "Type in your company code. If their email is already on your Instructors list, they're in straight away. If not, they appear under Instructors → Join requests for you to approve or decline — so a leaked code never lets a stranger in.",
         "Works for more than one centre? They join each with its code and switch between them in the app's Settings.",
       ] },
       { kind: "sub", text: "What the app adds" },
       { kind: "bullets", items: [
-        "Phone notifications for rota changes, new open shifts, leave decisions and expiring licences (they can switch these off).",
+        "Phone notifications for roster changes, new open shifts, leave decisions and expiring certs (they can switch these off).",
         "Face ID / fingerprint instead of typing the PIN every time; the PIN stays as the fallback.",
         "Clock in and out records an approximate location — shown as a 📍 map link on your Time clock page.",
         "A camera button on Documents to photograph a certificate straight into their record.",
@@ -163,10 +163,10 @@ const SECTIONS: Section[] = [
   {
     id: "staff-import",
     icon: "📇",
-    label: "Importing staff",
+    label: "Importing instructors",
     blurb: "Bring your whole team in from a spreadsheet — even a rough, incomplete one.",
     blocks: [
-      { kind: "p", text: "On the Staff tab use “Import from spreadsheet”. Your list doesn't need to be tidy or complete — the only thing every row needs is a name." },
+      { kind: "p", text: "On the Instructors tab use “Import from spreadsheet”. Your list doesn't need to be tidy or complete — the only thing every row needs is a name." },
       { kind: "steps", items: [
         "Paste your list or upload a CSV.",
         "Match your columns — we guess them, you correct any that are wrong. Name is the only required column.",
@@ -179,22 +179,22 @@ const SECTIONS: Section[] = [
         "Qualifications/tickets and courses-they-can-teach are matched to your catalogue by name; anything it doesn't recognise is ignored so you don't get junk — add those on each profile later.",
         "Employment type is read loosely (e.g. 'casual' → freelance) and defaults to employed.",
       ] },
-      { kind: "tip", text: "Start simple: a sheet of just names and emails is enough to get everyone in and invited — you can fill in tickets and courses afterwards." },
+      { kind: "tip", text: "Start simple: a sheet of just names and emails is enough to get everyone in and invited — you can fill in certs and courses afterwards." },
     ],
   },
   {
     id: "staff",
     icon: "👥",
-    label: "Staff & team",
+    label: "Instructors & team",
     blurb: "Add instructors, job types and the courses they can teach.",
     blocks: [
-      { kind: "p", text: "The Staff tab lists everyone at your centre with their status and whether they're cleared to roster." },
+      { kind: "p", text: "The Instructors tab lists everyone at your centre with their status and whether they're cleared to roster." },
       { kind: "sub", text: "Add an instructor" },
       { kind: "steps", items: [
         "Enter their name and (optionally) email.",
         "Pick their employment type — employed, freelance or volunteer. Need a different one? Add a custom job/instructor type inline.",
         "Tick the qualifications/tickets they hold and the courses they can teach (a searchable tickbox list).",
-        "Save. If you gave an email, they're automatically invited to the instructor app to upload their own licences.",
+        "Save. If you gave an email, they're automatically invited to the instructor app to upload their own certs.",
         "An invite shows as “Invite pending” until they open it — access to your centre only starts when the invited person signs in, so a mistyped address can't let the wrong account in.",
       ] },
       { kind: "sub", text: "Courses each person can teach" },
@@ -204,13 +204,13 @@ const SECTIONS: Section[] = [
   {
     id: "licences",
     icon: "🎫",
-    label: "Licences, tickets & vetting",
-    blurb: "Track every ticket and check, with expiry alerts.",
+    label: "Certs & vetting",
+    blurb: "Track every cert and check, with expiry alerts.",
     blocks: [
       { kind: "p", text: "Every instructor has a document area for their qualifications (dinghy, keelboat, windsurf, SUP, powerboat, first aid…) and their checks (DBS, safeguarding, first aid)." },
       { kind: "sub", text: "Two ways to add documents" },
       { kind: "bullets", items: [
-        "The instructor uploads their own: they pick the licence from a dropdown, add a photo/scan and the expiry date.",
+        "The instructor uploads their own: they pick the cert from a dropdown, add a photo/scan and the expiry date.",
         "The office uploads on their behalf and can edit the expiry, add a reference/certificate number, and mark it verified.",
       ] },
       { kind: "sub", text: "Expiry alerts" },
@@ -270,21 +270,21 @@ const SECTIONS: Section[] = [
   {
     id: "rota",
     icon: "🖨️",
-    label: "Weekly rota & PDF",
-    blurb: "A clean, printable rota for the wall or the inbox.",
+    label: "Weekly roster & PDF",
+    blurb: "A clean, printable roster for the wall or the inbox.",
     blocks: [
-      { kind: "p", text: "The Rota page shows the whole week: each day, each session, who's working, their role, the location/classroom and the times." },
+      { kind: "p", text: "The Roster page shows the whole week: each day, each session, who's working, their role, the location/classroom and the times." },
       { kind: "sub", text: "Three templates" },
       { kind: "bullets", items: [
-        "By week — a table for each day. The classic wall rota.",
+        "By week — a table for each day. The classic wall roster.",
         "By day — big cards, one day per page. Good for a briefing board or a day sheet for each site.",
         "Compact grid — days across, morning/afternoon/evening down, the whole week on one page.",
       ] },
       { kind: "p", text: "Use the “Show” tickboxes to switch fields on or off: times, instructor names, role, location, equipment (safety boats etc.) and the safety-cover status. Your choice of template and fields is remembered on this device, and the PDF matches what's on screen." },
       { kind: "bullets", items: [
         "Move between weeks with the navigation — past or future.",
-        "Print / Save-as-PDF produces a tidy one-page rota for the wall or the inbox — the layout is designed for it.",
-        "Export the week's hours to CSV for payroll straight from the rota.",
+        "Print / Save-as-PDF produces a tidy one-page roster for the wall or the inbox — the layout is designed for it.",
+        "Export the week's hours to CSV for payroll straight from the roster.",
         "Unassigned or under-covered sessions (and any missing safety-boat cover) are clearly marked so nothing slips through.",
       ] },
     ],
@@ -314,7 +314,7 @@ const SECTIONS: Section[] = [
       { kind: "steps", items: [
         "Add a location.",
         "Put it in a category — or add your own category if none fits.",
-        "Attach locations to courses so they appear on the rota.",
+        "Attach locations to courses so they appear on the roster.",
         "Rename or retire a category from its box header; retired categories can be brought back from the list at the bottom.",
       ] },
     ],
@@ -378,7 +378,7 @@ const SECTIONS: Section[] = [
       ] },
       { kind: "sub", text: "How the Small Club limit works" },
       { kind: "p", text: "On Small Club you can add up to 10 people in total. Everyone counts towards the 10 — paid instructors and volunteers alike. When you try to add the 11th person, we'll let you know you've reached the limit and prompt you to upgrade to Standard for unlimited team members." },
-      { kind: "tip", text: "Upgrading is instant and keeps everything you've set up — your courses, staff, tickets and rota all stay exactly as they are. Because competitors charge per user, a volunteer-heavy centre usually pays far less with our flat price." },
+      { kind: "tip", text: "Upgrading is instant and keeps everything you've set up — your courses, staff, certs and roster all stay exactly as they are. Because competitors charge per user, a volunteer-heavy centre usually pays far less with our flat price." },
     ],
   },
   {
@@ -528,7 +528,7 @@ export function LearningCenter({ initialTopic }: { initialTopic?: string }) {
         <p className="text-sm font-semibold uppercase tracking-wide text-teal">Learning Centre</p>
         <h1 className="mt-1 font-display text-3xl font-bold text-navy sm:text-4xl">How to use ActivityRoster</h1>
         <p className="mx-auto mt-3 max-w-2xl text-slate-600">
-          A step-by-step guide to every part of the platform — from first setup to rostering, licences, billing and
+          A step-by-step guide to every part of the platform — from first setup to rostering, certs, billing and
           data. Pick a topic to jump in.
         </p>
       </div>

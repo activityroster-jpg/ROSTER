@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { authClient } from "@/lib/auth/client";
 
 const JURISDICTIONS = [
   { value: "england", label: "England" },
@@ -35,6 +36,16 @@ export function LeadCapture({
   const [status, setStatus] = useState<"idle" | "busy" | "done" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{ url: string; emailSent: boolean } | null>(null);
+  const [resending, setResending] = useState(false);
+  const [resent, setResent] = useState<string | null>(null);
+  const resend = async () => {
+    setResending(true); setResent(null);
+    try {
+      const r = await authClient.sendVerificationEmail({ email, callbackURL: `${result?.url ?? ""}/office` });
+      setResent(r.error ? "Could not resend — try signing in instead." : "Sent again.");
+    } catch { setResent("Could not resend — try signing in instead."); }
+    finally { setResending(false); }
+  };
 
   const onCentreName = (v: string) => {
     setCentreName(v);
@@ -84,6 +95,13 @@ export function LeadCapture({
         <p className="mt-3 rounded-lg bg-canvas p-3 text-xs text-slate-500">
           {result.emailSent ? <>Didn&apos;t get it? Check spam, or sign in at </> : <>Go to </>}
           <a href={`${result.url}/sign-in`} className="font-semibold text-teal hover:underline">{slug}.{apex}/sign-in</a>.
+          {result.emailSent ? (
+            <>
+              {" "}
+              <button type="button" onClick={resend} disabled={resending} className="font-semibold text-teal hover:underline disabled:opacity-50">{resending ? "Sending…" : "Resend the email"}</button>
+              {resent ? <span className="ml-1 text-starboard">{resent}</span> : null}
+            </>
+          ) : null}
         </p>
         <p className="mt-3 text-xs text-slate-500">
           {setupMode === "basic"
@@ -121,6 +139,7 @@ export function LeadCapture({
           />
           <span className="flex items-center rounded-r-lg bg-slate-50 px-3 text-sm text-slate-500">.{apex}</span>
         </div>
+        <p className="-mt-1 text-xs text-slate-500">This is your centre&apos;s permanent web address — pick something short your team will recognise. It can&apos;t be changed later.</p>
 
         <select value={jurisdiction} onChange={(e) => setJurisdiction(e.target.value as typeof jurisdiction)} className={field} aria-label="Jurisdiction">
           {JURISDICTIONS.map((j) => <option key={j.value} value={j.value}>{j.label}</option>)}
