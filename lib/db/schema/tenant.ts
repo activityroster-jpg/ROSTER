@@ -128,6 +128,8 @@ export const orgSettings = sqliteTable("org_settings", {
   breakAfterMinutes: integer("break_after_minutes").notNull().default(360),
   breakMinutes: integer("break_minutes").notNull().default(0),
   breakPaid: boolCol("break_paid").default(false),
+  /** The centre's own privacy notice for its staff; linked beside ActivityRoster's notice in the office and portal. */
+  privacyNoticeUrl: text("privacy_notice_url"),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 }, (t) => [uniqueIndex("org_settings_org_uq").on(t.organisationId)]);

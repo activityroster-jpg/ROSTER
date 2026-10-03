@@ -21,6 +21,7 @@ import {
   outreachMessage,
   outreachSuppression,
   aiUsage,
+  privacyRequest,
   callAvailability,
   callBooking,
   type CallAvailability,
@@ -47,6 +48,9 @@ import {
   type OutreachSuppression,
   type AiUsage,
   type NewAiUsage,
+  type PrivacyRequest,
+  type NewPrivacyRequest,
+  type PrivacyRequestStatus,
   type OutreachLeadStatus,
   type SuppressionReason,
   type TaskStatus,
@@ -576,6 +580,28 @@ export class PlatformRepository {
     const q = this.db.select({ status: outreachMessage.status, n: sql<number>`count(*)` }).from(outreachMessage);
     const rows = campaignId ? await q.where(eq(outreachMessage.campaignId, campaignId)).groupBy(outreachMessage.status) : await q.groupBy(outreachMessage.status);
     return new Map(rows.map((r) => [r.status, Number(r.n)]));
+  }
+
+  // --- Privacy requests and complaints ---------------------------------------
+
+  async insertPrivacyRequest(values: Omit<NewPrivacyRequest, "id" | "createdAt" | "updatedAt">): Promise<PrivacyRequest> {
+    return (await this.db.insert(privacyRequest).values(values).returning())[0]!;
+  }
+  async listPrivacyRequests(limit = 200): Promise<PrivacyRequest[]> {
+    return this.db.select().from(privacyRequest).orderBy(desc(privacyRequest.createdAt)).limit(limit);
+  }
+  async setPrivacyRequestStatus(id: string, status: PrivacyRequestStatus, notes?: string | null): Promise<void> {
+    const now = new Date();
+    await this.db.update(privacyRequest).set({
+      status, updatedAt: now,
+      ...(status === "acknowledged" ? { acknowledgedAt: now } : {}),
+      ...(status === "closed" ? { closedAt: now } : {}),
+      ...(notes !== undefined ? { notes } : {}),
+    }).where(eq(privacyRequest.id, id));
+  }
+  async openPrivacyRequestCount(): Promise<number> {
+    const rows = await this.db.select({ id: privacyRequest.id }).from(privacyRequest).where(inArray(privacyRequest.status, ["new", "acknowledged", "in_progress"]));
+    return rows.length;
   }
 
   // --- AI usage (outreach agent spend) --------------------------------------

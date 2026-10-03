@@ -180,6 +180,11 @@ export const organisation = sqliteTable("organisation", {
   // When the free trial ends. Null = created_at + the platform trial length;
   // the Dev Center can extend it. After it: read-only, then locked (lib/billing/trial).
   trialEndsAt: integer("trial_ends_at", { mode: "timestamp_ms" }),
+  /** Which version of the Terms + DPA the centre accepted at signup, and when (compliance spec: terms acceptance). */
+  termsVersion: text("terms_version"),
+  termsAcceptedAt: integer("terms_accepted_at", { mode: "timestamp_ms" }),
+  /** When Stripe first reported a failed payment; cleared when paid. Drives the grace period → read-only rule. */
+  pastDueSince: integer("past_due_since", { mode: "timestamp_ms" }),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 }, (t) => [
@@ -649,6 +654,30 @@ export const aiUsage = sqliteTable("ai_usage", {
 }, (t) => [index("ai_usage_created_idx").on(t.createdAt), index("ai_usage_campaign_idx").on(t.campaignId)]);
 export type AiUsage = typeof aiUsage.$inferSelect;
 export type NewAiUsage = typeof aiUsage.$inferInsert;
+
+export const PRIVACY_REQUEST_KINDS = ["access", "correction", "erasure", "restriction", "portability", "objection", "complaint", "other"] as const;
+export type PrivacyRequestKind = (typeof PRIVACY_REQUEST_KINDS)[number];
+export const PRIVACY_REQUEST_STATUSES = ["new", "acknowledged", "in_progress", "closed"] as const;
+export type PrivacyRequestStatus = (typeof PRIVACY_REQUEST_STATUSES)[number];
+
+/** Data-protection requests and complaints from the public form; acknowledged within 30 days (UK DUAA duty). */
+export const privacyRequest = sqliteTable("privacy_request", {
+  id: id(),
+  kind: text("kind", { enum: PRIVACY_REQUEST_KINDS }).notNull(),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  centre: text("centre"),
+  message: text("message").notNull(),
+  status: text("status", { enum: PRIVACY_REQUEST_STATUSES }).notNull().default("new"),
+  dueAt: integer("due_at", { mode: "timestamp_ms" }).notNull(),
+  acknowledgedAt: integer("acknowledged_at", { mode: "timestamp_ms" }),
+  closedAt: integer("closed_at", { mode: "timestamp_ms" }),
+  notes: text("notes"),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, (t) => [index("privacy_request_status_idx").on(t.status), index("privacy_request_due_idx").on(t.dueAt)]);
+export type PrivacyRequest = typeof privacyRequest.$inferSelect;
+export type NewPrivacyRequest = typeof privacyRequest.$inferInsert;
 
 // --- Security events --------------------------------------------------------
 

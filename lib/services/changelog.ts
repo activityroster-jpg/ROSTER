@@ -28,7 +28,7 @@ const ACTION: Record<string, string> = {
   add_default_grades: "Added the RYA cert types", add_default_courses: "Added the RYA courses", update_schedule: "Set the default schedule for", list: "Added to the course list:", unlist: "Removed from the course list:", merge: "Merged",
   request_leave: "Asked for leave", leave_approved: "Approved leave for", leave_declined: "Declined leave for",
   open_shift_create: "Broadcast an open shift", open_shift_claim: "Offered to cover an open shift", open_shift_confirm: "Confirmed cover for an open shift", open_shift_cancel: "Cancelled an open shift",
-  clock_in: "Clocked in", clock_out: "Clocked out", set_availability: "Changed availability", attach_document: "Uploaded a document for", update_document_meta: "Updated the details of",
+  data_export: "Downloaded a full export of", clock_in: "Clocked in", clock_out: "Clocked out", set_availability: "Changed availability", attach_document: "Uploaded a document for", update_document_meta: "Updated the details of",
   self_add_licence: "Added a cert to their own record", self_add_licence_type: "Added a new cert type", integration_connect: "Connected", integration_remove: "Disconnected", integration_sync: "Checked", integration_apply_changes: "Applied changes from",
   booking_create: "Added a booking", booking_status: "Changed a booking", publish_week: "Published the roster for", republish_week: "Re-published the roster for", confirm_assignment: "Confirmed their place on", decline_assignment: "Declined their place on",
   set_students: "Set the number of students on", restore_defaults: "Restored the RYA course list", set_notify_email: "Changed email notifications for", update_profile: "Updated the details of",

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { apexDomain } from "@/lib/config";
 import { eq } from "drizzle-orm";
 import { Bell, CalendarCheck, CalendarClock, CalendarOff, Clock, FileCheck, Settings, Timer } from "lucide-react";
 import { requireTenant } from "@/lib/tenant/require";
@@ -23,7 +24,9 @@ export default async function PortalLayout({ children }: { children: React.React
   // Cert-expiry reminders are raised lazily, on the instructor's own visits.
   if (me && !ctx.readOnly) await ensureExpiryReminders(repos, ctx, me.id).catch(() => undefined);
   const unread = me ? await unreadCount(repos, ctx, me.id) : 0;
-  const clockOn = Boolean((await repos.tenant.orgSettings.list(ctx))[0]?.timeclockEnabled);
+  const portalSettings = (await repos.tenant.orgSettings.list(ctx))[0];
+  const clockOn = Boolean(portalSettings?.timeclockEnabled);
+  const privacyUrl = portalSettings?.privacyNoticeUrl ?? null;
   const tabs = TABS.filter((t) => clockOn || t.href !== "/portal/timeclock");
 
   return (
@@ -49,7 +52,13 @@ export default async function PortalLayout({ children }: { children: React.React
       {trial.kind === "read_only" ? (
         <p className="bg-amber/25 px-4 py-2 text-center text-xs font-medium text-navy">Your centre&apos;s free trial has ended, so nothing can be changed for now. Please let whoever runs your centre know.</p>
       ) : null}
-      <main className="flex-1 px-4 py-5 pb-24">{children}</main>
+      <main className="flex-1 px-4 py-5 pb-24">
+        {children}
+        <p className="mt-8 text-center text-[11px] text-slate-400">
+          Privacy: {privacyUrl ? <><a href={privacyUrl} target="_blank" rel="noreferrer" className="underline">{organisation.name}&rsquo;s notice</a> · </> : null}
+          <a href={`https://${apexDomain()}/privacy`} target="_blank" rel="noreferrer" className="underline">ActivityRoster&rsquo;s notice</a>
+        </p>
+      </main>
       <nav className="fixed inset-x-0 bottom-0 mx-auto flex max-w-md items-center justify-around border-t border-slate-200 bg-white py-2">
         {tabs.map((tab) => (
           <Link key={tab.href} href={tab.href} className="flex flex-col items-center gap-1 px-3 py-1 text-slate-500">

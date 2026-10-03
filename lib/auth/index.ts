@@ -33,6 +33,7 @@ export function createAuth(db: Database, env: CloudflareEnv) {
     }),
     emailAndPassword: {
       enabled: true,
+      minPasswordLength: 12,
       requireEmailVerification: true,
       // A password reset logs out every other session — an intruder who
       // triggered the reset (or was already inside) loses access.

@@ -3,6 +3,7 @@
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { authClient } from "@/lib/auth/client";
+import { passwordAcceptableAction } from "./actions";
 
 export default function ResetPasswordPage() {
   return (
@@ -25,10 +26,12 @@ function ResetPasswordInner() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (pw.length < 8) { setError("Use at least 8 characters."); return; }
+    if (pw.length < 12) { setError("Use at least 12 characters."); return; }
     if (pw !== confirm) { setError("The two passwords don't match."); return; }
     setBusy(true);
     try {
+      const check = await passwordAcceptableAction(pw);
+      if (!check.ok) { setError(check.error ?? "Choose a different password."); return; }
       const res = await authClient.resetPassword({ newPassword: pw, token });
       if (res.error) setError(res.error.message ?? "Could not reset password — the link may have expired.");
       else setDone(true);

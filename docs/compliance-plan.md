@@ -20,7 +20,7 @@ Effort is a rough guide: S = under half a day, M = one to two days, L = a week o
 
 ## Phase 1 (P0): before onboarding more customers
 
-### P0-A Documents and quick code fixes (S–M, no decisions needed)
+### P0-A Documents and quick code fixes — done 3 October (remaining: `booking` table removal after a backup cycle; GitHub security settings are Conor's clicks)
 
 - `docs/subprocessors.md`, `docs/data-map.md` (from the real schema), `docs/environment.md`,
   `docs/retention.md` (defaults), `docs/runbooks/restore.md`, `docs/runbooks/incident.md`,
@@ -40,7 +40,7 @@ Effort is a rough guide: S = under half a day, M = one to two days, L = a week o
   scanning, push protection. Cloudflare → SSL/TLS: Always Use HTTPS on, minimum TLS 1.2.
   Resend → Domains: note the region; Resend, Stripe, Cloudflare, GitHub: accept DPAs.
 
-### P0-B Billing grace path (S)
+### P0-B Billing grace path — done 3 October (14-day grace after a failed payment, then read-only with a banner; never deletion)
 
 - Confirm `past_due` keeps the centre read-only with a visible banner and never deletes;
   write the grace period into the billing page copy.

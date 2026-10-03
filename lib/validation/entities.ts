@@ -27,6 +27,7 @@ export const orgSettingsSchema = z.object({
   enforceRatioChecks: z.boolean().optional(),
   enforceConflictChecks: z.boolean().optional(),
   enforceAvailabilityChecks: z.boolean().optional(),
+  privacyNoticeUrl: z.string().trim().url("Enter a full web address, starting with https://").max(500).optional().or(z.literal("")),
 });
 
 export const sessionSlotSchema = z.object({

@@ -109,7 +109,7 @@ async function routeEvent(env: CloudflareEnv, repos: Repositories, event: Stripe
       const customerId = typeof invoice.customer === "string" ? invoice.customer : null;
       if (customerId) {
         const org = await repos.control.organisationByStripeCustomer(customerId);
-        if (org) await repos.control.updateOrganisation(org.id, { subscriptionStatus: "active", status: "active" });
+        if (org) await repos.control.updateOrganisation(org.id, { subscriptionStatus: "active", status: "active", pastDueSince: null });
       }
       // Books: revenue + Stripe fee (idempotent; never fails the webhook).
       try { await recordInvoicePaid(await getDb(), repos, env, invoice); } catch (err) { console.error("[finance] invoice.paid not booked:", (err as Error).message); }
@@ -126,7 +126,7 @@ async function routeEvent(env: CloudflareEnv, repos: Repositories, event: Stripe
       const customerId = typeof invoice.customer === "string" ? invoice.customer : null;
       if (!customerId) return;
       const org = await repos.control.organisationByStripeCustomer(customerId);
-      if (org) await repos.control.updateOrganisation(org.id, { subscriptionStatus: "past_due" });
+      if (org) await repos.control.updateOrganisation(org.id, { subscriptionStatus: "past_due", ...(org.pastDueSince ? {} : { pastDueSince: new Date() }) });
       return;
     }
 

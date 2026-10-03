@@ -53,7 +53,8 @@ export default function SignInPage() {
       if (res.error) {
         const notVerified = res.error.status === 403 || /verif/i.test(res.error.message ?? "");
         setUnverified(notVerified);
-        setError(notVerified ? "Please confirm your email first — we sent you a link when you signed up." : res.error.message ?? "Sign-in failed");
+        // One message for every failure, so the page never confirms whether an address has an account.
+        setError("That email and password don't match our records. If you've just signed up, confirm your email first.");
       } else if (res.data && "twoFactorRedirect" in res.data && res.data.twoFactorRedirect) {
         const hint = await twoFactorHintAction(email).catch(() => ({ method: null, hint: null }));
         const q = new URLSearchParams({ next: after });

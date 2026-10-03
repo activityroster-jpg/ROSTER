@@ -30,9 +30,15 @@ async function trialFor(db: Awaited<ReturnType<typeof getRepositories>>["db"], o
 }
 
 /** Apply the trial state to a context: read-only after the trial, locked after the grace period. */
-function withTrial(ctx: TenantContext, trial: TrialState): TenantContext {
+/** A failed payment gets this long to be fixed before the centre turns read-only. Never deletion. */
+export const PAYMENT_GRACE_DAYS = 14;
+
+function withTrial(ctx: TenantContext, trial: TrialState, org?: Pick<Organisation, "subscriptionStatus" | "pastDueSince">): TenantContext {
   if (trial.kind === "read_only") return { ...ctx, readOnly: "trial" };
   if (trial.kind === "locked") return { ...ctx, readOnly: "trial", locked: true };
+  if (org && (org.subscriptionStatus === "past_due" || org.subscriptionStatus === "unpaid") && org.pastDueSince && Date.now() - org.pastDueSince.getTime() > PAYMENT_GRACE_DAYS * 86_400_000) {
+    return { ...ctx, readOnly: "overdue" };
+  }
   return ctx;
 }
 
@@ -126,6 +132,6 @@ export async function resolveTenant(headers: Headers): Promise<TenantResolution>
     slug: organisation.slug,
     userId: authSession.user.id,
     role: membership.role,
-  }, trial);
+  }, trial, organisation);
   return { ok: true, ctx, organisation, sessionId: authSession.session?.id, trial };
 }

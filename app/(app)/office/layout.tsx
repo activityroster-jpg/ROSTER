@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { apexDomain } from "@/lib/config";
 import { requireTenant } from "@/lib/tenant/require";
 import { getRepositories } from "@/lib/cf/bindings";
 import { OfficeSidebar } from "@/components/office/OfficeSidebar";
@@ -10,6 +11,7 @@ import { instructor as instructorTable } from "@/lib/db/schema";
 export default async function OfficeLayout({ children }: { children: React.ReactNode }) {
   const { ctx, organisation, trial } = await requireTenant({ role: "admin", allowReadOnly: true });
   let clockOn = false;
+  let privacyUrl: string | null = null;
 
   // Nudge the admin to turn on 2FA once they've added staff (dismissible).
   let show2fa = false;
@@ -23,13 +25,15 @@ export default async function OfficeLayout({ children }: { children: React.React
       show2fa = (await tenant.instructor.count(ctx)) >= 1;
     }
     hasInstructorRecord = (await tenant.instructor.count(ctx, eq(instructorTable.userId, ctx.userId))) > 0;
-    clockOn = Boolean((await tenant.orgSettings.list(ctx))[0]?.timeclockEnabled);
+    const settings = (await tenant.orgSettings.list(ctx))[0];
+    clockOn = Boolean(settings?.timeclockEnabled);
+    privacyUrl = settings?.privacyNoticeUrl ?? null;
   } catch { show2fa = false; }
 
   // Billing nudge: failed payment, or where the free trial is.
   const sub = organisation.subscriptionStatus;
-  let banner: { kind: "trial" | "pastdue" | "readonly" | "locked"; daysLeft: number } | null = null;
-  if (sub === "past_due" || sub === "unpaid") banner = { kind: "pastdue", daysLeft: 0 };
+  let banner: { kind: "trial" | "pastdue" | "overdue" | "readonly" | "locked"; daysLeft: number } | null = null;
+  if (sub === "past_due" || sub === "unpaid") banner = ctx.readOnly === "overdue" ? { kind: "overdue", daysLeft: 0 } : { kind: "pastdue", daysLeft: organisation.pastDueSince ? Math.max(0, 14 - Math.floor((Date.now() - organisation.pastDueSince.getTime()) / 86_400_000)) : 14 };
   else if (trial.kind === "trial") banner = { kind: "trial", daysLeft: trial.daysLeft };
   else if (trial.kind === "read_only") banner = { kind: "readonly", daysLeft: trial.daysUntilLock };
   else if (trial.kind === "locked") banner = { kind: "locked", daysLeft: 0 };
@@ -42,7 +46,11 @@ export default async function OfficeLayout({ children }: { children: React.React
         {show2fa && !ctx.ghost ? <TwoFactorNudge /> : null}
         {banner?.kind === "pastdue" ? (
           <Link href="/office/billing" className="block bg-port/15 px-6 py-2 text-center text-sm font-medium text-port hover:bg-port/20">
-            Your last payment failed — update your card to keep your centre active →
+            Your last payment failed — update your card within {banner.daysLeft} day{banner.daysLeft === 1 ? "" : "s"} to keep editing. Nothing is ever deleted. →
+          </Link>
+        ) : banner?.kind === "overdue" ? (
+          <Link href="/office/billing" className="block bg-port/15 px-6 py-2 text-center text-sm font-medium text-port hover:bg-port/20">
+            Your centre is read-only until the failed payment is fixed. Everything is still here and nothing will be deleted — update your card to carry on →
           </Link>
         ) : banner?.kind === "locked" ? (
           <Link href="/office/billing" className="block bg-port/15 px-6 py-2 text-center text-sm font-medium text-port hover:bg-port/20">
@@ -60,6 +68,11 @@ export default async function OfficeLayout({ children }: { children: React.React
           </Link>
         ) : null}
         <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">{children}</div>
+        <footer className="mx-auto max-w-6xl px-4 pb-6 text-xs text-slate-400 sm:px-6">
+          Privacy: {privacyUrl ? <><a href={privacyUrl} target="_blank" rel="noreferrer" className="hover:text-navy">{organisation.name}&rsquo;s notice</a> · </> : null}
+          <a href={`https://${apexDomain()}/privacy`} target="_blank" rel="noreferrer" className="hover:text-navy">ActivityRoster&rsquo;s notice</a>
+          {" · "}<a href={`https://${apexDomain()}/privacy-request`} target="_blank" rel="noreferrer" className="hover:text-navy">Data request or complaint</a>
+        </footer>
       </div>
     </div>
   );

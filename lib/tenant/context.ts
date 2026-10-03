@@ -29,7 +29,7 @@ export interface TenantContext {
    * visible, nothing can be changed (the repository layer refuses writes), and
    * billing stays reachable. See lib/billing/trial.
    */
-  readonly readOnly?: "trial";
+  readonly readOnly?: "trial" | "overdue";
   /** Trial grace period over: admins are sent to Billing, instructors to /trial-ended. */
   readonly locked?: true;
 }

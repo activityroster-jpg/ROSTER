@@ -1,3 +1,4 @@
+import { TERMS_VERSION } from "@/lib/legal";
 import type { Repositories } from "@/lib/db/repositories";
 import type { CloudflareEnv } from "@/lib/cf/bindings";
 import { JURISDICTIONS, PLANS, SETUP_MODES, type Jurisdiction, type Plan, type SetupMode, type SubscriptionStatus } from "@/lib/db/schema";
@@ -55,6 +56,8 @@ export async function provisionCentre(
       stripeCustomerId: params.stripeCustomerId ?? existing.stripeCustomerId,
       stripeSubscriptionId: params.stripeSubscriptionId ?? existing.stripeSubscriptionId,
       subscriptionStatus: "active",
+      termsVersion: TERMS_VERSION,
+      termsAcceptedAt: new Date(),
       status: "active",
     });
     return { organisationId: existing.id, created: false };

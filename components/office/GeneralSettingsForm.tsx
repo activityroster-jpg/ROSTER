@@ -14,6 +14,7 @@ export function GeneralSettingsForm({
   enforceRatioChecks,
   enforceConflictChecks,
   enforceAvailabilityChecks,
+  privacyNoticeUrl = "",
 }: {
   schedulingMode: string;
   alertLeadDays: number;
@@ -23,6 +24,7 @@ export function GeneralSettingsForm({
   enforceRatioChecks: boolean;
   enforceConflictChecks: boolean;
   enforceAvailabilityChecks: boolean;
+  privacyNoticeUrl?: string;
 }) {
   const [state, action, pending] = useActionState(updateSettingsAction, initial);
 
@@ -42,6 +44,11 @@ export function GeneralSettingsForm({
           <option value="EUR">EUR (€)</option>
           <option value="USD">USD ($)</option>
         </select>
+      </div>
+      <div className="sm:col-span-4">
+        <label className="mb-1 block text-xs font-medium text-slate-500">Your centre&rsquo;s privacy notice (web address, optional)</label>
+        <input name="privacyNoticeUrl" type="url" defaultValue={privacyNoticeUrl} placeholder="https://yourclub.org.uk/privacy" className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal" />
+        <p className="mt-1 text-xs text-slate-400">Shown to your team beside ActivityRoster&rsquo;s own notice. You are the data controller for your staff&rsquo;s details; we process them for you. Need wording? See the template in the Learning Centre.</p>
       </div>
       <fieldset className="sm:col-span-4 rounded-lg border border-slate-200 p-3">
         <legend className="px-1 text-xs font-semibold text-slate-500">Checks when rostering</legend>

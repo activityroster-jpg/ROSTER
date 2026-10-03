@@ -53,16 +53,18 @@ export async function updateSettingsAction(_prev: ActionState, formData: FormDat
     enforceRatioChecks: formData.get("enforceRatioChecks") === "on",
     enforceConflictChecks: formData.get("enforceConflictChecks") === "on",
     enforceAvailabilityChecks: formData.get("enforceAvailabilityChecks") === "on",
+    privacyNoticeUrl: String(formData.get("privacyNoticeUrl") ?? "").trim(),
   });
-  if (!parsed.success) return { ok: false, error: "Please check the settings values" };
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Please check the settings values" };
 
+  const values = { ...parsed.data, privacyNoticeUrl: parsed.data.privacyNoticeUrl || null };
   const existing = (await repos.tenant.orgSettings.list(ctx))[0];
   if (existing) {
-    await repos.tenant.orgSettings.update(ctx, existing.id, parsed.data);
+    await repos.tenant.orgSettings.update(ctx, existing.id, values);
   } else {
-    await repos.tenant.orgSettings.insert(ctx, parsed.data);
+    await repos.tenant.orgSettings.insert(ctx, values);
   }
-  await writeAudit(repos, ctx, { action: "update", entity: "org_settings", after: parsed.data });
+  await writeAudit(repos, ctx, { action: "update", entity: "org_settings", after: values });
   revalidatePath("/office/settings");
   return { ok: true, message: "Settings saved" };
 }

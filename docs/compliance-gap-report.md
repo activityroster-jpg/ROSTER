@@ -58,8 +58,8 @@ counts only, no content.
 | D1 in western Europe, EU jurisdiction where offered | P0 | Partial | `wrangler.toml` creates D1 with `--location=weur`. That is a location hint; D1 has no jurisdiction flag. Dashboard: confirm region shows Western Europe. |
 | R2 buckets with EU jurisdiction | P0 | Partial | `wrangler.toml` comment uses `--location=weur`; the EU **jurisdiction** flag (`--jurisdiction eu`) is a different setting and cannot be added to an existing bucket. Dashboard: check the bucket's jurisdiction; if not EU, create a new EU bucket and migrate (plan P1-C). |
 | Resend EU sending region, DPA, transfer mechanism | P0 | Dashboard | Code calls `api.resend.com` (`lib/mail/index.ts`); region is set per domain in Resend. Conor confirms the domain region and accepts Resend's DPA. |
-| Sub-processor register `docs/subprocessors.md` | P0 | Missing | Known processors from code: Cloudflare (Workers, D1, R2, KV), Resend, Stripe, Sentry (`lib/observability/sentry.ts`), Anthropic (`lib/outreach/research.ts`, prospect data only), GitHub (code and deploys), Have I Been Pwned (password hash prefixes only), Cloudflare DNS-over-HTTPS (domain checks). |
-| GitHub holds code only | P0 | Partial | No personal data in app code or tests. **Exception:** `d1-letter-not-sent.sql` in the repo root lists 100 prospect business names (B2B, low sensitivity). Remove once run. |
+| Sub-processor register `docs/subprocessors.md` | P0 | Done | Known processors from code: Cloudflare (Workers, D1, R2, KV), Resend, Stripe, Sentry (`lib/observability/sentry.ts`), Anthropic (`lib/outreach/research.ts`, prospect data only), GitHub (code and deploys), Have I Been Pwned (password hash prefixes only), Cloudflare DNS-over-HTTPS (domain checks). |
+| GitHub holds code only | P0 | Done | No personal data in app code, tests or docs. The console helper SQL files (one of which listed prospect business names) were removed on 3 October; migrations now run through the deploy workflow. |
 | Synthetic data in local and staging | P0 | Partial | Seeds and tests are synthetic (`lib/seed`, `tests/*` on SQLite). There is no staging environment yet. |
 | Payments via Stripe Checkout, IDs only, grace then read-only | P0 | Done | `lib/billing/checkout.ts`, `lib/billing/webhook.ts` (raw-body signature, idempotent by event id), `organisation.subscriptionStatus`; trial lock → read-only (`lib/billing/trial.ts`). Failed-payment grace relies on Stripe's retry schedule; confirm the `past_due` path keeps read-only rather than locking (plan P0-B). |
 | Customer notice before new sub-processor | P1 | Missing | Needs the register first, then a notice email template. |
@@ -69,7 +69,7 @@ counts only, no content.
 | Requirement | Pri | Status | Evidence / notes |
 | --- | --- | --- | --- |
 | Slow salted password hashing | P0 | Done | Better Auth default (scrypt) in `lib/auth/index.ts`. PIN uses PBKDF2 100k (`lib/auth/pin.ts`). |
-| Min 12 chars, no complexity rules, breached-password check | P0 | Partial | Minimum is **10** (`lib/validation/actions.ts:11`, `lib/validation/signup.ts:38`). HIBP range check on signup and portal password change (`lib/security/pwned.ts`); confirm it also runs on reset and office change. |
+| Min 12 chars, no complexity rules, breached-password check | P0 | Done | Minimum 12 everywhere (`lib/validation/*`, Better Auth `minPasswordLength`); HIBP check on signup, password change, Dev Center and reset (`app/(app)/reset-password/actions.ts`). |
 | Two-factor (TOTP + recovery codes) required for Owner/Admin | P0 | Conflict C1 | TOTP, email OTP and backup codes exist but are **optional** (`components/office/TwoFactorSetup.tsx`). Today's change makes an **emailed code mandatory** on every office sign-in (`app/verify-login`), which Conor asked for this morning. The spec wants authenticator-app 2FA mandatory. |
 | Brute-force: per-IP and per-account limits, Turnstile, generic errors | P0 | Partial | Per-IP and per-email throttle on `/api/auth` (`lib/security/auth-throttle.ts`, `app/api/auth/[...all]/route.ts`), PIN lockout, code attempt limits. **No Turnstile.** Sign-in reveals "confirm your email first" for unverified accounts (`app/(app)/sign-in/page.tsx`), a small existence leak. |
 | Password reset: single-use, ≤60 min, logs out other sessions | P0 | Done | Better Auth reset tokens (1 hour default), `revokeSessionsOnPasswordReset: true` (`lib/auth/index.ts:39`). |
@@ -100,20 +100,20 @@ counts only, no content.
 | Parameterised queries only | P0 | Done | Drizzle throughout; no string-built SQL in app code. |
 | Zod on every request, output encoding | P0 | Done | `lib/validation/*`, Zod pass completed this week; React escapes output; `escapeHtml` for emails. |
 | CSRF on every mutating request | P0 | Done | Next.js server-action origin checks; Better Auth CSRF; cookies SameSite=Lax. |
-| Security headers incl. frame-ancestors 'none' | P0 | Partial | CSP, nosniff, Referrer-Policy, Permissions-Policy set (`next.config.mjs`). `frame-ancestors` is `'self'` not `'none'`; marketing CSP still allows `'unsafe-inline'` scripts; the app's nonce policy is report-only (`lib/security/csp.ts`). |
+| Security headers incl. frame-ancestors 'none' | P0 | Partial | CSP, nosniff, Referrer-Policy, Permissions-Policy set; `frame-ancestors 'none'` since 3 October. Marketing CSP still allows `'unsafe-inline'` scripts; the app's nonce policy is report-only (`lib/security/csp.ts`). |
 | Rate limiting on all API routes, Turnstile on public forms | P0 | Partial | `lib/security/rate-limit.ts` used on auth, webhooks, signup, slug-check, report-error, outreach, unsubscribe. Not every office API route is limited. **No Turnstile** on signup, demo or contact forms. |
 | Uploads: allow-list, size, malware scan, private bucket, signed links | P0 | Partial | Allow-list and byte sniffing (`lib/security/file-type.ts`), size cap, private R2 with org-scoped keys (`lib/r2`), download only through an authenticated route (`app/api/documents/download/route.ts`), which is equivalent to signed links. **No malware scanning.** |
 | Warning on free-text fields | P1 | Missing | Notes fields on staff, courses, prospects carry no warning. |
-| Lockfile, Dependabot, secret scanning, push protection | P0 | Partial | `package-lock.json` committed; `npm audit` in CI. No `.github/dependabot.yml`; secret scanning and push protection are GitHub settings (dashboard). |
+| Lockfile, Dependabot, secret scanning, push protection | P0 | Partial | `package-lock.json` committed; `npm audit` in CI; `.github/dependabot.yml` added. Secret scanning and push protection are GitHub settings (dashboard). |
 | Cloudflare WAF managed rules | P1 | Dashboard | |
-| `/.well-known/security.txt` and disclosure page | P1 | Missing | |
+| `/.well-known/security.txt` and disclosure page | P1 | Done | `app/.well-known/security.txt/route.ts`, `/trust` page with safe-harbour wording. |
 | Annual penetration test | P2 | Missing | |
 
 ## Logging, monitoring and audit trail
 
 | Requirement | Pri | Status | Evidence / notes |
 | --- | --- | --- | --- |
-| Append-only audit log: who, what, when, record, IP/device; logins, failures, permission changes, sensitive views, exports, deletions, DB access | P0 | Partial | Two logs: `audit_log` (tenant changes to roster, resources, settings, billing) and `security_event` (logins, PIN, devices, 2FA, ghost, invites, with IP/country/agent via `lib/security/events.ts`). **Not logged:** views of sensitive records, data exports, admin database access. Append-only is by convention (no delete method), not enforced in the database. |
+| Append-only audit log: who, what, when, record, IP/device; logins, failures, permission changes, sensitive views, exports, deletions, DB access | P0 | Partial | Two logs: `audit_log` (tenant changes to roster, resources, settings, billing) and `security_event` (logins, PIN, devices, 2FA, ghost, invites, with IP/country/agent via `lib/security/events.ts`). **Not logged:** views of sensitive records, admin database access. Data exports are logged since 3 October. Append-only is by convention (no delete method), not enforced in the database. |
 | Schools can view and export their own audit log | P1 | Partial | `app/(app)/office/change-log` shows the centre's changes in plain English; no export; security events not shown. |
 | Clean application logs, 30–90 day retention | P0 | Partial | Sentry events scrubbed (`lib/observability/sentry.ts:31`). Worker console logs are not retained unless Logpush is on (dashboard). A few `console.info` lines include recipient email addresses (`lib/mail/index.ts:83`), to tidy. |
 | Alerts to Conor: email for all, text for critical | P1 | Partial | Error reports land in the Dev Center (`app/admin/errors`) with email on first occurrence. No downtime, backup, deploy-failure or mass-export alerts; no SMS. |
@@ -128,11 +128,11 @@ counts only, no content.
 | Per-school retention settings and scheduled deletion | P1 | Missing | `eraseOrganisation` exists for whole-centre deletion only. |
 | Consent records | P1 | Missing | |
 | Data minimisation review | P1 | Partial | Fields are already lean; `booking` table (customer name/email) is unused and should go. |
-| Privacy notices: in-app links, under-18 version, templates | P0 | Partial | `/privacy`, `/data-processing`, `/cookies`, `/terms` exist. No in-app link to the school's own notice, no plain-English under-18 version, no templates. |
-| Record terms/DPA version accepted and when | P0 | Partial | Signup requires `acceptedTerms` (`lib/validation/signup.ts:41`) but **no version or timestamp is stored** on `organisation`. |
+| Privacy notices: in-app links, under-18 version, templates | P0 | Partial | Centres set their own notice URL in Settings; office and portal link it beside ours. Templates in `docs/templates/` (staff notice, under-18 version). A public page for the under-18 notice is Phase 2. |
+| Record terms/DPA version accepted and when | P0 | Done | `organisation.termsVersion` and `termsAcceptedAt` set at provisioning from `lib/legal.ts` (migration 0041). Re-acceptance on a new version is Phase 2. |
 | Leaving: 90-day export, deletion, written confirmation | P0 | Partial | Export always available; suspended centres keep export (`CLAUDE.md`); `eraseOrganisation` exists. The 90-day timer and confirmation email are not automated. |
 | Strictly necessary cookies; cookieless analytics | P0 | Done | No analytics or tracking scripts loaded; `CookieNotice` is informational. |
-| Named privacy contact, complaints form, 30-day acknowledgement | P0 | Partial | `privacy@activityroster.com` on the privacy, cookies, data-processing and contact pages. No complaints form or tracked acknowledgement. |
+| Named privacy contact, complaints form, 30-day acknowledgement | P0 | Done | `/privacy-request` form → `privacy_request` table with a 30-day due date, automatic receipt, owner email, Dev Center → Privacy queue. |
 
 ## Under-18 users and safeguarding
 
@@ -226,7 +226,7 @@ counts only, no content.
 | Rule-based auto-rostering transparent and overridable | P2 | Partial | Fit-to-roster suggestions are rule-based and always manual to apply. |
 | Ratio checks per activity | P2 | Done | `lib/domain/ratio.ts`, configurable per course type. |
 | CSV import for staff and students | P2 | Done (staff) | `app/(app)/office/staff/import`, `app/(app)/office/import` (courses). Students are not held. |
-| Customer-facing security overview page | P1 | Missing | `/data-processing` covers part of it. |
+| Customer-facing security overview page | P1 | Done | `/trust` from `docs/security-overview.md`. |
 
 ## Conflicts, with Conor's decisions (3 October 2026)
 

@@ -20,6 +20,8 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
             <Link href="/privacy" className="hover:text-navy">Privacy</Link>
             <Link href="/terms" className="hover:text-navy">Terms</Link>
             <Link href="/data-processing" className="hover:text-navy">Data processing</Link>
+            <Link href="/trust" className="hover:text-navy">Security</Link>
+            <Link href="/privacy-request" className="hover:text-navy">Data requests</Link>
             <Link href="/cookies" className="hover:text-navy">Cookies</Link>
           </nav>
           <div className="mb-3 flex items-center gap-3">
