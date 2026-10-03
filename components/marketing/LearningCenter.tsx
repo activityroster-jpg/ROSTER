@@ -37,6 +37,8 @@ const SECTIONS: Section[] = [
         "Finish — you're ready to roster. Any optional features you switched on appear here with a “set up” link.",
       ] },
       { kind: "tip", text: "You can leave the wizard at any time with “Skip for now”. The dashboard keeps a checklist so you can finish setup later." },
+      { kind: "sub", text: "Coming back to sign in" },
+      { kind: "p", text: "Your centre lives at its own address, yourcentre.activityroster.com. Bookmark it, or use the Sign in link on the homepage: pick Centre admin or Instructor portal, type your centre's address, and you're sent to the right sign-in page." },
     ],
   },
   {

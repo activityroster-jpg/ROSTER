@@ -15,9 +15,14 @@ export default function SignInPage() {
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [unverified, setUnverified] = useState(false);
+  // Where to land afterwards: the office by default, the portal when the apex
+  // sign-in chooser sent an instructor here. Anything else is ignored.
+  const [next, setNext] = useState("/office");
   // Remember how this person last signed in on this device.
   useEffect(() => {
     try { if (window.localStorage.getItem("ar.signin.mode") === "password") setMode("password"); } catch { /* blocked storage */ }
+    const n = new URLSearchParams(window.location.search).get("next");
+    if (n === "/portal") setNext("/portal");
   }, []);
   const pickMode = (m: Mode) => { setMode(m); try { window.localStorage.setItem("ar.signin.mode", m); } catch { /* ignore */ } };
 
@@ -27,7 +32,7 @@ export default function SignInPage() {
     if (!email) { setError("Enter your email first."); return; }
     setBusy(true);
     try {
-      const res = await signIn.magicLink({ email, callbackURL: "/office" });
+      const res = await signIn.magicLink({ email, callbackURL: next });
       if (res.error) setError(res.error.message ?? "Could not send link");
       else setSent(true);
     } finally { setBusy(false); }
@@ -38,25 +43,25 @@ export default function SignInPage() {
     setError(null);
     setBusy(true);
     try {
-      const res = await signIn.email({ email, password, callbackURL: "/office" });
+      const res = await signIn.email({ email, password, callbackURL: next });
       if (res.error) {
         const notVerified = res.error.status === 403 || /verif/i.test(res.error.message ?? "");
         setUnverified(notVerified);
         setError(notVerified ? "Please confirm your email first — we sent you a link when you signed up." : res.error.message ?? "Sign-in failed");
       } else if (res.data && "twoFactorRedirect" in res.data && res.data.twoFactorRedirect) {
         const hint = await twoFactorHintAction(email).catch(() => ({ method: null, hint: null }));
-        const q = new URLSearchParams({ next: "/office" });
+        const q = new URLSearchParams({ next });
         if (hint.method) q.set("m", hint.method);
         if (hint.hint) q.set("h", hint.hint);
         window.location.href = `/two-factor?${q.toString()}`;
-      } else window.location.href = "/office";
+      } else window.location.href = next;
     } finally { setBusy(false); }
   };
 
   const resendConfirmation = async () => {
     setError(null); setNote(null); setBusy(true);
     try {
-      const res = await authClient.sendVerificationEmail({ email, callbackURL: "/office" });
+      const res = await authClient.sendVerificationEmail({ email, callbackURL: next });
       if (res.error) setError(res.error.message ?? "Could not resend");
       else setNote("Confirmation email sent again — check your inbox and spam.");
     } finally { setBusy(false); }
@@ -91,7 +96,7 @@ export default function SignInPage() {
 
   return (
     <div className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-4">
-      <h1 className="mb-1 font-display text-2xl font-semibold text-navy">Sign in</h1>
+      <h1 className="mb-1 font-display text-2xl font-semibold text-navy">{next === "/portal" ? "Instructor sign in" : "Sign in"}</h1>
       <p className="mb-6 text-sm text-slate-500">First time here? Just enter your email and we&apos;ll send you a link to get in and set up your account.</p>
 
       <div className="rounded-card border border-slate-200 bg-white p-5">
