@@ -3,13 +3,15 @@
 import { headers } from "next/headers";
 import { getAuth } from "@/lib/auth";
 import { isPwnedPassword, PWNED_MESSAGE } from "@/lib/security/pwned";
+import { firstIssue, passwordSchema } from "@/lib/validation/actions";
 
 export type SetPwResult = { ok: boolean; error?: string };
 
 /** Set a password for the signed-in user (first-time setup after a magic-link
  *  sign-in). Fails gracefully if they already have one. */
 export async function setMyPasswordAction(password: string): Promise<SetPwResult> {
-  if (!password || password.length < 10) return { ok: false, error: "Use at least 10 characters." };
+  const pw = passwordSchema.safeParse(password);
+  if (!pw.success) return { ok: false, error: firstIssue(pw.error) };
   if (await isPwnedPassword(password)) return { ok: false, error: PWNED_MESSAGE };
   try {
     const auth = await getAuth();

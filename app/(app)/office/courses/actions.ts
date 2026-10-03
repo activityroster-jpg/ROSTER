@@ -12,6 +12,7 @@ import { getCourseEditorData, type CourseEditorData } from "@/lib/services/cours
 import { createCourseTypeResolver, TYPE_NEW, TYPE_ONEOFF } from "@/lib/services/course-type-resolve";
 import { syncHoursForCourse } from "@/lib/services/hours";
 import { assignBlockMessage, notifyRosterChange } from "@/lib/services/assignment";
+import { firstIssue, studentsSchema } from "@/lib/validation/actions";
 import { eq } from "drizzle-orm";
 import { courseSession as courseSessionTable, courseStaff as courseStaffTable } from "@/lib/db/schema";
 
@@ -178,8 +179,9 @@ export async function deleteCourseAction(courseId: string): Promise<ActionState>
 /** Set how many students are booked on a course (drives the ratio check). */
 export async function setCourseStudentsAction(courseId: string, students: number): Promise<ActionState> {
   const { ctx, repos } = await requireTenant({ role: "admin" });
-  if (!Number.isFinite(students) || students < 1) return { ok: false, error: "Enter how many students (at least 1)" };
-  const n = Math.min(500, Math.round(students));
+  const parsed = studentsSchema.safeParse(students);
+  if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
+  const n = parsed.data;
   const updated = await repos.tenant.course.update(ctx, courseId, { capacity: n });
   if (!updated) return { ok: false, error: "Course not found" };
   await writeAudit(repos, ctx, { action: "set_students", entity: "course", entityId: courseId, after: { capacity: n } });

@@ -3,13 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { requireTenant } from "@/lib/tenant/require";
 import { publishWeek } from "@/lib/services/roster";
+import { isoDateSchema } from "@/lib/validation/actions";
 
 type Result = { ok: boolean; error?: string; message?: string };
 
 /** Publish (or re-publish) one week's roster and tell everyone on it. */
 export async function publishWeekAction(weekStart: string): Promise<Result> {
   const { ctx, repos } = await requireTenant({ role: "admin" });
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(weekStart)) return { ok: false, error: "Invalid week" };
+  if (!isoDateSchema.safeParse(weekStart).success) return { ok: false, error: "Invalid week" };
   const r = await publishWeek(repos, ctx, weekStart);
   revalidatePath("/office/rota");
   revalidatePath("/office/courses");

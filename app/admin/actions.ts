@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { idSchema, isoDateSchema, trialDaysSchema } from "@/lib/validation/actions";
 import { requirePlatformAdmin } from "@/lib/platform/admin";
 import { resolvePrices, PRICE_KINDS } from "@/lib/billing/prices";
 import { getDb, getEnv, getRepositories } from "@/lib/cf/bindings";
@@ -194,9 +195,10 @@ export async function startGhostAction(orgId: string): Promise<Result> {
 /** Set when a centre's free trial ends (null = back to the default length from sign-up). */
 export async function setTrialEndsAtAction(id: string, isoDate: string | null): Promise<Result> {
   await requirePlatformAdmin();
+  if (!idSchema.safeParse(id).success) return { ok: false, error: "Not found" };
   let when: Date | null = null;
   if (isoDate) {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) return { ok: false, error: "Pick a date" };
+    if (!isoDateSchema.safeParse(isoDate).success) return { ok: false, error: "Pick a date" };
     when = new Date(`${isoDate}T23:59:59.999Z`);
   }
   const { control } = await getRepositories();
@@ -210,8 +212,9 @@ export async function setTrialEndsAtAction(id: string, isoDate: string | null): 
 /** Extend a centre's trial by N days from today (or from its current end if that is later). */
 export async function extendTrialAction(id: string, days: number): Promise<Result> {
   await requirePlatformAdmin();
-  const n = Math.round(Number(days));
-  if (!Number.isFinite(n) || n < 1 || n > 365) return { ok: false, error: "Enter 1–365 days" };
+  const parsedDays = trialDaysSchema.safeParse(days);
+  if (!parsedDays.success || !idSchema.safeParse(id).success) return { ok: false, error: "Enter 1–365 days" };
+  const n = parsedDays.data;
   const { control } = await getRepositories();
   const org = await control.organisationById(id);
   if (!org) return { ok: false, error: "Not found" };

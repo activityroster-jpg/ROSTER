@@ -8,6 +8,7 @@ import { authSecret } from "@/lib/security/secrets";
 import { TOTP_COOKIE, TOTP_MAX_AGE_S, totpCookieValue } from "@/lib/auth/pin";
 import { recordSecurityEvent } from "@/lib/security/events";
 import { isPwnedPassword, PWNED_MESSAGE } from "@/lib/security/pwned";
+import { firstIssue, passwordSchema } from "@/lib/validation/actions";
 
 type Result = { ok: boolean; error?: string };
 
@@ -51,7 +52,8 @@ export async function verifyAdminTotpAction(code: string): Promise<Result> {
 export async function setAdminPasswordAction(password: string): Promise<Result> {
   const s = await adminSession();
   if (!s) return { ok: false, error: "Please sign in again." };
-  if (typeof password !== "string" || password.length < 10) return { ok: false, error: "Use at least 10 characters." };
+  const pw = passwordSchema.safeParse(password);
+  if (!pw.success) return { ok: false, error: firstIssue(pw.error) };
   if (await isPwnedPassword(password)) return { ok: false, error: PWNED_MESSAGE };
   try {
     const accounts = await s.auth.api.listUserAccounts({ headers: s.h });
