@@ -168,8 +168,6 @@ export default function MarketingHome() {
             <p className="mt-3 text-sm text-white/60">
               Free for a month · no card ·{" "}
               <Link href="/pricing" className="font-semibold text-white/90 underline decoration-white/30 underline-offset-2 hover:decoration-white">Pricing</Link>
-              {" "}· Already a customer?{" "}
-              <Link href="/login" className="font-semibold text-white/90 underline decoration-white/30 underline-offset-2 hover:decoration-white">Sign in</Link>
             </p>
           </div>
           <div className="flex justify-center md:justify-end">

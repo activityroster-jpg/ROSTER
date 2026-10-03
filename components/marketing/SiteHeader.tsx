@@ -7,7 +7,6 @@ import { Logo } from "@/components/Logo";
 
 /** Primary nav shown on desktop — kept short so the header stays uncluttered. */
 const PRIMARY = [
-  { href: "/#features", label: "Features" },
   { href: "/pricing", label: "Pricing" },
   { href: "/learn", label: "Learn" },
   { href: "/demo", label: "Demo" },
@@ -16,7 +15,6 @@ const PRIMARY = [
 
 /** The full set, shown in the mobile menu (secondary pages too; no Demo — it's a desktop experience). */
 const ALL = [
-  { href: "/#features", label: "Features" },
   { href: "/pricing", label: "Pricing" },
   { href: "/compare", label: "Compare" },
   { href: "/learn", label: "Learning Centre" },
@@ -44,10 +42,16 @@ export function SiteHeader() {
           <a href="/#get-demo" className="rounded-lg bg-navy px-4 py-2 text-white transition hover:bg-navy-700">
             Try free for a month
           </a>
+          <Link href="/login" className="rounded-lg border border-slate-300 px-3.5 py-2 text-navy transition hover:bg-slate-50">
+            Sign in
+          </Link>
         </nav>
 
         {/* Mobile controls */}
         <div className="flex items-center gap-2 md:hidden">
+          <Link href="/login" className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-navy">
+            Sign in
+          </Link>
           <a href="/#get-demo" className="rounded-lg bg-navy px-3 py-2 text-sm font-medium text-white">
             Try free
           </a>
@@ -67,7 +71,7 @@ export function SiteHeader() {
       {open ? (
         <nav className="border-t border-slate-200 bg-white md:hidden">
           <div className="mx-auto max-w-6xl px-4 py-2">
-            {ALL.map((l) => (
+            {[...ALL, { href: "/login", label: "Sign in" }].map((l) => (
               <Link
                 key={l.href}
                 href={l.href}
