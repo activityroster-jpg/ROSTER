@@ -120,6 +120,7 @@ export async function runDueSends(db: Database, env: CloudflareEnv, opts: { limi
           replyTo: c.replyTo ?? undefined,
           headers: { "List-Unsubscribe": `<${unsub}>, <mailto:${c.replyTo ?? c.fromEmail}?subject=unsubscribe>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
           tags: [{ name: "campaign", value: c.id }, { name: "lead", value: lead.id }],
+          stream: "news",
         });
         await p.insertOutreachMessage({ leadId: lead.id, campaignId: c.id, step: lead.stepIndex, toEmail: lead.email, subject: composed.subject, bodyText: composed.text, resendId: res.id, status: "sent", sentAt: now });
         const nextIndex = lead.stepIndex + 1;

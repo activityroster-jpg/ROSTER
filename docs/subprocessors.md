@@ -17,6 +17,9 @@ one is added. Keep in step with `docs/compliance-spec.md`.
 | Better Stack, Inc. | External uptime monitoring and the public status page | None: it only fetches `/api/health` and the home page and holds Conor's contact details for alerts | EU/US | Better Stack DPA (self-serve) | SCCs |
 | Backblaze, Inc. (B2 Cloud Storage) | Off-Cloudflare copy of encrypted nightly backups, object lock on (live since 3 October) | Encrypted database exports and document archives only; the key never leaves GitHub secrets and the password manager | EU (eu-central) | Backblaze DPA (self-serve) | SCCs |
 
-To be added when Phase 1 lands: the backup email provider (P0-G).
+| ActiveCampaign, LLC (Postmark) | **Backup** transactional and outreach email, used only when Resend fails | Recipient email addresses, email content (the same as Resend) | US (EU DPA and SCCs; Postmark processes in the US) | Postmark DPA (postmarkapp.com/dpa, self-serve) | SCCs / UK addendum |
 
-Last reviewed: 3 October 2026.
+Postmark is listed ahead of use (P0-G): it becomes live the day `POSTMARK_SERVER_TOKEN`
+is set. Conor tells customers before that day.
+
+Last reviewed: 3 October 2026 (Postmark added, pending activation).

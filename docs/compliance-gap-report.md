@@ -20,7 +20,7 @@ Nothing was changed as part of this audit. The phased plan is in
 | Privacy features | 1 | 6 | 3 | 0 |
 | Under-18 and safeguarding | 2 | 2 | 5 | 1 |
 | Working-time rules engine | 7 | 0 | 0 | 0 |
-| Email and marketing | 6 | 3 | 4 | 0 |
+| Email and marketing | 6 | 5 | 2 | 0 |
 | Backups and DR | 1 | 1 | 8 | 0 |
 | Change management | 1 | 2 | 5 | 2 |
 | Incident response | 0 | 0 | 6 | 1 |
@@ -171,11 +171,11 @@ Built 3 October 2026 (plan P0-F). Engine: `lib/domain/working-time.ts` (pure); p
 | Requirement | Pri | Status | Evidence / notes |
 | --- | --- | --- | --- |
 | SPF, DKIM, DMARC | P0 | Dashboard | Steps in `docs/email-setup.md`; records live in Cloudflare DNS. |
-| Separate system and marketing subdomains, separate keys | P0 | Missing | Everything sends from `activityroster.com` with one `RESEND_API_KEY`; outreach from-address is per campaign (`outreach_campaign.fromEmail`). |
+| Separate system and marketing subdomains, separate keys | P0 | Built, awaiting DNS | Two streams in `lib/mail/providers.ts`: system (`RESEND_API_KEY`, from `MAIL_FROM_SYSTEM`) and news (`RESEND_API_KEY_NEWS`; from-address must be on `OUTREACH_FROM_DOMAIN`). Live once Conor verifies `notify.` and `news.` in Resend and sets the four variables (`docs/email-setup.md`, Part 3). |
 | Minimal content in emails | P0 | Done | Notifications link into the app; no contact details are emailed. |
 | Queue with retries, failed-send list | P1 | Missing | Direct `fetch` to Resend; failures are logged, not queued. |
 | Bounce/complaint webhooks suppress addresses | P1 | Partial | Built for outreach (`app/api/webhooks/resend`), not for system email. |
-| Backup email provider with automatic failover | P0 | Missing | Single provider behind `sendEmail`/`sendRawEmail` (`lib/mail/index.ts`), which is the right seam to add one. |
+| Backup email provider with automatic failover | P0 | Built, awaiting account | Postmark behind the same seam; network errors, 429 and 5xx at the primary fail over automatically, a 4xx about the message does not. Failovers show on the Dev Center overview. Live once Conor opens the Postmark account and sets `POSTMARK_SERVER_TOKEN` (`docs/email-setup.md`, Part 4). |
 | Prospect data separate from school data | P0 | Done | `marketing_prospect` and `outreach_*` are control-plane tables; `lib/outreach` reads nothing tenant-owned. |
 | Business contacts only, never users or under-18s | P0 | Done | Audience is the prospect list only (`app/admin/outreach/actions.ts`). |
 | Identifies sender, postal address, one-click unsubscribe | P0 | Done | Footer and `List-Unsubscribe` headers (`lib/outreach/writer.ts`, `lib/outreach/engine.ts`). |

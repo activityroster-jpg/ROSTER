@@ -130,3 +130,52 @@ window.
 If you want the app's footer/support links to point at `hello@`, set the
 `SUPPORT_EMAIL` Worker env var to `hello@activityroster.com` (otherwise it already
 falls back sensibly).
+
+---
+
+## Part 3 — Two sending subdomains: `notify.` for the app, `news.` for outreach
+
+Why: if an outreach campaign ever annoys a spam filter, sign-in codes and rota
+notices must keep arriving. Separate domains have separate reputations.
+
+1. In **Resend → Domains → Add Domain**, add `notify.activityroster.com` (EU region).
+   Add the DNS records it shows in Cloudflare DNS (Proxy status **DNS only**), click
+   **Verify**.
+2. Repeat for `news.activityroster.com`.
+3. In **Resend → API Keys**, create two keys: one with **Sending access** limited to
+   `notify.activityroster.com`, one limited to `news.activityroster.com`.
+4. In Cloudflare → **Workers & Pages → roster → Settings**:
+   - **Secrets:** replace `RESEND_API_KEY` with the `notify.` key; add
+     `RESEND_API_KEY_NEWS` with the `news.` key.
+   - **Variables:** add `MAIL_FROM_SYSTEM` = `ActivityRoster <no-reply@notify.activityroster.com>`
+     and `OUTREACH_FROM_DOMAIN` = `news.activityroster.com`.
+   Do the same on `roster-staging` if you want staging to send real email.
+5. In the Dev Center → Outreach, change each campaign's from-address to
+   `…@news.activityroster.com`. A campaign with any other from-address is refused
+   from now on.
+6. Add DMARC for each subdomain if Cloudflare did not already: TXT `_dmarc.notify`
+   and `_dmarc.news`, content `v=DMARC1; p=none; rua=mailto:hello@activityroster.com`.
+   Move to `p=quarantine` after a month of clean reports.
+7. Redeploy from GitHub (push to staging first; "Deploy production" when happy).
+   Send yourself a sign-in code and check the From address.
+
+## Part 4 — Backup provider (Postmark) with automatic failover
+
+Why: if Resend has an outage, codes and notices still go out. Nothing changes
+day to day; Postmark is only used when Resend fails.
+
+1. Open an account at **postmarkapp.com** (free tier: 100 emails/month, enough for
+   a backup). Under **Account → Legal**, accept the **Data Processing Addendum**.
+2. **Sender Signatures → Domains → Add Domain:** add `notify.activityroster.com`,
+   then `news.activityroster.com`. Add the DKIM and Return-Path records it shows in
+   Cloudflare DNS (DNS only), click **Verify**.
+3. Create one **Server** (name it ActivityRoster). It comes with two message
+   streams, **Transactional** (`outbound`) and **Broadcasts** (`broadcast`): the app
+   uses the first for system mail and the second for outreach.
+4. **Servers → ActivityRoster → API Tokens:** copy the server token.
+5. Cloudflare → **Workers & Pages → roster → Settings → Secrets:** add
+   `POSTMARK_SERVER_TOKEN`. Redeploy from GitHub.
+6. The Dev Center overview's **Email** card now says "Backed up · resend → postmark"
+   and shows the date of the last failover, if any.
+
+Tell customers before step 5: Postmark is in `docs/subprocessors.md` as pending.

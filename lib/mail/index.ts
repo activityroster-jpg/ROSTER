@@ -1,10 +1,13 @@
 import { getEnv } from "@/lib/cf/bindings";
 import { COMPANY } from "@/lib/config";
+import { deliver, providersFor, type MailStream } from "./providers";
+import { recordMailFailover } from "@/lib/ops/mail-status";
 
 /**
- * Minimal transactional mailer. Uses Resend's HTTP API (fetch-only, no Node
- * SDK) so it runs on Workers. In non-production or without a key it logs instead
- * of sending, so local/dev flows still work.
+ * Minimal transactional mailer. Delivery goes through lib/mail/providers
+ * (Resend, with Postmark as automatic backup; fetch-only, no Node SDK) so it
+ * runs on Workers. In non-production or without a key it logs instead of
+ * sending, so local/dev flows still work.
  */
 export interface EmailMessage {
   to: string;
@@ -70,6 +73,8 @@ export interface RawEmail {
   replyTo?: string;
   headers?: Record<string, string>;
   tags?: { name: string; value: string }[];
+  /** "system" (default) or "news" for the outreach agent: separate keys, from-domain and reputation. */
+  stream?: MailStream;
 }
 
 /**
@@ -78,7 +83,18 @@ export interface RawEmail {
  * agent, whose messages carry their own footer and unsubscribe link.
  */
 /** Environments that really send. Staging also keeps a copy of every email in the Dev Center outbox. */
-const canSend = (env: ReturnType<typeof getEnv>) => Boolean(env.RESEND_API_KEY) && (env.APP_ENV === "production" || env.APP_ENV === "staging");
+const canSend = (env: ReturnType<typeof getEnv>) => providersFor(env).length > 0 && (env.APP_ENV === "production" || env.APP_ENV === "staging");
+
+/** Hand a message to the providers; note a failover on the Dev Center overview. */
+async function dispatch(env: ReturnType<typeof getEnv>, msg: Parameters<typeof deliver>[1], stream: MailStream): Promise<string | null> {
+  const r = await deliver(env, msg, stream);
+  if (r.failedOver) {
+    console.error(`[mail] failed over to ${r.provider}: ${r.firstError ?? "primary failed"}`);
+    const order = providersFor(env);
+    await recordMailFailover(order[0] ?? "resend", r.provider, r.firstError ?? "primary failed");
+  }
+  return r.id;
+}
 
 export interface OutboxEntry { at: string; to: string; from: string; subject: string; text: string }
 const OUTBOX_KEY = "outbox:v1";
@@ -110,24 +126,16 @@ export async function sendRawEmail(msg: RawEmail): Promise<{ id: string | null; 
     console.info(`[mail] (not sent: ${env.APP_ENV ?? "unset"}) ${msg.subject}`);
     return { id: null, sent: false };
   }
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      from: msg.from, to: msg.to, subject: msg.subject, html: msg.html, text: msg.text,
-      ...(msg.replyTo ? { reply_to: msg.replyTo } : {}),
-      ...(msg.headers ? { headers: msg.headers } : {}),
-      ...(msg.tags ? { tags: msg.tags } : {}),
-    }),
-  });
-  if (!res.ok) throw new Error(`Email send failed: ${res.status} ${(await res.text()).slice(0, 300)}`);
-  const data = (await res.json().catch(() => ({}))) as { id?: string };
-  return { id: data.id ?? null, sent: true };
+  const id = await dispatch(env, {
+    from: msg.from, to: msg.to, subject: msg.subject, html: msg.html, text: msg.text,
+    replyTo: msg.replyTo, headers: msg.headers, tags: msg.tags,
+  }, msg.stream ?? "system");
+  return { id, sent: true };
 }
 
 export async function sendEmail(msg: EmailMessage): Promise<void> {
   const env = getEnv();
-  const from = msg.from ?? "ActivityRoster <no-reply@activityroster.com>";
+  const from = msg.from ?? env.MAIL_FROM_SYSTEM ?? "ActivityRoster <no-reply@activityroster.com>";
   const html = renderEmail(msg.html);
   await captureOutbox(env, { at: new Date().toISOString(), to: msg.to, from, subject: msg.subject, text: htmlToText(msg.html) });
 
@@ -135,17 +143,5 @@ export async function sendEmail(msg: EmailMessage): Promise<void> {
     console.info(`[mail] (not sent: ${env.APP_ENV ?? "unset"}) ${msg.subject}`);
     return;
   }
-
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${env.RESEND_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ from, to: msg.to, subject: msg.subject, html }),
-  });
-
-  if (!res.ok) {
-    throw new Error(`Email send failed: ${res.status} ${await res.text()}`);
-  }
+  await dispatch(env, { from, to: msg.to, subject: msg.subject, html }, "system");
 }

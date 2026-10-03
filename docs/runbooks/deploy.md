@@ -46,4 +46,15 @@ the source of truth and this table is a convenience copy.
 | Date (UTC) | Commit | Bookmark | Contents |
 |---|---|---|---|
 | 2026-10-03 | 7c39fcd | (see run summary, tag `prod-20261003-1929`) | Password rule, strength meter, sign-out buttons, migrations 0040–0043 |
-| 2026-10-03 | 7838db1 | `000001ca-00000000-000050f9-ff60ef9ec57b5ded297c390416b7680b` | Status page link; Cloudflare Turnstile on public forms and sign-in |
+| 2026-10-03 | 7838db1 | `000001ca-00000000-000050f9-ff60ef9ec57b5ded297c390416b7680b` | **Failed and rolled back.** Smoke test got HTTP 403 from Cloudflare (Bot Fight Mode challenging the runner); production stayed on 7c39fcd. Re-run once Bot Fight Mode is off. |
+
+### Bot Fight Mode breaks the deploy checks
+
+The smoke tests fetch `/api/health`, the home page and the sign-in page with `curl`
+from a GitHub runner. Cloudflare's **Bot Fight Mode** treats that as an automated
+visitor and answers 403 with `cf-mitigated: challenge`, so every deploy fails its
+check and production rolls back. The same happens to external uptime monitors.
+Keep Bot Fight Mode **off** (Security → Bots). Bots are handled by Turnstile on the
+public forms and sign-in, the per-IP rate limits, and Cloudflare's always-on DDoS
+protection and managed rules. The workflow now says so in plain words when it sees
+the challenge header.

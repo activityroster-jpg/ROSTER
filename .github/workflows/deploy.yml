@@ -118,7 +118,17 @@ jobs:
             if curl -fsS https://activityroster.com/api/health | grep -q '"ok":true' && curl -fsS -o /dev/null https://activityroster.com/ && curl -fsS -o /dev/null https://activityroster.com/login; then ok=1; break; fi
             sleep 10
           done
-          if [ "$ok" != "1" ]; then echo "::error::Production smoke test failed."; exit 1; fi
+          if [ "$ok" != "1" ]; then
+            hdr="$(curl -sS -o /dev/null -D - https://activityroster.com/api/health || true)"
+            code="$(printf '%s' "$hdr" | head -1 | awk '{print $2}')"
+            echo "Health check answered HTTP ${code:-none}"
+            if printf '%s' "$hdr" | grep -qi '^cf-mitigated: challenge'; then
+              echo "::error::Cloudflare challenged the smoke test (HTTP 403, cf-mitigated: challenge). This is Bot Fight Mode blocking GitHub's test request, not the app. Turn it off: Cloudflare dashboard → activityroster.com → Security → Bots → Bot Fight Mode → Off (Turnstile and rate limits still protect the forms). Then press Deploy production again. The deploy has been rolled back so production is unchanged."
+            else
+              echo "::error::Production smoke test failed (HTTP ${code:-none} from /api/health, or the home or sign-in page did not load)."
+            fi
+            exit 1
+          fi
           echo "production healthy"
 
       - name: Roll back if the smoke test failed

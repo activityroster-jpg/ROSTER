@@ -100,13 +100,18 @@ Effort is a rough guide: S = under half a day, M = one to two days, L = a week o
   is empty. Until then every warning carries "figure not yet verified".
 - Later (Phase 2): adult working-time checks; term dates imported from a public feed.
 
-### P0-G Email resilience (M)
+### P0-G Email resilience (M) — code built 3 October; live when Conor adds the DNS records and the Postmark account
 
-- Two Resend domains: `notify.activityroster.com` (system) and `news.activityroster.com`
-  (outreach), separate API keys; outreach from-address restricted to `news.`.
-- Backup provider behind the existing `sendEmail` seam with automatic failover.
-  Recommended: Postmark (EU data processing addendum available) or Amazon SES (eu-west-1).
-- **Conor:** add the DNS records the two providers list; start DMARC at `p=none`.
+- Done in code: two mail streams (system and news) with separate Resend keys and an
+  enforced outreach from-domain; Postmark as backup provider with automatic failover on
+  outages (never on a rejected message); failover counter on the Dev Center overview;
+  Postmark added to the sub-processor register.
+- **Conor** (plain steps in `docs/email-setup.md`, Parts 3 and 4): verify
+  `notify.activityroster.com` and `news.activityroster.com` in Resend, create a key per
+  domain, open a Postmark account (EU DPA) and verify the same two domains there, then set
+  the Worker variables listed in `docs/environment.md`. Start DMARC at `p=none`.
+- Until the variables exist nothing changes: everything still sends from
+  `no-reply@activityroster.com` through the single Resend key.
 
 ### P0-H Offline fallbacks and monitoring — done 3 October (status page: https://activity-roster.betteruptime.com)
 

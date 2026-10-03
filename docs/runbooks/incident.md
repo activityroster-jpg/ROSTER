@@ -56,7 +56,9 @@ help with the wording. Contact: privacy@activityroster.com."
 
 - Status page: https://activity-roster.betteruptime.com · Better Stack alerts go to Conor by SMS and email
 - Cloudflare support: dashboard → Support (Paid plan: email/chat)
-- Resend: support@resend.com
+- Resend: support@resend.com · Postmark: support@postmarkapp.com
+- Deploy smoke test fails with 403 / `cf-mitigated: challenge`: Bot Fight Mode is on. Security → Bots → off, redeploy. See `docs/runbooks/deploy.md`.
+- Email provider down: failover is automatic once `POSTMARK_SERVER_TOKEN` is set. To make Postmark primary for a while, set the Worker variable `MAIL_PRIMARY=postmark` (Workers & Pages → roster → Settings → Variables) and redeploy from GitHub; set it back afterwards. The Dev Center overview shows the last failover.
 - Stripe: dashboard → Help
 - Data protection solicitor: [name, phone]
 - ICO breach line: 0303 123 1113 · Irish DPC: dataprotection.ie

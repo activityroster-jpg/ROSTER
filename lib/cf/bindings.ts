@@ -37,6 +37,16 @@ export interface CloudflareEnv {
   STRIPE_PRICE_FULL?: string;
   SENTRY_DSN?: string;
   RESEND_API_KEY?: string;
+  /** Separate Resend key for the outreach ("news") stream, so campaigns never share the system domain's reputation. */
+  RESEND_API_KEY_NEWS?: string;
+  /** Backup email provider (Postmark server token). When set, an outage at the primary fails over automatically. */
+  POSTMARK_SERVER_TOKEN?: string;
+  /** "resend" (default) or "postmark": which provider is tried first. */
+  MAIL_PRIMARY?: string;
+  /** System from-address, e.g. "ActivityRoster <no-reply@notify.activityroster.com>". Default stays on the apex until the subdomain is verified. */
+  MAIL_FROM_SYSTEM?: string;
+  /** Once set, outreach mail must come from this domain (e.g. news.activityroster.com). */
+  OUTREACH_FROM_DOMAIN?: string;
   /** Signing secret of the Resend webhook endpoint (whsec_…), for delivery/open/bounce events. */
   RESEND_WEBHOOK_SECRET?: string;
   /** Claude API key for the outreach agent's research and email writing (optional; templates only without it). */

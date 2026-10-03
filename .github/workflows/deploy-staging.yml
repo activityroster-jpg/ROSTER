@@ -69,5 +69,10 @@ jobs:
             echo "home page check: $home"
             sleep 10
           done
-          echo "::error::Staging health check failed after deploy."
+          hdr="$(curl -sS -o /dev/null -D - https://staging.activityroster.com/api/health || true)"
+          if printf '%s' "$hdr" | grep -qi '^cf-mitigated: challenge'; then
+            echo "::error::Cloudflare challenged the smoke test (HTTP 403, cf-mitigated: challenge). This is Bot Fight Mode blocking GitHub's test request, not the app: staging is deployed but unverified. Turn it off: Cloudflare dashboard → activityroster.com → Security → Bots → Bot Fight Mode → Off."
+          else
+            echo "::error::Staging health check failed after deploy (HTTP $(printf '%s' "$hdr" | head -1 | awk '{print $2}') from /api/health)."
+          fi
           exit 1

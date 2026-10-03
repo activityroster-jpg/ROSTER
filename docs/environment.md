@@ -26,6 +26,11 @@ Three environments. Names only here, never values.
 | `STRIPE_PRICE_*` | Price ids per plan | Stripe → Products | Change when prices change |
 | `RESEND_API_KEY` | Sends email | Resend → API Keys | Create new, set, delete old |
 | `RESEND_WEBHOOK_SECRET` | Verifies Resend delivery/bounce webhooks | Resend → Webhooks → signing secret | Recreate the webhook |
+| `RESEND_API_KEY_NEWS` (optional) | Sends outreach email from the `news.` domain with its own key | Resend → API Keys (restrict to the `news.activityroster.com` domain) | Create new, set, delete old |
+| `POSTMARK_SERVER_TOKEN` (optional) | Backup email provider; automatic failover | Postmark → Servers → API Tokens | Create new, set, delete old |
+| `MAIL_PRIMARY` (optional, variable) | `resend` (default) or `postmark`: which provider is tried first | n/a | n/a |
+| `MAIL_FROM_SYSTEM` (optional, variable) | System from-address once `notify.` is verified, e.g. `ActivityRoster <no-reply@notify.activityroster.com>` | n/a | n/a |
+| `OUTREACH_FROM_DOMAIN` (optional, variable) | Once set (`news.activityroster.com`), outreach refuses any other from-domain | n/a | n/a |
 | `ANTHROPIC_API_KEY` | Outreach agent research and drafting (prospect data only) | console.anthropic.com → API Keys | Create new, set, revoke old |
 | `TURNSTILE_SECRET_KEY` | Verifies Turnstile human checks on public forms and challenged sign-ins; the site key is public and lives in code | Cloudflare → Turnstile → widget → Secret key | Rotate the key in Turnstile, set the new value |
 | `OUTREACH_CRON_SECRET` | Shared secret for the hourly tick | Generated; same value in the GitHub secret of the same name | Change both places |

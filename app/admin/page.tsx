@@ -14,6 +14,7 @@ import { TIERS } from "@/lib/tiers";
 import { ON_SITE_DAY_PRICE } from "@/lib/pricing";
 import { Card, StatusPill } from "@/components/ui";
 import { fmtBytes, readLastBackup } from "@/lib/ops/backup-status";
+import { mailProviderOrder, readMailFailover } from "@/lib/ops/mail-status";
 import { trialState } from "@/lib/billing/trial";
 
 export const dynamic = "force-dynamic";
@@ -102,7 +103,8 @@ export default async function AdminOverviewPage({ searchParams }: { searchParams
     .filter((o) => o.subscriptionStatus === "active")
     .reduce((sum, o) => sum + effectivePricing(o, pricing).monthly, 0);
 
-  const lastBackup = await readLastBackup();
+  const [lastBackup, mailFailover] = await Promise.all([readLastBackup(), readMailFailover()]);
+  const mailOrder = mailProviderOrder();
   return (
     <div>
       <h1 className="mb-1 font-display text-2xl font-bold text-navy">Overview</h1>
@@ -127,6 +129,20 @@ export default async function AdminOverviewPage({ searchParams }: { searchParams
           )}
         </Card>
         <Card><p className="text-xs font-semibold text-navy">Suspended</p><p className="mt-1 text-2xl font-semibold text-port">{suspended}</p></Card>
+        <Card>
+          <p className="text-xs font-semibold text-navy">Email</p>
+          {mailOrder.length === 0 ? (
+            <><p className="mt-1 text-2xl font-semibold text-port">Off</p><p className="text-xs text-slate-400">No RESEND_API_KEY or POSTMARK_SERVER_TOKEN; emails are logged, not sent.</p></>
+          ) : (
+            <>
+              <p className={`mt-1 text-2xl font-semibold ${mailOrder.length > 1 ? "text-starboard" : "text-amber-600"}`}>{mailOrder.length > 1 ? "Backed up" : "Single provider"}</p>
+              <p className="text-xs text-slate-400">
+                {mailOrder.join(" → ")}{mailOrder.length === 1 ? " · add POSTMARK_SERVER_TOKEN for automatic failover" : ""}
+                {mailFailover ? ` · last failover ${new Date(mailFailover.at).toLocaleString("en-GB", { timeZone: "Europe/London", dateStyle: "medium", timeStyle: "short" })} (${mailFailover.count} total)` : " · no failovers recorded"}
+              </p>
+            </>
+          )}
+        </Card>
       </div>
 
       <Card className="mb-8">
