@@ -96,7 +96,9 @@ Effort is a rough guide: S = under half a day, M = one to two days, L = a week o
 - Verified by Conor against GOV.UK on 3 October: the 16–17 band (22:00–06:00, 30-minute
   break after 4.5 hours, 12 hours' daily and 48 hours' weekly rest) and the 15–16 holiday
   caps (8 hours weekdays and Saturdays, 2 on Sundays, 35 a week). The GB pack is now marked
-  verified. Decision (Conor, 3 October): under-15s are not rostered as workers on the
+  verified. Decisions (Conor, 3 October): the 16–17 rules apply from the 16th birthday,
+  not the school-leaving date (the law is stricter for a 16-year-old still at school until
+  the June leaving date; noted in the pack); under-15s are not rostered as workers on the
   platform; they may only volunteer, so no 13–14 band is carried and the engine raises a
   notice (a warning if they are recorded as employed) instead of applying caps.
 - **Conor:** the Northern Ireland pack (Education Authority) and the Ireland pack (WRC)

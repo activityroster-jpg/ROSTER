@@ -15,7 +15,9 @@ describe("school-leaving and bands", () => {
     expect(schoolLeavingDate("2010-10-10", "ie")).toBe("2026-10-10");
   });
   it("picks the child band before leaving and the young-worker band after", () => {
-    expect(selectBand(gb, "2010-03-10", "2026-06-01")?.id).toBe("gb-child-15-16");
+    // GB (decision): 16–17 rules apply from the 16th birthday, whatever the school-leaving date.
+    expect(selectBand(gb, "2010-03-10", "2026-06-01")?.id).toBe("gb-young");
+    expect(selectBand(gb, "2010-03-10", "2026-03-09")?.id).toBe("gb-child-15");
     expect(selectBand(gb, "2012-02-01", "2026-06-01")).toBeNull(); // 14: under the platform minimum, no band
     expect(selectBand(gb, "2010-03-10", "2026-07-01")?.id).toBe("gb-young");
     expect(selectBand(gb, "2005-01-01", "2026-07-01")).toBeNull();

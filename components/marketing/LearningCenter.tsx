@@ -232,7 +232,7 @@ const SECTIONS: Section[] = [
     label: "Young workers' hours",
     blurb: "How rostering checks under-18s against the working-time rules for your country.",
     blocks: [
-      { kind: "p", text: "Children and young people can only work limited hours, between set times, with breaks and rest days. The limits differ for school-age children and 16–17-year-olds, and between term time and school holidays. ActivityRoster carries those figures as a rule pack for each jurisdiction (Great Britain, Northern Ireland and Ireland) and checks every assignment of an under-18 against them. Under-15s are not rostered as workers: they may only volunteer, no hour caps are applied to them, and rostering one who is recorded as employed raises a warning." },
+      { kind: "p", text: "Children and young people can only work limited hours, between set times, with breaks and rest days. The limits differ for 15-year-olds and 16–17-year-olds (the 16–17 rules apply from the 16th birthday), and between term time and school holidays. ActivityRoster carries those figures as a rule pack for each jurisdiction (Great Britain, Northern Ireland and Ireland) and checks every assignment of an under-18 against them. Under-15s are not rostered as workers: they may only volunteer, no hour caps are applied to them, and rostering one who is recorded as employed raises a warning." },
       { kind: "sub", text: "What is checked" },
       { kind: "bullets", items: [
         "Hours in a day and in a week, with the term-time and holiday caps (school-day, Saturday and Sunday caps where they apply).",

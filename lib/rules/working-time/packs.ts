@@ -11,7 +11,7 @@ export const BUILTIN_PACKS: Record<string, WorkingTimePack> = {
   gb: {
     key: "gb",
     name: "Great Britain (England, Scotland, Wales)",
-    version: "2026-10-03.3",
+    version: "2026-10-03.4",
     verified: true,
     schoolLeaving: "gb",
     volunteersCovered: false,
@@ -24,7 +24,7 @@ export const BUILTIN_PACKS: Record<string, WorkingTimePack> = {
     ],
     bands: [
       {
-        id: "gb-child-15-16", label: "children aged 15–16, still of school age (GB)", minAge: 15, maxAge: 16, until: "schoolLeaving",
+        id: "gb-child-15", label: "children aged 15 (GB)", minAge: 15, maxAge: 15,
         termTime: { maxHoursPerDay: 2, maxHoursPerWeek: 12, maxHoursSchoolDay: 2, maxHoursSaturday: 8, maxHoursSunday: 2 },
         holiday: { maxHoursPerDay: 8, maxHoursPerWeek: 35, maxHoursSunday: 2 },
         earliestStart: "07:00", latestFinish: "19:00",
@@ -33,10 +33,10 @@ export const BUILTIN_PACKS: Record<string, WorkingTimePack> = {
         annualBreak: "2 consecutive weeks off work during the school holidays each year",
         paperwork: "Council work permit applied for within 1 week of starting, plus written parental consent",
         unverified: [],
-        notes: "Holiday figures (8 hours on weekdays and Saturdays, 2 on Sundays, 35 a week) verified against GOV.UK by Conor, 3 October 2026; term-time figures, 07:00–19:00 and the 1-hour break are from the compliance spec's table. Under-15s are not rostered as workers on ActivityRoster (Conor, 3 October): they may only volunteer and no hour caps are applied to them, so GOV.UK's lower 13–14 figures are deliberately not carried. Council byelaws can be stricter; Scottish councils and Scottish school-leaving dates need separate checking.",
+        notes: "Holiday figures (8 hours on weekdays and Saturdays, 2 on Sundays, 35 a week) verified against GOV.UK by Conor, 3 October 2026; term-time figures, 07:00–19:00 and the 1-hour break are from the compliance spec's table. Under-15s are not rostered as workers on ActivityRoster (Conor, 3 October): they may only volunteer and no hour caps are applied to them. Council byelaws can be stricter.",
       },
       {
-        id: "gb-young", label: "young workers (16–17, past school-leaving age)", minAge: 15, maxAge: 17, from: "schoolLeaving",
+        id: "gb-young", label: "young workers aged 16–17 (GB)", minAge: 16, maxAge: 17,
         termTime: { maxHoursPerDay: 8, maxHoursPerWeek: 40 },
         holiday: { maxHoursPerDay: 8, maxHoursPerWeek: 40 },
         earliestStart: "06:00", latestFinish: "22:00",
@@ -44,7 +44,7 @@ export const BUILTIN_PACKS: Record<string, WorkingTimePack> = {
         dailyRestHours: 12, weeklyRestHours: 48,
         annualBreak: null, paperwork: null,
         unverified: [],
-        notes: "Verified against GOV.UK by Conor, 3 October 2026: no work between 22:00 and 06:00 (a contract may move this to 23:00–07:00 instead; edit earliestStart/latestFinish here if a centre's contracts do), 30-minute break after 4.5 hours, 12 hours' daily rest, 48 hours' weekly rest. 8 hours a day and 40 a week, no averaging.",
+        notes: "Verified against GOV.UK by Conor, 3 October 2026: no work between 22:00 and 06:00 (a contract may move this to 23:00–07:00 instead; edit earliestStart/latestFinish here if a centre's contracts do), 30-minute break after 4.5 hours, 12 hours' daily rest, 48 hours' weekly rest. 8 hours a day and 40 a week, no averaging. Decision (Conor, 3 October): these rules apply from the 16th birthday regardless of the school-leaving date. Note the law treats a 16-year-old as a child until the last Friday in June of their final school year; a centre employing one before then should apply the stricter child caps itself.",
       },
     ],
     adults: { maxHoursPerWeekAveraged: 48, breakMinutes: 20, breakAfterHours: 6, dailyRestHours: 11, weeklyRestHours: 24, notes: "48 hours averaged over 17 weeks; workers may opt out in writing. 24 hours' rest a week or 48 a fortnight." },
