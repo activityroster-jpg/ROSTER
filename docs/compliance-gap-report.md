@@ -12,24 +12,25 @@ Nothing was changed as part of this audit. The phased plan is in
 
 | Area | Done | Partial | Missing | Conflict |
 | --- | --- | --- | --- | --- |
-| Hosting, residency, sub-processors | 3 | 3 | 1 | 0 |
-| Authentication and sessions | 5 | 6 | 1 | 2 |
+| Hosting, residency, sub-processors | 4 | 3 | 1 | 0 |
+| Authentication and sessions | 8 | 1 | 1 | 2 |
 | Access control and isolation | 4 | 0 | 1 | 0 |
-| Hardening | 5 | 6 | 2 | 0 |
+| Hardening | 6 | 5 | 2 | 0 |
 | Logging and monitoring | 1 | 4 | 0 | 0 |
-| Privacy features | 1 | 6 | 3 | 0 |
-| Under-18 and safeguarding | 2 | 2 | 5 | 1 |
-| Working-time rules engine | 7 | 0 | 0 | 0 |
-| Email and marketing | 6 | 5 | 2 | 0 |
-| Backups and DR | 1 | 1 | 8 | 0 |
-| Change management | 1 | 2 | 5 | 2 |
-| Incident response | 0 | 0 | 6 | 1 |
-| Extras | 3 | 1 | 0 | 1 |
+| Privacy features | 4 | 3 | 3 | 0 |
+| Under-18 and safeguarding | 5 | 2 | 1 | 1 |
+| Working-time rules engine | 8 | 0 | 0 | 0 |
+| Email and marketing | 5 | 4 | 2 | 0 |
+| Backups and DR | 6 | 2 | 2 | 0 |
+| Change management | 6 | 1 | 0 | 2 |
+| Incident response | 4 | 0 | 2 | 0 |
+| Extras | 3 | 2 | 0 | 0 |
 
-The strongest areas are tenant isolation, input validation, Stripe handling and the
-sign-in hardening done this week. The biggest gaps are backups (nothing beyond D1 Time
-Travel), no staging environment, no under-18 controls, no working-time rules engine and
-no incident/offline fallbacks.
+Counts refreshed 3 October 2026 (evening), after Phase 1. "Partial" now includes items
+built in code that wait on a dashboard step or an account Conor opens (staging and the
+deploy gate are live; the two email subdomains and Postmark are coded but not yet switched
+on). Everything still marked Missing or Partial at P0 is either a dashboard action, a
+Phase 2 item by decision, or noted in the row.
 
 ## Data map, confirmed against the schema
 
@@ -60,7 +61,7 @@ counts only, no content.
 | Resend EU sending region, DPA, transfer mechanism | P0 | Dashboard | Code calls `api.resend.com` (`lib/mail/index.ts`); region is set per domain in Resend. Conor confirms the domain region and accepts Resend's DPA. |
 | Sub-processor register `docs/subprocessors.md` | P0 | Done | Known processors from code: Cloudflare (Workers, D1, R2, KV), Resend, Stripe, Sentry (`lib/observability/sentry.ts`), Anthropic (`lib/outreach/research.ts`, prospect data only), GitHub (code and deploys), Have I Been Pwned (password hash prefixes only), Cloudflare DNS-over-HTTPS (domain checks). |
 | GitHub holds code only | P0 | Done | No personal data in app code, tests or docs. The console helper SQL files (one of which listed prospect business names) were removed on 3 October; migrations now run through the deploy workflow. |
-| Synthetic data in local and staging | P0 | Partial | Seeds and tests are synthetic (`lib/seed`, `tests/*` on SQLite). There is no staging environment yet. |
+| Synthetic data in local and staging | P0 | Done | Seeds and tests are synthetic (`lib/seed`, `tests/*` on SQLite). Staging (`staging.activityroster.com`, since 3 October) starts empty and is wiped after each restore rehearsal. |
 | Payments via Stripe Checkout, IDs only, grace then read-only | P0 | Done | `lib/billing/checkout.ts`, `lib/billing/webhook.ts` (raw-body signature, idempotent by event id), `organisation.subscriptionStatus`; trial lock → read-only (`lib/billing/trial.ts`). Failed-payment grace relies on Stripe's retry schedule; confirm the `past_due` path keeps read-only rather than locking (plan P0-B). |
 | Customer notice before new sub-processor | P1 | Missing | Needs the register first, then a notice email template. |
 
@@ -73,11 +74,11 @@ counts only, no content.
 | Two-factor (TOTP + recovery codes) required for Owner/Admin | P0 | Conflict C1 | TOTP, email OTP and backup codes exist but are **optional** (`components/office/TwoFactorSetup.tsx`). Today's change makes an **emailed code mandatory** on every office sign-in (`app/verify-login`), which Conor asked for this morning. The spec wants authenticator-app 2FA mandatory. |
 | Brute-force: per-IP and per-account limits, Turnstile, generic errors | P0 | Done | Per-IP and per-email throttle on `/api/auth`, PIN lockout, code attempt limits, one generic sign-in message. Turnstile (managed, interaction-only) on sign-up, the privacy form and the leads route, and required on sign-in after 3 failures from one address (`lib/security/turnstile.ts`, `app/api/auth/[...all]/route.ts`). Active once `TURNSTILE_SECRET_KEY` is set on the Worker. |
 | Password reset: single-use, ≤60 min, logs out other sessions | P0 | Done | Better Auth reset tokens (1 hour default), `revokeSessionsOnPasswordReset: true` (`lib/auth/index.ts:39`). |
-| Change alerts (password, email, 2FA, new device/country); repeated unusual sign-ins alert Conor | P0 | Partial | `notifySecurityChange` emails on password change, new device, 2FA on/off (`lib/security/events.ts`). Email-address change alert: not found. Alerts to Conor: not built. |
+| Change alerts (password, email, 2FA, new device/country); repeated unusual sign-ins alert Conor | P0 | Done (alerts to Conor: Phase 2) | `notifySecurityChange` emails on password change, recovery-email change, new device, 2FA on/off (`lib/security/events.ts`). The sign-in email address cannot be changed by users at all, so there is nothing to alert on. Alerts to Conor for repeated unusual sign-ins: Phase 2. |
 | Cookies HttpOnly, Secure, SameSite=Lax | P0 | Done | Better Auth defaults plus every custom cookie (`lib/auth/pin.ts`, `app/verify-login/actions.ts`, middleware). |
 | Idle timeout (30 min admins), absolute timeout, "log out all devices" | P1 | Partial | PIN re-prompt after 30 min idle, office sign-out after 12 h idle (`lib/auth/login-verify.ts`), 7-day absolute session. **No "log out all devices" button.** Not configurable per school. |
 | Shared-device mode | P1 | Done | "Just this once" ends the session when the browser closes (`components/auth/VerifyLoginForm.tsx`). |
-| Password or magic link; links single-use ≤15 min; prompt magic-link users to set a password; admins still do 2FA | P0 | Partial | Both offered; magic links single-use, 5-minute expiry (Better Auth default). The set-up flow asks for a PIN but does **not** push magic-link users to set a password. Admins now always do the emailed code. |
+| Password or magic link; links single-use ≤15 min; prompt magic-link users to set a password; admins still do 2FA | P0 | Done | Both offered; magic links single-use, 5-minute expiry. Admins without a password see a banner in the office that emails them a set-a-password link (`components/office/SetPasswordNudge.tsx`). Admins do the emailed code on a new device and after 12 hours away. |
 | No support login | P0 | Conflict C2 | **Ghost Mode exists**: a platform admin can open any centre read-only from the Dev Center (`lib/auth/ghost.ts`, `app/(app)/office/ghost-actions.ts`), logged as `ghost_start`/`ghost_end` security events. The spec forbids this. |
 | SSO (Google / Microsoft) | P2 | Missing | |
 
@@ -113,9 +114,9 @@ counts only, no content.
 
 | Requirement | Pri | Status | Evidence / notes |
 | --- | --- | --- | --- |
-| Append-only audit log: who, what, when, record, IP/device; logins, failures, permission changes, sensitive views, exports, deletions, DB access | P0 | Partial | Two logs: `audit_log` (tenant changes to roster, resources, settings, billing) and `security_event` (logins, PIN, devices, 2FA, ghost, invites, with IP/country/agent via `lib/security/events.ts`). **Not logged:** admin database access. Data exports and views of emergency/guardian contacts are logged since 3 October. Append-only is by convention (no delete method), not enforced in the database. |
+| Append-only audit log: who, what, when, record, IP/device; logins, failures, permission changes, sensitive views, exports, deletions, DB access | P0 | Partial | Two logs: `audit_log` (tenant changes to roster, resources, settings, billing, exports, sensitive-record views) and `security_event` (logins, PIN, devices, 2FA, ghost, invites, with IP/country/agent). **Append-only is enforced in the database since migration 0046**: triggers refuse updates and deletes while the owning centre or user exists; only erasure of the owner cascades through. Still not logged: direct database access by the platform owner (Cloudflare dashboard; no app path). |
 | Schools can view and export their own audit log | P1 | Partial | `app/(app)/office/change-log` shows the centre's changes in plain English; no export; security events not shown. |
-| Clean application logs, 30–90 day retention | P0 | Partial | Sentry events scrubbed (`lib/observability/sentry.ts:31`). Worker console logs are not retained unless Logpush is on (dashboard). A few `console.info` lines include recipient email addresses (`lib/mail/index.ts:83`), to tidy. |
+| Clean application logs, 30–90 day retention | P0 | Partial | Sentry events scrubbed (`lib/observability/sentry.ts:31`). Mail logging prints the subject only, never the recipient (`lib/mail/index.ts`). Worker console logs are not retained unless Logpush is on (dashboard; Paid plan). |
 | Alerts to Conor: email for all, text for critical | P1 | Partial | Error reports land in the Dev Center (`app/admin/errors`) with email on first occurrence. No downtime, backup, deploy-failure or mass-export alerts; no SMS. |
 | Error monitoring with EU region and scrubbing | P1 | Done | Sentry via fetch, EU ingest allowed in CSP, scrubbing on. Needs a sub-processor entry. |
 
@@ -130,7 +131,7 @@ counts only, no content.
 | Data minimisation review | P1 | Partial | Fields are already lean; `booking` table (customer name/email) is unused and should go. |
 | Privacy notices: in-app links, under-18 version, templates | P0 | Partial | Centres set their own notice URL in Settings; office and portal link it beside ours. Templates in `docs/templates/` (staff notice, under-18 version). A public page for the under-18 notice is Phase 2. |
 | Record terms/DPA version accepted and when | P0 | Done | `organisation.termsVersion` and `termsAcceptedAt` set at provisioning from `lib/legal.ts` (migration 0041). Re-acceptance on a new version is Phase 2. |
-| Leaving: 90-day export, deletion, written confirmation | P0 | Partial | Export always available; suspended centres keep export (`CLAUDE.md`); `eraseOrganisation` exists. The 90-day timer and confirmation email are not automated. |
+| Leaving: 90-day export, deletion, written confirmation | P0 | Done | Setting a centre to suspended or cancelled emails its admins a written confirmation with the export link and the 90-day date; a reminder goes 14 days before; at 90 days Conor is emailed and the centre page offers "Erase this centre" (typed slug), which emails the final confirmation. Nothing is deleted automatically (`lib/services/leaving.ts`, migration 0045). |
 | Strictly necessary cookies; cookieless analytics | P0 | Done | No analytics or tracking scripts loaded; `CookieNotice` is informational. |
 | Named privacy contact, complaints form, 30-day acknowledgement | P0 | Done | `/privacy-request` form → `privacy_request` table with a 30-day due date, automatic receipt, owner email, Dev Center → Privacy queue. |
 
@@ -193,7 +194,7 @@ Built 3 October 2026 (plan P0-F). Engine: `lib/domain/working-time.ts` (pure); p
 | Backup status email | P0 | Done | Workflow posts to `/api/ops/backup-report`; owner emailed on success and failure; Dev Center overview shows the last result. |
 | `docs/runbooks/restore.md` (three cases) | P0 | Done | Plus `.github/workflows/restore.yml` for case B (staging rehearsal or confirmed production restore). |
 | Quarterly restore test, `docs/restore-tests.md` | P0 | Partial | Log template exists; first rehearsal due a week after backups start. |
-| GitHub as source of truth, branch protection on main, `docs/environment.md` | P0 | Partial | Repo is the source of truth and deploys only from GitHub. **There is no `main` branch**: all work is on `claude/new-session-2wxbwe` with no protection. Secrets are named in `.dev.vars.example` and `scripts/setup-secrets.sh`; no rotation notes. |
+| GitHub as source of truth, branch protection on main, `docs/environment.md` | P0 | Done | Deploys only from GitHub. `main` exists and is written only by the production workflow (it records what is live); work happens on the working branch and reaches production through "Deploy production". Secrets, variables and rotation steps are in `docs/environment.md`. |
 | Monthly DNS zone export | P1 | Missing | Needs a Zone DNS Read token; Phase 2. |
 | Replay deletions after restore | P1 | Missing | |
 
@@ -201,13 +202,13 @@ Built 3 October 2026 (plan P0-F). Engine: `lib/domain/working-time.ts` (pure); p
 
 | Requirement | Pri | Status | Evidence / notes |
 | --- | --- | --- | --- |
-| Local, staging, production | P0 | Missing | Local and production only; one D1, one R2, one KV (`wrangler.toml` has no environments). |
+| Local, staging, production | P0 | Done | `wrangler.toml [env.staging]` with its own D1, R2 (EU) and KV; `staging.activityroster.com`; staging mail captured to the Dev Center outbox (`docs/environment.md`). |
 | Branches, tests before main, Conor approves DB/security/feature changes | P0 | Conflict C3 | Today every push to the working branch deploys straight to production after tests (`deploy.yml`), and Conor runs migration SQL by hand in the D1 console. No approval step. |
 | Deploy from GitHub only | P0 | Done | `.github/workflows/deploy.yml`, set up today. |
-| Versioned migrations, staging first, Time Travel bookmark, no destructive changes | P0 | Partial | Drizzle migrations are versioned (`lib/db/migrations`, 40 so far) and additive. No staging; no bookmark step; applied by pasting SQL. |
-| One-click rollback documented | P0 | Missing | Cloudflare keeps Worker versions; the click-path is not written down. |
-| Claude Code guardrails and least-privilege tokens | P0 | Missing | No `.claude/settings.json`. This cloud session holds no Cloudflare credentials, so it cannot touch production directly; the deploy token in GitHub is scoped to Workers. |
-| Rules in `CLAUDE.md` | P0 | Partial | Added in this commit: a pointer to the spec and the working rules. The change-management rules are written as the target state because the tooling (staging, approval gate) does not exist yet. |
+| Versioned migrations, staging first, Time Travel bookmark, no destructive changes | P0 | Done | Drizzle migrations are versioned and additive; every push applies them to staging; "Deploy production" records the Time Travel bookmark, applies them and rolls the Worker back on a failed smoke test (`.github/workflows/deploy.yml`, `docs/runbooks/deploy.md`). Nothing is pasted into the console any more. |
+| One-click rollback documented | P0 | Done | Automatic on a failed smoke test; the manual click-path and the data-rollback path (Time Travel) are in `docs/runbooks/deploy.md` and `docs/runbooks/restore.md`. |
+| Claude Code guardrails and least-privilege tokens | P0 | Done | `.claude/settings.json` denies remote D1 execution, deletes, Time Travel restores and force-pushes to main; the session holds no Cloudflare credentials; the production workflow runs only when Conor presses the button. |
+| Rules in `CLAUDE.md` | P0 | Done | Spec pointer, the eight working rules, change management as built, rule-pack locations. |
 | Deploy window 23:00–04:00, smoke tests, auto-rollback | P0 | Conflict C4 | Deploys happen on push at any hour. No smoke tests. |
 | Release notes | P2 | Partial | Dev Center change log (`app/admin/change-log`) lists commits in plain English. |
 

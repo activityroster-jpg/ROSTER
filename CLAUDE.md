@@ -42,7 +42,9 @@ centre is identical at provisioning and "branches off" only through
 - Config is **deactivate-never-delete**: config rows carry an `active` flag and
   the DB refuses to delete rows still referenced (RESTRICT foreign keys). Old
   records keep pointing at retired config and still render.
-- Every roster / resource / settings / billing change writes to `audit_log`.
+- Every roster / resource / settings / billing change writes to `audit_log`. `audit_log` and
+  `security_event` are append-only, enforced by database triggers (migration 0046): never
+  write code that updates or deletes a log row; erasing the owner is the only way they go.
 - Secrets only in Workers secrets/env — nothing sensitive in the client bundle.
 - Keep Node-heavy libs out (Workers Node-compat is partial); prefer Drizzle +
   `fetch` clients. `better-sqlite3` is **test/dev only**.

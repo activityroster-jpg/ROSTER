@@ -185,6 +185,13 @@ export const organisation = sqliteTable("organisation", {
   termsAcceptedAt: integer("terms_accepted_at", { mode: "timestamp_ms" }),
   /** When Stripe first reported a failed payment; cleared when paid. Drives the grace period → read-only rule. */
   pastDueSince: integer("past_due_since", { mode: "timestamp_ms" }),
+  // --- Leaving (P0-A "90-day export, deletion, written confirmation") ---------
+  /** When `status` last changed. A suspended or cancelled centre keeps its export for 90 days from here. */
+  statusChangedAt: integer("status_changed_at", { mode: "timestamp_ms" }),
+  /** The 14-days-to-go reminder was emailed to the centre's admins. */
+  leavingReminderSentAt: integer("leaving_reminder_sent_at", { mode: "timestamp_ms" }),
+  /** Conor was told the 90 days are up and the centre can be erased (erasure itself is a human click). */
+  leavingDueNotifiedAt: integer("leaving_due_notified_at", { mode: "timestamp_ms" }),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 }, (t) => [

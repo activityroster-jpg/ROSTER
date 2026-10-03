@@ -3,6 +3,7 @@ import { getDb, getEnv } from "@/lib/cf/bindings";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { researchBatch, runDueSends } from "@/lib/outreach/engine";
 import { sendDailyDigests } from "@/lib/services/digest";
+import { sweepLeaving } from "@/lib/services/leaving";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/security/rate-limit";
 import { checkCronSecret } from "@/lib/security/cron-secret";
 
@@ -27,7 +28,9 @@ async function tick(req: Request) {
   const sends = await runDueSends(db, env, { limit: 25 });
   // Centre-side jobs ride the same heartbeat: the opt-in morning rota digest.
   const digests = await sendDailyDigests(db, env).catch((e: Error) => ({ checked: 0, sent: 0, skipped: 0, error: e.message }));
-  return NextResponse.json({ ok: true, campaigns: running.length, research, sends, digests });
+  // Leaving centres: 14-day reminder and the "ready to erase" note to the owner.
+  const leaving = await sweepLeaving(db, env).catch((e: Error) => ({ checked: 0, reminded: 0, due: 0, error: e.message }));
+  return NextResponse.json({ ok: true, campaigns: running.length, research, sends, digests, leaving });
 }
 
 export async function POST(req: Request) { return tick(req); }

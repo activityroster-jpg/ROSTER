@@ -4,11 +4,21 @@ import { requireTenant } from "@/lib/tenant/require";
 import { getRepositories } from "@/lib/cf/bindings";
 import { OfficeSidebar } from "@/components/office/OfficeSidebar";
 import { GhostBanner } from "@/components/office/GhostBanner";
+import { SetPasswordNudge } from "@/components/office/SetPasswordNudge";
+import { actorUserId } from "@/lib/tenant/context";
 import { eq } from "drizzle-orm";
 import { instructor as instructorTable } from "@/lib/db/schema";
 
 export default async function OfficeLayout({ children }: { children: React.ReactNode }) {
-  const { ctx, organisation, trial } = await requireTenant({ role: "admin", allowReadOnly: true });
+  const { ctx, organisation, trial, repos } = await requireTenant({ role: "admin", allowReadOnly: true });
+  // Admins who only ever used the emailed link are nudged to set a password (spec P0-A).
+  let nudgeEmail: string | null = null;
+  const uid = ctx.ghost ? null : actorUserId(ctx);
+  if (uid) {
+    try {
+      if (!(await repos.control.hasCredentialPassword(uid))) nudgeEmail = (await repos.control.userById(uid))?.email ?? null;
+    } catch { /* cosmetic */ }
+  }
   let clockOn = false;
   let privacyUrl: string | null = null;
 
@@ -36,6 +46,7 @@ export default async function OfficeLayout({ children }: { children: React.React
       <OfficeSidebar orgName={organisation.name} clockOn={clockOn} hasInstructorRecord={hasInstructorRecord} />
       <div className="flex-1 overflow-x-hidden pt-14 lg:pt-0">
         {ctx.ghost ? <GhostBanner centreName={organisation.name} /> : null}
+        {nudgeEmail ? <SetPasswordNudge email={nudgeEmail} /> : null}
         {banner?.kind === "pastdue" ? (
           <Link href="/office/billing" className="block bg-port/15 px-6 py-2 text-center text-sm font-medium text-port hover:bg-port/20">
             Your last payment failed — update your card within {banner.daysLeft} day{banner.daysLeft === 1 ? "" : "s"} to keep editing. Nothing is ever deleted. →

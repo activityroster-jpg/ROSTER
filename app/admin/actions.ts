@@ -11,6 +11,9 @@ import { getAuth } from "@/lib/auth";
 import { GHOST_COOKIE, GHOST_TTL_S, signGhostToken } from "@/lib/auth/ghost";
 import { authSecret } from "@/lib/security/secrets";
 import { recordSecurityEvent } from "@/lib/security/events";
+import { leavingDeadline, onOrganisationStatusChanged } from "@/lib/services/leaving";
+import { eraseOrganisationData } from "@/lib/services/export";
+import { escapeHtml, sendEmail } from "@/lib/mail";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { createStripe } from "@/lib/billing/stripe";
 import { createPromotionCode, type CouponSpec } from "@/lib/billing/coupons";
@@ -115,12 +118,41 @@ export async function setOrgPricingAction(id: string, input: {
 export async function setOrgStatusAction(id: string, status: string): Promise<Result> {
   await requirePlatformAdmin();
   if (!(ORG_STATUSES as readonly string[]).includes(status)) return { ok: false, error: "Invalid status" };
-  const { control } = await getRepositories();
+  const { control, db } = await getRepositories();
+  const before = await control.organisationById(id);
+  if (!before) return { ok: false, error: "Not found" };
   const updated = await control.updateOrganisation(id, { status: status as OrgStatus });
   if (!updated) return { ok: false, error: "Not found" };
+  // Leaving: stamp the change and send the written confirmation with the 90-day export window.
+  await onOrganisationStatusChanged(db, getEnv(), updated, before.status).catch((e: Error) => console.error("[leaving] notify failed:", e.message));
   revalidatePath("/admin");
   revalidatePath(`/admin/centres/${id}`);
   return { ok: true };
+}
+
+/**
+ * Permanently erase a centre from the Dev Center. Only offered once the
+ * 90-day export window has closed; the slug must be typed to confirm. Every
+ * tenant row goes, the audit log with it (its append-only trigger allows the
+ * cascade), and a confirmation is sent to the centre's former admins.
+ */
+export async function eraseCentreAction(id: string, confirmSlug: string): Promise<Result> {
+  const { email } = await requirePlatformAdmin();
+  const repos = await getRepositories();
+  const org = await repos.control.organisationById(id);
+  if (!org) return { ok: false, error: "Not found" };
+  if (confirmSlug.trim() !== org.slug) return { ok: false, error: "Type the centre's address exactly to confirm" };
+  const deadline = leavingDeadline(org);
+  if (!deadline) return { ok: false, error: "Suspend or cancel the centre first; erasure is only offered after the 90-day export window" };
+  if (deadline.getTime() > Date.now()) return { ok: false, error: `The export window runs until ${deadline.toLocaleDateString("en-GB")}` };
+  const admins = await repos.control.adminEmailsForOrg(id);
+  const res = await eraseOrganisationData(repos, { organisationId: org.id, slug: org.slug, system: true, reason: `erased by ${email}` });
+  if (res.erased) {
+    console.info(`[leaving] centre ${org.slug} erased by a platform admin`);
+    await Promise.all(admins.map((to) => sendEmail({ to, subject: `${org.name}: your data has been deleted`, html: `<p>Hello,</p><p>This confirms that <strong>${escapeHtml(org.name)}</strong> and all of its records have now been permanently deleted from ActivityRoster, as notified. Encrypted backups age out within 35 days.</p><p>Thank you for having used ActivityRoster.</p>` }).catch(() => {})));
+  }
+  revalidatePath("/admin");
+  return res.erased ? { ok: true } : { ok: false, error: "Nothing to erase" };
 }
 
 export async function setSubscriptionStatusAction(id: string, sub: string): Promise<Result> {

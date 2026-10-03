@@ -6,6 +6,8 @@ import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { effectivePricing } from "@/lib/pricing";
 import { tierMeta } from "@/lib/tiers";
 import { CentreControls } from "@/components/admin/CentreControls";
+import { EraseCentre } from "@/components/admin/EraseCentre";
+import { leavingDeadline } from "@/lib/services/leaving";
 import { PricingControls } from "@/components/admin/PricingControls";
 import { Card } from "@/components/ui";
 import { GhostModeCard, type GhostSessionRow } from "@/components/admin/GhostModeCard";
@@ -99,6 +101,7 @@ export default async function CentreDetailPage({ params }: { params: Promise<{ i
       <Card className="mt-6">
         <h2 className="mb-3 font-semibold text-navy">Manage</h2>
         <CentreControls id={org.id} status={org.status} subscriptionStatus={org.subscriptionStatus} plan={org.plan} tier={org.tier} />
+        <EraseCentre id={org.id} slug={org.slug} status={org.status} deadline={leavingDeadline(org)?.toISOString() ?? null} />
       </Card>
 
       <Card className="mt-6">

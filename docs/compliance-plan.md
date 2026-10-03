@@ -20,7 +20,7 @@ Effort is a rough guide: S = under half a day, M = one to two days, L = a week o
 
 ## Phase 1 (P0): before onboarding more customers
 
-### P0-A Documents and quick code fixes — done 3 October (remaining: `booking` table removal after a backup cycle; GitHub security settings are Conor's clicks)
+### P0-A Documents and quick code fixes — done 3 October (leaving flow, password nudge and append-only logs added the same evening; `booking` table dropped in the following release; GitHub security settings are Conor's clicks)
 
 - `docs/subprocessors.md`, `docs/data-map.md` (from the real schema), `docs/environment.md`,
   `docs/retention.md` (defaults), `docs/runbooks/restore.md`, `docs/runbooks/incident.md`,

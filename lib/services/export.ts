@@ -1,5 +1,5 @@
 import type { Repositories } from "@/lib/db/repositories";
-import type { TenantContext } from "@/lib/tenant/context";
+import type { AnyTenantContext, TenantContext } from "@/lib/tenant/context";
 
 /**
  * Export ALL of a centre's data as a single JSON object (GDPR data portability).
@@ -41,7 +41,14 @@ export async function eraseOrganisation(
 ): Promise<{ erased: boolean }> {
   if (ctx.role !== "admin") throw new Error("Only an admin can erase a centre");
   if (confirmationSlug !== ctx.slug) throw new Error("Confirmation slug does not match");
+  return eraseOrganisationData(repos, ctx);
+}
 
+/**
+ * The removal itself. Also used by the platform owner from the Dev Center once
+ * a leaving centre's 90-day export window has closed (lib/services/leaving).
+ */
+export async function eraseOrganisationData(repos: Repositories, ctx: AnyTenantContext): Promise<{ erased: boolean }> {
   const org = await repos.control.organisationById(ctx.organisationId);
   if (!org) return { erased: false };
 
@@ -63,12 +70,15 @@ export async function eraseOrganisation(
     // 5. config
     t.roleType, t.qualificationType, t.complianceType, t.equipmentType, t.locationType, t.courseType,
     // 6. standalone
-    t.sessionSlot, t.orgSettings, t.notification, t.auditLog,
+    t.sessionSlot, t.orgSettings, t.notification,
   ];
   for (const repo of order) {
     await repo.deleteAllForOrg(ctx);
   }
 
+  // The audit log is append-only while its centre exists (database triggers,
+  // migration 0046). Deleting the organisation cascades to it, which the
+  // trigger allows because the parent row is already gone.
   await repos.control.deleteOrganisation(ctx.organisationId);
   return { erased: true };
 }

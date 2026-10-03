@@ -15,6 +15,7 @@ import { ON_SITE_DAY_PRICE } from "@/lib/pricing";
 import { Card, StatusPill } from "@/components/ui";
 import { fmtBytes, readLastBackup } from "@/lib/ops/backup-status";
 import { mailProviderOrder, readMailFailover } from "@/lib/ops/mail-status";
+import { leavingDeadline } from "@/lib/services/leaving";
 import { trialState } from "@/lib/billing/trial";
 
 export const dynamic = "force-dynamic";
@@ -144,6 +145,26 @@ export default async function AdminOverviewPage({ searchParams }: { searchParams
           )}
         </Card>
       </div>
+
+      {allOrgs.some((o) => leavingDeadline(o)) ? (
+        <Card className="mb-8">
+          <h2 className="mb-1 font-semibold text-navy">Leaving centres</h2>
+          <p className="mb-3 text-xs text-slate-500">Suspended or cancelled centres keep their data export for 90 days. Their admins were emailed on the day and get a reminder 14 days before the end. Erasure is a click on the centre&rsquo;s page once the window has closed.</p>
+          <ul className="space-y-1 text-sm">
+            {allOrgs.filter((o) => leavingDeadline(o)).map((o) => {
+              const d = leavingDeadline(o)!;
+              const left = Math.ceil((d.getTime() - Date.now()) / 86_400_000);
+              return (
+                <li key={o.id} className="flex flex-wrap items-center gap-2">
+                  <Link href={`/admin/centres/${o.id}`} className="font-medium text-teal hover:underline">{o.name}</Link>
+                  <span className="text-xs text-slate-500">{o.status} · export until {d.toLocaleDateString("en-GB")}</span>
+                  <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${left <= 0 ? "bg-port/10 text-port" : left <= 14 ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-600"}`}>{left <= 0 ? "ready to erase" : `${left} days left`}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </Card>
+      ) : null}
 
       <Card className="mb-8">
         <h2 className="mb-1 font-semibold text-navy">Pricing</h2>
