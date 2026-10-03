@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>ActivityRoster</title>
+  <style>
+    html, body { height: 100%; margin: 0; background: #0A2E52; color: #fff; font-family: -apple-system, system-ui, Segoe UI, Roboto, sans-serif; }
+    .wrap { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px; text-align: center; }
+    .mark { width: 72px; height: 72px; }
+    h1 { font-size: 22px; margin: 0; letter-spacing: -0.01em; }
+    p { margin: 0; color: rgba(255,255,255,.75); font-size: 14px; }
+    a { color: #fff; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <!-- Shown only if the live site can't be reached (no connection). Capacitor's
+       server.url points the app at https://activityroster.com/app. -->
+  <div class="wrap">
+    <svg class="mark" viewBox="0 0 100 100" aria-hidden="true">
+      <rect x="6" y="6" width="24" height="24" rx="6" fill="#fff"/><rect x="38" y="6" width="24" height="24" rx="6" fill="#fff"/><rect x="70" y="6" width="24" height="24" rx="6" fill="#5A6B82"/>
+      <rect x="6" y="38" width="24" height="24" rx="6" fill="#5A6B82"/><rect x="38" y="38" width="24" height="24" rx="6" fill="#fff"/><rect x="70" y="38" width="24" height="24" rx="6" fill="#fff"/>
+      <rect x="6" y="70" width="24" height="24" rx="6" fill="#fff"/><rect x="38" y="70" width="24" height="24" rx="6" fill="#5A6B82"/><rect x="70" y="70" width="24" height="24" rx="6" fill="#3F9FE0"/>
+    </svg>
+    <h1>ActivityRoster</h1>
+    <p>You're offline. Connect to the internet and <a href="https://activityroster.com/app">try again</a>.</p>
+  </div>
+</body>
+</html>

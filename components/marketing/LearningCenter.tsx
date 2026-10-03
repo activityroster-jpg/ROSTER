@@ -132,6 +132,35 @@ const SECTIONS: Section[] = [
     ],
   },
   {
+    id: "app",
+    icon: "📱",
+    label: "The instructor app",
+    blurb: "ActivityRoster on the App Store and Google Play — your rota, hours and licences in your pocket.",
+    blocks: [
+      { kind: "p", text: "Instructors and volunteers use the free ActivityRoster app (iPhone and Android). Everything in the instructor portal is in it — schedule, availability, clock in/out, leave, hours, documents — plus phone notifications, Face ID / fingerprint unlock and a camera button for licence photos." },
+      { kind: "sub", text: "Your company code" },
+      { kind: "steps", items: [
+        "Open Settings → “Company code · instructor app”. Each centre has its own 6-character code — copy it and share it with your team (a notice board, a WhatsApp group, your welcome email).",
+        "If a code leaks, press “Issue a new code”. The old one stops working immediately; people already joined are unaffected.",
+      ] },
+      { kind: "sub", text: "How an instructor joins" },
+      { kind: "steps", items: [
+        "Install the app and tap “Create your account”: name, mobile number, email and a password.",
+        "Enter the 6-digit code we email them to confirm the address, then choose a 4-digit PIN.",
+        "Type in your company code. If their email is already on your Staff list, they're in straight away. If not, they appear under Staff → Join requests for you to approve or decline — so a leaked code never lets a stranger in.",
+        "Works for more than one centre? They join each with its code and switch between them in the app's Settings.",
+      ] },
+      { kind: "sub", text: "What the app adds" },
+      { kind: "bullets", items: [
+        "Phone notifications for rota changes, new open shifts, leave decisions and expiring licences (they can switch these off).",
+        "Face ID / fingerprint instead of typing the PIN every time; the PIN stays as the fallback.",
+        "Clock in and out records an approximate location — shown as a 📍 map link on your Time clock page.",
+        "A camera button on Documents to photograph a certificate straight into their record.",
+      ] },
+      { kind: "tip", text: "The web portal keeps working exactly as before — the app and the web are the same account." },
+    ],
+  },
+  {
     id: "staff-import",
     icon: "📇",
     label: "Importing staff",

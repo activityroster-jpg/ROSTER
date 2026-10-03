@@ -1,0 +1,27 @@
+{
+  "name": "activityroster-mobile",
+  "private": true,
+  "version": "1.0.0",
+  "description": "ActivityRoster instructor app — native shell (Capacitor) for iOS and Android",
+  "scripts": {
+    "sync": "cap sync",
+    "ios": "cap open ios",
+    "android": "cap open android",
+    "assets": "capacitor-assets generate --iconBackgroundColor '#0A2E52' --iconBackgroundColorDark '#0A2E52' --splashBackgroundColor '#0A2E52' --splashBackgroundColorDark '#0A2E52'"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/app": "^8.0.0",
+    "@capacitor/core": "^8.0.0",
+    "@capacitor/ios": "^8.0.0",
+    "@capacitor/push-notifications": "^8.0.0",
+    "@capacitor/splash-screen": "^8.0.0",
+    "@capacitor/status-bar": "^8.0.0",
+    "capacitor-native-biometric": "^4.2.2"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.0.0",
+    "typescript": "^5.6.0"
+  }
+}

@@ -5,6 +5,7 @@ import { requireTenant } from "@/lib/tenant/require";
 import { instructor as instructorTable } from "@/lib/db/schema";
 import { unreadCount } from "@/lib/services/notifications";
 import { Logo } from "@/components/Logo";
+import { NativeBridge } from "@/components/mobile/NativeBridge";
 
 const TABS = [
   { href: "/portal", label: "Schedule", icon: CalendarCheck },
@@ -22,7 +23,8 @@ export default async function PortalLayout({ children }: { children: React.React
 
   return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col bg-canvas">
-      <header className="flex items-center justify-between bg-navy px-4 py-4 text-white">
+      <NativeBridge />
+      <header className="flex items-center justify-between bg-navy px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))] text-white">
         <div>
           <Logo variant="onDark" size="sm" />
           <p className="mt-1 text-sm text-white/70">{organisation.name}</p>

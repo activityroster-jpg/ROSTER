@@ -28,12 +28,15 @@ export async function getOpenEntry(
  * Clock an instructor in. No-op-safe: if they already have an open entry it is
  * returned rather than opening a second one. Tenant scoped, audited.
  */
+export interface ClockFix { lat: number; lng: number; accuracyM: number | null }
+
 export async function clockIn(
   repos: Repositories,
   ctx: AnyTenantContext,
   instructorId: string,
   courseSessionId: string | null = null,
   now: number = Date.now(),
+  fix: ClockFix | null = null,
 ): Promise<TimeEntry> {
   const open = await getOpenEntry(repos, ctx, instructorId);
   if (open) return open;
@@ -44,6 +47,9 @@ export async function clockIn(
     clockInAt: new Date(now),
     clockOutAt: null,
     source: "clock",
+    inLat: fix?.lat ?? null,
+    inLng: fix?.lng ?? null,
+    inAccuracyM: fix?.accuracyM ?? null,
   });
   await writeAudit(repos, ctx, {
     action: "clock_in",
@@ -64,11 +70,17 @@ export async function clockOut(
   ctx: AnyTenantContext,
   instructorId: string,
   now: number = Date.now(),
+  fix: ClockFix | null = null,
 ): Promise<TimeEntry | null> {
   const open = await getOpenEntry(repos, ctx, instructorId);
   if (!open) return null;
 
-  const closed = await repos.tenant.timeEntry.update(ctx, open.id, { clockOutAt: new Date(now) });
+  const closed = await repos.tenant.timeEntry.update(ctx, open.id, {
+    clockOutAt: new Date(now),
+    outLat: fix?.lat ?? null,
+    outLng: fix?.lng ?? null,
+    outAccuracyM: fix?.accuracyM ?? null,
+  });
   if (!closed) return null;
 
   const minutes = entryMinutes(closed, now);
@@ -129,6 +141,9 @@ export interface AttendanceRow {
   clockOutAt: number | null;
   minutes: number;
   status: "on-water" | "done";
+  /** Approximate positions recorded by the app (null when clocked from the web or permission refused). */
+  inLocation: { lat: number; lng: number; accuracyM: number | null } | null;
+  outLocation: { lat: number; lng: number; accuracyM: number | null } | null;
 }
 
 export interface AttendanceBoard {
@@ -171,6 +186,8 @@ export async function getAttendanceBoard(
       clockOutAt: e.clockOutAt ? e.clockOutAt.getTime() : null,
       minutes: entryMinutes(e, now),
       status: e.clockOutAt ? "done" : "on-water",
+      inLocation: e.inLat != null && e.inLng != null ? { lat: e.inLat, lng: e.inLng, accuracyM: e.inAccuracyM ?? null } : null,
+      outLocation: e.outLat != null && e.outLng != null ? { lat: e.outLat, lng: e.outLng, accuracyM: e.outAccuracyM ?? null } : null,
     }));
 
   return {

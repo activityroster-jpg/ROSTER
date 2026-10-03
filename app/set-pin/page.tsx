@@ -11,5 +11,5 @@ export default async function SetPinPage({ searchParams }: { searchParams: Promi
   const h = new Headers(await headers());
   const s = await (await getAuth()).api.getSession({ headers: h });
   if (!s?.user) redirect("/sign-in");
-  return <PinForm mode="set" next={next} />;
+  return <PinForm mode="set" next={next} userId={s.user.id} />;
 }

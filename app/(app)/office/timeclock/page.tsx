@@ -44,8 +44,8 @@ export default async function TimeClockPage() {
                 <tr key={r.entryId}>
                   <td className="px-4 py-3 font-medium text-navy">{r.instructorName}</td>
                   <td className="px-4 py-3 text-slate-600">{r.courseName ?? "—"}</td>
-                  <td className="px-4 py-3 text-slate-600">{fmt(r.clockInAt)}</td>
-                  <td className="px-4 py-3 text-slate-600">{fmt(r.clockOutAt)}</td>
+                  <td className="px-4 py-3 text-slate-600">{fmt(r.clockInAt)}{r.inLocation ? <a href={`https://www.openstreetmap.org/?mlat=${r.inLocation.lat}&mlon=${r.inLocation.lng}#map=16/${r.inLocation.lat}/${r.inLocation.lng}`} target="_blank" rel="noreferrer" className="ml-1 text-xs text-teal hover:underline" title={`Clocked in near here (±${r.inLocation.accuracyM ?? "?"} m)`}>📍</a> : null}</td>
+                  <td className="px-4 py-3 text-slate-600">{fmt(r.clockOutAt)}{r.outLocation ? <a href={`https://www.openstreetmap.org/?mlat=${r.outLocation.lat}&mlon=${r.outLocation.lng}#map=16/${r.outLocation.lat}/${r.outLocation.lng}`} target="_blank" rel="noreferrer" className="ml-1 text-xs text-teal hover:underline" title={`Clocked out near here (±${r.outLocation.accuracyM ?? "?"} m)`}>📍</a> : null}</td>
                   <td className="px-4 py-3 font-medium text-navy">{(r.minutes / 60).toFixed(1)}</td>
                   <td className="px-4 py-3">
                     <StatusPill tone={r.status === "on-water" ? "covered" : "neutral"}>

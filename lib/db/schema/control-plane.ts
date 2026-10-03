@@ -514,5 +514,20 @@ export const trustedDevice = sqliteTable("trusted_device", {
 ]);
 export type TrustedDevice = typeof trustedDevice.$inferSelect;
 
+export const PUSH_PLATFORMS = ["ios", "android", "web"] as const;
+export type PushPlatform = (typeof PUSH_PLATFORMS)[number];
+
+/** Device push tokens (FCM) registered by the mobile app, per user × device. */
+export const pushToken = sqliteTable("push_token", {
+  id: id(),
+  userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  token: text("token").notNull(),
+  platform: text("platform", { enum: PUSH_PLATFORMS }).notNull(),
+  deviceId: text("device_id"),
+  lastSeenAt: integer("last_seen_at", { mode: "timestamp_ms" }).notNull(),
+  createdAt: createdAt(),
+}, (t) => [uniqueIndex("push_token_token_uq").on(t.token), index("push_token_user_idx").on(t.userId)]);
+export type PushToken = typeof pushToken.$inferSelect;
+
 // A tiny re-export so migrations pick up the raw-sql helper if needed.
 export const _sql = sql;

@@ -567,6 +567,13 @@ export const timeEntry = sqliteTable("time_entry", {
   clockOutAt: integer("clock_out_at", { mode: "timestamp_ms" }),
   source: text("source", { enum: TIME_ENTRY_SOURCES }).notNull().default("clock"),
   note: text("note"),
+  // Approximate location at clock-in / clock-out (from the app, with permission).
+  inLat: real("in_lat"),
+  inLng: real("in_lng"),
+  inAccuracyM: integer("in_accuracy_m"),
+  outLat: real("out_lat"),
+  outLng: real("out_lng"),
+  outAccuracyM: integer("out_accuracy_m"),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 }, (t) => [

@@ -1,11 +1,32 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { Logo } from "@/components/Logo";
 import { setPinAction, verifyPinAction, resetMyPinAction, requestPinResetCodeAction } from "@/app/pin/actions";
+import { biometricPinSaved, biometricsAvailable, forgetBiometricPin, isNative, savePinForBiometrics, unlockPinWithBiometrics } from "@/lib/mobile/native";
 
-export function PinForm({ mode, next, hasPassword = true }: { mode: "enter" | "set"; next: string; hasPassword?: boolean }) {
+export function PinForm({ mode, next, hasPassword = true, userId }: { mode: "enter" | "set"; next: string; hasPassword?: boolean; userId?: string }) {
   const [pin, setPin] = useState("");
+  // Inside the app: Face ID / fingerprint can release a PIN saved in the keychain.
+  const [bioAvailable, setBioAvailable] = useState(false);
+  const [rememberBio, setRememberBio] = useState(false);
+  const [bioTried, setBioTried] = useState(false);
+  useEffect(() => {
+    if (!isNative()) return;
+    void biometricsAvailable().then((ok) => {
+      setBioAvailable(ok);
+      if (!ok || mode !== "enter" || !biometricPinSaved() || bioTried) return;
+      setBioTried(true);
+      void unlockPinWithBiometrics().then((saved) => {
+        if (!saved) return;
+        startTransition(async () => {
+          const res = await verifyPinAction(saved, next);
+          if (res && !res.ok) { await forgetBiometricPin(); setErr("Your saved PIN no longer matches — enter it to continue."); }
+        });
+      });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [confirm, setConfirm] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -21,9 +42,11 @@ export function PinForm({ mode, next, hasPassword = true }: { mode: "enter" | "s
     e.preventDefault();
     setErr(null);
     startTransition(async () => {
+      // Save for biometrics BEFORE the action (a successful action redirects away); undo on failure.
+      if (rememberBio && bioAvailable && userId) { try { await savePinForBiometrics(userId, pin); } catch { /* ignore */ } }
       const res = mode === "set" ? await setPinAction(pin, confirm, next) : await verifyPinAction(pin, next);
       // On success the action redirects; only failures return here.
-      if (res && !res.ok) { setErr(res.error ?? "Something went wrong"); setPin(""); setConfirm(""); }
+      if (res && !res.ok) { if (rememberBio) await forgetBiometricPin(); setErr(res.error ?? "Something went wrong"); setPin(""); setConfirm(""); }
     });
   };
 
@@ -121,6 +144,12 @@ export function PinForm({ mode, next, hasPassword = true }: { mode: "enter" | "s
             <form onSubmit={submit} className="space-y-4">
               {pinInput(pin, setPin, mode === "set" ? "New 4-digit PIN" : "Your PIN", true)}
               {mode === "set" ? pinInput(confirm, setConfirm, "Confirm PIN") : null}
+              {bioAvailable && userId ? (
+                <label className="flex items-center gap-2 text-sm text-slate-600">
+                  <input type="checkbox" checked={rememberBio} onChange={(e) => setRememberBio(e.target.checked)} />
+                  Use Face ID / fingerprint next time
+                </label>
+              ) : null}
               {err ? <p className="text-center text-sm text-port">{err}</p> : null}
               <button
                 type="submit"

@@ -14,8 +14,19 @@ async function resolveMe() {
   return { ctx, repos, me };
 }
 
-/** Clock the signed-in instructor in, optionally against one of their sessions. */
-export async function clockInAction(courseSessionId?: string | null): Promise<Result> {
+export interface GeoFix { lat: number; lng: number; accuracy?: number | null }
+
+/** Validate a client-supplied position; anything odd is dropped, never trusted. */
+function cleanFix(fix: GeoFix | null | undefined): { lat: number; lng: number; accuracyM: number | null } | null {
+  if (!fix) return null;
+  const lat = Number(fix.lat), lng = Number(fix.lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+  const acc = fix.accuracy == null ? null : Math.round(Number(fix.accuracy));
+  return { lat: Math.round(lat * 1e5) / 1e5, lng: Math.round(lng * 1e5) / 1e5, accuracyM: acc != null && Number.isFinite(acc) && acc >= 0 ? Math.min(acc, 100_000) : null };
+}
+
+/** Clock the signed-in instructor in, optionally against one of their sessions (with approximate location from the app). */
+export async function clockInAction(courseSessionId?: string | null, fix?: GeoFix | null): Promise<Result> {
   const { ctx, repos, me } = await resolveMe();
   if (!me) return { ok: false, error: "No linked instructor profile" };
 
@@ -27,16 +38,16 @@ export async function clockInAction(courseSessionId?: string | null): Promise<Re
     sessionId = session.id;
   }
 
-  await clockIn(repos, ctx, me.id, sessionId);
+  await clockIn(repos, ctx, me.id, sessionId, Date.now(), cleanFix(fix));
   revalidatePath("/portal/timeclock");
   return { ok: true };
 }
 
 /** Clock the signed-in instructor out of their open entry. */
-export async function clockOutAction(): Promise<Result> {
+export async function clockOutAction(fix?: GeoFix | null): Promise<Result> {
   const { ctx, repos, me } = await resolveMe();
   if (!me) return { ok: false, error: "No linked instructor profile" };
-  await clockOut(repos, ctx, me.id);
+  await clockOut(repos, ctx, me.id, Date.now(), cleanFix(fix));
   revalidatePath("/portal/timeclock");
   return { ok: true };
 }

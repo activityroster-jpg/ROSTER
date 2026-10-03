@@ -1,7 +1,21 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { clockInAction, clockOutAction } from "@/app/(app)/portal/timeclock/actions";
+import { clockInAction, clockOutAction, type GeoFix } from "@/app/(app)/portal/timeclock/actions";
+
+/** Approximate position, or null if unavailable / refused / slow. Never blocks the clock-in for long. */
+function currentFix(): Promise<GeoFix | null> {
+  return new Promise((resolve) => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) return resolve(null);
+    const done = (v: GeoFix | null) => { clearTimeout(t); resolve(v); };
+    const t = setTimeout(() => done(null), 8000);
+    navigator.geolocation.getCurrentPosition(
+      (p) => done({ lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy }),
+      () => done(null),
+      { enableHighAccuracy: false, timeout: 7000, maximumAge: 60_000 },
+    );
+  });
+}
 
 export interface ClockSession {
   id: string;
@@ -32,7 +46,7 @@ export function ClockPanel({
     setSince(nowHHMM());
     setLabel(sessionLabel);
     startTransition(async () => {
-      const res = await clockInAction(sessionId);
+      const res = await clockInAction(sessionId, await currentFix());
       if (!res.ok) { setOpen(false); setSince(null); setLabel(null); setError(res.error ?? "Could not clock in"); }
     });
   };
@@ -40,7 +54,7 @@ export function ClockPanel({
     setError(null);
     setOpen(false);
     startTransition(async () => {
-      const res = await clockOutAction();
+      const res = await clockOutAction(await currentFix());
       if (!res.ok) { setOpen(true); setError(res.error ?? "Could not clock out"); }
       else { setSince(null); setLabel(null); }
     });

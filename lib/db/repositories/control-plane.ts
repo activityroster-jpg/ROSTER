@@ -4,8 +4,10 @@ import {
   account,
   errorReport,
   lead,
+  pushToken,
   securityEvent,
   trustedDevice,
+  type PushPlatform,
   type SecurityEventKind,
   membership,
   organisation,
@@ -467,6 +469,24 @@ export class ControlPlaneRepository {
 
   async setUserPhone(userId: string, phone: string | null): Promise<void> {
     await this.db.update(user).set({ phone }).where(eq(user.id, userId));
+  }
+
+  // --- Push tokens -----------------------------------------------------------
+
+  /** Register (or refresh) a device's push token for the user. A token moving to another user is re-owned. */
+  async upsertPushToken(input: { userId: string; token: string; platform: PushPlatform; deviceId: string | null }): Promise<void> {
+    await this.db
+      .insert(pushToken)
+      .values({ ...input, lastSeenAt: new Date() })
+      .onConflictDoUpdate({ target: pushToken.token, set: { userId: input.userId, platform: input.platform, deviceId: input.deviceId, lastSeenAt: new Date() } });
+  }
+
+  async deletePushToken(token: string): Promise<void> {
+    await this.db.delete(pushToken).where(eq(pushToken.token, token));
+  }
+
+  async pushTokensForUser(userId: string): Promise<{ token: string; platform: PushPlatform }[]> {
+    return this.db.select({ token: pushToken.token, platform: pushToken.platform }).from(pushToken).where(eq(pushToken.userId, userId));
   }
 }
 

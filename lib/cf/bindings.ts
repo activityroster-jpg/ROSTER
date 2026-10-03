@@ -44,6 +44,8 @@ export interface CloudflareEnv {
    *  Pixabay keys are issued instantly, Pexels keys are sometimes paused. */
   PEXELS_API_KEY?: string;
   PIXABAY_API_KEY?: string;
+  /** Firebase service-account JSON (whole file, as one secret) for push notifications via FCM. */
+  FCM_SERVICE_ACCOUNT_JSON?: string;
 }
 
 export function getEnv(): CloudflareEnv {

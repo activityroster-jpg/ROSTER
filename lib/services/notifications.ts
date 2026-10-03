@@ -3,6 +3,8 @@ import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
 import { notification as notificationTable, type Notification } from "@/lib/db/schema";
 import { sendEmail } from "@/lib/mail";
+import { getEnv } from "@/lib/cf/bindings";
+import { sendPush } from "@/lib/push/fcm";
 
 export interface NotifyInput {
   title: string;
@@ -34,6 +36,19 @@ export async function notifyInstructor(
     readAt: null,
     sentAt: new Date(),
   });
+
+  // Push to the instructor's phones (the app registers tokens per device). Best effort.
+  if (instructor.userId) {
+    try {
+      const tokens = await repos.control.pushTokensForUser(instructor.userId);
+      if (tokens.length) {
+        const { dead } = await sendPush(getEnv(), tokens.map((t) => t.token), { title: input.title, body: input.body ?? null, url: "/portal/notifications" });
+        await Promise.all(dead.map((t) => repos.control.deletePushToken(t).catch(() => {})));
+      }
+    } catch (err) {
+      console.error("[notify] push failed:", (err as Error).message);
+    }
+  }
 
   if (input.email && instructor.email && instructor.notifyEmail !== false) {
     try {

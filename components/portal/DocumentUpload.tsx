@@ -38,16 +38,16 @@ export function DocumentUpload({
   };
 
   return (
-    <label className="cursor-pointer text-xs font-medium text-teal hover:underline">
-      {busy ? "Uploading…" : hasDoc ? "Replace" : "Upload"}
-      <input
-        type="file"
-        accept="application/pdf,image/png,image/jpeg,image/webp"
-        className="hidden"
-        onChange={onChange}
-        disabled={busy}
-      />
-      {error ? <span className="ml-2 text-port">{error}</span> : null}
-    </label>
+    <span className="inline-flex items-center gap-2 text-xs font-medium">
+      <label className="cursor-pointer text-teal hover:underline">
+        {busy ? "Uploading…" : hasDoc ? "Replace" : "Upload"}
+        <input type="file" accept="application/pdf,image/png,image/jpeg,image/webp" className="hidden" onChange={onChange} disabled={busy} />
+      </label>
+      <label className="cursor-pointer text-teal hover:underline" title="Take a photo of the certificate">
+        📷
+        <input type="file" accept="image/*" capture="environment" className="hidden" onChange={onChange} disabled={busy} />
+      </label>
+      {error ? <span className="text-port">{error}</span> : null}
+    </span>
   );
 }
