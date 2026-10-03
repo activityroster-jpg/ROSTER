@@ -1,0 +1,17 @@
+name: Probe production
+# Read-only: fetches a few public pages and prints the status codes. Used to
+# check production from GitHub's network when it cannot be reached otherwise.
+on:
+  workflow_dispatch:
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch pages
+        run: |
+          for u in https://activityroster.com/api/health https://activityroster.com/ https://activityroster.com/sign-in https://no-such-centre-probe.activityroster.com/ https://no-such-centre-probe.activityroster.com/sign-in https://staging.activityroster.com/api/health https://no-such-centre-probe.staging.activityroster.com/; do
+            code=$(curl -sS -o /tmp/body -w '%{http_code}' --max-time 30 "$u" || echo ERR)
+            echo "$code  $u"
+            if [ "$code" != "200" ] && [ "$code" != "404" ] && [ "$code" != "302" ] && [ "$code" != "307" ]; then head -c 600 /tmp/body; echo; fi
+          done
+          curl -sS https://activityroster.com/api/health; echo
