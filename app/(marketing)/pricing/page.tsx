@@ -198,7 +198,7 @@ export default async function PricingPage() {
                     <th key={n} className="px-4 py-3 whitespace-nowrap">{n}</th>
                   ))}
                   <th className="px-4 py-3 whitespace-nowrap bg-starboard/10 text-navy">ActivityRoster</th>
-                  <th className="px-4 py-3">You save</th>
+                  <th className="px-4 py-3">You save per year</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -215,7 +215,12 @@ export default async function PricingPage() {
                       <span className="block text-[11px] font-normal text-slate-500">{r.plan}</span>
                     </td>
                     <td className="px-4 py-3 font-semibold text-starboard whitespace-nowrap">
-                      {r.save > 0 ? `${fmtMoney(r.save, currency)}/mo (${r.pct}% less)` : "Cheapest"}
+                      {r.save > 0 ? (
+                        <>
+                          {fmtMoney(r.save * 12, currency)}/yr
+                          <span className="block text-[11px] font-normal text-slate-500">{fmtMoney(r.save, currency)}/mo · {r.pct}% less</span>
+                        </>
+                      ) : "Cheapest"}
                     </td>
                   </tr>
                 ))}
