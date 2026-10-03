@@ -44,6 +44,10 @@ jobs:
         id: ids
         run: |
           set -euo pipefail
+          # Surface wrangler's own error text as a GitHub annotation, so the
+          # reason is readable from the run page and the API without the log.
+          exec > >(tee -a /tmp/provision.log) 2>&1
+          trap 'echo "::error::Provisioning failed. Last output: $(tail -c 1200 /tmp/provision.log | tr "\n" " ")"' ERR
           D1_ID="$(npx wrangler d1 list --json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const l=JSON.parse(s);const d=l.find(x=>x.name==="activityroster-staging");console.log(d?d.uuid:"")})')"
           if [ -z "$D1_ID" ]; then
             npx wrangler d1 create activityroster-staging --location=weur
