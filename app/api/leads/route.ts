@@ -3,6 +3,7 @@ import { getEnv, getRepositories } from "@/lib/cf/bindings";
 import { leadSchema } from "@/lib/validation/lead";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/security/rate-limit";
 import { escapeHtml, sendEmail } from "@/lib/mail";
+import { verifyTurnstile } from "@/lib/security/turnstile";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,10 @@ export async function POST(req: Request) {
   const limit = await rateLimit(`lead:${clientIp(req)}`, 15, 60);
   if (!limit.allowed) return tooManyRequests();
 
-  const parsed = leadSchema.safeParse(await req.json().catch(() => null));
+  const rawBody = (await req.json().catch(() => null)) as (Record<string, unknown> & { turnstileToken?: string }) | null;
+  const human = await verifyTurnstile(rawBody?.turnstileToken, clientIp(req));
+  if (!human.ok) return NextResponse.json({ error: human.reason }, { status: 400 });
+  const parsed = leadSchema.safeParse(rawBody);
   if (!parsed.success) {
     return NextResponse.json({ error: "Please enter a valid email" }, { status: 400 });
   }

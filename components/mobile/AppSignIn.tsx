@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Turnstile } from "@/components/auth/Turnstile";
 import { twoFactorHintAction } from "@/app/(app)/sign-in/actions";
 import Link from "next/link";
 import { authClient, signIn } from "@/lib/auth/client";
@@ -12,6 +13,9 @@ export function AppSignIn() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const [needsCheck, setNeedsCheck] = useState(false);
+  const [tsToken, setTsToken] = useState<string | null>(null);
+  const [tsReset, setTsReset] = useState(0);
   const [err, setErr] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
 
@@ -19,7 +23,8 @@ export function AppSignIn() {
     e.preventDefault();
     setErr(null); setBusy(true);
     try {
-      const res = await signIn.email({ email: email.trim(), password });
+      const res = await signIn.email({ email: email.trim(), password }, tsToken ? { headers: { "x-turnstile-token": tsToken } } : {});
+      if (res.error?.status === 428) { setNeedsCheck(true); setTsReset((n) => n + 1); setErr("Please complete the security check below, then try again."); return; }
       if (res.error) { setErr(res.error.message ?? "Sign-in failed"); return; }
       if (res.data && "twoFactorRedirect" in res.data && res.data.twoFactorRedirect) {
         const hint = await twoFactorHintAction(email.trim()).catch(() => ({ method: null, hint: null }));
@@ -53,6 +58,7 @@ export function AppSignIn() {
         <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" autoComplete="current-password" required className={field} />
         {err ? <p className="text-sm text-port">{err}</p> : null}
         {note ? <p className="text-sm text-slate-600">{note}</p> : null}
+        {needsCheck ? <Turnstile onToken={setTsToken} resetKey={tsReset} /> : null}
         <button type="submit" disabled={busy} className="w-full rounded-xl bg-teal px-4 py-3.5 text-base font-semibold text-white hover:bg-teal-700 disabled:opacity-50">
           {busy ? "Signing in…" : "Sign in"}
         </button>

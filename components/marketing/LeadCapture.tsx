@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { PasswordStrength } from "@/components/auth/PasswordStrength";
+import { Turnstile } from "@/components/auth/Turnstile";
 import Link from "next/link";
 import { authClient } from "@/lib/auth/client";
 
@@ -28,6 +29,8 @@ export function LeadCapture({
 }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [tsReset, setTsReset] = useState(0);
   const [centreName, setCentreName] = useState("");
   const [slug, setSlug] = useState("");
   const [slugEdited, setSlugEdited] = useState(false);
@@ -61,10 +64,11 @@ export function LeadCapture({
     if (!acceptedTerms) { setError("Please agree to the Terms and Privacy Policy to continue."); return; }
     setStatus("busy");
     try {
+      setTsReset((n) => n + 1);
       const res = await fetch("/api/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ownerEmail: email, password, centreName, slug, jurisdiction, setupMode, acceptedTerms, source }),
+        body: JSON.stringify({ ownerEmail: email, password, centreName, slug, jurisdiction, setupMode, acceptedTerms, source, turnstileToken }),
       });
       const data = (await res.json()) as { ok?: boolean; error?: string; url?: string; emailSent?: boolean };
       if (!res.ok || !data.ok) {
@@ -185,6 +189,7 @@ export function LeadCapture({
       {error ? <p className="mt-3 text-sm text-port">{error}</p> : null}
 
       <div className="mt-4 flex flex-wrap gap-3">
+        <Turnstile onToken={setTurnstileToken} resetKey={tsReset} className="my-2" />
         <button type="submit" disabled={status === "busy" || !acceptedTerms} className="rounded-lg bg-teal px-5 py-3 font-semibold text-white transition hover:bg-teal-700 disabled:opacity-50">
           {status === "busy" ? "Setting up…" : "Start my free month"}
         </button>

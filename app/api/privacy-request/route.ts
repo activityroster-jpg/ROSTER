@@ -6,6 +6,7 @@ import { clientIp, rateLimit, tooManyRequests } from "@/lib/security/rate-limit"
 import { escapeHtml, sendEmail } from "@/lib/mail";
 import { platformAdminEmails } from "@/lib/platform/admin";
 import { PRIVACY_CONTACT } from "@/lib/legal";
+import { verifyTurnstile } from "@/lib/security/turnstile";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,10 @@ const KIND_LABEL: Record<string, string> = {
 export async function POST(req: Request) {
   const limit = await rateLimit(`privacy-request:${clientIp(req)}`, 5, 60 * 60);
   if (!limit.allowed) return tooManyRequests();
-  const parsed = privacyRequestSchema.safeParse(await req.json().catch(() => null));
+  const raw = (await req.json().catch(() => null)) as (Record<string, unknown> & { turnstileToken?: string }) | null;
+  const human = await verifyTurnstile(raw?.turnstileToken, clientIp(req));
+  if (!human.ok) return NextResponse.json({ error: human.reason }, { status: 400 });
+  const parsed = privacyRequestSchema.safeParse(raw);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Please check the form" }, { status: 400 });
   const d = parsed.data;
   if (d.website) return NextResponse.json({ ok: true, reference: "received" });

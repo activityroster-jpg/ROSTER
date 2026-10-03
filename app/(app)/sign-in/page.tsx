@@ -3,12 +3,18 @@
 import { useEffect, useState } from "react";
 import { signIn, authClient } from "@/lib/auth/client";
 import { twoFactorHintAction } from "./actions";
+import { Turnstile } from "@/components/auth/Turnstile";
 
 type Mode = "link" | "password";
 
 export default function SignInPage() {
   const [mode, setMode] = useState<Mode>("password");
   const [expired, setExpired] = useState(false);
+  // Shown only after repeated failures (the server answers 428 until a check passes).
+  const [needsCheck, setNeedsCheck] = useState(false);
+  const [tsToken, setTsToken] = useState<string | null>(null);
+  const [tsReset, setTsReset] = useState(0);
+  const tsHeaders = () => (tsToken ? { headers: { "x-turnstile-token": tsToken } } : {});
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -49,8 +55,10 @@ export default function SignInPage() {
     setError(null);
     setBusy(true);
     try {
-      const res = await signIn.email({ email, password, callbackURL: after });
+      const res = await signIn.email({ email, password, callbackURL: after }, tsHeaders());
       if (res.error) {
+        if (res.error.status === 428) { setNeedsCheck(true); setTsReset((n) => n + 1); setError("Please complete the security check below, then sign in again."); return; }
+        setTsReset((n) => n + 1);
         const notVerified = res.error.status === 403 || /verif/i.test(res.error.message ?? "");
         setUnverified(notVerified);
         // One message for every failure, so the page never confirms whether an address has an account.
@@ -123,6 +131,7 @@ export default function SignInPage() {
           <form onSubmit={signInPassword} className="space-y-3">
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" required autoComplete="email" className="w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-teal" />
             <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" autoComplete="current-password" className="w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-teal" />
+            {needsCheck ? <Turnstile onToken={setTsToken} resetKey={tsReset} /> : null}
             {error ? <p className="text-sm text-port">{error}</p> : null}
             {unverified ? <button type="button" onClick={resendConfirmation} disabled={busy} className="text-sm font-semibold text-teal hover:underline disabled:opacity-50">Resend the confirmation email</button> : null}
             {note ? <p className="text-sm text-starboard">{note}</p> : null}

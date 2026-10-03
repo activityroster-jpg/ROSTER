@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Turnstile } from "@/components/auth/Turnstile";
 
 const KINDS = [
   ["access", "A copy of the personal data you hold about me"],
@@ -17,6 +18,8 @@ const input = "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outli
 
 export function PrivacyRequestForm() {
   const [v, setV] = useState({ kind: "access", name: "", email: "", centre: "", message: "", website: "" });
+  const [token, setToken] = useState<string | null>(null);
+  const [tsReset, setTsReset] = useState(0);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -26,7 +29,8 @@ export function PrivacyRequestForm() {
     e.preventDefault();
     setErr(null); setBusy(true);
     try {
-      const res = await fetch("/api/privacy-request", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(v) });
+      const res = await fetch("/api/privacy-request", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...v, turnstileToken: token }) });
+      setTsReset((n) => n + 1);
       const data = (await res.json().catch(() => ({}))) as { ok?: boolean; reference?: string; error?: string };
       if (!res.ok || !data.ok) { setErr(data.error ?? "Something went wrong. Email privacy@activityroster.com instead."); return; }
       setDone(data.reference ?? "received");
@@ -58,6 +62,7 @@ export function PrivacyRequestForm() {
       <div><label className="mb-1 block text-xs font-medium text-slate-500">Centre or club this is about (if any)</label><input value={v.centre} onChange={(e) => set("centre", e.target.value)} placeholder="e.g. Westbay Sailing Club" className={input} /></div>
       <div><label className="mb-1 block text-xs font-medium text-slate-500">Details</label><textarea value={v.message} onChange={(e) => set("message", e.target.value)} required rows={5} className={input} placeholder="Tell us what you need and anything that helps us find your records (the email address your account uses, for example)." /></div>
       <div className="hidden" aria-hidden><label>Website<input tabIndex={-1} autoComplete="off" value={v.website} onChange={(e) => set("website", e.target.value)} /></label></div>
+      <Turnstile onToken={setToken} resetKey={tsReset} />
       {err ? <p className="text-sm text-port">{err}</p> : null}
       <button disabled={busy} className="rounded-lg bg-teal px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{busy ? "Sending…" : "Send request"}</button>
       <p className="text-xs text-slate-400">We use these details only to deal with your request. You can also complain to the ICO (ico.org.uk) or, in Ireland, the Data Protection Commission (dataprotection.ie).</p>

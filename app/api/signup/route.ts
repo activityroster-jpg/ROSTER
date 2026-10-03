@@ -5,6 +5,7 @@ import { trialSignupSchema } from "@/lib/validation/signup";
 import { provisionCentre } from "@/lib/billing/provision";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/security/rate-limit";
 import { isPwnedPassword, PWNED_MESSAGE } from "@/lib/security/pwned";
+import { verifyTurnstile } from "@/lib/security/turnstile";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,10 @@ export async function POST(req: Request) {
   const limit = await rateLimit(`signup:${clientIp(req)}`, 8, 300);
   if (!limit.allowed) return tooManyRequests();
 
+  // Human check (skipped until TURNSTILE_SECRET_KEY is set).
+  const raw = await req.clone().json().catch(() => null) as { turnstileToken?: string } | null;
+  const human = await verifyTurnstile(raw?.turnstileToken, clientIp(req));
+  if (!human.ok) return NextResponse.json({ error: human.reason }, { status: 400 });
   const parsed = trialSignupSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     const first = parsed.error.issues[0]?.message ?? "Please check your details";

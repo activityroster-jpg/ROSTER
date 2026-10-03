@@ -18,6 +18,7 @@ export interface CloudflareEnv {
   BETTER_AUTH_SECRET?: string;
   /** Optional dedicated key for encrypting integration API tokens at rest (falls back to the auth secret). */
   TOKEN_ENCRYPTION_KEY?: string;
+  TURNSTILE_SECRET_KEY?: string;
   BETTER_AUTH_URL?: string;
   STRIPE_SECRET_KEY?: string;
   STRIPE_WEBHOOK_SECRET?: string;

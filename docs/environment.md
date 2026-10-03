@@ -27,6 +27,7 @@ Three environments. Names only here, never values.
 | `RESEND_API_KEY` | Sends email | Resend → API Keys | Create new, set, delete old |
 | `RESEND_WEBHOOK_SECRET` | Verifies Resend delivery/bounce webhooks | Resend → Webhooks → signing secret | Recreate the webhook |
 | `ANTHROPIC_API_KEY` | Outreach agent research and drafting (prospect data only) | console.anthropic.com → API Keys | Create new, set, revoke old |
+| `TURNSTILE_SECRET_KEY` | Verifies Turnstile human checks on public forms and challenged sign-ins; the site key is public and lives in code | Cloudflare → Turnstile → widget → Secret key | Rotate the key in Turnstile, set the new value |
 | `OUTREACH_CRON_SECRET` | Shared secret for the hourly tick | Generated; same value in the GitHub secret of the same name | Change both places |
 | `SENTRY_DSN` | Error reporting (EU ingest) | Sentry project settings | Regenerate the DSN in Sentry |
 | `FCM_SERVICE_ACCOUNT_JSON` | Push notifications for the mobile app | Firebase service account | Create a new key, set, delete old |

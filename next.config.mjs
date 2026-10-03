@@ -15,12 +15,12 @@ const csp = [
   // Inline scripts are still allowed here because the marketing pages are
   // prerendered. The signed-in app also receives a nonce policy (report-only)
   // from middleware — see lib/security/csp.ts for how to enforce it.
-  "script-src 'self' 'unsafe-inline'",
+  "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com",
   // Only the hosts the browser actually talks to: our own origin, Stripe.js (if
   // ever embedded) and Sentry's EU/US ingest. Everything else is server-side.
-  "connect-src 'self' https://api.stripe.com https://*.ingest.sentry.io https://*.ingest.de.sentry.io",
+  "connect-src 'self' https://api.stripe.com https://*.ingest.sentry.io https://*.ingest.de.sentry.io https://challenges.cloudflare.com",
   "form-action 'self' https://checkout.stripe.com https://billing.stripe.com",
-  "frame-src https://js.stripe.com https://hooks.stripe.com",
+  "frame-src https://js.stripe.com https://hooks.stripe.com https://challenges.cloudflare.com",
   "upgrade-insecure-requests",
 ].join("; ");
 

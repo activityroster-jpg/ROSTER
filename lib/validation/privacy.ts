@@ -9,5 +9,6 @@ export const privacyRequestSchema = z.object({
   message: z.string().trim().min(10, "Tell us a little more so we can act on it").max(4000),
   // Honeypot: real people leave it blank.
   website: z.string().max(0).optional().or(z.literal("")),
+  turnstileToken: z.string().max(2048).optional(),
 });
 export type PrivacyRequestInput = z.infer<typeof privacyRequestSchema>;

@@ -29,10 +29,10 @@ export function noncePolicy(nonce: string): string {
     "img-src 'self' data: https:",
     "font-src 'self' https://fonts.gstatic.com data:",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    `script-src 'nonce-${nonce}' 'strict-dynamic' 'self'`,
-    "connect-src 'self' https://api.stripe.com https://*.ingest.sentry.io https://*.ingest.de.sentry.io",
+    `script-src 'nonce-${nonce}' 'strict-dynamic' 'self' https://challenges.cloudflare.com`,
+    "connect-src 'self' https://api.stripe.com https://*.ingest.sentry.io https://*.ingest.de.sentry.io https://challenges.cloudflare.com",
     "form-action 'self' https://checkout.stripe.com https://billing.stripe.com",
-    "frame-src https://js.stripe.com https://hooks.stripe.com",
+    "frame-src https://js.stripe.com https://hooks.stripe.com https://challenges.cloudflare.com",
     "report-uri /api/csp-report",
   ].join("; ");
 }
