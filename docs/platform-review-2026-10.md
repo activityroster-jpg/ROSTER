@@ -133,3 +133,22 @@ expiry reminder delivery, pay model, hours source, approval, export format, cloc
 location policy, Face ID replacing PIN, password re-prompt cadence, shift swaps,
 trial end behaviour, sample data, import route, self-serve vs call, Dev Center
 morning view, real default price, preferred vocabulary.
+
+## Decisions (Conor, 2026-10-03)
+
+- One shared admin login per centre (Principal), no personal name; no role below admin.
+- Owner is not auto-instructor; hide "Switch to instructor view" when no instructor record.
+- ~50/50 volunteer clubs vs commercial schools; courses mostly ad hoc.
+- Roster is PUBLISHED per period once assigned; instructors CONFIRM assignments; colleagues/student counts visible only once published.
+- "Busy" availability BLOCKS rostering, admin override allowed.
+- Default session times per course type, editable per course (exists).
+- Nothing mandatory unless the centre ticks it; safety boat does not require PB2 → seed checks as optional.
+- Expiry reminders delivered in the app/portal (in-app + push), generated lazily.
+- Pay: per instructor, centre chooses hourly / per session / per day (optional per role).
+- Hours from the ROSTER by default; clock is an optional switch; pay source roster|clock is a centre setting.
+- Payroll review page: auto-filled from roster, all fields editable, roster vs clock side by side with per-line choice + main switch; reviewed/approved before export.
+- Clock-in shows the session; clocking in without a session allowed but needs a mandatory note.
+- Face ID replaces PIN in the app (PIN backup); password only after a week unused; device trust by device+country; no shift swaps.
+- Trial end: read-only, then locked out; no sample data.
+- Real prices: £35 Small Club, £65 Standard — remove dead default monthly/annual fields.
+- Vocabulary: "certs", "instructors", "roster" (URLs unchanged).
