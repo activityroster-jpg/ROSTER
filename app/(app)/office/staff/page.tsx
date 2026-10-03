@@ -2,6 +2,7 @@ import { requireTenant } from "@/lib/tenant/require";
 import { listStaffWithFit } from "@/lib/services/staff";
 import { getTeachingMatrix } from "@/lib/services/teaching";
 import { Card } from "@/components/ui";
+import { JoinRequests, type JoinRequestRow } from "@/components/office/JoinRequests";
 import { AddInstructorForm } from "@/components/office/AddInstructorForm";
 import { StaffTable, type StaffRow } from "@/components/office/StaffTable";
 
@@ -32,7 +33,13 @@ export default async function StaffPage() {
     if (!userId) return "none";
     return membershipStatus.get(userId) === "active" ? "accepted" : "pending";
   };
-  const rows: StaffRow[] = staff.map(({ instructor, fit }) => {
+  const pendingRequests: JoinRequestRow[] = staff
+    .filter(({ instructor }) => instructor.status === "pending")
+    .map(({ instructor }) => ({
+      id: instructor.id, name: instructor.name, email: instructor.email, phone: instructor.phone,
+      requestedAt: instructor.createdAt.toLocaleDateString("en-GB", { day: "numeric", month: "short" }),
+    }));
+  const rows: StaffRow[] = staff.filter(({ instructor }) => instructor.status !== "pending").map(({ instructor, fit }) => {
     const teach = teaching.get(instructor.id) ?? [];
     return {
       id: instructor.id,
@@ -61,9 +68,11 @@ export default async function StaffPage() {
         <a href="/office/staff/import" className="flex-none rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-navy hover:bg-slate-50">Import from spreadsheet</a>
       </div>
 
+      <JoinRequests rows={pendingRequests} />
+
       <Card className="mb-5">
         <h2 className="mb-1 font-semibold text-navy">Add an instructor</h2>
-        <p className="mb-3 text-xs text-slate-500">Enter their details and what they teach — we email them an invite to set up their account and upload their licences.</p>
+        <p className="mb-3 text-xs text-slate-500">Enter their details and what they teach — we email them an invite to set up their account and upload their licences. Or give them your company code (Settings) and they can join from the app.</p>
         <AddInstructorForm courses={courseChoices} quals={qualChoices} checks={checkChoices} />
       </Card>
 

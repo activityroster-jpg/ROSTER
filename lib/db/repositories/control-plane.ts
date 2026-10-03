@@ -98,7 +98,7 @@ export class ControlPlaneRepository {
 
   async createMembership(
     values: { userId: string; organisationId: string; role: MembershipRole },
-    status: "active" | "invited" = "active",
+    status: MembershipStatus = "active",
   ): Promise<void> {
     await this.db.insert(membership).values({ ...values, status });
   }
@@ -404,4 +404,80 @@ export class ControlPlaneRepository {
       .limit(limit);
     return rows;
   }
+
+  // --- Company codes & app membership -------------------------------------
+
+  async organisationByJoinCode(code: string) {
+    const clean = normaliseJoinCode(code);
+    if (!clean) return null;
+    const rows = await this.db.select().from(organisation).where(eq(organisation.joinCode, clean)).limit(1);
+    return rows[0] ?? null;
+  }
+
+  /** The centre's company code, generating one the first time it's asked for. */
+  async ensureJoinCode(organisationId: string): Promise<string> {
+    const org = await this.organisationById(organisationId);
+    if (!org) throw new Error("Organisation not found");
+    if (org.joinCode) return org.joinCode;
+    return this.regenerateJoinCode(organisationId);
+  }
+
+  /** Issue a fresh company code (the old one stops working immediately). */
+  async regenerateJoinCode(organisationId: string): Promise<string> {
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const code = generateJoinCode();
+      if (await this.organisationByJoinCode(code)) continue; // astronomically rare collision
+      await this.db.update(organisation).set({ joinCode: code }).where(eq(organisation.id, organisationId));
+      return code;
+    }
+    throw new Error("Could not generate a unique company code");
+  }
+
+  /** Every centre a user belongs to (any status), with the centre's name/slug. */
+  async membershipsForUser(userId: string): Promise<{ organisationId: string; name: string; slug: string; role: MembershipRole; status: MembershipStatus; orgStatus: string }[]> {
+    return this.db
+      .select({ organisationId: membership.organisationId, name: organisation.name, slug: organisation.slug, role: membership.role, status: membership.status, orgStatus: organisation.status })
+      .from(membership)
+      .innerJoin(organisation, eq(organisation.id, membership.organisationId))
+      .where(eq(membership.userId, userId));
+  }
+
+  async setMembershipStatus(userId: string, organisationId: string, status: MembershipStatus): Promise<boolean> {
+    const rows = await this.db
+      .update(membership)
+      .set({ status })
+      .where(and(eq(membership.userId, userId), eq(membership.organisationId, organisationId)))
+      .returning({ id: membership.id });
+    return rows.length > 0;
+  }
+
+  async deleteMembership(userId: string, organisationId: string): Promise<void> {
+    await this.db.delete(membership).where(and(eq(membership.userId, userId), eq(membership.organisationId, organisationId)));
+  }
+
+  /** Emails of a centre's active admins (to tell them about a join request). */
+  async adminEmailsForOrg(organisationId: string): Promise<string[]> {
+    const rows = await this.db
+      .select({ email: user.email })
+      .from(membership)
+      .innerJoin(user, eq(user.id, membership.userId))
+      .where(and(eq(membership.organisationId, organisationId), eq(membership.role, "admin"), eq(membership.status, "active")));
+    return rows.map((r) => r.email);
+  }
+
+  async setUserPhone(userId: string, phone: string | null): Promise<void> {
+    await this.db.update(user).set({ phone }).where(eq(user.id, userId));
+  }
+}
+
+/** Company codes: 6 characters from an alphabet without look-alikes (no 0/O, 1/I/L). */
+const CODE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+export function generateJoinCode(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(6));
+  return Array.from(bytes, (b) => CODE_ALPHABET[b % CODE_ALPHABET.length]).join("");
+}
+/** Uppercase, strip spaces/dashes; null if it can't be a code. */
+export function normaliseJoinCode(input: string): string | null {
+  const clean = (input ?? "").toUpperCase().replace(/[\s-]+/g, "");
+  return /^[A-Z0-9]{6}$/.test(clean) ? clean : null;
 }

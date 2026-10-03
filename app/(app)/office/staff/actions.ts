@@ -1,5 +1,9 @@
 "use server";
 
+import { escapeHtml, sendEmail } from "@/lib/mail";
+
+import { notifyInstructor } from "@/lib/services/notifications";
+
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { requireTenant } from "@/lib/tenant/require";
@@ -236,4 +240,32 @@ export async function addQualificationAction(_prev: ActionState, formData: FormD
   await writeAudit(repos, ctx, { action: "create", entity: "qualification", entityId: created.id, after: created });
   revalidatePath("/office/staff");
   return { ok: true };
+}
+
+/** Approve someone who joined via the app's company code: they become active staff with portal access. */
+export async function approveJoinRequestAction(instructorId: string): Promise<ActionState> {
+  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const inst = await repos.tenant.instructor.findById(ctx, instructorId);
+  if (!inst || inst.status !== "pending") return { ok: false, error: "Request not found" };
+  await repos.tenant.instructor.update(ctx, inst.id, { status: "active" });
+  if (inst.userId) await repos.control.setMembershipStatus(inst.userId, ctx.organisationId, "active");
+  await writeAudit(repos, ctx, { action: "approve_join_request", entity: "instructor", entityId: inst.id, after: { email: inst.email } });
+  await notifyInstructor(repos, ctx, inst.id, { title: "You're in — your centre approved your request", body: "Open the ActivityRoster app to see your schedule, set your availability and upload your licences.", email: true });
+  revalidatePath("/office/staff");
+  return { ok: true, message: `${inst.name} approved` };
+}
+
+/** Decline a join request: removes the pending record and tells them. */
+export async function declineJoinRequestAction(instructorId: string): Promise<ActionState> {
+  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const inst = await repos.tenant.instructor.findById(ctx, instructorId);
+  if (!inst || inst.status !== "pending") return { ok: false, error: "Request not found" };
+  if (inst.email) {
+    await sendEmail({ to: inst.email, subject: "About your request to join on ActivityRoster", html: `<p>Hi ${escapeHtml(inst.name)},</p><p>The centre you asked to join didn't approve your request this time. If you think that's a mistake, please contact them directly.</p>` }).catch(() => {});
+  }
+  if (inst.userId) await repos.control.deleteMembership(inst.userId, ctx.organisationId);
+  await repos.tenant.instructor.delete(ctx, inst.id);
+  await writeAudit(repos, ctx, { action: "decline_join_request", entity: "instructor", entityId: inst.id, before: { email: inst.email } });
+  revalidatePath("/office/staff");
+  return { ok: true, message: `${inst.name} declined` };
 }

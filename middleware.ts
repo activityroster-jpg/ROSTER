@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { resolveHost } from "@/lib/tenant/host";
 import { PIN_COOKIE, PIN_IDLE_MAX_AGE_S } from "@/lib/auth/pin";
 import { DEVICE_COOKIE, DEVICE_HEADER, DEVICE_MAX_AGE_S, isDeviceId } from "@/lib/auth/device";
+import { CENTRE_COOKIE } from "@/lib/auth/centre-cookie";
 
 /**
  * Slide the "PIN verified" cookie forward on each authenticated app request, so
@@ -73,13 +74,17 @@ export function middleware(req: NextRequest) {
     return isAppPath ? slidePinCookie(req, next()) : next();
   }
 
-  // Apex / reserved / unknown: the app surfaces are not served here.
-  if (isAppPath) {
+  // Apex / reserved / unknown: the office is never served here. The instructor
+  // portal IS, for the mobile app, once a centre has been selected (signed
+  // cookie; membership is still checked server-side on every request).
+  const mobilePortal = host.kind === "apex" && path.startsWith("/portal") && req.cookies.has(CENTRE_COOKIE);
+  if (isAppPath && !mobilePortal) {
     const to = url.clone();
-    to.pathname = "/";
+    to.pathname = path.startsWith("/portal") ? "/app" : "/";
     to.host = APEX;
     return NextResponse.redirect(to);
   }
+  if (mobilePortal) return slidePinCookie(req, next());
 
   // The platform admin area lives on the apex — slide its PIN session too.
   return path.startsWith("/admin") ? slidePinCookie(req, next()) : next();

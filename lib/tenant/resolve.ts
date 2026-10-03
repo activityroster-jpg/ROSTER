@@ -6,6 +6,7 @@ import type { TenantContext } from "./context";
 import { GHOST_COOKIE, cookieFromHeader, verifyGhostToken } from "@/lib/auth/ghost";
 import { authSecret } from "@/lib/security/secrets";
 import { isPlatformAdminEmail } from "@/lib/platform/admin";
+import { centreCookieFromHeader, verifyCentreCookie } from "@/lib/auth/centre-cookie";
 
 export type TenantDenial =
   | "unknown-host"
@@ -33,24 +34,39 @@ export type TenantResolution =
 export async function resolveTenant(headers: Headers): Promise<TenantResolution> {
   const env = getEnv();
   const host = resolveHost(headers.get("host"), env.APP_APEX_DOMAIN);
+  const { control } = await getRepositories();
 
-  if (host.kind !== "tenant") {
+  // The mobile app runs on the apex domain (one origin, so the native bridge
+  // works on every page). There the centre comes from a signed "selected
+  // centre" cookie instead of the subdomain — still only a hint: the membership
+  // check below is what authorises, and the cookie must belong to this user.
+  let centreClaims: { organisationId: string; userId: string } | null = null;
+  if (host.kind === "apex") {
+    centreClaims = await verifyCentreCookie(authSecret(env), centreCookieFromHeader(headers.get("cookie")));
+    if (!centreClaims) return { ok: false, reason: "unknown-host" };
+  } else if (host.kind !== "tenant") {
     return { ok: false, reason: "unknown-host" };
   }
 
-  const { control } = await getRepositories();
-  const organisation = await control.organisationBySlug(host.slug);
+  const organisation = host.kind === "tenant"
+    ? await control.organisationBySlug(host.slug)
+    : await control.organisationById(centreClaims!.organisationId);
+  const slugHint = host.kind === "tenant" ? host.slug : organisation?.slug ?? "";
   if (!organisation) {
-    return { ok: false, reason: "no-such-centre", slug: host.slug };
+    return { ok: false, reason: "no-such-centre", slug: slugHint };
   }
   if (organisation.status !== "active") {
-    return { ok: false, reason: "suspended", slug: host.slug, organisation };
+    return { ok: false, reason: "suspended", slug: slugHint, organisation };
   }
 
   const auth = await getAuth();
   const authSession = await auth.api.getSession({ headers });
   if (!authSession?.user) {
-    return { ok: false, reason: "unauthenticated", slug: host.slug, organisation };
+    return { ok: false, reason: "unauthenticated", slug: slugHint, organisation };
+  }
+  // A selected-centre cookie issued to a different user is ignored outright.
+  if (centreClaims && centreClaims.userId !== authSession.user.id) {
+    return { ok: false, reason: "unknown-host" };
   }
 
   // Ghost Mode: a platform admin holding a valid ghost cookie for THIS org gets
@@ -84,7 +100,7 @@ export async function resolveTenant(headers: Headers): Promise<TenantResolution>
     }
   }
   if (!membership || membership.status !== "active") {
-    return { ok: false, reason: "not-a-member", slug: host.slug, organisation };
+    return { ok: false, reason: "not-a-member", slug: slugHint, organisation };
   }
 
   const ctx: TenantContext = {

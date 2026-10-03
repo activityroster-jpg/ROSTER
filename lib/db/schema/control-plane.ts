@@ -25,6 +25,8 @@ export const user = sqliteTable("user", {
   // A secondary email an admin sets for account recovery (separate from the
   // sign-in email). Never used as a login identity.
   recoveryEmail: text("recovery_email"),
+  // Mobile-app sign-up collects a phone number (copied onto the instructor record on join).
+  phone: text("phone"),
   // twoFactor plugin
   twoFactorEnabled: integer("two_factor_enabled", { mode: "boolean" }),
   // 4-digit login PIN (a second factor for centre admins + the platform owner).
@@ -166,10 +168,13 @@ export const organisation = sqliteTable("organisation", {
   // Set when a centre buys the one-off "done-for-you" setup & customisation
   // service, so the platform owner can see who has paid for concierge setup.
   setupPurchasedAt: integer("setup_purchased_at", { mode: "timestamp_ms" }),
+  /** Company code instructors type into the app to join this centre (e.g. "7KD4PX"). */
+  joinCode: text("join_code"),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 }, (t) => [
   uniqueIndex("organisation_slug_uq").on(t.slug),
+  uniqueIndex("organisation_join_code_uq").on(t.joinCode),
   uniqueIndex("organisation_stripe_customer_uq").on(t.stripeCustomerId),
 ]);
 
@@ -197,7 +202,9 @@ export const platformPricing = sqliteTable("platform_pricing", {
 export const MEMBERSHIP_ROLES = ["admin", "instructor"] as const;
 export type MembershipRole = (typeof MEMBERSHIP_ROLES)[number];
 
-export const MEMBERSHIP_STATUSES = ["active", "invited", "suspended"] as const;
+// invited = admin invited, not yet accepted · requested = joined via the app's
+// company code without a matching instructor record, awaiting admin approval.
+export const MEMBERSHIP_STATUSES = ["active", "invited", "requested", "suspended"] as const;
 export type MembershipStatus = (typeof MEMBERSHIP_STATUSES)[number];
 
 /**
@@ -465,7 +472,7 @@ export type NewPlatformTask = typeof platformTask.$inferInsert;
 export const SECURITY_EVENT_KINDS = [
   "pin_set", "pin_reset", "pin_reset_failed", "pin_failed", "pin_locked", "pin_reset_code_sent",
   "recovery_email_set", "password_changed", "new_device", "reauth_passed", "reauth_failed", "invite_accepted",
-  "ghost_start", "ghost_end",
+  "ghost_start", "ghost_end", "join_requested", "join_code_failed",
 ] as const;
 export type SecurityEventKind = (typeof SECURITY_EVENT_KINDS)[number];
 

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { eq } from "drizzle-orm";
-import { Bell, CalendarCheck, CalendarClock, CalendarOff, Clock, FileCheck, Timer } from "lucide-react";
+import { Bell, CalendarCheck, CalendarClock, CalendarOff, Clock, FileCheck, Settings, Timer } from "lucide-react";
 import { requireTenant } from "@/lib/tenant/require";
 import { instructor as instructorTable } from "@/lib/db/schema";
 import { unreadCount } from "@/lib/services/notifications";
@@ -27,6 +27,8 @@ export default async function PortalLayout({ children }: { children: React.React
           <Logo variant="onDark" size="sm" />
           <p className="mt-1 text-sm text-white/70">{organisation.name}</p>
         </div>
+        <div className="flex items-center gap-1">
+        <Link href="/portal/settings" className="rounded-full p-2 hover:bg-white/10" aria-label="Settings"><Settings className="h-5 w-5" /></Link>
         <Link href="/portal/notifications" className="relative rounded-full p-2 hover:bg-white/10" aria-label={`Notifications${unread ? ` (${unread} unread)` : ""}`}>
           <Bell className="h-5 w-5" />
           {unread > 0 ? (
@@ -35,6 +37,7 @@ export default async function PortalLayout({ children }: { children: React.React
             </span>
           ) : null}
         </Link>
+        </div>
       </header>
       <main className="flex-1 px-4 py-5 pb-24">{children}</main>
       <nav className="fixed inset-x-0 bottom-0 mx-auto flex max-w-md items-center justify-around border-t border-slate-200 bg-white py-2">

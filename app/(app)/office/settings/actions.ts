@@ -211,3 +211,13 @@ export async function updateBreakPolicyAction(input: { afterMinutes: number; bre
   revalidatePath("/office/finance");
   return { ok: true, message: "Break rule saved" };
 }
+
+/** Issue a new company code for the instructor app (the old one stops working). */
+export async function regenerateJoinCodeAction(): Promise<ActionState> {
+  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const before = await repos.control.ensureJoinCode(ctx.organisationId);
+  const after = await repos.control.regenerateJoinCode(ctx.organisationId);
+  await writeAudit(repos, ctx, { action: "regenerate_join_code", entity: "org_settings", before: { code: before }, after: { code: after } });
+  revalidatePath("/office/settings");
+  return { ok: true, message: "New company code issued" };
+}

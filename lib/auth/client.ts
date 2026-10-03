@@ -1,7 +1,7 @@
 "use client";
 
 import { createAuthClient } from "better-auth/react";
-import { magicLinkClient, twoFactorClient } from "better-auth/client/plugins";
+import { emailOTPClient, magicLinkClient, twoFactorClient } from "better-auth/client/plugins";
 
 /**
  * Browser auth client. baseURL defaults to the current origin, so it talks to
@@ -9,7 +9,7 @@ import { magicLinkClient, twoFactorClient } from "better-auth/client/plugins";
  * cookie is scoped to `.activityroster.com` for cross-subdomain sign-in.
  */
 export const authClient = createAuthClient({
-  plugins: [magicLinkClient(), twoFactorClient()],
+  plugins: [magicLinkClient(), twoFactorClient(), emailOTPClient()],
 });
 
 export const { signIn, signUp, signOut, useSession } = authClient;

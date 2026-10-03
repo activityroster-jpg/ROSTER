@@ -58,7 +58,8 @@ export type SlotCode = (typeof SLOT_CODES)[number];
 export const EMPLOYMENT_TYPES = ["employed", "freelance", "volunteer"] as const;
 export type EmploymentType = (typeof EMPLOYMENT_TYPES)[number];
 
-export const INSTRUCTOR_STATUSES = ["active", "inactive"] as const;
+// pending = requested to join via the app; invisible to rostering until approved.
+export const INSTRUCTOR_STATUSES = ["active", "inactive", "pending"] as const;
 export const EQUIPMENT_STATUSES = ["available", "maintenance", "retired"] as const;
 export const COURSE_STATUSES = ["draft", "scheduled", "confirmed", "completed", "cancelled"] as const;
 export type CourseStatus = (typeof COURSE_STATUSES)[number];

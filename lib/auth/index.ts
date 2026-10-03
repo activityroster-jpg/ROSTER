@@ -1,6 +1,6 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { magicLink, twoFactor } from "better-auth/plugins";
+import { emailOTP, magicLink, twoFactor } from "better-auth/plugins";
 import type { Database } from "@/lib/db/client";
 import { account, session, twoFactor as twoFactorTable, user, verification } from "@/lib/db/schema";
 import { getDb, getEnv, type CloudflareEnv } from "@/lib/cf/bindings";
@@ -88,6 +88,20 @@ export function createAuth(db: Database, env: CloudflareEnv) {
       updateAge: 60 * 60 * 24,
     },
     plugins: [
+      // Six-digit codes for the mobile app's sign-up (typing a code beats
+      // tapping an email link on a phone). Also usable for password resets.
+      emailOTP({
+        otpLength: 6,
+        expiresIn: 10 * 60,
+        async sendVerificationOTP({ email, otp, type }) {
+          const what = type === "email-verification" ? "Confirm your email" : type === "forget-password" ? "Reset your password" : "Your sign-in code";
+          await sendEmail({
+            to: email,
+            subject: `${what} — ActivityRoster code ${otp}`,
+            html: `<p>${what} in the ActivityRoster app with this code:</p><p style="font-size:26px;font-weight:700;letter-spacing:4px">${otp}</p><p style="color:#64748b;font-size:12px">It expires in 10 minutes. If you didn't request it, you can ignore this email.</p>`,
+          });
+        },
+      }),
       magicLink({
         sendMagicLink: async ({ email, url }) => {
           await sendEmail({

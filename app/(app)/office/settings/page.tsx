@@ -3,6 +3,7 @@ import { Card } from "@/components/ui";
 import { GeneralSettingsForm } from "@/components/office/GeneralSettingsForm";
 import { ConfigManager, type ConfigItem } from "@/components/office/ConfigManager";
 import { BreakPolicyForm } from "@/components/office/BreakPolicyForm";
+import { CompanyCodeCard } from "@/components/office/CompanyCodeCard";
 import { CourseScheduleDefaults } from "@/components/office/CourseScheduleDefaults";
 import { parseDefaultSchedule } from "@/lib/domain";
 
@@ -24,6 +25,7 @@ export default async function SettingsPage() {
     .map((c) => ({ id: c.id, name: c.name, schedule: parseDefaultSchedule(c.defaultSchedule) }))
     .sort((a, b) => a.name.localeCompare(b.name));
   const s = settings[0];
+  const joinCode = await repos.control.ensureJoinCode(ctx.organisationId);
 
   const toItems = <T extends { id: string; active: boolean }>(rows: T[], label: (r: T) => string, meta?: (r: T) => string, edit?: (r: T) => string): ConfigItem[] =>
     rows.map((r) => ({ id: r.id, label: label(r), active: r.active, meta: meta?.(r), editValue: edit?.(r) }));
@@ -35,6 +37,14 @@ export default async function SettingsPage() {
         Shape ActivityRoster to how your centre runs — courses, grades, roles, checks and slots are all yours to edit.
         Retiring an item hides it from new records but keeps your history intact (nothing is deleted).
       </p>
+
+      <Card className="mb-6">
+        <div className="mb-1 flex items-center justify-between">
+          <h2 className="font-semibold text-navy">Company code · instructor app</h2>
+          <a href="/learn?topic=app" target="_blank" rel="noreferrer" className="text-xs font-medium text-teal hover:underline">📖 Read the guide</a>
+        </div>
+        <CompanyCodeCard code={joinCode} />
+      </Card>
 
       <Card className="mb-6">
         <h2 className="mb-1 font-semibold text-navy">General</h2>
