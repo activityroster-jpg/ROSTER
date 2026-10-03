@@ -57,6 +57,7 @@ help with the wording. Contact: privacy@activityroster.com."
 - Status page: https://activity-roster.betteruptime.com · Better Stack alerts go to Conor by SMS and email
 - Cloudflare support: dashboard → Support (Paid plan: email/chat)
 - Resend: support@resend.com · Postmark: support@postmarkapp.com
+- Tell everyone: Dev Center → Overview → Operations → Incident banner (one line, shows on the website, office and app with the status-page link). Pause editing while repairing data: the same card → Maintenance mode (office and app show “Back shortly” to everyone except platform admins; website and status page stay up). Switch both off when done.
 - Deploy smoke test fails with 403 / `cf-mitigated: challenge`: Bot Fight Mode is on. Security → Bots → off, redeploy. See `docs/runbooks/deploy.md`.
 - Email provider down: failover is automatic once `POSTMARK_SERVER_TOKEN` is set. To make Postmark primary for a while, set the Worker variable `MAIL_PRIMARY=postmark` (Workers & Pages → roster → Settings → Variables) and redeploy from GitHub; set it back afterwards. The Dev Center overview shows the last failover.
 - Stripe: dashboard → Help

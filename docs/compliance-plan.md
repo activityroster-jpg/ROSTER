@@ -146,9 +146,16 @@ Effort is a rough guide: S = under half a day, M = one to two days, L = a week o
 - Change log shows sign-in events for the centre's accounts and downloads as CSV.
 - Migration 0049. Guide updated.
 
-### P1-B Sessions and alerts
-- "Log out all devices", configurable idle timeout per centre, alerts to Conor for repeated
-  unusual sign-ins and mass exports, incident banner (KV flag) and maintenance page.
+### P1-B Sessions and alerts — built 4 October
+- Office → Security → "Sign out all other devices" (ends other sessions, forgets confirmed
+  devices, emails the account). Settings → Security: PIN idle timeout per centre, 5 minutes
+  to 4 hours, carried inside the signed PIN cookie so the middleware slides it correctly.
+- Owner alerts (`lib/security/alerts.ts`): more than 8 failed PIN / identity / join-code
+  checks on one account in an hour, or more than 15 exports and sensitive-record views
+  from one centre in an hour, email the platform admins, at most once a day per subject.
+- Dev Center → Overview → Operations: incident banner on every surface (with the status
+  page link) and maintenance mode, which shows a holding page in the office and the app to
+  everyone except platform admins. Migration 0050.
 
 ### P1-C Email queue and prospects
 - Queue with retries and a failed-send list; bounce handling for system email; prospect

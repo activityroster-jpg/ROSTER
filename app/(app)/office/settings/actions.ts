@@ -64,6 +64,7 @@ export async function updateSettingsAction(_prev: ActionState, formData: FormDat
     dailyDigestEnabled: formData.get("dailyDigestEnabled") === "on",
     dailyDigestHour: Number(formData.get("dailyDigestHour") ?? 6),
     workingTimeMode: formData.get("workingTimeMode") ?? "block_override",
+    idleTimeoutMinutes: Number(formData.get("idleTimeoutMinutes") ?? 30),
     termDates: parseTermDatesField(formData.get("termDates")),
   });
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Please check the settings values" };
@@ -75,6 +76,7 @@ export async function updateSettingsAction(_prev: ActionState, formData: FormDat
     dailyDigestEnabled: rest.dailyDigestEnabled ?? false,
     dailyDigestHour: rest.dailyDigestHour ?? 6,
     workingTimeMode: rest.workingTimeMode ?? "block_override",
+    idleTimeoutMinutes: rest.idleTimeoutMinutes ?? 30,
     termDates: JSON.stringify((termDates ?? []).map((r) => ({ from: r.from, to: r.to, ...(r.label ? { label: r.label } : {}) }))),
   };
   const existing = (await repos.tenant.orgSettings.list(ctx))[0];

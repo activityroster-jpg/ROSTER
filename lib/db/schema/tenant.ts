@@ -142,6 +142,8 @@ export const orgSettings = sqliteTable("org_settings", {
   termDates: text("term_dates").notNull().default("[]"),
   /** JSON RotaTemplateSettings (lib/rota/template): range, orientation and fields for the rota PDF. */
   rotaTemplate: text("rota_template").notNull().default("{}"),
+  /** Minutes of inactivity before an admin is asked for their PIN again (5–240). Applied from the next PIN entry. */
+  idleTimeoutMinutes: integer("idle_timeout_minutes").notNull().default(30),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 }, (t) => [uniqueIndex("org_settings_org_uq").on(t.organisationId)]);

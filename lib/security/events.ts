@@ -1,3 +1,4 @@
+import { noteSecurityEvent } from "./alerts";
 import { headers } from "next/headers";
 import { getRepositories } from "@/lib/cf/bindings";
 import type { SecurityEventKind } from "@/lib/db/schema";
@@ -41,6 +42,7 @@ export async function recordSecurityEvent(
       ...fp,
       meta: input.meta ? JSON.stringify(input.meta) : null,
     });
+    await noteSecurityEvent(kind, input.userId, input.organisationId);
   } catch (err) {
     console.error("[security-event] failed to record", kind, (err as Error).message);
   }

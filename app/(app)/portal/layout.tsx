@@ -20,8 +20,17 @@ const TABS = [
   { href: "/portal/documents", label: "Docs", icon: FileCheck },
 ];
 
+import { IncidentBanner, MaintenanceNotice } from "@/components/IncidentBanner";
+import { readMaintenance } from "@/lib/ops/incident";
+import { isPlatformAdminEmail } from "@/lib/platform/admin";
+
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
   const { ctx, organisation, repos, trial } = await requireTenant();
+  const maintenance = await readMaintenance();
+  if (maintenance?.on) {
+    const u = await repos.control.userById(ctx.userId);
+    if (!(await isPlatformAdminEmail(u?.email))) return <div className="mx-auto min-h-screen max-w-md bg-canvas"><MaintenanceNotice message={maintenance.message} /></div>;
+  }
   const me = (await repos.tenant.instructor.list(ctx, eq(instructorTable.userId, ctx.userId)))[0];
   // Cert-expiry reminders are raised lazily, on the instructor's own visits.
   if (me && !ctx.readOnly) await ensureExpiryReminders(repos, ctx, me.id).catch(() => undefined);
@@ -53,6 +62,7 @@ export default async function PortalLayout({ children }: { children: React.React
         </Link>
         </div>
       </header>
+      <IncidentBanner />
       {trial.kind === "read_only" ? (
         <p className="bg-amber/25 px-4 py-2 text-center text-xs font-medium text-navy">Your centre&apos;s free trial has ended, so nothing can be changed for now. Please let whoever runs your centre know.</p>
       ) : null}

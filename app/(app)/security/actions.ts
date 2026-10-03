@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { revalidatePath } from "next/cache";
 import { requireTenant } from "@/lib/tenant/require";
 import { getRepositories } from "@/lib/cf/bindings";
 import { notifySecurityChange, recordSecurityEvent } from "@/lib/security/events";
@@ -70,4 +71,19 @@ export async function clearTwoFactorPrefsAction(): Promise<Result> {
   await control.setTwoFactorPrefs(s.userId, null);
   await recordSecurityEvent("two_factor_disabled", { userId: s.userId });
   return { ok: true };
+}
+
+/** Sign out every other device: ends all other sessions and forgets confirmed devices, so each one must sign in and re-confirm. */
+export async function signOutEverywhereAction(): Promise<Result & { message?: string }> {
+  const { ctx } = await requireTenant();
+  const h = new Headers(await headers());
+  const s = await (await getAuth()).api.getSession({ headers: h });
+  const keep = (s?.session?.id as string | undefined) ?? null;
+  const { control } = await getRepositories();
+  const ended = await control.deleteOtherSessions(ctx.userId, keep);
+  await control.forgetTrustedDevices(ctx.userId);
+  await recordSecurityEvent("sessions_revoked", { userId: ctx.userId, organisationId: ctx.organisationId, meta: { ended } });
+  await notifySecurityChange(ctx.userId, "All other devices were signed out", `<p>Every other device signed in to your ActivityRoster account has been signed out and will need to sign in again.</p>`);
+  revalidatePath("/security");
+  return { ok: true, message: ended ? `Signed out ${ended} other session${ended === 1 ? "" : "s"}` : "No other sessions were open" };
 }

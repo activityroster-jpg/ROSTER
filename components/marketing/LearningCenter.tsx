@@ -466,6 +466,7 @@ const SECTIONS: Section[] = [
     label: "Admin & security",
     blurb: "Roles, the 4-digit PIN and the audit trail.",
     blocks: [
+      { kind: "p", text: "Lost a phone or left yourself signed in on a shared computer? Office → Security → “Sign out all other devices” ends every other session and forgets every confirmed device, keeping only the one you are using. Your centre also sets how long an idle admin screen waits before asking for the PIN again, under Settings → Security (5 minutes to 4 hours; 30 by default). A full sign-in is always required again after 12 hours away." },
       { kind: "p", text: "Access is authorised on every request: we resolve your account, your centre and your role, and deny anyone who isn't a member." },
       { kind: "sub", text: "Second-factor PIN" },
       { kind: "steps", items: [

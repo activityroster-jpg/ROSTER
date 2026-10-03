@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { CookieNotice } from "@/components/marketing/CookieNotice";
 import { SiteHeader } from "@/components/marketing/SiteHeader";
+import { IncidentBanner } from "@/components/IncidentBanner";
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-canvas">
+      <IncidentBanner />
       <SiteHeader />
       <main>{children}</main>
       <footer className="border-t border-slate-200 bg-white">

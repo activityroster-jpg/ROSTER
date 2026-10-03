@@ -5,12 +5,21 @@ import { getRepositories } from "@/lib/cf/bindings";
 import { OfficeSidebar } from "@/components/office/OfficeSidebar";
 import { GhostBanner } from "@/components/office/GhostBanner";
 import { SetPasswordNudge } from "@/components/office/SetPasswordNudge";
+import { IncidentBanner, MaintenanceNotice } from "@/components/IncidentBanner";
+import { readMaintenance } from "@/lib/ops/incident";
+import { isPlatformAdminEmail } from "@/lib/platform/admin";
 import { actorUserId } from "@/lib/tenant/context";
 import { eq } from "drizzle-orm";
 import { instructor as instructorTable } from "@/lib/db/schema";
 
 export default async function OfficeLayout({ children }: { children: React.ReactNode }) {
   const { ctx, organisation, trial, repos } = await requireTenant({ role: "admin", allowReadOnly: true });
+  // Maintenance mode (Dev Center → Operations): a holding page for everyone except platform admins.
+  const maintenance = await readMaintenance();
+  if (maintenance?.on) {
+    const me = ctx.ghost ? null : await repos.control.userById(actorUserId(ctx) ?? "");
+    if (!(await isPlatformAdminEmail(me?.email))) return <div className="min-h-screen bg-canvas"><MaintenanceNotice message={maintenance.message} /></div>;
+  }
   // Admins who only ever used the emailed link are nudged to set a password (spec P0-A).
   let nudgeEmail: string | null = null;
   const uid = ctx.ghost ? null : actorUserId(ctx);
@@ -45,6 +54,7 @@ export default async function OfficeLayout({ children }: { children: React.React
     <div className="flex min-h-screen bg-canvas">
       <OfficeSidebar orgName={organisation.name} clockOn={clockOn} hasInstructorRecord={hasInstructorRecord} />
       <div className="flex-1 overflow-x-hidden pt-14 lg:pt-0">
+        <IncidentBanner />
         {ctx.ghost ? <GhostBanner centreName={organisation.name} /> : null}
         {nudgeEmail ? <SetPasswordNudge email={nudgeEmail} /> : null}
         {banner?.kind === "pastdue" ? (

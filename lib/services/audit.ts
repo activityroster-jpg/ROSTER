@@ -1,5 +1,6 @@
 import type { Repositories } from "@/lib/db/repositories";
 import { actorUserId, isGhostContext, type AnyTenantContext } from "@/lib/tenant/context";
+import { noteAuditAction } from "@/lib/security/alerts";
 
 export interface AuditEntry {
   action: string;
@@ -31,4 +32,6 @@ export async function writeAudit(
     before: entry.before === undefined ? null : JSON.stringify(entry.before),
     after: entry.after === undefined ? null : JSON.stringify(entry.after),
   });
+  // Unusual volumes of exports are flagged to the platform owner (P1-B); never blocks the action.
+  await noteAuditAction(entry.action, ctx.organisationId, ctx.slug).catch(() => {});
 }

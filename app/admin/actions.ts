@@ -14,6 +14,7 @@ import { recordSecurityEvent } from "@/lib/security/events";
 import { leavingDeadline, onOrganisationStatusChanged } from "@/lib/services/leaving";
 import { eraseOrganisationData } from "@/lib/services/export";
 import { replayDeletions } from "@/lib/services/person-data";
+import { writeIncident, writeMaintenance } from "@/lib/ops/incident";
 import { escapeHtml, sendEmail } from "@/lib/mail";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { createStripe } from "@/lib/billing/stripe";
@@ -269,4 +270,23 @@ export async function replayDeletionsAction(organisationId: string): Promise<Res
   const r = await replayDeletions(repos, { organisationId: org.id, slug: org.slug, system: true, reason: `replay deletions by ${email}` });
   revalidatePath(`/admin/centres/${organisationId}`);
   return { ok: true, ...r };
+}
+
+/** Show (or clear, with an empty message) the platform-wide incident banner. */
+export async function setIncidentAction(message: string, level: "info" | "warn"): Promise<Result> {
+  const { email } = await requirePlatformAdmin();
+  const text = message.trim().slice(0, 240);
+  await writeIncident(text ? { message: text, level: level === "warn" ? "warn" : "info", updatedAt: new Date().toISOString() } : null);
+  console.info(`[ops] incident banner ${text ? "set" : "cleared"} by ${email}`);
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+/** Maintenance mode: office and app show a holding page to everyone but platform admins. */
+export async function setMaintenanceAction(on: boolean, message: string): Promise<Result> {
+  const { email } = await requirePlatformAdmin();
+  await writeMaintenance({ on: Boolean(on), message: message.trim().slice(0, 240), updatedAt: new Date().toISOString() });
+  console.info(`[ops] maintenance ${on ? "ON" : "off"} by ${email}`);
+  revalidatePath("/", "layout");
+  return { ok: true };
 }

@@ -692,7 +692,7 @@ export const SECURITY_EVENT_KINDS = [
   "pin_set", "pin_reset", "pin_reset_failed", "pin_failed", "pin_locked", "pin_reset_code_sent",
   "recovery_email_set", "password_changed", "new_device", "reauth_passed", "reauth_failed", "invite_accepted",
   "ghost_start", "ghost_end", "join_requested", "join_code_failed",
-  "two_factor_enabled", "two_factor_disabled",
+  "two_factor_enabled", "two_factor_disabled", "sessions_revoked",
 ] as const;
 export type SecurityEventKind = (typeof SECURITY_EVENT_KINDS)[number];
 

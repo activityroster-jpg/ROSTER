@@ -24,6 +24,7 @@ export function GeneralSettingsForm({
   workingTimeMode = "block_override",
   termDates = [],
   packStatus = null,
+  idleTimeoutMinutes = 30,
 }: {
   schedulingMode: string;
   alertLeadDays: number;
@@ -39,6 +40,7 @@ export function GeneralSettingsForm({
   workingTimeMode?: string;
   termDates?: TermDate[];
   packStatus?: PackStatus | null;
+  idleTimeoutMinutes?: number;
 }) {
   const [state, action, pending] = useActionState(updateSettingsAction, initial);
   const [terms, setTerms] = useState<TermDate[]>(termDates);
@@ -120,6 +122,16 @@ export function GeneralSettingsForm({
           <button type="button" onClick={() => setTerms((x) => [...x, { from: "", to: "", label: "" }])} className="mt-2 rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-navy hover:bg-slate-50">+ Add a term</button>
         </div>
         <p className="mt-3 text-[11px] leading-snug text-slate-400">ActivityRoster applies the published working-time rules for your jurisdiction as a planning aid. It is not legal advice: the employer remains responsible for complying with child-employment law, local authority permits and the school-leaving rules that apply to each young person.</p>
+      </fieldset>
+      <fieldset className="sm:col-span-4 rounded-lg border border-slate-200 p-3">
+        <legend className="px-1 text-xs font-semibold text-slate-500">Security</legend>
+        <label className="block text-sm text-slate-600">
+          <span className="mb-1 block text-xs font-medium text-slate-500">Ask admins for their PIN after this long without activity</span>
+          <select name="idleTimeoutMinutes" defaultValue={String(idleTimeoutMinutes)} className="w-full max-w-xs rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal">
+            {[5, 10, 15, 30, 60, 120, 240].map((m) => <option key={m} value={m}>{m < 60 ? `${m} minutes` : `${m / 60} hour${m === 60 ? "" : "s"}`}</option>)}
+          </select>
+        </label>
+        <p className="mt-1 text-xs text-slate-400">30 minutes suits a shared office computer; shorter for a front desk the public can see. Takes effect the next time each admin enters their PIN. Full sign-in is always required again after 12 hours away.</p>
       </fieldset>
       <fieldset className="sm:col-span-4 rounded-lg border border-slate-200 p-3">
         <legend className="px-1 text-xs font-semibold text-slate-500">Checks when rostering</legend>

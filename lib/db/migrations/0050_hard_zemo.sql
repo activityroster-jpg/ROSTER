@@ -1,0 +1,1 @@
+ALTER TABLE `org_settings` ADD `idle_timeout_minutes` integer DEFAULT 30 NOT NULL;

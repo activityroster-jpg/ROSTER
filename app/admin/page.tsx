@@ -16,6 +16,8 @@ import { Card, StatusPill } from "@/components/ui";
 import { fmtBytes, readLastBackup } from "@/lib/ops/backup-status";
 import { mailProviderOrder, readMailFailover } from "@/lib/ops/mail-status";
 import { leavingDeadline } from "@/lib/services/leaving";
+import { readIncident, readMaintenance } from "@/lib/ops/incident";
+import { OpsControls } from "@/components/admin/OpsControls";
 import { trialState } from "@/lib/billing/trial";
 
 export const dynamic = "force-dynamic";
@@ -104,7 +106,7 @@ export default async function AdminOverviewPage({ searchParams }: { searchParams
     .filter((o) => o.subscriptionStatus === "active")
     .reduce((sum, o) => sum + effectivePricing(o, pricing).monthly, 0);
 
-  const [lastBackup, mailFailover] = await Promise.all([readLastBackup(), readMailFailover()]);
+  const [lastBackup, mailFailover, incident, maintenance] = await Promise.all([readLastBackup(), readMailFailover(), readIncident(), readMaintenance()]);
   const mailOrder = mailProviderOrder();
   return (
     <div>
@@ -145,6 +147,12 @@ export default async function AdminOverviewPage({ searchParams }: { searchParams
           )}
         </Card>
       </div>
+
+      <Card className="mb-8">
+        <h2 className="mb-1 font-semibold text-navy">Operations</h2>
+        <p className="mb-3 text-xs text-slate-500">For an incident: tell everyone what is happening, or pause editing while you fix it. The runbook is docs/runbooks/incident.md.</p>
+        <OpsControls incident={incident ? { message: incident.message, level: incident.level } : null} maintenance={maintenance ? { on: maintenance.on, message: maintenance.message } : null} />
+      </Card>
 
       {allOrgs.some((o) => leavingDeadline(o)) ? (
         <Card className="mb-8">

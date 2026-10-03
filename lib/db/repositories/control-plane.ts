@@ -99,6 +99,13 @@ export class ControlPlaneRepository {
   async deleteSessionById(id: string): Promise<void> {
     await this.db.delete(session).where(eq(session.id, id));
   }
+  /** "Log out all devices": end every session of a user except the one they are using now. Returns how many ended. */
+  async deleteOtherSessions(userId: string, keepSessionId: string | null): Promise<number> {
+    const rows = await this.db.select({ id: session.id }).from(session).where(eq(session.userId, userId));
+    const victims = rows.map((r) => r.id).filter((id) => id !== keepSessionId);
+    if (victims.length) await this.db.delete(session).where(inArray(session.id, victims));
+    return victims.length;
+  }
 
   async userById(id: string) {
     const rows = await this.db.select().from(user).where(eq(user.id, id)).limit(1);

@@ -65,14 +65,42 @@ export async function hmacSign(secret: string, msg: string): Promise<string> {
   return b64(new Uint8Array(sig));
 }
 
-export function pinCookieValue(secret: string, sessionId: string): Promise<string> {
-  return hmacSign(secret, `pin:${sessionId}`);
+export const PIN_IDLE_MIN_MINUTES = 5;
+export const PIN_IDLE_MAX_MINUTES = 240;
+export const clampIdleMinutes = (m: unknown): number => {
+  const n = Math.round(Number(m));
+  return Number.isFinite(n) ? Math.min(PIN_IDLE_MAX_MINUTES, Math.max(PIN_IDLE_MIN_MINUTES, n)) : 30;
+};
+
+/**
+ * Cookie value `<idleMinutes>.<hmac>`: the centre's idle timeout rides inside the
+ * signed value so the middleware (which has no database) can slide the cookie
+ * by the right amount. Legacy values without the prefix verify as 30 minutes.
+ */
+export async function pinCookieValue(secret: string, sessionId: string, idleMinutes = 30): Promise<string> {
+  const m = clampIdleMinutes(idleMinutes);
+  return `${m}.${await hmacSign(secret, `pin:${sessionId}:${m}`)}`;
 }
 
 export async function verifyPinCookie(secret: string, sessionId: string, value: string | undefined): Promise<boolean> {
   if (!value) return false;
+  const dot = value.indexOf(".");
+  if (dot > 0 && /^\d+$/.test(value.slice(0, dot))) {
+    const m = clampIdleMinutes(value.slice(0, dot));
+    if (m !== Number(value.slice(0, dot))) return false;
+    const expected = await hmacSign(secret, `pin:${sessionId}:${m}`);
+    return timingSafeEqual(expected, value.slice(dot + 1));
+  }
   const expected = await hmacSign(secret, `pin:${sessionId}`);
   return timingSafeEqual(expected, value);
+}
+
+/** How long (seconds) the middleware should slide this PIN cookie for. */
+export function pinIdleSecondsFrom(value: string | undefined): number {
+  if (!value) return PIN_IDLE_MAX_AGE_S;
+  const dot = value.indexOf(".");
+  if (dot > 0 && /^\d+$/.test(value.slice(0, dot))) return clampIdleMinutes(value.slice(0, dot)) * 60;
+  return PIN_IDLE_MAX_AGE_S;
 }
 
 // --- Signed "authenticator code verified this session" cookie (Dev Center) --

@@ -5,9 +5,11 @@ import { TwoFactorSetup } from "@/components/office/TwoFactorSetup";
 import { RecoveryEmailForm } from "@/components/office/RecoveryEmailForm";
 import { describeAgent } from "@/lib/security/events";
 import { TrustedDevices } from "@/components/office/TrustedDevices";
+import { SignOutEverywhere } from "@/components/office/SignOutEverywhere";
 import { maskEmail } from "@/lib/security/mask";
 
 const EVENT_LABEL: Record<string, string> = {
+  sessions_revoked: "Signed out all other devices",
   pin_set: "PIN set",
   pin_reset: "PIN reset",
   pin_reset_failed: "Failed PIN reset attempt",
@@ -77,6 +79,7 @@ export default async function SecurityPage() {
         <h2 className="mb-1 font-semibold text-navy">Confirmed devices</h2>
         <p className="mb-3 text-xs text-slate-500">Signing in from a new device, network or country asks for your password again. These are the ones you&apos;ve confirmed.</p>
         <TrustedDevices rows={devices} />
+        <SignOutEverywhere />
       </div>
 
       <div className="mt-5 rounded-card border border-slate-200 bg-white p-5">

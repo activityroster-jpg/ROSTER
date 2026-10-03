@@ -9,7 +9,7 @@ import {
   pinCookieValue,
   verifyPin,
   PIN_COOKIE,
-  PIN_IDLE_MAX_AGE_S,
+  clampIdleMinutes,
   PIN_LOCK_MS,
   PIN_MAX_FAILS,
   PIN_REGEX,
@@ -19,6 +19,9 @@ import { notifySecurityChange, recordSecurityEvent } from "@/lib/security/events
 import { rateLimit } from "@/lib/security/rate-limit";
 import { sendEmail } from "@/lib/mail";
 import { authSecret } from "@/lib/security/secrets";
+import { resolveHost } from "@/lib/tenant/host";
+import { createTenantRepositories } from "@/lib/db/repositories";
+import { getDb } from "@/lib/cf/bindings";
 
 export type PinResult = { ok: boolean; error?: string; message?: string };
 
@@ -36,9 +39,27 @@ async function sessionInfo() {
   return { userId: s.user.id, sessionId: s.session?.id as string | undefined };
 }
 
+/** The centre's idle timeout (Settings → Security), read from the host we are on; 30 minutes elsewhere. */
+async function idleMinutesForHost(): Promise<number> {
+  try {
+    const env = getEnv();
+    const host = resolveHost((await headers()).get("host"), env.APP_APEX_DOMAIN || "activityroster.com");
+    if (host.kind !== "tenant") return 30;
+    const { control } = await getRepositories();
+    const org = await control.organisationBySlug(host.slug);
+    if (!org) return 30;
+    const t = createTenantRepositories(await getDb());
+    const settings = (await t.orgSettings.list({ organisationId: org.id, slug: org.slug, system: true, reason: "pin idle timeout" }))[0];
+    return clampIdleMinutes(settings?.idleTimeoutMinutes ?? 30);
+  } catch {
+    return 30;
+  }
+}
+
 async function setVerifiedCookie(sessionId: string) {
   const env = getEnv();
-  const value = await pinCookieValue(authSecret(env), sessionId);
+  const idle = await idleMinutesForHost();
+  const value = await pinCookieValue(authSecret(env), sessionId, idle);
   const jar = await cookies();
   jar.set(PIN_COOKIE, value, {
     httpOnly: true,
@@ -46,7 +67,7 @@ async function setVerifiedCookie(sessionId: string) {
     sameSite: "lax",
     path: "/",
     domain: `.${env.APP_APEX_DOMAIN}`,
-    maxAge: PIN_IDLE_MAX_AGE_S,
+    maxAge: idle * 60,
   });
 }
 

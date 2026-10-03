@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { resolveHost } from "@/lib/tenant/host";
-import { PIN_COOKIE, PIN_IDLE_MAX_AGE_S } from "@/lib/auth/pin";
+import { PIN_COOKIE, pinIdleSecondsFrom } from "@/lib/auth/pin";
 import { LV_COOKIE, LV_DEVICE_COOKIE, LV_IDLE_MAX_AGE_S, LV_SESSION_COOKIE } from "@/lib/auth/login-verify";
 import { DEVICE_COOKIE, DEVICE_HEADER, DEVICE_MAX_AGE_S, PATH_HEADER, isDeviceId } from "@/lib/auth/device";
 import { CENTRE_COOKIE } from "@/lib/auth/centre-cookie";
@@ -19,7 +19,7 @@ function slidePinCookie(req: NextRequest, res: NextResponse): NextResponse {
       secure: true,
       sameSite: "lax",
       path: "/",
-      maxAge: PIN_IDLE_MAX_AGE_S,
+      maxAge: pinIdleSecondsFrom(pin),
     });
   }
   // Same idea for the office's "login verified" proof: 12 hours of inactivity

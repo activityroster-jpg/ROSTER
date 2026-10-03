@@ -71,6 +71,7 @@ export default async function SettingsPage() {
           workingTimeMode={s?.workingTimeMode ?? "block_override"}
           termDates={termRangesOf(s)}
           packStatus={packStatus}
+          idleTimeoutMinutes={s?.idleTimeoutMinutes ?? 30}
           enforceLicenceChecks={Boolean(s?.enforceLicenceChecks)}
           enforceRatioChecks={Boolean(s?.enforceRatioChecks)}
           enforceConflictChecks={Boolean(s?.enforceConflictChecks)}
