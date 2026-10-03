@@ -403,7 +403,7 @@ const SECTIONS: Section[] = [
     label: "Billing & invoices",
     blurb: "Manage your subscription and get VAT invoices.",
     blocks: [
-      { kind: "p", text: "Your centre starts with a free month — no card required. When you're ready, choose monthly or annual (annual includes several months free) and enter card details through secure checkout." },
+      { kind: "p", text: "Your centre starts with a free month — no card required. When you're ready, choose monthly or annual (annual works out at one month free on Small Club and two on Standard) and enter card details through secure checkout." },
       { kind: "p", text: "If the trial ends before you choose a plan, nothing is deleted: the centre goes read-only for two weeks (everyone can still look, nobody can change anything), then locks until a plan is chosen. Choosing a plan brings everything straight back." },
       { kind: "bullets", items: [
         "VAT is handled automatically at checkout for business customers.",

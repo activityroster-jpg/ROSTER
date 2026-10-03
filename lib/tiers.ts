@@ -22,7 +22,7 @@ export interface TierMeta {
   name: string;
   /** Flat monthly price for the whole centre, GBP. */
   monthlyPrice: number;
-  /** Flat annual price (2 months free vs monthly), GBP. */
+  /** Flat annual price, GBP (Small Club: 1 month free vs monthly; Standard: 2 months free). */
   annualPrice: number;
   /** Max instructor headcount; null = unlimited. */
   userCap: number | null;
@@ -34,7 +34,7 @@ export const TIERS: Record<OrgTier, TierMeta> = {
     id: "small_club",
     name: "Small Club",
     monthlyPrice: 35,
-    annualPrice: 350,
+    annualPrice: 385,
     userCap: SMALL_CLUB_CAP,
     tagline: `For smaller centres — up to ${SMALL_CLUB_CAP} people on your team.`,
   },

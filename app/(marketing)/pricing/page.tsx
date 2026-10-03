@@ -106,7 +106,7 @@ export default async function PricingPage() {
                   <span className="ml-1 text-slate-500">/month</span>
                 </p>
                 <p className="mt-1 text-sm text-slate-500">
-                  or {fmtMoney(t.annualPrice, currency)}/year{monthsFree > 0 ? ` — ${monthsFree} months free` : ""}
+                  or {fmtMoney(t.annualPrice, currency)}/year{monthsFree > 0 ? ` — ${monthsFree} month${monthsFree === 1 ? "" : "s"} free` : ""}
                 </p>
                 <p className="mt-3 inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
                   {t.userCap ? `Up to ${t.userCap} people on your team` : "Unlimited instructors & volunteers"}
