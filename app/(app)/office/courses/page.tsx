@@ -14,10 +14,13 @@ import { providerName, providerColor } from "@/lib/integrations/catalogue";
 
 export const dynamic = "force-dynamic";
 
-export default async function CoursesPage({ searchParams }: { searchParams: Promise<{ view?: string }> }) {
+export default async function CoursesPage({ searchParams }: { searchParams: Promise<{ view?: string; q?: string }> }) {
   const { ctx, repos } = await requireTenant({ role: "admin" });
   const sp = await searchParams;
   const view: "upcoming" | "past" = sp.view === "past" ? "past" : "upcoming";
+  const q = (typeof sp.q === "string" ? sp.q : "").trim().slice(0, 80);
+  const qLower = q.toLowerCase();
+  const qs = (v: "upcoming" | "past") => `/office/courses?${v === "past" ? "view=past" : ""}${q ? `${v === "past" ? "&" : ""}q=${encodeURIComponent(q)}` : ""}`.replace(/\?$/, "");
   const monday = weekStart(new Date());
   const [{ coverageByCourse }, courseTypes, staff, roles, assignments, instructors, settings, events, locationRows, equipmentRows] = await Promise.all([
     getWeekSchedule(repos, ctx, monday),
@@ -80,7 +83,8 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
   //     month/year; unscheduled courses sink to the end. -----------------------
   type Course = (typeof courses)[number];
   const earliest = (courseId: string) => sessionsFullByCourse.get(courseId)?.[0] ?? null; // sessions pre-sorted ascending
-  const sortedCourses = [...courses].sort((a, b) => (earliest(a.courseId)?.startMs ?? Infinity) - (earliest(b.courseId)?.startMs ?? Infinity));
+  const matchesQuery = (c: Course) => !qLower || `${c.courseName} ${c.courseTypeName}`.toLowerCase().includes(qLower);
+  const sortedCourses = [...courses].filter(matchesQuery).sort((a, b) => (earliest(a.courseId)?.startMs ?? Infinity) - (earliest(b.courseId)?.startMs ?? Infinity));
 
   const monthLabelOf = (key: string) => new Date(`${key}-01T00:00:00Z`).toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
   const weekRangeOf = (mondayIso: string) => {
@@ -196,9 +200,14 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
       <div className="mb-3 flex items-center gap-2">
         <h2 className="font-display text-lg font-semibold text-navy">Courses</h2>
         <div className="ml-2 flex rounded-lg border border-slate-200 p-0.5 text-sm">
-          <a href="/office/courses" className={`rounded-md px-3 py-1 font-medium ${view === "upcoming" ? "bg-navy text-white" : "text-slate-500 hover:text-navy"}`}>Upcoming ({upcomingCount})</a>
-          <a href="/office/courses?view=past" className={`rounded-md px-3 py-1 font-medium ${view === "past" ? "bg-navy text-white" : "text-slate-500 hover:text-navy"}`}>Past ({pastCourses.length})</a>
+          <a href={qs("upcoming")} className={`rounded-md px-3 py-1 font-medium ${view === "upcoming" ? "bg-navy text-white" : "text-slate-500 hover:text-navy"}`}>Upcoming ({upcomingCount})</a>
+          <a href={qs("past")} className={`rounded-md px-3 py-1 font-medium ${view === "past" ? "bg-navy text-white" : "text-slate-500 hover:text-navy"}`}>Past ({pastCourses.length})</a>
         </div>
+        <form method="get" className="ml-auto flex items-center gap-2">
+          {view === "past" ? <input type="hidden" name="view" value="past" /> : null}
+          <input name="q" defaultValue={q} placeholder="Search courses…" aria-label="Search courses" className="w-44 rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none focus:border-teal sm:w-56" />
+          {q ? <a href={view === "past" ? "/office/courses?view=past" : "/office/courses"} className="text-sm text-slate-500 hover:text-navy">Clear</a> : null}
+        </form>
       </div>
 
       {view === "upcoming" ? (
