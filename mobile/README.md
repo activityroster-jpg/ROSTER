@@ -48,28 +48,29 @@ You also need a **Mac with Xcode** (free, Mac App Store) for the iOS build, and
 
 ## 2. Build the projects (on the Mac)
 
+The `ios/` and `android/` projects are **already generated and committed**
+(icons, splash screens, permissions and usage descriptions included), so you
+don't run `cap add`. iOS uses CocoaPods.
+
 ```bash
+# one-off tools
+brew install cocoapods            # or: sudo gem install cocoapods
+# in the repo
 cd mobile
 npm install
-npx cap add ios
-npx cap add android
-npm run assets          # icons + splash screens from resources/
-npx cap sync
+npx cap sync                      # installs iOS pods + copies config
 ```
 
 Then:
 
 - **iOS**: copy `GoogleService-Info.plist` into `ios/App/App/`. Open Xcode
   (`npm run ios`). Select the *App* target → **Signing & Capabilities**: choose
-  your Team, then **+ Capability** → *Push Notifications* and *Background Modes
-  → Remote notifications*. In `Info.plist` add:
-  - `NSCameraUsageDescription` — “Take photos of your certificates for your centre.”
-  - `NSFaceIDUsageDescription` — “Unlock ActivityRoster with Face ID instead of your PIN.”
-  - `NSLocationWhenInUseUsageDescription` — “Record your approximate location when you clock in or out.”
-  - `NSPhotoLibraryUsageDescription` — “Choose a photo of a certificate.”
+  your Team, then **+ Capability** → *Push Notifications* (Background Modes →
+  Remote notifications and all usage descriptions are already in `Info.plist`).
+  Open `ios/App/App.xcworkspace` (the *workspace*, not the project).
 - **Android**: copy `google-services.json` into `android/app/`. Open Android
-  Studio (`npm run android`). Permissions are declared by the plugins; the
-  location permission is requested by the WebView when clocking in.
+  Studio (`npm run android`). Camera, location, biometric and notification
+  permissions are already declared in the manifest.
 
 Run on a device (Product → Run in Xcode; ▶ in Android Studio). Sign in with a
 real instructor account, enter a company code, and check: push toggle in
