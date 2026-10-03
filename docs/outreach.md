@@ -66,3 +66,12 @@ code by hand.
 In a campaign, open a centre and press **They replied** or **Booked a demo**.
 That stops the sequence, suppresses the address, and adds "email_sent" plus a
 note to the prospect on the Marketing tab so both views agree.
+
+
+## Lawful basis and sole traders (PECR)
+
+Each prospect carries a lawful basis (legitimate interests by default for a business;
+consent; existing customer) and a sole-trader flag. Under PECR a sole trader or partnership
+counts as an individual, so the outreach agent never adds one to a campaign unless the
+basis is consent. Set both from the Actions menu on the Marketing page or with the CSV
+columns "Sole trader" (yes/no) and "Basis" (LI, consent, customer).

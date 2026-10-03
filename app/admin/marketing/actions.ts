@@ -121,7 +121,11 @@ const HEADER_MAP: Record<string, keyof NewMarketingProspect> = {
   contact: "contactName", "contact name": "contactName", name_contact: "contactName", principal: "contactName", owner: "contactName", manager: "contactName",
   role: "contactRole", title: "contactRole", position: "contactRole", "contact role": "contactRole",
   notes: "notes", note: "notes",
+  "sole trader": "soleTrader", soletrader: "soleTrader", "sole_trader": "soleTrader", individual: "soleTrader",
+  basis: "lawfulBasis", "lawful basis": "lawfulBasis", "lawful_basis": "lawfulBasis",
 };
+const TRUE_WORDS = new Set(["yes", "y", "true", "1", "sole trader", "individual"]);
+const BASIS_WORDS: Record<string, "legitimate_interests" | "consent" | "existing_customer"> = { li: "legitimate_interests", "legitimate interests": "legitimate_interests", legitimate_interests: "legitimate_interests", consent: "consent", customer: "existing_customer", "existing customer": "existing_customer", existing_customer: "existing_customer" };
 
 /** Bulk-import prospects from pasted CSV (e.g. the public RYA training-centre directory). */
 export async function importProspectsAction(csv: string): Promise<ProspectResult> {
@@ -148,6 +152,8 @@ export async function importProspectsAction(csv: string): Promise<ProspectResult
       city: rec.city || null,
       postcode: rec.postcode || null,
       country: rec.country || "United Kingdom",
+      soleTrader: TRUE_WORDS.has((rec.soleTrader ?? "").toLowerCase()),
+      lawfulBasis: BASIS_WORDS[(rec.lawfulBasis ?? "").toLowerCase()] ?? "legitimate_interests",
       email: rec.email || null,
       website: rec.website || null,
       linkedinUrl: rec.linkedinUrl || null,
@@ -235,4 +241,13 @@ export async function prepareNextLettersAction(count = 10): Promise<{ ok: boolea
   }
   revalidatePath("/admin/marketing");
   return { ok: true, ids: next.map((p) => p.id) };
+}
+
+/** Lawful basis and sole-trader flag for one prospect (UK GDPR / PECR bookkeeping). */
+export async function setProspectBasisAction(id: string, input: { soleTrader: boolean; lawfulBasis: string; basisNote?: string }): Promise<ProspectResult> {
+  const repo = await platform();
+  const basis = (["legitimate_interests", "consent", "existing_customer"] as const).find((b) => b === input.lawfulBasis) ?? "legitimate_interests";
+  await repo.updateProspect(id, { soleTrader: Boolean(input.soleTrader), lawfulBasis: basis, basisNote: (input.basisNote ?? "").trim().slice(0, 200) || null });
+  revalidatePath("/admin/marketing");
+  return { ok: true };
 }

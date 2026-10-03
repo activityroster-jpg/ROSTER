@@ -37,6 +37,7 @@ export async function sendLoginCodeAction(): Promise<LoginVerifyResult> {
   if (!code) return { ok: false, error: "We've already sent a few codes. Check your inbox and spam, or try again in an hour." };
   const fp = await requestFingerprint();
   await sendEmail({
+    expiresInMinutes: 15,
     to: who.email,
     subject: `Your ActivityRoster sign-in code: ${code}`,
     html: `<p>Here's the code to finish signing in to your centre's office${fp.userAgent ? ` (${escapeHtml(describeAgent(fp.userAgent))}${fp.country ? `, ${escapeHtml(fp.country)}` : ""})` : ""}:</p>

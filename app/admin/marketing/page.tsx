@@ -42,6 +42,8 @@ export default async function AdminMarketingPage() {
     contactRole: p.contactRole ?? "",
     statuses: parseProspectStatuses(p.statuses, p.status),
     source: p.source,
+    soleTrader: Boolean(p.soleTrader),
+    lawfulBasis: p.lawfulBasis ?? "legitimate_interests",
     createdAt: p.createdAt instanceof Date ? p.createdAt.getTime() : Number(p.createdAt),
   }));
 

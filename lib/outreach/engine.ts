@@ -174,8 +174,16 @@ export async function applyResendEvent(db: Database, type: string, data: { email
   const id = data.email_id;
   if (!id) return "ignored";
   const msg = await p.findOutreachMessageByResendId(id);
-  if (!msg) return "ignored";
   const now = new Date();
+  if (!msg) {
+    // Not an outreach message: a system email from the queue. Bounces and
+    // complaints suppress the address so nothing else is sent to it.
+    const row = await p.emailOutboxByProviderId(id);
+    if (!row) return "ignored";
+    if (type === "email.bounced") { await p.setEmailStatus(row.id, "failed", `Bounced: ${data.bounce?.message?.slice(0, 300) ?? "no detail"}`); await p.addSuppression(row.toEmail, "bounce", data.bounce?.message?.slice(0, 200) ?? null); return "updated"; }
+    if (type === "email.complained") { await p.setEmailStatus(row.id, "failed", "Recipient marked it as spam"); await p.addSuppression(row.toEmail, "complaint", null); return "updated"; }
+    return "ignored";
+  }
   switch (type) {
     case "email.delivered": if (msg.status === "sent") await p.updateOutreachMessage(msg.id, { status: "delivered" }); return "updated";
     case "email.opened": await p.updateOutreachMessage(msg.id, { status: msg.status === "clicked" ? "clicked" : "opened", openedAt: msg.openedAt ?? now }); await p.touchOutreachLead(msg.leadId, now); return "updated";

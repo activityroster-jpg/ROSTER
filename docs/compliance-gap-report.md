@@ -174,14 +174,14 @@ Built 3 October 2026 (plan P0-F). Engine: `lib/domain/working-time.ts` (pure); p
 | SPF, DKIM, DMARC | P0 | Dashboard | Steps in `docs/email-setup.md`; records live in Cloudflare DNS. |
 | Separate system and marketing subdomains, separate keys | P0 | Built, awaiting DNS | Two streams in `lib/mail/providers.ts`: system (`RESEND_API_KEY`, from `MAIL_FROM_SYSTEM`) and news (`RESEND_API_KEY_NEWS`; from-address must be on `OUTREACH_FROM_DOMAIN`). Live once Conor verifies `notify.` and `news.` in Resend and sets the four variables (`docs/email-setup.md`, Part 3). |
 | Minimal content in emails | P0 | Done | Notifications link into the app; no contact details are emailed. |
-| Queue with retries, failed-send list | P1 | Missing | Direct `fetch` to Resend; failures are logged, not queued. |
-| Bounce/complaint webhooks suppress addresses | P1 | Partial | Built for outreach (`app/api/webhooks/resend`), not for system email. |
+| Queue with retries, failed-send list | P1 | Done | `email_outbox` queue with backoff and five attempts; failed-send list with retry/discard at Dev Center → Email (`lib/mail/queue.ts`, P1-C). |
+| Bounce/complaint webhooks suppress addresses | P1 | Done | Outreach and system email alike: the Resend webhook matches the queue row by provider id, marks it failed and suppresses the address; every send checks the list first (P1-C). |
 | Backup email provider with automatic failover | P0 | Built, awaiting account | Postmark behind the same seam; network errors, 429 and 5xx at the primary fail over automatically, a 4xx about the message does not. Failovers show on the Dev Center overview. Live once Conor opens the Postmark account and sets `POSTMARK_SERVER_TOKEN` (`docs/email-setup.md`, Part 4). |
 | Prospect data separate from school data | P0 | Done | `marketing_prospect` and `outreach_*` are control-plane tables; `lib/outreach` reads nothing tenant-owned. |
 | Business contacts only, never users or under-18s | P0 | Done | Audience is the prospect list only (`app/admin/outreach/actions.ts`). |
 | Identifies sender, postal address, one-click unsubscribe | P0 | Done | Footer and `List-Unsubscribe` headers (`lib/outreach/writer.ts`, `lib/outreach/engine.ts`). |
 | Permanent suppression list checked before every send | P0 | Done | `outreach_suppression`; checked at research, queue and send time. |
-| Contact source and legitimate-interests basis; flag sole traders | P1 | Missing | No `source` or `basis` columns on `marketing_prospect`. |
+| Contact source and legitimate-interests basis; flag sole traders | P1 | Done | `marketing_prospect.source` (existing), `lawful_basis`, `basis_note`, `sole_trader`; CSV import columns; table toggles; the outreach agent skips sole traders without consent (P1-C). |
 
 ## Backups and disaster recovery
 

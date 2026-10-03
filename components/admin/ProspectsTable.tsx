@@ -9,7 +9,7 @@ import {
   draftProspectEmail,
   prospectStatusRank,
 } from "@/lib/marketing";
-import { deleteProspectAction, prepareNextLettersAction, setProspectStatusesAction } from "@/app/admin/marketing/actions";
+import { deleteProspectAction, prepareNextLettersAction, setProspectStatusesAction, setProspectBasisAction } from "@/app/admin/marketing/actions";
 import type { ProspectStatus } from "@/lib/db/schema";
 
 export interface ProspectRow {
@@ -26,6 +26,8 @@ export interface ProspectRow {
   contactRole: string;
   statuses: ProspectStatus[];
   source: string;
+  soleTrader: boolean;
+  lawfulBasis: string;
   /** Epoch ms — "Added" sort. */
   createdAt: number;
 }
@@ -230,6 +232,7 @@ export function ProspectsTable({ rows }: { rows: ProspectRow[] }) {
                   <td className="truncate px-2 py-1">
                     <span className="font-medium text-navy" title={r.name}>{r.name}</span>
                     {r.source === "sample" ? <span className="ml-1 rounded bg-amber/15 px-1 py-px text-[9px] font-semibold text-amber">sample</span> : null}
+                    {r.soleTrader ? <span className="ml-1 rounded bg-port/10 px-1 py-px text-[9px] font-semibold text-port" title={r.lawfulBasis === "consent" ? "Sole trader with consent: may be emailed" : "Sole trader: no marketing email without consent (PECR)"}>sole trader{r.lawfulBasis === "consent" ? " · consent" : ""}</span> : r.lawfulBasis === "consent" ? <span className="ml-1 rounded bg-starboard/10 px-1 py-px text-[9px] font-semibold text-starboard">consent</span> : null}
                     {r.website ? <a href={r.website.startsWith("http") ? r.website : `https://${r.website}`} target="_blank" rel="noreferrer" className="ml-1.5 text-[10px] text-slate-400 hover:text-teal" title={r.website}>↗</a> : null}
                   </td>
                   <td className="truncate px-2 py-1 text-slate-600">{r.region || "—"}</td>
@@ -268,6 +271,8 @@ export function ProspectsTable({ rows }: { rows: ProspectRow[] }) {
                         <a href={`/admin/marketing/${r.id}/mockup`} target="_blank" rel="noreferrer" className={menuItem}>📄 Mock-up PDF</a>
                         {r.email ? <a href={mailtoHref(r)} className={menuItem}>📧 Email</a> : <span className={`${menuItem} cursor-not-allowed text-slate-300`}>📧 Email (none)</span>}
                         {r.linkedinUrl ? <a href={linkedinHref(r.linkedinUrl)} target="_blank" rel="noreferrer" className={menuItem}>in LinkedIn ↗</a> : null}
+                        <button type="button" onClick={() => startTransition(async () => { await setProspectBasisAction(r.id, { soleTrader: !r.soleTrader, lawfulBasis: r.lawfulBasis }); router.refresh(); })} className={menuItem}>{r.soleTrader ? "☑ Sole trader" : "☐ Sole trader"}</button>
+                        <button type="button" onClick={() => startTransition(async () => { await setProspectBasisAction(r.id, { soleTrader: r.soleTrader, lawfulBasis: r.lawfulBasis === "consent" ? "legitimate_interests" : "consent" }); router.refresh(); })} className={menuItem}>{r.lawfulBasis === "consent" ? "Basis: consent → legitimate interests" : "Basis: legitimate interests → consent"}</button>
                         <button type="button" onClick={() => remove(r.id, r.name)} className={`${menuItem} text-port hover:bg-port/5`}>Remove</button>
                       </div>
                     </details>

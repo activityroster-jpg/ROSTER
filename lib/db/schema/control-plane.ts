@@ -319,6 +319,9 @@ export type ProspectStatus = (typeof PROSPECT_STATUSES)[number];
  * lightweight CRM. Control-plane (global, not tenant-owned); only ever reached
  * behind requirePlatformAdmin(). Postal fields feed the C5-window letter.
  */
+export const LAWFUL_BASES = ["legitimate_interests", "consent", "existing_customer"] as const;
+export type LawfulBasis = (typeof LAWFUL_BASES)[number];
+
 export const marketingProspect = sqliteTable("marketing_prospect", {
   id: id(),
   name: text("name").notNull(),
@@ -340,6 +343,11 @@ export const marketingProspect = sqliteTable("marketing_prospect", {
   statuses: text("statuses"),
   notes: text("notes"),
   source: text("source").notNull().default("manual"),
+  /** Why we may contact them (UK GDPR / PECR): legitimate interests for a business, consent otherwise. */
+  lawfulBasis: text("lawful_basis", { enum: LAWFUL_BASES }).notNull().default("legitimate_interests"),
+  basisNote: text("basis_note"),
+  /** Sole traders and partnerships count as individuals under PECR: no marketing email without consent. */
+  soleTrader: boolCol("sole_trader").default(false),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 }, (t) => [
@@ -767,5 +775,42 @@ export const rulePack = sqliteTable("rule_pack", {
   updatedAt: updatedAt(),
 });
 export type RulePack = typeof rulePack.$inferSelect;
+
+// --- Email outbox (queue with retries; compliance P1-C) ----------------------
+export const EMAIL_OUTBOX_STATUSES = ["queued", "sent", "failed"] as const;
+export type EmailOutboxStatus = (typeof EMAIL_OUTBOX_STATUSES)[number];
+/**
+ * Every email the platform sends passes through here: an immediate attempt,
+ * then retries from the hourly tick with backoff, then a failed-send list in
+ * the Dev Center. Bodies are cleared once sent or finally failed, so a
+ * sign-in code never sits in the database longer than its retries.
+ */
+export const emailOutbox = sqliteTable("email_outbox", {
+  id: id(),
+  stream: text("stream").notNull().default("system"),
+  toEmail: text("to_email").notNull(),
+  fromAddr: text("from_addr").notNull(),
+  subject: text("subject").notNull(),
+  html: text("html"),
+  text: text("text"),
+  replyTo: text("reply_to"),
+  headers: text("headers"), // JSON
+  tags: text("tags"), // JSON
+  status: text("status", { enum: EMAIL_OUTBOX_STATUSES }).notNull().default("queued"),
+  attempts: integer("attempts").notNull().default(0),
+  lastError: text("last_error"),
+  nextAttemptAt: integer("next_attempt_at", { mode: "timestamp_ms" }),
+  expiresAt: integer("expires_at", { mode: "timestamp_ms" }),
+  provider: text("provider"),
+  providerId: text("provider_id"),
+  sentAt: integer("sent_at", { mode: "timestamp_ms" }),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, (t) => [
+  index("email_outbox_status_idx").on(t.status, t.nextAttemptAt),
+  index("email_outbox_provider_idx").on(t.providerId),
+]);
+export type EmailOutbox = typeof emailOutbox.$inferSelect;
+export type NewEmailOutbox = typeof emailOutbox.$inferInsert;
 
 export const _sql = sql;

@@ -104,6 +104,8 @@ export async function launchCampaignAction(id: string): Promise<OutreachResult> 
   for (const x of picked) {
     const email = x.email?.trim().toLowerCase() || null;
     if (email && (await p.isSuppressed(email))) continue;
+    // PECR: a sole trader or partnership is an individual; no marketing email without consent.
+    if (x.soleTrader && x.lawfulBasis !== "consent") continue;
     rows.push({
       campaignId: c.id, prospectId: x.id, centreName: x.name, website: x.website, region: x.region, email,
       emailVerified: false, contactName: x.contactName, contactRole: x.contactRole, research: null,

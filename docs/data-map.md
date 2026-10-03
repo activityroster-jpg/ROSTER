@@ -24,6 +24,7 @@ in `docs/retention.md`. Sub-processors in `docs/subprocessors.md`.
 | `onboarding_item`, `org_settings`, `session_slot`, `role_type`, `qualification_type`, `compliance_type`, `equipment_type`, `location_type`, `course_type*`, `equipment`, `location` | Configuration | – | None | – | Admins |
 | `integration` | Connected calendar/accounting tokens (AES-GCM encrypted) | – | Secret | Contract | Nobody directly |
 | `deletion_log` | One-way hash and summary of each anonymisation, so it can be re-applied after a restore | Nobody identifiable | Standard | Legal obligation (erasure) | Admins (via replay) |
+| `email_outbox` (control plane) | Each outgoing email while it is being sent or retried: recipient, subject, body; the body is cleared once sent or finally failed; rows purge after 7 days (sent) or 30 (failed) | Anyone we email | Standard; a sign-in code is in the body briefly | Contract / legitimate interests | Platform admin (Dev Center → Email: recipient masked, no bodies) |
 | `audit_log` | Who changed what and when in the centre; append-only (database triggers) | Staff (actor), subjects of changes | Standard | Legitimate interests (accountability) | Admins (plain-English change log) |
 | R2 bucket `activityroster-docs` | Uploaded certificate and vetting documents, keyed by centre | Staff | High | As `compliance_item` | Admins, via authenticated download only |
 

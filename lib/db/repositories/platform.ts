@@ -22,6 +22,7 @@ import {
   aiUsage,
   privacyRequest,
   rulePack,
+  emailOutbox,
   callAvailability,
   callBooking,
   type CallAvailability,
@@ -52,6 +53,9 @@ import {
   type NewPrivacyRequest,
   type PrivacyRequestStatus,
   type RulePack,
+  type EmailOutbox,
+  type NewEmailOutbox,
+  type EmailOutboxStatus,
   type OutreachLeadStatus,
   type SuppressionReason,
   type TaskStatus,
@@ -597,6 +601,57 @@ export class PlatformRepository {
       ...(notes !== undefined ? { notes } : {}),
     }).where(eq(privacyRequest.id, id));
   }
+  // --- Email outbox -----------------------------------------------------------
+
+  async enqueueEmail(values: Omit<NewEmailOutbox, "id" | "createdAt" | "updatedAt">): Promise<EmailOutbox> {
+    return (await this.db.insert(emailOutbox).values(values).returning())[0]!;
+  }
+  async emailOutboxById(id: string): Promise<EmailOutbox | null> {
+    return (await this.db.select().from(emailOutbox).where(eq(emailOutbox.id, id)).limit(1))[0] ?? null;
+  }
+  async emailOutboxByProviderId(providerId: string): Promise<EmailOutbox | null> {
+    return (await this.db.select().from(emailOutbox).where(eq(emailOutbox.providerId, providerId)).limit(1))[0] ?? null;
+  }
+  /** Queued rows whose next attempt is due (or never attempted), oldest first. */
+  async dueEmails(now: Date, limit = 50): Promise<EmailOutbox[]> {
+    return this.db.select().from(emailOutbox)
+      .where(and(eq(emailOutbox.status, "queued"), lte(emailOutbox.nextAttemptAt, now)))
+      .orderBy(asc(emailOutbox.nextAttemptAt)).limit(limit);
+  }
+  async markEmailSent(id: string, provider: string, providerId: string | null, attempts: number): Promise<void> {
+    await this.db.update(emailOutbox).set({ status: "sent", provider, providerId, attempts, lastError: null, sentAt: new Date(), html: null, text: null, updatedAt: new Date() }).where(eq(emailOutbox.id, id));
+  }
+  /** Retry later (status stays queued) or give up (failed, body cleared). */
+  async markEmailAttemptFailed(id: string, attempts: number, error: string, nextAttemptAt: Date | null): Promise<void> {
+    const giveUp = nextAttemptAt === null;
+    await this.db.update(emailOutbox).set({
+      status: giveUp ? "failed" : "queued", attempts, lastError: error.slice(0, 400), nextAttemptAt,
+      ...(giveUp ? { html: null, text: null } : {}), updatedAt: new Date(),
+    }).where(eq(emailOutbox.id, id));
+  }
+  async setEmailStatus(id: string, status: EmailOutboxStatus, error: string | null): Promise<void> {
+    await this.db.update(emailOutbox).set({ status, lastError: error, updatedAt: new Date(), ...(status === "failed" ? { html: null, text: null } : {}) }).where(eq(emailOutbox.id, id));
+  }
+  async listEmailOutbox(status: EmailOutboxStatus | null, limit = 200): Promise<EmailOutbox[]> {
+    const q = this.db.select().from(emailOutbox);
+    const rows = status ? await q.where(eq(emailOutbox.status, status)).orderBy(desc(emailOutbox.updatedAt)).limit(limit) : await q.orderBy(desc(emailOutbox.updatedAt)).limit(limit);
+    return rows;
+  }
+  async emailOutboxCounts(since: Date): Promise<{ queued: number; failed: number; sentRecently: number }> {
+    const rows = await this.db.select({ status: emailOutbox.status, n: sql<number>`count(*)` }).from(emailOutbox).where(gte(emailOutbox.updatedAt, since)).groupBy(emailOutbox.status);
+    const queuedAll = await this.db.select({ n: sql<number>`count(*)` }).from(emailOutbox).where(eq(emailOutbox.status, "queued"));
+    const failedAll = await this.db.select({ n: sql<number>`count(*)` }).from(emailOutbox).where(eq(emailOutbox.status, "failed"));
+    return { queued: Number(queuedAll[0]?.n ?? 0), failed: Number(failedAll[0]?.n ?? 0), sentRecently: Number(rows.find((r) => r.status === "sent")?.n ?? 0) };
+  }
+  /** Sent rows older than `sentDays` and failed rows older than `failedDays` are dropped (bodies were already cleared). */
+  async purgeEmailOutbox(now: Date, sentDays = 7, failedDays = 30): Promise<number> {
+    const sentCut = new Date(now.getTime() - sentDays * 86_400_000);
+    const failedCut = new Date(now.getTime() - failedDays * 86_400_000);
+    const a = await this.db.delete(emailOutbox).where(and(eq(emailOutbox.status, "sent"), lte(emailOutbox.updatedAt, sentCut))).returning({ id: emailOutbox.id });
+    const b = await this.db.delete(emailOutbox).where(and(eq(emailOutbox.status, "failed"), lte(emailOutbox.updatedAt, failedCut))).returning({ id: emailOutbox.id });
+    return a.length + b.length;
+  }
+
   // --- Rule packs (working-time law as data) --------------------------------
 
   async getRulePack(key: string): Promise<RulePack | null> {

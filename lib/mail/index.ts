@@ -1,7 +1,8 @@
 import { getEnv } from "@/lib/cf/bindings";
 import { COMPANY } from "@/lib/config";
-import { deliver, providersFor, type MailStream } from "./providers";
-import { recordMailFailover } from "@/lib/ops/mail-status";
+import { providersFor, type MailStream } from "./providers";
+import { queueAndSend } from "./queue";
+import { getDb } from "@/lib/cf/bindings";
 
 /**
  * Minimal transactional mailer. Delivery goes through lib/mail/providers
@@ -14,6 +15,8 @@ export interface EmailMessage {
   subject: string;
   html: string;
   from?: string;
+  /** Time-limited content (a sign-in code): do not retry past this many minutes; fail instead. */
+  expiresInMinutes?: number;
 }
 
 /**
@@ -85,15 +88,10 @@ export interface RawEmail {
 /** Environments that really send. Staging also keeps a copy of every email in the Dev Center outbox. */
 const canSend = (env: ReturnType<typeof getEnv>) => providersFor(env).length > 0 && (env.APP_ENV === "production" || env.APP_ENV === "staging");
 
-/** Hand a message to the providers; note a failover on the Dev Center overview. */
-async function dispatch(env: ReturnType<typeof getEnv>, msg: Parameters<typeof deliver>[1], stream: MailStream): Promise<string | null> {
-  const r = await deliver(env, msg, stream);
-  if (r.failedOver) {
-    console.error(`[mail] failed over to ${r.provider}: ${r.firstError ?? "primary failed"}`);
-    const order = providersFor(env);
-    await recordMailFailover(order[0] ?? "resend", r.provider, r.firstError ?? "primary failed");
-  }
-  return r.id;
+/** Queue the message and try to send it now; retries and the failed-send list live in lib/mail/queue. */
+async function dispatch(env: ReturnType<typeof getEnv>, msg: Parameters<typeof queueAndSend>[2], stream: MailStream): Promise<string | null> {
+  const r = await queueAndSend(await getDb(), env, { ...msg, stream });
+  return r.providerId;
 }
 
 export interface OutboxEntry { at: string; to: string; from: string; subject: string; text: string }
@@ -143,5 +141,5 @@ export async function sendEmail(msg: EmailMessage): Promise<void> {
     console.info(`[mail] (not sent: ${env.APP_ENV ?? "unset"}) ${msg.subject}`);
     return;
   }
-  await dispatch(env, { from, to: msg.to, subject: msg.subject, html }, "system");
+  await dispatch(env, { from, to: msg.to, subject: msg.subject, html, expiresAt: msg.expiresInMinutes ? new Date(Date.now() + msg.expiresInMinutes * 60_000) : null }, "system");
 }

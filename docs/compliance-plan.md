@@ -157,9 +157,17 @@ Effort is a rough guide: S = under half a day, M = one to two days, L = a week o
   page link) and maintenance mode, which shows a holding page in the office and the app to
   everyone except platform admins. Migration 0050.
 
-### P1-C Email queue and prospects
-- Queue with retries and a failed-send list; bounce handling for system email; prospect
-  source and lawful-basis columns; sole-trader flag.
+### P1-C Email queue and prospects — built 4 October
+- Every email goes through `email_outbox` (`lib/mail/queue.ts`): one attempt at once, retries
+  from the hourly tick with backoff (5, 15, 45, 135 minutes, five attempts), then the
+  failed-send list at Dev Center → Email with retry and discard. Bodies are cleared once sent
+  or finally failed; sent rows purge after 7 days, failed after 30. Time-limited messages can
+  carry an expiry and fail rather than arrive late.
+- Bounces and complaints on system email (Resend webhook) mark the row failed and put the
+  address on the suppression list, which every send now checks.
+- Prospects carry `lawful_basis` (legitimate interests, consent, existing customer), a note,
+  and a sole-trader flag (CSV columns "Sole trader" and "Basis"; toggles in the table). The
+  outreach agent never emails a sole trader without consent (PECR). Migration 0051.
 
 ### P1-D Retention
 - Retention settings per data type with scheduled deletion and 14-day reminders; the
