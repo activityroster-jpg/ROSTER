@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { requirePlatformAdmin } from "@/lib/platform/admin";
 import { getDb } from "@/lib/cf/bindings";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
@@ -18,18 +17,16 @@ const TONE: Record<string, string> = {
   conflict: "border-l-port",
 };
 
-const PAGE_SIZE = 200;
-
-export default async function AdminMarketingPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+/**
+ * The whole list is loaded at once (a few thousand rows at most) so the pipeline
+ * counts, filters and sorting cover every prospect — not just one page. The
+ * table pages on the client.
+ */
+export default async function AdminMarketingPage() {
   await requirePlatformAdmin();
   const platform = new PlatformRepository(await getDb());
-  const sp = await searchParams;
-  const page = Math.max(1, Number(sp.page ?? 1) || 1);
-  const [prospects, total] = await Promise.all([
-    platform.listProspects(PAGE_SIZE, (page - 1) * PAGE_SIZE),
-    platform.countProspects(),
-  ]);
-  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const prospects = await platform.listProspects(10_000, 0);
+  const total = prospects.length;
 
   const rows: ProspectRow[] = prospects.map((p) => ({
     id: p.id,
@@ -45,6 +42,7 @@ export default async function AdminMarketingPage({ searchParams }: { searchParam
     contactRole: p.contactRole ?? "",
     statuses: parseProspectStatuses(p.statuses, p.status),
     source: p.source,
+    createdAt: p.createdAt instanceof Date ? p.createdAt.getTime() : Number(p.createdAt),
   }));
 
   const counts = PROSPECT_STATUS_ORDER.map((s) => ({ s, n: rows.filter((r) => r.statuses.includes(s)).length }));
@@ -103,16 +101,7 @@ export default async function AdminMarketingPage({ searchParams }: { searchParam
       {rows.length === 0 ? (
         <Card><p className="text-sm text-slate-400">No prospects yet. Use <span className="font-medium text-navy">Import CSV</span> to load the RYA directory, add one manually, or drop in a few example rows to see how it works.</p></Card>
       ) : (
-        <>
-          <ProspectsTable rows={rows} />
-          {pages > 1 ? (
-            <div className="mt-4 flex items-center justify-center gap-3 text-sm">
-              {page > 1 ? <Link href={`/admin/marketing?page=${page - 1}`} className="rounded-lg border border-slate-300 px-3 py-1.5 font-medium text-navy hover:bg-slate-50">← Previous</Link> : <span />}
-              <span className="text-slate-500">Page {page} of {pages} · {total} total</span>
-              {page < pages ? <Link href={`/admin/marketing?page=${page + 1}`} className="rounded-lg border border-slate-300 px-3 py-1.5 font-medium text-navy hover:bg-slate-50">Next →</Link> : <span />}
-            </div>
-          ) : null}
-        </>
+        <ProspectsTable rows={rows} />
       )}
     </div>
   );

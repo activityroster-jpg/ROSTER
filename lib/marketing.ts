@@ -37,6 +37,11 @@ export function primaryProspectStatus(statuses: ProspectStatus[]): ProspectStatu
   return chosen[chosen.length - 1] ?? "new";
 }
 
+/** How far along the pipeline a prospect is (0 = new … 6 = rejected), for sorting by status. */
+export function prospectStatusRank(statuses: ProspectStatus[]): number {
+  return PROSPECT_STATUS_ORDER.indexOf(primaryProspectStatus(statuses));
+}
+
 /** An address is postable only when it has a street line, a town and a postcode. */
 export function addressComplete(p: { addressLine1?: string | null; city?: string | null; postcode?: string | null }): boolean {
   return Boolean((p.addressLine1 ?? "").trim() && (p.city ?? "").trim() && (p.postcode ?? "").trim());

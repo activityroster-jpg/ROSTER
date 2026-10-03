@@ -181,9 +181,13 @@ export async function prepareNextLettersAction(count = 10): Promise<{ ok: boolea
   const repo = await platform();
   const n = Math.max(1, Math.min(50, Math.round(Number(count) || 10)));
   const all = await repo.listProspects(10_000, 0);
+  // Centres that already had a letter — by row AND by name, so a duplicate row
+  // for the same centre (e.g. imported twice) is never lettered a second time.
+  const norm = (v: string) => v.trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
+  const letteredNames = new Set(all.filter((p) => parseProspectStatuses(p.statuses, p.status).includes("letter_sent")).map((p) => norm(p.name)));
   const next = all
     .filter((p) => addressComplete({ addressLine1: p.addressLine1 ?? "", city: p.city ?? "", postcode: p.postcode ?? "" }))
-    .filter((p) => !parseProspectStatuses(p.statuses, p.status).includes("letter_sent"))
+    .filter((p) => !parseProspectStatuses(p.statuses, p.status).includes("letter_sent") && !letteredNames.has(norm(p.name)))
     .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime() || a.name.localeCompare(b.name))
     .slice(0, n);
   if (next.length === 0) return { ok: false, error: "Everyone with a complete address already has a letter marked as sent." };

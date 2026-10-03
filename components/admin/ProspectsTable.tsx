@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   PROSPECT_STATUS_META,
   PROSPECT_STATUS_ORDER,
   addressComplete,
   draftProspectEmail,
+  prospectStatusRank,
 } from "@/lib/marketing";
 import { deleteProspectAction, prepareNextLettersAction, setProspectStatusesAction } from "@/app/admin/marketing/actions";
 import type { ProspectStatus } from "@/lib/db/schema";
@@ -25,10 +26,19 @@ export interface ProspectRow {
   contactRole: string;
   statuses: ProspectStatus[];
   source: string;
+  /** Epoch ms — "Added" sort. */
+  createdAt: number;
 }
 
 type Filters = { name: string; region: string; place: string; email: string; contact: string; status: string };
 const EMPTY: Filters = { name: "", region: "", place: "", email: "", contact: "", status: "" };
+
+type SortKey = "name" | "region" | "place" | "email" | "addr" | "status" | "added";
+type Sort = { key: SortKey; dir: "asc" | "desc" };
+/** First click on a column: text columns A→Z, the rest "most useful first". */
+const DEFAULT_DIR: Record<SortKey, Sort["dir"]> = { name: "asc", region: "asc", place: "asc", email: "asc", addr: "desc", status: "desc", added: "desc" };
+
+const PAGE_SIZE = 200;
 
 const mailtoHref = (r: ProspectRow) => {
   const { subject, body } = draftProspectEmail(r);
@@ -43,24 +53,49 @@ const TONE_CHIP: Record<string, string> = {
   conflict: "bg-port/15 text-port",
 };
 
+const cmp = (a: string, b: string) => a.localeCompare(b, "en", { sensitivity: "base" });
+
+/** Order rows by a column. Pure, so it can be unit-tested. */
+export function sortProspects(rows: ProspectRow[], sort: Sort | null): ProspectRow[] {
+  if (!sort) return rows;
+  const sign = sort.dir === "asc" ? 1 : -1;
+  const by: Record<SortKey, (a: ProspectRow, b: ProspectRow) => number> = {
+    name: (a, b) => cmp(a.name, b.name),
+    region: (a, b) => cmp(a.region, b.region) || cmp(a.name, b.name),
+    place: (a, b) => cmp(a.city, b.city) || cmp(a.postcode, b.postcode) || cmp(a.name, b.name),
+    email: (a, b) => cmp(a.email, b.email) || cmp(a.name, b.name),
+    addr: (a, b) => Number(addressComplete(a)) - Number(addressComplete(b)) || cmp(a.name, b.name),
+    status: (a, b) => prospectStatusRank(a.statuses) - prospectStatusRank(b.statuses) || cmp(a.name, b.name),
+    added: (a, b) => a.createdAt - b.createdAt || cmp(a.name, b.name),
+  };
+  const f = by[sort.key];
+  return [...rows].sort((a, b) => sign * f(a, b));
+}
+
 /**
- * Compact prospect list: one line per centre. Status is a dropdown of
- * tickboxes (a centre can be lettered AND emailed), Actions is a dropdown menu.
- * "Download next 10 letters" reserves the next unsent centres with a full
- * address, marks them Letter sent, and opens them as one printable batch.
+ * Compact prospect list: one line per centre. Every column filters and sorts
+ * across the WHOLE list (the server hands over every prospect); the table pages
+ * on the client. Status is a dropdown of tickboxes (a centre can be lettered
+ * AND emailed), Actions is a dropdown menu. "Download next 10 letters" reserves
+ * the next unsent centres with a full address, marks them Letter sent, and
+ * opens them as one printable batch.
  */
 export function ProspectsTable({ rows }: { rows: ProspectRow[] }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [filters, setFilters] = useState<Filters>(EMPTY);
+  const [sort, setSort] = useState<Sort | null>(null);
+  const [page, setPage] = useState(1);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [batchMsg, setBatchMsg] = useState<string | null>(null);
 
   const set = (k: keyof Filters, v: string) => setFilters((f) => ({ ...f, [k]: v }));
+  const toggleSort = (key: SortKey) =>
+    setSort((s) => (s?.key === key ? (s.dir === DEFAULT_DIR[key] ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : null) : { key, dir: DEFAULT_DIR[key] }));
 
   const filtered = useMemo(() => {
     const has = (val: string, q: string) => val.toLowerCase().includes(q.trim().toLowerCase());
-    return rows.filter((r) =>
+    const kept = rows.filter((r) =>
       (!filters.name || has(`${r.name} ${r.website}`, filters.name)) &&
       (!filters.region || has(r.region, filters.region)) &&
       (!filters.place || has(`${r.city} ${r.postcode} ${r.addressLine1}`, filters.place)) &&
@@ -68,7 +103,15 @@ export function ProspectsTable({ rows }: { rows: ProspectRow[] }) {
       (!filters.contact || has(`${r.contactName} ${r.contactRole}`, filters.contact)) &&
       (!filters.status || (filters.status === "unsent" ? !r.statuses.includes("letter_sent") && addressComplete(r) : r.statuses.includes(filters.status as ProspectStatus))),
     );
-  }, [rows, filters]);
+    return sortProspects(kept, sort);
+  }, [rows, filters, sort]);
+
+  // Back to page 1 whenever the view changes, and never past the last page.
+  const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  useEffect(() => { setPage(1); }, [filters, sort]);
+  useEffect(() => { if (page > pages) setPage(pages); }, [page, pages]);
+  const start = (page - 1) * PAGE_SIZE;
+  const visible = filtered.slice(start, start + PAGE_SIZE);
 
   const toggleStatus = (r: ProspectRow, status: ProspectStatus, checked: boolean) => {
     const next = checked ? Array.from(new Set([...r.statuses, status])) : r.statuses.filter((s) => s !== status);
@@ -100,16 +143,39 @@ export function ProspectsTable({ rows }: { rows: ProspectRow[] }) {
       className="w-full rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[11px] outline-none focus:border-teal" />
   );
   const menuItem = "block w-full rounded px-2.5 py-1.5 text-left text-xs font-medium text-navy hover:bg-slate-50";
+  const Th = ({ k, children, title, align = "left" }: { k: SortKey; children: React.ReactNode; title?: string; align?: "left" | "right" }) => {
+    const active = sort?.key === k;
+    return (
+      <th className={`px-2 py-1.5 ${align === "right" ? "text-right" : ""}`} title={title ?? "Click to sort"} aria-sort={active ? (sort!.dir === "asc" ? "ascending" : "descending") : "none"}>
+        <button type="button" onClick={() => toggleSort(k)} className={`inline-flex items-center gap-1 uppercase tracking-wide hover:text-navy ${active ? "text-navy" : ""}`}>
+          {children}
+          <span aria-hidden="true" className={active ? "text-teal" : "text-slate-300"}>{active ? (sort!.dir === "asc" ? "▲" : "▼") : "⇅"}</span>
+        </button>
+      </th>
+    );
+  };
+  const pager = pages > 1 ? (
+    <span className="flex items-center gap-1.5 text-xs text-slate-500">
+      <button type="button" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="rounded border border-slate-300 px-2 py-0.5 font-medium text-navy hover:bg-slate-50 disabled:opacity-40">←</button>
+      <span>Page {page} of {pages}</span>
+      <button type="button" onClick={() => setPage((p) => Math.min(pages, p + 1))} disabled={page === pages} className="rounded border border-slate-300 px-2 py-0.5 font-medium text-navy hover:bg-slate-50 disabled:opacity-40">→</button>
+    </span>
+  ) : null;
 
   return (
     <div className="rounded-card border border-slate-200 bg-white shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-3 py-2">
-        <p className="text-xs text-slate-500">
-          Showing <span className="font-semibold text-navy">{filtered.length}</span> of {rows.length} on this page
-          {anyFilter ? <button onClick={() => setFilters(EMPTY)} className="ml-2 text-xs text-teal hover:underline">Clear filters</button> : null}
-          {pending ? <span className="ml-2 text-slate-400">Saving…</span> : null}
+        <p className="flex flex-wrap items-center gap-x-2 text-xs text-slate-500">
+          <span>
+            Showing <span className="font-semibold text-navy">{filtered.length === 0 ? 0 : start + 1}–{Math.min(start + PAGE_SIZE, filtered.length)}</span> of {filtered.length}
+            {filtered.length !== rows.length ? <> (filtered from {rows.length})</> : null}
+          </span>
+          {anyFilter ? <button onClick={() => setFilters(EMPTY)} className="text-xs text-teal hover:underline">Clear filters</button> : null}
+          {sort ? <button onClick={() => setSort(null)} className="text-xs text-teal hover:underline">Clear sort</button> : null}
+          {pending ? <span className="text-slate-400">Saving…</span> : null}
         </p>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          {pager}
           {batchMsg ? <span className="text-xs text-slate-500">{batchMsg}</span> : null}
           <button type="button" onClick={nextLetters} disabled={pending} className="rounded-lg bg-teal px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-700 disabled:opacity-50">
             ✉ Download next 10 letters
@@ -129,13 +195,13 @@ export function ProspectsTable({ rows }: { rows: ProspectRow[] }) {
           </colgroup>
           <thead className="bg-slate-50/70 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
             <tr>
-              <th className="px-2 py-1.5">Centre / club</th>
-              <th className="px-2 py-1.5">Region</th>
-              <th className="px-2 py-1.5">Town · postcode</th>
-              <th className="px-2 py-1.5">Email · contact</th>
-              <th className="px-2 py-1.5" title="Postal address complete?">Addr</th>
-              <th className="px-2 py-1.5">Status</th>
-              <th className="px-2 py-1.5 text-right">Actions</th>
+              <Th k="name">Centre / club</Th>
+              <Th k="region">Region</Th>
+              <Th k="place">Town · postcode</Th>
+              <Th k="email">Email · contact</Th>
+              <Th k="addr" title="Postal address complete? Click to sort">Addr</Th>
+              <Th k="status" title="Click to sort by how far along they are">Status</Th>
+              <Th k="added" title="Click to sort by when they were added" align="right">Actions</Th>
             </tr>
             <tr className="bg-white">
               <th className="px-2 pb-1.5">{filterInput("name", "Filter…")}</th>
@@ -154,9 +220,9 @@ export function ProspectsTable({ rows }: { rows: ProspectRow[] }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {filtered.length === 0 ? (
+            {visible.length === 0 ? (
               <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-400">No prospects match these filters.</td></tr>
-            ) : filtered.map((r) => {
+            ) : visible.map((r) => {
               const complete = addressComplete(r);
               const shown = r.statuses.filter((s) => s !== "new");
               return (
@@ -212,6 +278,7 @@ export function ProspectsTable({ rows }: { rows: ProspectRow[] }) {
           </tbody>
         </table>
       </div>
+      {pages > 1 ? <div className="flex justify-center border-t border-slate-100 px-3 py-2">{pager}</div> : null}
     </div>
   );
 }
