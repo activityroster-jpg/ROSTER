@@ -32,7 +32,7 @@ export default function SecurityPage() {
       <P>Instructors see their own shifts, hours and leave, and their colleagues&rsquo; names and shift times. Contact details, pay rates, documents and exports are for centre admins. Every change to the roster, staff, settings and billing is written to a change log the centre can read.</P>
 
       <H>Backups and resilience</H>
-      <P>The database keeps point-in-time history for 30 days, with nightly encrypted exports kept in the EU and a second copy outside Cloudflare. Restores are tested each quarter. If the platform is ever down, centres can still print the day&rsquo;s rota in advance.</P>
+      <P>The database keeps point-in-time history for 30 days, with nightly encrypted exports kept in the EU and a second copy outside Cloudflare. Restores are tested each quarter. The platform is watched from outside Cloudflare around the clock; live status and any incidents are on our <a href="https://activity-roster.betteruptime.com" className="font-semibold text-teal hover:underline" rel="noreferrer">status page</a>. If the platform is ever down, centres can still print the day&rsquo;s rota and emergency sheet in advance, or have the day&rsquo;s rota emailed each morning.</P>
 
       <H>Your rights and complaints</H>
       <P>Anyone can ask for, correct or delete their data, or complain, through our <Link href="/privacy-request" className="font-semibold text-teal hover:underline">data request form</Link> or by emailing {PRIVACY_CONTACT}. We acknowledge within 30 days. Centres can export all their data at any time from Settings.</P>

@@ -182,9 +182,9 @@ counts only, no content.
 | Requirement | Pri | Status | Evidence / notes |
 | --- | --- | --- | --- |
 | D1 Time Travel (30 days on Paid) | P0 | Dashboard | Always on. Conor confirmed the Workers Paid upgrade today; 30-day window follows. |
-| Nightly D1 export to private EU R2, 30 daily + 12 monthly | P0 | Done (needs secret) | `.github/workflows/backup.yml` at 02:30 UTC: export → gzip → AES-256 → `activityroster-backups` (EU) with lifecycle rules daily/31 days, monthly/400 days, documents/31 days. Runs once `BACKUP_PASSPHRASE` exists. |
-| Encrypted off-Cloudflare copy with object lock | P0 | Partial | Workflow copies to any S3-compatible bucket when `OFFSITE_S3_*` secrets exist (recommended Backblaze B2 with object lock). Account is Conor's to open. |
-| Backup encryption key held outside Cloudflare | P0 | Done (needs secret) | `BACKUP_PASSPHRASE` lives in GitHub secrets and Conor's password manager, never in Cloudflare. |
+| Nightly D1 export to private EU R2, 30 daily + 12 monthly | P0 | Done | `.github/workflows/backup.yml` at 02:30 UTC: export → gzip → AES-256 → `activityroster-backups` (EU) with lifecycle rules daily/31 days, monthly/400 days, documents/31 days. Runs once `BACKUP_PASSPHRASE` exists. |
+| Encrypted off-Cloudflare copy with object lock | P0 | Done | Backblaze B2 (EU) with object lock; first copy made 3 October 19:22. |
+| Backup encryption key held outside Cloudflare | P0 | Done | `BACKUP_PASSPHRASE` lives in GitHub secrets and Conor's password manager, never in Cloudflare. |
 | Backup status email | P0 | Done | Workflow posts to `/api/ops/backup-report`; owner emailed on success and failure; Dev Center overview shows the last result. |
 | `docs/runbooks/restore.md` (three cases) | P0 | Done | Plus `.github/workflows/restore.yml` for case B (staging rehearsal or confirmed production restore). |
 | Quarterly restore test, `docs/restore-tests.md` | P0 | Partial | Log template exists; first rehearsal due a week after backups start. |
@@ -212,7 +212,7 @@ counts only, no content.
 | --- | --- | --- | --- |
 | Daily rota digest (opt-in email + PDF) | P0 | Done | Office → Settings → "If the platform is ever down": opt-in hour; the hourly tick emails every admin the day's rota with a link to the printable (PDF) roster (`lib/services/digest.ts`). |
 | Emergency sheet (today's staff, students, emergency contacts), restricted and logged | P0 | Done | `/office/rota/emergency` plus CSV: today's sessions, who is on, phone, emergency contact (guardian for under-18s), handling warning, print-ready; admin-only and every open written to the change log (`lib/services/emergency.ts`). Students stay out by decision C6. |
-| External uptime monitoring and status page | P0 | Dashboard | `/api/health` exists for the monitor to call. Conor signs up (Better Stack or UptimeRobot) and points it at `https://activityroster.com/api/health`; the status page comes from the same service. |
+| External uptime monitoring and status page | P0 | Done | Better Stack monitors `/api/health`; status page at https://activity-roster.betteruptime.com, linked from `/trust` and the incident runbook. |
 | Incident banner via KV flag | P1 | Missing | |
 | Maintenance page | P1 | Missing | |
 | `docs/runbooks/incident.md`, severity table, breach steps, templates | P0 | Done | Plus `docs/incident-log.md`. |

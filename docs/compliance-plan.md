@@ -45,7 +45,7 @@ Effort is a rough guide: S = under half a day, M = one to two days, L = a week o
 - Confirm `past_due` keeps the centre read-only with a visible banner and never deletes;
   write the grace period into the billing page copy.
 
-### P0-C Backups and restore — built 3 October; live once BACKUP_PASSPHRASE is set (Conor), off-site once the B2 secrets exist
+### P0-C Backups and restore — live 3 October (first nightly + off-site copy confirmed); first restore rehearsal due ~10 October
 
 - Nightly GitHub Actions job: `wrangler d1 export` → encrypted → private EU R2 bucket
   (30 daily, 12 monthly lifecycle) → off-site copy with object lock.
@@ -105,7 +105,7 @@ Effort is a rough guide: S = under half a day, M = one to two days, L = a week o
   Recommended: Postmark (EU data processing addendum available) or Amazon SES (eu-west-1).
 - **Conor:** add the DNS records the two providers list; start DMARC at `p=none`.
 
-### P0-H Offline fallbacks and monitoring — digest and emergency sheet done 3 October; uptime monitor is Conor's sign-up
+### P0-H Offline fallbacks and monitoring — done 3 October (status page: https://activity-roster.betteruptime.com)
 
 - Opt-in daily rota digest email (PDF attached) sent from the existing hourly tick.
 - Emergency sheet: printable today's staff on duty with emergency contacts, admin-only,
