@@ -48,19 +48,19 @@ jobs:
           # reason is readable from the run page and the API without the log.
           exec > >(tee -a /tmp/provision.log) 2>&1
           trap 'echo "::error::Provisioning failed. Last output: $(tail -c 1200 /tmp/provision.log | tr "\n" " ")"' ERR
-          D1_ID="$(npx wrangler d1 list --json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const l=JSON.parse(s);const d=l.find(x=>x.name==="activityroster-staging");console.log(d?d.uuid:"")})')"
+          D1_ID="$(npx wrangler d1 list --json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const l=JSON.parse(s.slice(s.indexOf("[")));const d=l.find(x=>x.name==="activityroster-staging");console.log(d?d.uuid:"")})')"
           if [ -z "$D1_ID" ]; then
             npx wrangler d1 create activityroster-staging --location=weur
-            D1_ID="$(npx wrangler d1 list --json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const l=JSON.parse(s);const d=l.find(x=>x.name==="activityroster-staging");console.log(d?d.uuid:"")})')"
+            D1_ID="$(npx wrangler d1 list --json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const l=JSON.parse(s.slice(s.indexOf("[")));const d=l.find(x=>x.name==="activityroster-staging");console.log(d?d.uuid:"")})')"
           fi
           echo "D1: $D1_ID"
           if ! npx wrangler r2 bucket list | grep -q "activityroster-docs-staging"; then
             npx wrangler r2 bucket create activityroster-docs-staging --jurisdiction eu
           fi
-          KV_ID="$(npx wrangler kv namespace list | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const l=JSON.parse(s);const d=l.find(x=>x.title==="roster-staging-TENANT_CACHE");console.log(d?d.id:"")})')"
+          KV_ID="$(npx wrangler kv namespace list | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const l=JSON.parse(s.slice(s.indexOf("[")));const d=l.find(x=>x.title==="roster-staging-TENANT_CACHE");console.log(d?d.id:"")})')"
           if [ -z "$KV_ID" ]; then
             npx wrangler kv namespace create TENANT_CACHE --env staging
-            KV_ID="$(npx wrangler kv namespace list | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const l=JSON.parse(s);const d=l.find(x=>x.title==="roster-staging-TENANT_CACHE");console.log(d?d.id:"")})')"
+            KV_ID="$(npx wrangler kv namespace list | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const l=JSON.parse(s.slice(s.indexOf("[")));const d=l.find(x=>x.title==="roster-staging-TENANT_CACHE");console.log(d?d.id:"")})')"
           fi
           echo "KV: $KV_ID"
           test -n "$D1_ID" && test -n "$KV_ID"
