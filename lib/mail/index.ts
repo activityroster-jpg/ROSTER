@@ -61,6 +61,43 @@ export function escapeHtml(s: string | null | undefined): string {
   return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 }
 
+export interface RawEmail {
+  from: string;
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+  replyTo?: string;
+  headers?: Record<string, string>;
+  tags?: { name: string; value: string }[];
+}
+
+/**
+ * Send an email exactly as given (no branded shell) and return Resend's id so
+ * delivery / open / bounce webhooks can be matched back. Used by the outreach
+ * agent, whose messages carry their own footer and unsubscribe link.
+ */
+export async function sendRawEmail(msg: RawEmail): Promise<{ id: string | null; sent: boolean }> {
+  const env = getEnv();
+  if (!env.RESEND_API_KEY || env.APP_ENV !== "production") {
+    console.info(`[mail] (not sent: ${env.APP_ENV}) → ${msg.to}: ${msg.subject}`);
+    return { id: null, sent: false };
+  }
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      from: msg.from, to: msg.to, subject: msg.subject, html: msg.html, text: msg.text,
+      ...(msg.replyTo ? { reply_to: msg.replyTo } : {}),
+      ...(msg.headers ? { headers: msg.headers } : {}),
+      ...(msg.tags ? { tags: msg.tags } : {}),
+    }),
+  });
+  if (!res.ok) throw new Error(`Email send failed: ${res.status} ${(await res.text()).slice(0, 300)}`);
+  const data = (await res.json().catch(() => ({}))) as { id?: string };
+  return { id: data.id ?? null, sent: true };
+}
+
 export async function sendEmail(msg: EmailMessage): Promise<void> {
   const env = getEnv();
   const from = msg.from ?? "ActivityRoster <no-reply@activityroster.com>";

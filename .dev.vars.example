@@ -30,6 +30,14 @@ STRIPE_PRICE_SETUP=price_...
 
 # --- Email (Resend) ----------------------------------------------------------
 RESEND_API_KEY=re_...
+# Signing secret of the Resend webhook pointing at /api/webhooks/resend (whsec_...).
+RESEND_WEBHOOK_SECRET=
+
+# --- Outreach agent (Dev Center → Outreach) ----------------------------------
+# Claude API key: lets the agent read a centre's website and write a personal note.
+ANTHROPIC_API_KEY=
+# Shared secret an external hourly pinger sends to POST /api/outreach/tick.
+OUTREACH_CRON_SECRET=
 
 # --- Errors (Sentry, optional) -----------------------------------------------
 SENTRY_DSN=https://...ingest.sentry.io/...

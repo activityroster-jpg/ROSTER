@@ -3,6 +3,7 @@
 import { useActionState, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
+  bulkStatusByNameAction,
   createProspectAction,
   dedupeProspectsAction,
   importProspectsAction,
@@ -10,6 +11,7 @@ import {
   seedSampleProspectsAction,
   type ProspectResult,
 } from "@/app/admin/marketing/actions";
+import { PROSPECT_STATUS_META, PROSPECT_STATUS_ORDER } from "@/lib/marketing";
 
 const initial: ProspectResult = { ok: false };
 
@@ -29,13 +31,28 @@ const FIELDS: { name: string; label: string; wide?: boolean }[] = [
 
 export function ProspectTools({ hasRows }: { hasRows: boolean }) {
   const router = useRouter();
-  const [tab, setTab] = useState<"none" | "add" | "import">("none");
+  const [tab, setTab] = useState<"none" | "add" | "import" | "bulk">("none");
   const [addState, addAction, adding] = useActionState(createProspectAction, initial);
   const [pending, startTransition] = useTransition();
   const [csv, setCsv] = useState("");
   const [importMsg, setImportMsg] = useState<ProspectResult | null>(null);
 
   const [fileName, setFileName] = useState<string | null>(null);
+  const [bulkText, setBulkText] = useState("");
+  const [bulkStatus, setBulkStatus] = useState("letter_sent");
+  const [bulkMsg, setBulkMsg] = useState<(ProspectResult & { unmatched?: string[] }) | null>(null);
+
+  const doBulk = (mode: "add" | "remove") => {
+    const n = bulkText.split(/\r?\n/).filter((l) => l.trim()).length;
+    const label = PROSPECT_STATUS_META[bulkStatus as keyof typeof PROSPECT_STATUS_META]?.label ?? bulkStatus;
+    if (!confirm(`${mode === "add" ? "Add" : "Remove"} “${label}” on up to ${n} centre${n === 1 ? "" : "s"}?`)) return;
+    setBulkMsg(null);
+    startTransition(async () => {
+      const res = await bulkStatusByNameAction(bulkText, bulkStatus, mode);
+      setBulkMsg(res);
+      if (res.ok) router.refresh();
+    });
+  };
 
   const doImport = () => {
     setImportMsg(null);
@@ -76,6 +93,7 @@ export function ProspectTools({ hasRows }: { hasRows: boolean }) {
         <button onClick={() => setTab(tab === "add" ? "none" : "add")} className={`rounded-lg px-3 py-1.5 text-sm font-semibold ${tab === "add" ? "bg-navy text-white" : "border border-slate-300 text-navy hover:bg-slate-50"}`}>+ Add prospect</button>
         <button onClick={() => setTab(tab === "import" ? "none" : "import")} className={`rounded-lg px-3 py-1.5 text-sm font-semibold ${tab === "import" ? "bg-navy text-white" : "border border-slate-300 text-navy hover:bg-slate-50"}`}>Import CSV</button>
         <button onClick={loadDirectory} disabled={pending} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-navy hover:bg-slate-50 disabled:opacity-50">{pending ? "Working…" : "Load RYA directory"}</button>
+        {hasRows ? <button onClick={() => setTab(tab === "bulk" ? "none" : "bulk")} className={`rounded-lg px-3 py-1.5 text-sm font-semibold ${tab === "bulk" ? "bg-navy text-white" : "border border-slate-300 text-navy hover:bg-slate-50"}`}>Bulk status by name</button> : null}
         {hasRows ? <button onClick={dedupe} disabled={pending} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-navy hover:bg-slate-50 disabled:opacity-50">Merge duplicates</button> : null}
         {!hasRows ? <button onClick={seed} disabled={pending} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-500 hover:bg-slate-50">Add example rows</button> : null}
       </div>
@@ -99,6 +117,29 @@ export function ProspectTools({ hasRows }: { hasRows: boolean }) {
             {addState.ok ? <span className="text-sm text-starboard">{addState.message}</span> : null}
           </div>
         </form>
+      ) : null}
+
+      {tab === "bulk" ? (
+        <div className="mt-3 rounded-card border border-slate-200 bg-white p-4">
+          <p className="text-sm text-slate-600">Paste centre names, one per line (numbering like &ldquo;12.&rdquo; is ignored), pick a status, then add it to or remove it from every matching centre. Names are matched ignoring case, spaces and punctuation.</p>
+          <textarea value={bulkText} onChange={(e) => setBulkText(e.target.value)} rows={8} placeholder={"Jersey Sea Sport Centre\nRoyal Channel Islands Yacht Club\n…"} className="mt-3 w-full rounded-lg border border-slate-300 p-3 text-sm outline-none focus:border-teal" />
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <label className="text-sm text-slate-600">Status
+              <select value={bulkStatus} onChange={(e) => setBulkStatus(e.target.value)} className="ml-2 rounded-lg border border-slate-300 px-2 py-1.5 text-sm">
+                {PROSPECT_STATUS_ORDER.filter((s) => s !== "new").map((s) => <option key={s} value={s}>{PROSPECT_STATUS_META[s].label}</option>)}
+              </select>
+            </label>
+            <button onClick={() => doBulk("remove")} disabled={pending || !bulkText.trim()} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-navy hover:bg-slate-50 disabled:opacity-50">{pending ? "Working…" : "Mark as NOT done (remove status)"}</button>
+            <button onClick={() => doBulk("add")} disabled={pending || !bulkText.trim()} className="rounded-lg bg-teal px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{pending ? "Working…" : "Mark as done (add status)"}</button>
+          </div>
+          {bulkMsg?.error ? <p role="status" className="mt-2 text-sm text-port">{bulkMsg.error}</p> : null}
+          {bulkMsg?.ok ? <p role="status" className="mt-2 text-sm text-starboard">{bulkMsg.message}</p> : null}
+          {bulkMsg?.ok && bulkMsg.unmatched?.length ? (
+            <details className="mt-2 text-xs text-slate-500"><summary className="cursor-pointer">Names not found on your list ({bulkMsg.unmatched.length})</summary>
+              <ul className="mt-1 list-disc pl-5">{bulkMsg.unmatched.map((n) => <li key={n}>{n}</li>)}</ul>
+            </details>
+          ) : null}
+        </div>
       ) : null}
 
       {tab === "import" ? (

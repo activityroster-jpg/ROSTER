@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, lte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import type { Database } from "@/lib/db/client";
 import {
   organisation,
@@ -16,6 +16,10 @@ import {
   platformTask,
   financeTransaction,
   financeSettings,
+  outreachCampaign,
+  outreachLead,
+  outreachMessage,
+  outreachSuppression,
   callAvailability,
   callBooking,
   type CallAvailability,
@@ -34,6 +38,14 @@ import {
   type FinanceTransaction,
   type NewFinanceTransaction,
   type FinanceSettings,
+  type OutreachCampaign,
+  type NewOutreachCampaign,
+  type OutreachLead,
+  type NewOutreachLead,
+  type OutreachMessage,
+  type OutreachSuppression,
+  type OutreachLeadStatus,
+  type SuppressionReason,
   type TaskStatus,
   type ProspectStatus,
 } from "@/lib/db/schema";
@@ -278,6 +290,50 @@ export class PlatformRepository {
     return this.updateProspect(id, { statuses: JSON.stringify(statuses), status: primary });
   }
 
+  /**
+   * Add or remove one outreach status on every prospect whose name matches one
+   * of the given names (case- and whitespace-insensitive). Used by the
+   * "Bulk status by name" tool so a pasted list of centres can be corrected in
+   * one go (e.g. "these letters were not actually sent"). Returns which names
+   * matched nothing so the caller can show them.
+   */
+  async bulkProspectStatusByName(
+    names: string[],
+    status: ProspectStatus,
+    mode: "add" | "remove",
+  ): Promise<{ matched: number; updated: number; unmatched: string[] }> {
+    const norm = (v: string | null | undefined) => (v ?? "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
+    const wanted = new Map<string, string>();
+    for (const n of names) { const k = norm(n); if (k) wanted.set(k, n.trim()); }
+    if (wanted.size === 0) return { matched: 0, updated: 0, unmatched: [] };
+    const rows = await this.db
+      .select({ id: marketingProspect.id, name: marketingProspect.name, status: marketingProspect.status, statuses: marketingProspect.statuses })
+      .from(marketingProspect);
+    const seen = new Set<string>();
+    let matched = 0;
+    let updated = 0;
+    for (const r of rows) {
+      const k = norm(r.name);
+      if (!wanted.has(k)) continue;
+      matched++;
+      seen.add(k);
+      const current = parseProspectStatuses(r.statuses, r.status);
+      let next: ProspectStatus[];
+      if (mode === "add") {
+        if (current.includes(status)) continue;
+        next = [...current.filter((s) => s !== "new"), status];
+      } else {
+        if (!current.includes(status)) continue;
+        next = current.filter((s) => s !== status);
+        if (next.length === 0) next = ["new"];
+      }
+      await this.setProspectStatuses(r.id, next, primaryProspectStatus(next));
+      updated++;
+    }
+    const unmatched = [...wanted.entries()].filter(([k]) => !seen.has(k)).map(([, original]) => original);
+    return { matched, updated, unmatched };
+  }
+
   async deleteProspect(id: string): Promise<void> {
     await this.db.delete(marketingProspect).where(eq(marketingProspect.id, id));
   }
@@ -418,6 +474,121 @@ export class PlatformRepository {
   async upsertFinanceSettings(patch: Partial<Omit<FinanceSettings, "id" | "updatedAt">>): Promise<void> {
     const updated = await this.db.update(financeSettings).set({ ...patch, updatedAt: new Date() }).where(eq(financeSettings.id, "default")).returning({ id: financeSettings.id });
     if (updated.length === 0) await this.db.insert(financeSettings).values({ id: "default", ...patch, updatedAt: new Date() });
+  }
+
+  // --- Outreach agent --------------------------------------------------------
+
+  async listOutreachCampaigns(): Promise<OutreachCampaign[]> {
+    return this.db.select().from(outreachCampaign).orderBy(desc(outreachCampaign.createdAt));
+  }
+  async getOutreachCampaign(id: string): Promise<OutreachCampaign | null> {
+    return (await this.db.select().from(outreachCampaign).where(eq(outreachCampaign.id, id)).limit(1))[0] ?? null;
+  }
+  async insertOutreachCampaign(values: Omit<NewOutreachCampaign, "id" | "createdAt" | "updatedAt">): Promise<OutreachCampaign> {
+    return (await this.db.insert(outreachCampaign).values(values).returning())[0]!;
+  }
+  async updateOutreachCampaign(id: string, patch: Partial<Omit<NewOutreachCampaign, "id" | "createdAt">>): Promise<OutreachCampaign | null> {
+    return (await this.db.update(outreachCampaign).set({ ...patch, updatedAt: new Date() }).where(eq(outreachCampaign.id, id)).returning())[0] ?? null;
+  }
+  async deleteOutreachCampaign(id: string): Promise<void> {
+    await this.db.delete(outreachCampaign).where(eq(outreachCampaign.id, id));
+  }
+
+  async listOutreachLeads(campaignId: string, opts: { status?: OutreachLeadStatus; limit?: number } = {}): Promise<OutreachLead[]> {
+    const conds = [eq(outreachLead.campaignId, campaignId)];
+    if (opts.status) conds.push(eq(outreachLead.status, opts.status));
+    const q = this.db.select().from(outreachLead).where(and(...conds)).orderBy(asc(outreachLead.createdAt));
+    return opts.limit ? q.limit(opts.limit) : q;
+  }
+  async getOutreachLead(id: string): Promise<OutreachLead | null> {
+    return (await this.db.select().from(outreachLead).where(eq(outreachLead.id, id)).limit(1))[0] ?? null;
+  }
+  async getOutreachLeadByToken(token: string): Promise<OutreachLead | null> {
+    return (await this.db.select().from(outreachLead).where(eq(outreachLead.unsubscribeToken, token)).limit(1))[0] ?? null;
+  }
+  async insertOutreachLeads(rows: Omit<NewOutreachLead, "id" | "createdAt" | "updatedAt">[]): Promise<number> {
+    let n = 0;
+    for (let i = 0; i < rows.length; i += 5) {
+      const chunk = rows.slice(i, i + 5);
+      n += (await this.db.insert(outreachLead).values(chunk).returning({ id: outreachLead.id })).length;
+    }
+    return n;
+  }
+  async updateOutreachLead(id: string, patch: Partial<Omit<NewOutreachLead, "id" | "createdAt">>): Promise<OutreachLead | null> {
+    return (await this.db.update(outreachLead).set({ ...patch, updatedAt: new Date() }).where(eq(outreachLead.id, id)).returning())[0] ?? null;
+  }
+  async touchOutreachLead(id: string, at: Date): Promise<void> {
+    await this.db.update(outreachLead).set({ lastEventAt: at, updatedAt: new Date() }).where(eq(outreachLead.id, id));
+  }
+  /** Mark a lead as being sent to; returns false if someone else got there first. */
+  async claimOutreachLead(id: string): Promise<boolean> {
+    const rows = await this.db.update(outreachLead).set({ status: "sending", updatedAt: new Date() })
+      .where(and(eq(outreachLead.id, id), inArray(outreachLead.status, ["queued", "in_sequence"]))).returning({ id: outreachLead.id });
+    return rows.length > 0;
+  }
+  async listDueOutreachLeads(campaignId: string, now: Date, limit: number): Promise<OutreachLead[]> {
+    return this.db.select().from(outreachLead)
+      .where(and(eq(outreachLead.campaignId, campaignId), inArray(outreachLead.status, ["queued", "in_sequence"]), lte(outreachLead.nextSendAt, now)))
+      .orderBy(asc(outreachLead.nextSendAt)).limit(limit);
+  }
+  async countOutreachLeads(campaignId: string, statuses?: OutreachLeadStatus[]): Promise<number> {
+    const conds = [eq(outreachLead.campaignId, campaignId)];
+    if (statuses?.length) conds.push(inArray(outreachLead.status, statuses));
+    const rows = await this.db.select({ n: sql<number>`count(*)` }).from(outreachLead).where(and(...conds));
+    return Number(rows[0]?.n ?? 0);
+  }
+  async outreachLeadCountsByStatus(campaignId?: string): Promise<Map<string, number>> {
+    const q = this.db.select({ status: outreachLead.status, n: sql<number>`count(*)` }).from(outreachLead);
+    const rows = campaignId ? await q.where(eq(outreachLead.campaignId, campaignId)).groupBy(outreachLead.status) : await q.groupBy(outreachLead.status);
+    return new Map(rows.map((r) => [r.status, Number(r.n)]));
+  }
+  /** Prospect ids that already sit in any campaign created within the last N days. */
+  async recentlyContactedProspectIds(days: number): Promise<Set<string>> {
+    if (days <= 0) return new Set();
+    const since = new Date(Date.now() - days * 86_400_000);
+    const rows = await this.db.select({ pid: outreachLead.prospectId }).from(outreachLead).where(gte(outreachLead.createdAt, since));
+    return new Set(rows.map((r) => r.pid).filter((x): x is string => Boolean(x)));
+  }
+
+  async insertOutreachMessage(values: Omit<OutreachMessage, "id" | "createdAt" | "openedAt" | "clickedAt" | "error"> & Partial<Pick<OutreachMessage, "openedAt" | "clickedAt" | "error">>): Promise<OutreachMessage> {
+    return (await this.db.insert(outreachMessage).values(values).returning())[0]!;
+  }
+  async listOutreachMessages(leadId: string): Promise<OutreachMessage[]> {
+    return this.db.select().from(outreachMessage).where(eq(outreachMessage.leadId, leadId)).orderBy(asc(outreachMessage.sentAt));
+  }
+  async listCampaignMessages(campaignId: string, limit = 200): Promise<OutreachMessage[]> {
+    return this.db.select().from(outreachMessage).where(eq(outreachMessage.campaignId, campaignId)).orderBy(desc(outreachMessage.sentAt)).limit(limit);
+  }
+  async findOutreachMessageByResendId(resendId: string): Promise<OutreachMessage | null> {
+    return (await this.db.select().from(outreachMessage).where(eq(outreachMessage.resendId, resendId)).limit(1))[0] ?? null;
+  }
+  async updateOutreachMessage(id: string, patch: Partial<Omit<OutreachMessage, "id" | "createdAt">>): Promise<void> {
+    await this.db.update(outreachMessage).set(patch).where(eq(outreachMessage.id, id));
+  }
+  async countOutreachSentSince(campaignId: string, since: Date): Promise<number> {
+    const rows = await this.db.select({ n: sql<number>`count(*)` }).from(outreachMessage).where(and(eq(outreachMessage.campaignId, campaignId), gte(outreachMessage.sentAt, since)));
+    return Number(rows[0]?.n ?? 0);
+  }
+  async outreachMessageCountsByStatus(campaignId?: string): Promise<Map<string, number>> {
+    const q = this.db.select({ status: outreachMessage.status, n: sql<number>`count(*)` }).from(outreachMessage);
+    const rows = campaignId ? await q.where(eq(outreachMessage.campaignId, campaignId)).groupBy(outreachMessage.status) : await q.groupBy(outreachMessage.status);
+    return new Map(rows.map((r) => [r.status, Number(r.n)]));
+  }
+
+  async isSuppressed(email: string): Promise<boolean> {
+    const rows = await this.db.select({ id: outreachSuppression.id }).from(outreachSuppression).where(eq(outreachSuppression.email, email.toLowerCase())).limit(1);
+    return rows.length > 0;
+  }
+  async addSuppression(email: string, reason: SuppressionReason, note: string | null): Promise<void> {
+    const e = email.toLowerCase();
+    if (await this.isSuppressed(e)) return;
+    await this.db.insert(outreachSuppression).values({ email: e, reason, note });
+  }
+  async removeSuppression(email: string): Promise<void> {
+    await this.db.delete(outreachSuppression).where(eq(outreachSuppression.email, email.toLowerCase()));
+  }
+  async listSuppressions(limit = 500): Promise<OutreachSuppression[]> {
+    return this.db.select().from(outreachSuppression).orderBy(desc(outreachSuppression.createdAt)).limit(limit);
   }
 
   // --- Blog / CMS ----------------------------------------------------------

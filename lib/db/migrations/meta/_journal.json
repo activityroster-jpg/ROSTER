@@ -274,6 +274,13 @@
       "when": 1791023473755,
       "tag": "0038_jazzy_harrier",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "6",
+      "when": 1791027244437,
+      "tag": "0039_absent_shadow_king",
+      "breakpoints": true
     }
   ]
 }

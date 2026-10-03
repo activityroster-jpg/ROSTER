@@ -70,6 +70,36 @@ export async function setProspectStatusesAction(id: string, statuses: string[]):
   return { ok: true };
 }
 
+/**
+ * Add or remove one status for every prospect named in a pasted list (one name
+ * per line; leading numbering like "12." or "12)" is ignored).
+ */
+export async function bulkStatusByNameAction(
+  text: string,
+  status: string,
+  mode: "add" | "remove",
+): Promise<ProspectResult & { unmatched?: string[] }> {
+  const repo = await platform();
+  if (!(PROSPECT_STATUSES as readonly string[]).includes(status)) return { ok: false, error: "Unknown status." };
+  if (mode !== "add" && mode !== "remove") return { ok: false, error: "Unknown mode." };
+  const names = String(text ?? "")
+    .split(/\r?\n/)
+    .map((l) => l.replace(/^\s*\d+\s*[.)\-:]?\s*/, "").trim())
+    .filter(Boolean)
+    .slice(0, 2000);
+  if (names.length === 0) return { ok: false, error: "Paste at least one centre name, one per line." };
+  const r = await repo.bulkProspectStatusByName(names, status as ProspectStatus, mode);
+  revalidatePath("/admin/marketing");
+  const verb = mode === "add" ? "Added" : "Removed";
+  const label = status.replace(/_/g, " ");
+  return {
+    ok: true,
+    count: r.updated,
+    unmatched: r.unmatched,
+    message: `${verb} “${label}” on ${r.updated} of ${r.matched} matched centre${r.matched === 1 ? "" : "s"}${r.unmatched.length ? ` · ${r.unmatched.length} name${r.unmatched.length === 1 ? "" : "s"} not found` : ""}`,
+  };
+}
+
 export async function deleteProspectAction(id: string): Promise<ProspectResult> {
   const repo = await platform();
   await repo.deleteProspect(id);

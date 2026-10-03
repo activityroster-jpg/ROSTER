@@ -528,6 +528,107 @@ export const financeSettings = sqliteTable("finance_settings", {
 });
 export type FinanceSettings = typeof financeSettings.$inferSelect;
 
+// --- Outreach agent (platform owner's own prospecting) ----------------------
+
+export const OUTREACH_CAMPAIGN_STATUSES = ["draft", "running", "paused", "finished"] as const;
+export type OutreachCampaignStatus = (typeof OUTREACH_CAMPAIGN_STATUSES)[number];
+export const OUTREACH_LEAD_STATUSES = [
+  "new", "no_email", "queued", "sending", "in_sequence", "completed", "replied", "booked", "bounced", "opted_out", "skipped", "failed",
+] as const;
+export type OutreachLeadStatus = (typeof OUTREACH_LEAD_STATUSES)[number];
+export const OUTREACH_MESSAGE_STATUSES = ["sent", "delivered", "opened", "clicked", "bounced", "complained", "failed"] as const;
+export type OutreachMessageStatus = (typeof OUTREACH_MESSAGE_STATUSES)[number];
+export const SUPPRESSION_REASONS = ["unsubscribe", "bounce", "complaint", "replied", "manual"] as const;
+export type SuppressionReason = (typeof SUPPRESSION_REASONS)[number];
+
+/** A campaign: who to contact, what to say, how fast. Steps are a JSON array (see lib/outreach/types). */
+export const outreachCampaign = sqliteTable("outreach_campaign", {
+  id: id(),
+  name: text("name").notNull(),
+  status: text("status", { enum: OUTREACH_CAMPAIGN_STATUSES }).notNull().default("draft"),
+  audience: text("audience").notNull(), // JSON AudienceFilter
+  pitch: text("pitch").notNull(),
+  targetRoles: text("target_roles").notNull(), // comma-separated
+  tone: text("tone"),
+  steps: text("steps").notNull(), // JSON SequenceStep[]
+  fromName: text("from_name").notNull(),
+  fromEmail: text("from_email").notNull(),
+  replyTo: text("reply_to"),
+  dailyCap: integer("daily_cap").notNull().default(40),
+  sendWindowStart: integer("send_window_start").notNull().default(8),
+  sendWindowEnd: integer("send_window_end").notNull().default(18),
+  weekdaysOnly: boolCol("weekdays_only").default(true),
+  aiPersonalise: boolCol("ai_personalise").default(true),
+  launchedAt: integer("launched_at", { mode: "timestamp_ms" }),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+export type OutreachCampaign = typeof outreachCampaign.$inferSelect;
+export type NewOutreachCampaign = typeof outreachCampaign.$inferInsert;
+
+/** One prospect inside a campaign, with what we found out about them and where they are in the sequence. */
+export const outreachLead = sqliteTable("outreach_lead", {
+  id: id(),
+  campaignId: text("campaign_id").notNull().references(() => outreachCampaign.id, { onDelete: "cascade" }),
+  prospectId: text("prospect_id"),
+  centreName: text("centre_name").notNull(),
+  website: text("website"),
+  region: text("region"),
+  email: text("email"),
+  emailVerified: boolCol("email_verified").default(false),
+  contactName: text("contact_name"),
+  contactRole: text("contact_role"),
+  research: text("research"), // JSON ResearchResult
+  status: text("status", { enum: OUTREACH_LEAD_STATUSES }).notNull().default("new"),
+  stepIndex: integer("step_index").notNull().default(0),
+  nextSendAt: integer("next_send_at", { mode: "timestamp_ms" }),
+  lastEventAt: integer("last_event_at", { mode: "timestamp_ms" }),
+  unsubscribeToken: text("unsubscribe_token").notNull(),
+  error: text("error"),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, (t) => [
+  index("outreach_lead_campaign_idx").on(t.campaignId),
+  index("outreach_lead_status_idx").on(t.status),
+  index("outreach_lead_next_idx").on(t.nextSendAt),
+  uniqueIndex("outreach_lead_token_uq").on(t.unsubscribeToken),
+]);
+export type OutreachLead = typeof outreachLead.$inferSelect;
+export type NewOutreachLead = typeof outreachLead.$inferInsert;
+
+/** Every email actually sent, with what Resend told us about it afterwards. */
+export const outreachMessage = sqliteTable("outreach_message", {
+  id: id(),
+  leadId: text("lead_id").notNull().references(() => outreachLead.id, { onDelete: "cascade" }),
+  campaignId: text("campaign_id").notNull(),
+  step: integer("step").notNull(),
+  toEmail: text("to_email").notNull(),
+  subject: text("subject").notNull(),
+  bodyText: text("body_text").notNull(),
+  resendId: text("resend_id"),
+  status: text("status", { enum: OUTREACH_MESSAGE_STATUSES }).notNull().default("sent"),
+  sentAt: integer("sent_at", { mode: "timestamp_ms" }).notNull(),
+  openedAt: integer("opened_at", { mode: "timestamp_ms" }),
+  clickedAt: integer("clicked_at", { mode: "timestamp_ms" }),
+  error: text("error"),
+  createdAt: createdAt(),
+}, (t) => [
+  index("outreach_message_lead_idx").on(t.leadId),
+  index("outreach_message_campaign_idx").on(t.campaignId),
+  uniqueIndex("outreach_message_resend_uq").on(t.resendId),
+]);
+export type OutreachMessage = typeof outreachMessage.$inferSelect;
+
+/** Addresses we must never email again, whatever campaign. */
+export const outreachSuppression = sqliteTable("outreach_suppression", {
+  id: id(),
+  email: text("email").notNull(),
+  reason: text("reason", { enum: SUPPRESSION_REASONS }).notNull(),
+  note: text("note"),
+  createdAt: createdAt(),
+}, (t) => [uniqueIndex("outreach_suppression_email_uq").on(t.email)]);
+export type OutreachSuppression = typeof outreachSuppression.$inferSelect;
+
 // --- Security events --------------------------------------------------------
 
 export const SECURITY_EVENT_KINDS = [

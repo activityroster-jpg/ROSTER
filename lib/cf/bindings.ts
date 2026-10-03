@@ -36,6 +36,12 @@ export interface CloudflareEnv {
   STRIPE_PRICE_FULL?: string;
   SENTRY_DSN?: string;
   RESEND_API_KEY?: string;
+  /** Signing secret of the Resend webhook endpoint (whsec_…), for delivery/open/bounce events. */
+  RESEND_WEBHOOK_SECRET?: string;
+  /** Claude API key for the outreach agent's research and email writing (optional; templates only without it). */
+  ANTHROPIC_API_KEY?: string;
+  /** Shared secret an external scheduler sends to /api/outreach/tick so follow-ups go out on time. */
+  OUTREACH_CRON_SECRET?: string;
   // Shown in the legal footer of every email (optional — set for compliance).
   COMPANY_LEGAL_NAME?: string;
   COMPANY_ADDRESS?: string;
