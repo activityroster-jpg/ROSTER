@@ -76,18 +76,17 @@ describe("per-person data rights", () => {
     // Roster and payroll history stay.
     expect((await repos.tenant.courseStaff.list(sys)).some((s) => s.instructorId === instructorId)).toBe(true);
     expect((await repos.tenant.hoursRecord.list(sys)).some((h) => h.instructorId === instructorId)).toBe(true);
-    const log = await repos.tenant.deletionLog.list(sys);
+    const log = (await repos.tenant.deletionLog.list(sys)).filter((l) => l.subjectId === instructorId);
     expect(log).toHaveLength(1);
-    expect(log[0]!.subjectId).toBe(instructorId);
     expect(JSON.stringify(log[0])).not.toContain(before.name);
     // Second attempt is refused.
     expect((await anonymisePerson(repos, ctx, instructorId)).ok).toBe(false);
     // Simulate a restore: the old details come back.
     await repos.tenant.instructor.update(sys, instructorId, { name: before.name, email: before.email, phone: before.phone, anonymisedAt: null });
     const replay = await replayDeletions(repos, sys);
-    expect(replay).toEqual({ checked: 1, reapplied: 1 });
+    expect(replay.reapplied).toBe(1); // the fixture's own log row points at nobody and is skipped
     expect((await repos.tenant.instructor.findById(sys, instructorId))!.name).toBe("Former staff member");
-    expect(await repos.tenant.deletionLog.list(sys)).toHaveLength(1);
+    expect((await repos.tenant.deletionLog.list(sys)).filter((l) => l.subjectId === instructorId)).toHaveLength(1);
   });
 
   it("exports the change log as CSV for a date range", async () => {

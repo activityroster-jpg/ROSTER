@@ -186,6 +186,13 @@ export async function seedFullOrg(
     sortOrder: 0,
     completedAt: new Date(start),
   });
+  await t.deletionLog.insert(ctx, {
+    subjectKind: "instructor",
+    subjectId: `former-${opts.slug}`,
+    subjectHash: `hash-${opts.slug}`,
+    summary: JSON.stringify({ qualifications: 0 }),
+    actorUserId: owner.id,
+  });
   await t.integration.insert(ctx, {
     provider: "ics_generic",
     kind: "ics",
