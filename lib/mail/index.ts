@@ -32,7 +32,9 @@ export function renderEmail(bodyHtml: string): string {
   <div style="margin:0;padding:0;background:#f1f5f9">
     <div style="max-width:560px;margin:0 auto;padding:24px 16px;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#0f172a">
       <div style="text-align:center;padding:8px 0 16px">
-        <a href="${site}" style="text-decoration:none;color:#0A2E52;font-size:20px;font-weight:800;letter-spacing:-0.01em">⛵ ActivityRoster</a>
+        <a href="${site}" style="text-decoration:none;display:inline-block">
+          <img src="${site}/email-logo.png" width="190" height="34" alt="ActivityRoster" style="display:block;border:0;height:34px;width:auto;max-width:190px" />
+        </a>
       </div>
       <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;padding:24px;font-size:15px;line-height:1.55;color:#334155">
         ${bodyHtml}

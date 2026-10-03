@@ -4,6 +4,7 @@
  * sidebar, cards, pills) but are plain server components with sample data —
  * nothing here is interactive or reads a database.
  */
+import { Logo } from "@/components/Logo";
 import {
   CalendarDays, CalendarOff, ClipboardList, Clock, CreditCard, History, LayoutDashboard, LifeBuoy, MapPin, Settings, Ship, Users, Wallet,
 } from "lucide-react";
@@ -97,7 +98,7 @@ export function OfficeShell({ centre, active, children }: { centre: string; acti
   return (
     <div className="flex bg-canvas text-[8px]" style={{ minHeight: "118mm" }}>
       <aside className="w-[34mm] flex-none bg-navy p-2.5 text-white">
-        <p className="font-display text-[10px] font-bold">⛵ ActivityRoster</p>
+        <Logo variant="onDark" size="sm" className="origin-left scale-[0.62]" />
         <p className="mb-2 truncate text-[7px] text-white/70">{centre}</p>
         {NAV.map((s) => (
           <div key={s.group} className="mb-2">

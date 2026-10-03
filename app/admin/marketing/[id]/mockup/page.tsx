@@ -3,6 +3,7 @@ import { requirePlatformAdmin } from "@/lib/platform/admin";
 import { getDb } from "@/lib/cf/bindings";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { PrintButton } from "@/components/office/PrintButton";
+import { Logo } from "@/components/Logo";
 import { LETTER_SENDER } from "@/lib/marketing";
 import { apexDomain } from "@/lib/config";
 import { JURISDICTIONS, type Jurisdiction } from "@/lib/db/schema";
@@ -114,7 +115,7 @@ export default async function ProspectMockupPage({ params }: { params: Promise<{
         {/* 1 · Cover */}
         <Sheet n={1}>
           <div className="flex h-[269mm] flex-col rounded-2xl bg-navy p-12 text-white">
-            <p className="font-display text-[14pt] font-bold">⛵ ActivityRoster</p>
+            <Logo variant="onDark" size="lg" />
             <p className="text-[9pt] text-white/60">{LETTER_SENDER.tagline}</p>
             <div className="mt-auto">
               <p className="text-[10pt] font-semibold uppercase tracking-wide text-[#4fd1c5]">Your platform, mocked up</p>
