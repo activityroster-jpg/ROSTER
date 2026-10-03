@@ -13,6 +13,7 @@ import { PRICE_KINDS, priceLabel, resolvePrices } from "@/lib/billing/prices";
 import { TIERS } from "@/lib/tiers";
 import { ON_SITE_DAY_PRICE } from "@/lib/pricing";
 import { Card, StatusPill } from "@/components/ui";
+import { fmtBytes, readLastBackup } from "@/lib/ops/backup-status";
 import { trialState } from "@/lib/billing/trial";
 
 export const dynamic = "force-dynamic";
@@ -101,6 +102,7 @@ export default async function AdminOverviewPage({ searchParams }: { searchParams
     .filter((o) => o.subscriptionStatus === "active")
     .reduce((sum, o) => sum + effectivePricing(o, pricing).monthly, 0);
 
+  const lastBackup = await readLastBackup();
   return (
     <div>
       <h1 className="mb-1 font-display text-2xl font-bold text-navy">Overview</h1>
@@ -110,6 +112,20 @@ export default async function AdminOverviewPage({ searchParams }: { searchParams
         <Card><p className="text-xs font-semibold text-navy">Centres</p><p className="mt-1 text-2xl font-semibold text-navy">{total}</p></Card>
         <Card><p className="text-xs font-semibold text-navy">Paying</p><p className="mt-1 text-2xl font-semibold text-starboard">{active}</p><p className="text-xs text-slate-400">{trialing} on trial</p></Card>
         <Card><p className="text-xs font-semibold text-navy">Est. MRR</p><p className="mt-1 text-2xl font-semibold text-navy">{fmtMoney(mrr, pricing.currency)}</p><p className="text-xs text-slate-400">{fmtMoney(mrr * 12, pricing.currency)}/yr</p></Card>
+        <Card>
+          <p className="text-xs font-semibold text-navy">Last backup</p>
+          {lastBackup ? (
+            <>
+              <p className={`mt-1 text-2xl font-semibold ${lastBackup.ok ? "text-starboard" : "text-port"}`}>{lastBackup.ok ? "OK" : "Failed"}</p>
+              <p className="text-xs text-slate-400">{new Date(lastBackup.at).toLocaleString("en-GB", { timeZone: "Europe/London", dateStyle: "medium", timeStyle: "short" })} · {fmtBytes(lastBackup.bytes)}{lastBackup.offsite ? " · off-site ✓" : " · no off-site copy"}</p>
+            </>
+          ) : (
+            <>
+              <p className="mt-1 text-2xl font-semibold text-slate-400">None yet</p>
+              <p className="text-xs text-slate-400">Runs nightly at 02:30 UTC once BACKUP_PASSPHRASE is set in GitHub.</p>
+            </>
+          )}
+        </Card>
         <Card><p className="text-xs font-semibold text-navy">Suspended</p><p className="mt-1 text-2xl font-semibold text-port">{suspended}</p></Card>
       </div>
 

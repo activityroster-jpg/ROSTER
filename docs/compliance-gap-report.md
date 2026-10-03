@@ -182,14 +182,14 @@ counts only, no content.
 | Requirement | Pri | Status | Evidence / notes |
 | --- | --- | --- | --- |
 | D1 Time Travel (30 days on Paid) | P0 | Dashboard | Always on. Conor confirmed the Workers Paid upgrade today; 30-day window follows. |
-| Nightly D1 export to private EU R2, 30 daily + 12 monthly | P0 | Missing | OpenNext has no cron; the pattern already in use (GitHub Actions schedule, see `.github/workflows/outreach-tick.yml`) can run `wrangler d1 export` nightly. |
-| Encrypted off-Cloudflare copy with object lock | P0 | Missing | Provider to choose and account to open (plan P0-C). |
-| Backup encryption key held outside Cloudflare | P0 | Missing | |
-| Backup status email | P0 | Missing | |
-| `docs/runbooks/restore.md` (three cases) | P0 | Missing | |
-| Quarterly restore test, `docs/restore-tests.md` | P0 | Missing | |
+| Nightly D1 export to private EU R2, 30 daily + 12 monthly | P0 | Done (needs secret) | `.github/workflows/backup.yml` at 02:30 UTC: export → gzip → AES-256 → `activityroster-backups` (EU) with lifecycle rules daily/31 days, monthly/400 days, documents/31 days. Runs once `BACKUP_PASSPHRASE` exists. |
+| Encrypted off-Cloudflare copy with object lock | P0 | Partial | Workflow copies to any S3-compatible bucket when `OFFSITE_S3_*` secrets exist (recommended Backblaze B2 with object lock). Account is Conor's to open. |
+| Backup encryption key held outside Cloudflare | P0 | Done (needs secret) | `BACKUP_PASSPHRASE` lives in GitHub secrets and Conor's password manager, never in Cloudflare. |
+| Backup status email | P0 | Done | Workflow posts to `/api/ops/backup-report`; owner emailed on success and failure; Dev Center overview shows the last result. |
+| `docs/runbooks/restore.md` (three cases) | P0 | Done | Plus `.github/workflows/restore.yml` for case B (staging rehearsal or confirmed production restore). |
+| Quarterly restore test, `docs/restore-tests.md` | P0 | Partial | Log template exists; first rehearsal due a week after backups start. |
 | GitHub as source of truth, branch protection on main, `docs/environment.md` | P0 | Partial | Repo is the source of truth and deploys only from GitHub. **There is no `main` branch**: all work is on `claude/new-session-2wxbwe` with no protection. Secrets are named in `.dev.vars.example` and `scripts/setup-secrets.sh`; no rotation notes. |
-| Monthly DNS zone export | P1 | Missing | |
+| Monthly DNS zone export | P1 | Missing | Needs a Zone DNS Read token; Phase 2. |
 | Replay deletions after restore | P1 | Missing | |
 
 ## Safe change management

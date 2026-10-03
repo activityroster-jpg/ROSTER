@@ -1,0 +1,96 @@
+name: Restore from backup
+
+# Loads an encrypted nightly export into STAGING (to rehearse, every quarter) or
+# PRODUCTION (an emergency, with the word RESTORE typed to confirm). The target
+# database is emptied and replayed from the file, newer migrations are applied,
+# and the site is smoke-tested. Case B in docs/runbooks/restore.md.
+
+on:
+  workflow_dispatch:
+    inputs:
+      file:
+        description: "Backup object, e.g. daily/2026-10-03.sql.gz.enc or monthly/2026-10.sql.gz.enc"
+        required: true
+      target:
+        description: "Which database to restore into"
+        required: true
+        type: choice
+        options: [staging, production]
+        default: staging
+      confirm:
+        description: "Type RESTORE to allow a production restore"
+        required: false
+        default: ""
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      BUCKET: activityroster-backups
+    steps:
+      - name: Safety checks
+        env:
+          PASS: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          if [ -z "$PASS" ]; then echo "::error::BACKUP_PASSPHRASE is not set."; exit 1; fi
+          if [ "${{ inputs.target }}" = "production" ] && [ "${{ inputs.confirm }}" != "RESTORE" ]; then echo "::error::Production restore needs the word RESTORE in the confirm box."; exit 1; fi
+          case "${{ inputs.file }}" in daily/*|monthly/*) ;; *) echo "::error::File must start with daily/ or monthly/."; exit 1;; esac
+
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci || npm install
+
+      - name: Work out the target
+        run: |
+          if [ "${{ inputs.target }}" = "production" ]; then
+            echo "DB=activityroster" >> "$GITHUB_ENV"; echo "ENVFLAG=" >> "$GITHUB_ENV"; echo "HOST=activityroster.com" >> "$GITHUB_ENV"
+          else
+            echo "DB=activityroster-staging" >> "$GITHUB_ENV"; echo "ENVFLAG=--env staging" >> "$GITHUB_ENV"; echo "HOST=staging.activityroster.com" >> "$GITHUB_ENV"
+          fi
+
+      - name: Record the Time Travel bookmark of the target before touching it
+        run: |
+          echo "### Restore of ${{ inputs.file }} into ${{ inputs.target }}" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          npx wrangler d1 time-travel info "$DB" $ENVFLAG --json | tee -a "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Download and decrypt
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          npx wrangler r2 object get "$BUCKET/${{ inputs.file }}" --file backup.enc -J eu --remote
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in backup.enc -pass env:BACKUP_PASSPHRASE | gunzip -c > backup.sql
+          echo "Statements: $(grep -c ';' backup.sql)"; grep -c "CREATE TABLE" backup.sql
+
+      - name: Empty the target database
+        run: |
+          set -euo pipefail
+          TABLES="$(npx wrangler d1 execute "$DB" $ENVFLAG --remote --json --command "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%'" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const r=JSON.parse(s.slice(s.indexOf("[")));console.log(r[0].results.map(x=>x.name).join(" "))})')"
+          SQL="PRAGMA defer_foreign_keys = true;"
+          for t in $TABLES; do SQL="$SQL DROP TABLE IF EXISTS \"$t\";"; done
+          npx wrangler d1 execute "$DB" $ENVFLAG --remote --command "$SQL"
+
+      - name: Replay the export
+        run: npx wrangler d1 execute "$DB" $ENVFLAG --remote --file backup.sql --yes
+
+      - name: Apply migrations newer than the export
+        run: npx wrangler d1 migrations apply "$DB" $ENVFLAG --remote
+
+      - name: Smoke test
+        run: |
+          for i in 1 2 3 4 5 6; do
+            if curl -fsS "https://$HOST/api/health" | grep -q '"ok":true'; then echo "$HOST healthy"; exit 0; fi
+            sleep 10
+          done
+          echo "::error::$HOST did not report healthy after the restore."; exit 1
+
+      - name: Log reminder
+        run: |
+          echo "Add a row to docs/restore-tests.md: $(date -u +%F), case B, ${{ inputs.file }}, ${{ inputs.target }}." >> "$GITHUB_STEP_SUMMARY"

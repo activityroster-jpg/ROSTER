@@ -3,15 +3,9 @@ import { getDb, getEnv } from "@/lib/cf/bindings";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { researchBatch, runDueSends } from "@/lib/outreach/engine";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/security/rate-limit";
+import { checkCronSecret } from "@/lib/security/cron-secret";
 
 export const dynamic = "force-dynamic";
-
-function same(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let out = 0;
-  for (let i = 0; i < a.length; i++) out |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return out === 0;
-}
 
 /**
  * The agent's heartbeat. OpenNext has no cron, so an external pinger calls this
@@ -23,9 +17,7 @@ async function tick(req: Request) {
   const limit = await rateLimit(`outreach-tick:${clientIp(req)}`, 30, 60);
   if (!limit.allowed) return tooManyRequests();
   const env = getEnv();
-  const secret = env.OUTREACH_CRON_SECRET;
-  const given = req.headers.get("x-outreach-secret") ?? new URL(req.url).searchParams.get("secret") ?? "";
-  if (!secret || !same(given, secret)) return NextResponse.json({ error: "unauthorised" }, { status: 401 });
+  if (!checkCronSecret(req)) return NextResponse.json({ error: "unauthorised" }, { status: 401 });
   const db = await getDb();
   const p = new PlatformRepository(db);
   const running = (await p.listOutreachCampaigns()).filter((c) => c.status === "running");

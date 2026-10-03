@@ -45,7 +45,7 @@ Effort is a rough guide: S = under half a day, M = one to two days, L = a week o
 - Confirm `past_due` keeps the centre read-only with a visible banner and never deletes;
   write the grace period into the billing page copy.
 
-### P0-C Backups and restore (M)
+### P0-C Backups and restore — built 3 October; live once BACKUP_PASSPHRASE is set (Conor), off-site once the B2 secrets exist
 
 - Nightly GitHub Actions job: `wrangler d1 export` → encrypted → private EU R2 bucket
   (30 daily, 12 monthly lifecycle) → off-site copy with object lock.

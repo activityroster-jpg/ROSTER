@@ -45,6 +45,9 @@ Non-secret vars live in `wrangler.toml` (`APP_APEX_DOMAIN`, `APP_ENV`).
 | `STAGING_RESEND_API_KEY` (optional) | Provision staging: lets staging send real email |
 | `STAGING_STRIPE_SECRET_KEY`, `STAGING_STRIPE_WEBHOOK_SECRET` (optional) | Provision staging: Stripe test mode |
 | `STAGING_ANTHROPIC_API_KEY` (optional) | Provision staging: outreach agent on staging |
+| `BACKUP_PASSPHRASE` | Nightly backup and Restore: encrypts every export. **Also kept in Conor's password manager**; without it backups cannot be read. 24+ characters. |
+| `OFFSITE_S3_ENDPOINT`, `OFFSITE_S3_BUCKET`, `OFFSITE_S3_ACCESS_KEY_ID`, `OFFSITE_S3_SECRET_ACCESS_KEY` (optional until the account exists) | Nightly backup: off-Cloudflare copy to an S3-compatible bucket with object lock (recommended: Backblaze B2, EU region) |
+| `R2_S3_ENDPOINT`, `R2_S3_ACCESS_KEY_ID`, `R2_S3_SECRET_ACCESS_KEY` (optional) | Nightly backup: read-only R2 API token so uploaded documents are included in the backup |
 
 ## Branches
 

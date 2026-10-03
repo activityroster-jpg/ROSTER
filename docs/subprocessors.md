@@ -14,7 +14,8 @@ one is added. Keep in step with `docs/compliance-spec.md`.
 | Have I Been Pwned (Troy Hunt) | Breached-password check | The first five characters of a password's SHA-1 hash only; never the password or any identifier | Cloudflare edge | Not a processor of personal data (k-anonymity) | n/a |
 | Cloudflare DNS-over-HTTPS | Checks an email domain accepts mail before outreach | Domain names only | Cloudflare edge | Covered by Cloudflare's DPA | n/a |
 
-To be added when Phase 1 lands: the off-site backup provider (P0-C) and the backup email
-provider (P0-G).
+| Backblaze, Inc. (B2 Cloud Storage), **recommended, pending account** | Off-Cloudflare copy of encrypted nightly backups, object lock on | Encrypted database exports and document archives only; the key never leaves GitHub secrets and the password manager | EU (eu-central) | Backblaze DPA (self-serve) | SCCs |
+
+To be added when Phase 1 lands: the backup email provider (P0-G).
 
 Last reviewed: 3 October 2026.

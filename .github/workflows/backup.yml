@@ -1,0 +1,133 @@
+name: Nightly backup
+
+# Backup layer 2 and 3 (compliance spec): every night, export the production
+# database, compress and encrypt it, keep it in a private EU-jurisdiction R2
+# bucket (30 daily + 12 monthly copies via lifecycle rules), copy it off
+# Cloudflare when the OFFSITE_S3_* secrets exist, include the uploaded
+# documents when the R2_S3_* secrets exist, and report the result to the app,
+# which emails the owner and shows it in the Dev Center.
+#
+# Required repository secrets: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID,
+# BACKUP_PASSPHRASE (also kept in Conor's password manager), OUTREACH_CRON_SECRET.
+# Optional: OFFSITE_S3_ENDPOINT, OFFSITE_S3_BUCKET, OFFSITE_S3_ACCESS_KEY_ID,
+# OFFSITE_S3_SECRET_ACCESS_KEY (e.g. Backblaze B2 with object lock);
+# R2_S3_ENDPOINT, R2_S3_ACCESS_KEY_ID, R2_S3_SECRET_ACCESS_KEY (read-only R2
+# token for the documents bucket).
+
+on:
+  schedule:
+    - cron: "30 2 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: nightly-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      BUCKET: activityroster-backups
+    steps:
+      - name: Check required secrets
+        env:
+          PASS: ${{ secrets.BACKUP_PASSPHRASE }}
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then echo "::error::CLOUDFLARE_API_TOKEN is not set."; exit 1; fi
+          if [ -z "$PASS" ] || [ ${#PASS} -lt 24 ]; then echo "::error::BACKUP_PASSPHRASE is missing or shorter than 24 characters. Create a long random passphrase in your password manager, then add it as a repository secret named BACKUP_PASSPHRASE."; exit 1; fi
+
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci || npm install
+
+      - name: Export the production database
+        run: |
+          npx wrangler d1 export activityroster --remote --output backup.sql
+          ls -l backup.sql
+          grep -c "CREATE TABLE" backup.sql
+
+      - name: Compress and encrypt
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          gzip -9 -c backup.sql > backup.sql.gz
+          openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -in backup.sql.gz -out backup.enc -pass env:BACKUP_PASSPHRASE
+          # Prove it decrypts before we rely on it.
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in backup.enc -pass env:BACKUP_PASSPHRASE | cmp - backup.sql.gz
+          rm -f backup.sql backup.sql.gz
+          echo "BYTES=$(stat -c %s backup.enc)" >> "$GITHUB_ENV"
+          echo "DAY=$(date -u +%Y-%m-%d)" >> "$GITHUB_ENV"
+          echo "MONTH=$(date -u +%Y-%m)" >> "$GITHUB_ENV"
+          echo "DOM=$(date -u +%d)" >> "$GITHUB_ENV"
+
+      - name: Make sure the backup bucket and its retention rules exist
+        run: |
+          npx wrangler r2 bucket create "$BUCKET" --jurisdiction eu 2>&1 | tee /tmp/b.log || grep -q "already exists" /tmp/b.log
+          npx wrangler r2 bucket lifecycle add "$BUCKET" daily-31-days daily/ --expire-days 31 -J eu 2>/dev/null || true
+          npx wrangler r2 bucket lifecycle add "$BUCKET" monthly-400-days monthly/ --expire-days 400 -J eu 2>/dev/null || true
+          npx wrangler r2 bucket lifecycle add "$BUCKET" documents-31-days documents/ --expire-days 31 -J eu 2>/dev/null || true
+
+      - name: Upload to R2 (EU)
+        run: |
+          npx wrangler r2 object put "$BUCKET/daily/$DAY.sql.gz.enc" --file backup.enc -J eu --remote
+          if [ "$DOM" = "01" ]; then npx wrangler r2 object put "$BUCKET/monthly/$MONTH.sql.gz.enc" --file backup.enc -J eu --remote; fi
+          echo "FILE=daily/$DAY.sql.gz.enc" >> "$GITHUB_ENV"
+
+      - name: Snapshot uploaded documents (when R2 S3 credentials exist)
+        id: docs
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_S3_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_S3_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          R2_S3_ENDPOINT: ${{ secrets.R2_S3_ENDPOINT }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$R2_S3_ENDPOINT" ]; then echo "documents=false" >> "$GITHUB_OUTPUT"; echo "R2_S3_* not set; documents not included."; exit 0; fi
+          mkdir -p docs-snapshot
+          aws s3 sync "s3://activityroster-docs" docs-snapshot --endpoint-url "$R2_S3_ENDPOINT" --only-show-errors
+          tar -czf docs.tar.gz -C docs-snapshot .
+          openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -in docs.tar.gz -out docs.enc -pass env:BACKUP_PASSPHRASE
+          rm -rf docs-snapshot docs.tar.gz
+          npx wrangler r2 object put "$BUCKET/documents/$DAY.tar.gz.enc" --file docs.enc -J eu --remote
+          echo "documents=true" >> "$GITHUB_OUTPUT"
+
+      - name: Off-site copy (when OFFSITE_S3 credentials exist)
+        id: offsite
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.OFFSITE_S3_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.OFFSITE_S3_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          OFFSITE_S3_ENDPOINT: ${{ secrets.OFFSITE_S3_ENDPOINT }}
+          OFFSITE_S3_BUCKET: ${{ secrets.OFFSITE_S3_BUCKET }}
+        run: |
+          if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$OFFSITE_S3_BUCKET" ]; then echo "offsite=false" >> "$GITHUB_OUTPUT"; echo "OFFSITE_S3_* not set; no off-site copy."; exit 0; fi
+          aws s3 cp backup.enc "s3://$OFFSITE_S3_BUCKET/daily/$DAY.sql.gz.enc" --endpoint-url "$OFFSITE_S3_ENDPOINT" --only-show-errors
+          if [ "$DOM" = "01" ]; then aws s3 cp backup.enc "s3://$OFFSITE_S3_BUCKET/monthly/$MONTH.sql.gz.enc" --endpoint-url "$OFFSITE_S3_ENDPOINT" --only-show-errors; fi
+          if [ -f docs.enc ]; then aws s3 cp docs.enc "s3://$OFFSITE_S3_BUCKET/documents/$DAY.tar.gz.enc" --endpoint-url "$OFFSITE_S3_ENDPOINT" --only-show-errors; fi
+          echo "offsite=true" >> "$GITHUB_OUTPUT"
+
+      - name: Report success
+        if: success()
+        env:
+          SECRET: ${{ secrets.OUTREACH_CRON_SECRET }}
+        run: |
+          curl -fsS -X POST -H "x-cron-secret: $SECRET" -H "Content-Type: application/json" \
+            -d "{\"ok\":true,\"file\":\"$FILE\",\"bytes\":$BYTES,\"offsite\":${{ steps.offsite.outputs.offsite || 'false' }},\"documents\":${{ steps.docs.outputs.documents || 'false' }}}" \
+            https://activityroster.com/api/ops/backup-report || echo "::warning::Report call failed; the backup itself succeeded."
+          echo "Backup $FILE ($BYTES bytes) stored. Off-site: ${{ steps.offsite.outputs.offsite || 'false' }}. Documents: ${{ steps.docs.outputs.documents || 'false' }}." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Report failure
+        if: failure()
+        env:
+          SECRET: ${{ secrets.OUTREACH_CRON_SECRET }}
+        run: |
+          curl -fsS -X POST -H "x-cron-secret: $SECRET" -H "Content-Type: application/json" \
+            -d "{\"ok\":false,\"error\":\"Nightly backup failed in step before report. See GitHub Actions run ${{ github.run_id }}.\"}" \
+            https://activityroster.com/api/ops/backup-report || true
