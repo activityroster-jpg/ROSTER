@@ -1,0 +1,26 @@
+name: Outreach tick
+
+# Wakes the outreach agent (Dev Center → Outreach) once an hour during UK
+# working hours on weekdays. Each tick researches a small batch of new centres
+# and sends whatever is due, inside each campaign's own hours and daily cap.
+# Needs one repository secret: OUTREACH_CRON_SECRET, identical to the
+# Cloudflare Worker secret of the same name. See docs/outreach.md.
+
+on:
+  schedule:
+    - cron: "15 7-17 * * 1-5"
+  workflow_dispatch:
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call the tick route
+        env:
+          SECRET: ${{ secrets.OUTREACH_CRON_SECRET }}
+        run: |
+          if [ -z "$SECRET" ]; then
+            echo "::error::Repository secret OUTREACH_CRON_SECRET is not set (GitHub → Settings → Secrets and variables → Actions)."
+            exit 1
+          fi
+          curl -fsS -X POST -H "x-outreach-secret: $SECRET" https://activityroster.com/api/outreach/tick

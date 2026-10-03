@@ -32,19 +32,13 @@ Upload with `scripts/setup-secrets.sh` or `wrangler secret put <NAME>`.
 
 ## The hourly tick
 
-OpenNext on Workers has no cron, so an external pinger drives the agent. Any
-uptime monitor or GitHub Actions schedule will do:
-
-```yaml
-# .github/workflows/outreach-tick.yml (example; keep the secret in repo secrets)
-on:
-  schedule: [{ cron: "15 7-17 * * 1-5" }]   # UK working hours, weekdays
-jobs:
-  tick:
-    runs-on: ubuntu-latest
-    steps:
-      - run: curl -fsS -X POST -H "x-outreach-secret: ${{ secrets.OUTREACH_CRON_SECRET }}" https://activityroster.com/api/outreach/tick
-```
+OpenNext on Workers has no cron, so an external pinger drives the agent. The
+repo ships one: `.github/workflows/outreach-tick.yml` runs at a quarter past
+each hour, 07:00–17:00 UTC on weekdays. It needs a GitHub repository secret
+named `OUTREACH_CRON_SECRET` with the same value as the Worker secret. Any
+other uptime monitor can do the same job by calling
+`POST https://activityroster.com/api/outreach/tick` with header
+`x-outreach-secret`.
 
 Each tick researches up to 10 new centres per running campaign and sends up to
 25 due emails across campaigns, each campaign inside its own hours and daily
