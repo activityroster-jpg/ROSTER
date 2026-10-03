@@ -38,7 +38,7 @@ jobs:
           if [ "${{ inputs.target }}" = "production" ] && [ "${{ inputs.confirm }}" != "RESTORE" ]; then echo "::error::Production restore needs the word RESTORE in the confirm box."; exit 1; fi
           case "${{ inputs.file }}" in daily/*|monthly/*) ;; *) echo "::error::File must start with daily/ or monthly/."; exit 1;; esac
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: 22
