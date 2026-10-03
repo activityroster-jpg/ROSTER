@@ -19,9 +19,41 @@ mobile/
 
 | Account | Cost | Why |
 |---|---|---|
-| **Apple Developer Program** — https://developer.apple.com/programs/enroll/ | US$99 / year | App Store + push certificates. Enrol as the company (needs a D-U-N-S number; Apple can issue one, allow ~1–2 weeks) or as an individual to start faster. |
+| **Apple Developer Program** — https://developer.apple.com/programs/enroll/ | US$99 / year (≈£79 + VAT) | App Store + push certificates. Enrol as the company — see *UK company enrolment* below. |
 | **Google Play Console** — https://play.google.com/console/signup | US$25 once | Play Store. Identity verification can take a few days. |
 | **Firebase project** — https://console.firebase.google.com | free | Push notifications (FCM) for both platforms. |
+
+### UK company enrolment (Apple)
+
+The **Company / Organization** entity type is only offered in the **web**
+enrolment on a desktop browser. The Apple Developer app on iPhone/iPad only
+enrols individuals outside India, which is why the company option is missing
+there.
+
+1. **D-U-N-S number first** (free, ~5 working days). Most UK Ltd companies
+   already have one because Dun & Bradstreet mirrors Companies House. Check at
+   https://developer.apple.com/enroll/duns-lookup/ using the *exact* Companies
+   House name (e.g. `ACTIVITYROSTER LTD`, not the trading name) and the
+   registered office address. If none is found the same form requests one;
+   D&B emails it. Allow another 2 working days for Apple to see it.
+2. **Apple Account** for the Account Holder (a company director): real legal
+   first/last name, two-factor authentication on. Ideally sign in with an
+   address on the company domain (e.g. `name@activityroster.com`).
+3. On a **Mac/PC browser**, go to https://developer.apple.com/enroll/ → *Start
+   Your Enrollment* → confirm personal details → **Entity type: Company /
+   Organization**. You'll be asked for: legal entity name (must match the
+   D-U-N-S record), D-U-N-S number, registered address, website on the company
+   domain (`https://activityroster.com`), a work email on that domain, phone
+   number, and confirmation that you have legal authority to bind the company
+   (a director does).
+4. Apple Developer Support phones or emails to verify, usually within a few
+   working days. Then you pay the fee and the account activates.
+
+Sole trader (no Ltd company) → enrol as *Individual*; the App Store then shows
+your personal name as the seller. An individual account can later be converted
+to a company one, but only by asking Apple Developer Support
+(https://developer.apple.com/contact/), so it is quicker to wait for the D-U-N-S
+number than to start as an individual.
 
 You also need a **Mac with Xcode** (free, Mac App Store) for the iOS build, and
 **Android Studio** (free) for Android. Both run fine on one Mac.
