@@ -54,8 +54,10 @@ jobs:
             D1_ID="$(npx wrangler d1 list --json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const l=JSON.parse(s.slice(s.indexOf("[")));const d=l.find(x=>x.name==="activityroster-staging");console.log(d?d.uuid:"")})')"
           fi
           echo "D1: $D1_ID"
-          if ! npx wrangler r2 bucket list | grep -q "activityroster-docs-staging"; then
-            npx wrangler r2 bucket create activityroster-docs-staging --jurisdiction eu
+          # EU-jurisdiction buckets only appear when listing with --jurisdiction eu;
+          # and "already exists, and you own it" (code 10004) is a success here.
+          if ! npx wrangler r2 bucket list --jurisdiction eu 2>/dev/null | grep -q "activityroster-docs-staging"; then
+            npx wrangler r2 bucket create activityroster-docs-staging --jurisdiction eu 2>&1 | tee /tmp/r2.log || grep -q "already exists" /tmp/r2.log
           fi
           KV_ID="$(npx wrangler kv namespace list | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const l=JSON.parse(s.slice(s.indexOf("[")));const d=l.find(x=>x.title==="staging-TENANT_CACHE"||x.title==="roster-staging-TENANT_CACHE");console.log(d?d.id:"")})')"
           if [ -z "$KV_ID" ]; then
