@@ -48,8 +48,22 @@ the source of truth and this table is a convenience copy.
 | 2026-10-03 | 7c39fcd | (see run summary, tag `prod-20261003-1929`) | Password rule, strength meter, sign-out buttons, migrations 0040–0043 |
 | 2026-10-03 | 7838db1 | `000001ca-00000000-000050f9-ff60ef9ec57b5ded297c390416b7680b` | **Failed and rolled back.** Smoke test got HTTP 403 from Cloudflare (Bot Fight Mode challenging the runner); production stayed on 7c39fcd. |
 | 2026-10-03 | 0c414fa | `000001ca-00000000-000050f9-ff60ef9ec57b5ded297c390416b7680b` (unchanged: no writes since the attempt above) | Re-run after Bot Fight Mode was turned off; tag `prod-20261003-2107`. Turnstile, status page link, young workers' hours (migration 0044: `rule_pack`, `org_settings.working_time_mode`, `org_settings.term_dates`), email resilience code |
+| 2026-10-03 | 5abdaf5 | `000001cc-00000000-000050f9-edc6c7028fc5cd52cd46b86339971da2` | Tag `prod-20261003-2321`. Migrations 0045–0048 (leaving timer, append-only log triggers, drop unused `booking`, rota template). Phase 1 close-out, verified GB working-time pack (16–17 from 16th birthday, no under-15s), rota PDF with template, dependency updates. Pressed to close incident INC-2026-10-03-1 (see below). |
 
-### Bot Fight Mode breaks the deploy checks
+### Cloudflare "Workers Builds" must stay disconnected
+
+Cloudflare's Git integration (Workers & Pages → roster → Settings → Build) builds and
+deploys the Worker itself on every push to the connected branch. It does **not** run the
+D1 migrations, so the moment a push adds a column, production code and production data
+disagree. It was found connected on 3 October and disconnected the same night (incident
+INC-2026-10-03-1 in `docs/incident-log.md`). Only the GitHub workflows deploy. If a
+`Workers Builds` check ever reappears on a commit in GitHub, someone has reconnected it:
+disconnect it again before anything else. The read-only `Probe production` workflow
+(Actions → Probe production → Run workflow) prints status codes and the built file names
+for production and staging; identical names on both while GitHub has not deployed is the
+tell-tale.
+
+## Bot Fight Mode breaks the deploy checks
 
 The smoke tests fetch `/api/health`, the home page and the sign-in page with `curl`
 from a GitHub runner. Cloudflare's **Bot Fight Mode** treats that as an automated
