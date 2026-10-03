@@ -1,6 +1,8 @@
 import type { Organisation } from "@/lib/db/schema";
 import type { Repositories } from "@/lib/db/repositories";
 import { tierCap, tierMeta, UPGRADE_TIER, TIERS } from "@/lib/tiers";
+import { ne } from "drizzle-orm";
+import { instructor as instructorTable } from "@/lib/db/schema";
 import type { AnyTenantContext } from "./context";
 
 /**
@@ -29,7 +31,8 @@ export async function instructorCapState(
   org: Pick<Organisation, "tier">,
 ): Promise<InstructorCapState> {
   const cap = tierCap(org.tier);
-  const used = await repos.tenant.instructor.count(ctx);
+  // Pending join requests are not yet on the team; they are checked at approval.
+  const used = await repos.tenant.instructor.count(ctx, ne(instructorTable.status, "pending"));
   if (cap == null) return { cap, used, remaining: null, full: false };
   return { cap, used, remaining: Math.max(0, cap - used), full: used >= cap };
 }

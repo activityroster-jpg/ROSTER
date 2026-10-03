@@ -65,8 +65,10 @@ export function OnboardingWizard({
 
   // Step 2 — courses (local list so custom additions appear immediately)
   const [allCourses, setAllCourses] = useState<CourseTypeOpt[]>(courseTypes);
-  // Start with nothing ticked — the centre picks only the courses they run.
-  const [selectedCourses, setSelectedCourses] = useState<Set<string>>(new Set());
+  // Tick what the centre already runs (active types). A brand-new centre whose
+  // seeded types are all active therefore starts with the RYA list ticked and
+  // unticks what it doesn't run; re-opening the wizard never wipes the list.
+  const [selectedCourses, setSelectedCourses] = useState<Set<string>>(() => new Set(courseTypes.filter((c) => c.active).map((c) => c.id)));
   const toggleCourse = (id: string) => setSelectedCourses((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const [ccName, setCcName] = useState("");
   const [ccAudience, setCcAudience] = useState<CourseAudience>("youth");
@@ -169,6 +171,7 @@ export function OnboardingWizard({
 
   const saveCoursesThenNext = () => {
     setMsg(null);
+    if (selectedCourses.size === 0) { setMsg("Tick at least one course you run (you can always add more later)."); return; }
     startTransition(async () => {
       const res = await setCoursesRunAction([...selectedCourses]);
       if (res.ok) setStep(3); else setMsg(res.error ?? "Could not save");

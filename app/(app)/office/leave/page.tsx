@@ -4,12 +4,13 @@ import { listOpenShifts } from "@/lib/services/openshifts";
 import { LeaveRequests } from "@/components/office/LeaveRequests";
 import { OpenShiftsAdmin } from "@/components/office/OpenShiftsAdmin";
 import { Card } from "@/components/ui";
+import { todayIso } from "@/lib/domain";
 
 export const dynamic = "force-dynamic";
 
 export default async function LeavePage() {
   const { ctx, repos } = await requireTenant({ role: "admin" });
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayIso();
 
   const [leave, shifts, sessions, courses, roles] = await Promise.all([
     listLeave(repos, ctx),

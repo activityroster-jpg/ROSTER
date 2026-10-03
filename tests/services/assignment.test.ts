@@ -28,6 +28,8 @@ describe("assignStaff", () => {
     // These checks are opt-in (off by default); enable them for the enforcement tests.
     const st = (await repos.tenant.orgSettings.list(ctx))[0]!;
     await repos.tenant.orgSettings.update(ctx, st.id, { enforceLicenceChecks: true, enforceConflictChecks: true });
+    // Nothing is mandatory until a centre says so; this centre says so for every check.
+    for (const ct of await repos.tenant.complianceType.list(ctx)) await repos.tenant.complianceType.update(ctx, ct.id, { mandatory: true });
   });
 
   it("does not block an unfit instructor when licence checks are OFF (default)", async () => {
@@ -143,6 +145,7 @@ describe("bulkAssignStaff", () => {
     // Opt into the checks (off by default) so the enforcement assertions hold.
     const st = (await repos.tenant.orgSettings.list(ctx))[0]!;
     await repos.tenant.orgSettings.update(ctx, st.id, { enforceLicenceChecks: true, enforceConflictChecks: true });
+    for (const ct of await repos.tenant.complianceType.list(ctx)) await repos.tenant.complianceType.update(ctx, ct.id, { mandatory: true });
   });
 
   // Two courses on distinct, non-overlapping days so the fit fixture instructor

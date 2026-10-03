@@ -13,6 +13,7 @@ import { recordSecurityEvent } from "@/lib/security/events";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { createStripe } from "@/lib/billing/stripe";
 import { createPromotionCode, type CouponSpec } from "@/lib/billing/coupons";
+import { TIERS } from "@/lib/tiers";
 import { ORG_STATUSES, SUBSCRIPTION_STATUSES, PLANS, ORG_TIERS, ERROR_REPORT_STATUSES, type OrgStatus, type SubscriptionStatus, type Plan, type OrgTier, type ErrorReportStatus } from "@/lib/db/schema";
 
 type Result = { ok: boolean; error?: string };
@@ -25,14 +26,17 @@ const num = (v: unknown): number | null => {
 
 /** Update the global default pricing (all centres inherit this unless overridden). */
 export async function setGlobalPricingAction(input: {
-  monthlyPrice: number; annualPrice: number; currency: string; trialDays: number; freeFirstMonth: boolean;
+  monthlyPrice?: number; annualPrice?: number; currency: string; trialDays: number; freeFirstMonth: boolean;
   setupPrice?: number; setupEnabled?: boolean;
 }): Promise<Result> {
   await requirePlatformAdmin();
-  const monthly = num(input.monthlyPrice), annual = num(input.annualPrice), trial = num(input.trialDays);
-  if (monthly == null || monthly < 0 || annual == null || annual < 0 || trial == null || trial < 0) {
-    return { ok: false, error: "Enter valid prices and trial length" };
-  }
+  const trial = num(input.trialDays);
+  if (trial == null || trial < 0) return { ok: false, error: "Enter a valid trial length" };
+  // Plan prices come from the tiers (lib/tiers); the stored defaults only back
+  // tier-less callers, so they mirror Standard unless explicitly given.
+  const monthly = num(input.monthlyPrice) ?? TIERS.standard.monthlyPrice;
+  const annual = num(input.annualPrice) ?? TIERS.standard.annualPrice;
+  if (monthly < 0 || annual < 0) return { ok: false, error: "Enter valid prices" };
   const setup = num(input.setupPrice);
   if (input.setupPrice !== undefined && (setup == null || setup < 0)) {
     return { ok: false, error: "Enter a valid setup price" };

@@ -20,6 +20,8 @@ import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { Logo } from "@/components/Logo";
 import { TwoFactorNudge } from "@/components/office/TwoFactorNudge";
 import { GhostBanner } from "@/components/office/GhostBanner";
+import { eq } from "drizzle-orm";
+import { instructor as instructorTable } from "@/lib/db/schema";
 
 const NAV = [
   {
@@ -57,12 +59,16 @@ export default async function OfficeLayout({ children }: { children: React.React
 
   // Nudge the admin to turn on 2FA once they've added staff (dismissible).
   let show2fa = false;
+  // The shared admin login usually has no instructor record of its own; only
+  // offer the instructor view when there is one to show.
+  let hasInstructorRecord = false;
   try {
     const { control, tenant } = await getRepositories();
     const me = await control.userById(ctx.userId);
     if (me && !me.twoFactorEnabled) {
       show2fa = (await tenant.instructor.count(ctx)) >= 1;
     }
+    hasInstructorRecord = (await tenant.instructor.count(ctx, eq(instructorTable.userId, ctx.userId))) > 0;
   } catch { show2fa = false; }
 
   // Billing nudge: distinguish an active free trial from a failed payment.
@@ -109,9 +115,13 @@ export default async function OfficeLayout({ children }: { children: React.React
           ))}
         </nav>
         <div className="border-t border-white/10 px-5 py-4 text-xs text-white/50">
-          <Link href="/portal" className="hover:text-white">
-            Switch to instructor view →
-          </Link>
+          {hasInstructorRecord ? (
+            <Link href="/portal" className="hover:text-white">
+              Switch to instructor view →
+            </Link>
+          ) : (
+            <span title="This admin login has no instructor record. To use the instructor app yourself, add yourself on the Instructors page with a personal email.">The instructor app is for your team</span>
+          )}
         </div>
       </aside>
       <div className="flex-1 overflow-x-hidden">

@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
 import { hoursRecord as hoursRecordTable } from "@/lib/db/schema";
-import { applyBreak, type BreakPolicy } from "@/lib/domain";
+import { applyBreak, fmtClockTime, type BreakPolicy } from "@/lib/domain";
 
 export interface HoursRow {
   instructorName: string;
@@ -179,8 +179,11 @@ export async function getPayrollLines(
     if (filter.from && (!date || date < filter.from)) continue;
     if (filter.to && (!date || date > filter.to)) continue;
     const entry = r.courseSessionId ? entryFor.get(`${r.instructorId}|${r.courseSessionId}`) : undefined;
+    // Clock times are real instants (shown in UK time); session times are
+    // wall-clock values stored as UTC (shown as stored).
     const startMs = entry ? toMs(entry.clockInAt) : toMs(session?.startAt);
     const endMs = entry ? toMs(entry.clockOutAt) : toMs(session?.endAt);
+    const show = (ms: number | null) => (ms == null || Number.isNaN(ms) ? null : entry ? fmtClockTime(ms) : hhmm(ms));
     const worked = r.actualMinutes ?? r.scheduledMinutes;
     const { breakMinutes, payableMinutes } = applyBreak(worked, policy);
     lines.push({
@@ -188,8 +191,8 @@ export async function getPayrollLines(
       instructorId: r.instructorId,
       instructorName: nameById.get(r.instructorId) ?? "Unknown",
       courseName: session ? courseName.get(session.courseId) ?? "Session" : "Other",
-      start: hhmm(startMs),
-      finish: hhmm(endMs),
+      start: show(startMs),
+      finish: show(endMs),
       workedMinutes: worked,
       breakMinutes,
       payableMinutes,

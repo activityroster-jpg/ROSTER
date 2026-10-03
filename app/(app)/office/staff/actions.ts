@@ -244,9 +244,10 @@ export async function addQualificationAction(_prev: ActionState, formData: FormD
 
 /** Approve someone who joined via the app's company code: they become active staff with portal access. */
 export async function approveJoinRequestAction(instructorId: string): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos, organisation } = await requireTenant({ role: "admin" });
   const inst = await repos.tenant.instructor.findById(ctx, instructorId);
   if (!inst || inst.status !== "pending") return { ok: false, error: "Request not found" };
+  if ((await instructorCapState(repos, ctx, organisation)).full) return { ok: false, error: capUpgradeMessage(organisation) };
   await repos.tenant.instructor.update(ctx, inst.id, { status: "active" });
   if (inst.userId) await repos.control.setMembershipStatus(inst.userId, ctx.organisationId, "active");
   await writeAudit(repos, ctx, { action: "approve_join_request", entity: "instructor", entityId: inst.id, after: { email: inst.email } });

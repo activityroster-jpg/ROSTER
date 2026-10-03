@@ -72,7 +72,7 @@ export function VerifyDeviceForm({ next, hasPassword, where }: { next: string; h
             </button>
           ) : null}
         </div>
-        <p className="mt-5 text-center text-[11px] text-slate-400">Once confirmed, this device won&apos;t be asked again from this network.</p>
+        <p className="mt-5 text-center text-[11px] text-slate-400">Once confirmed, this device won&apos;t be asked again (unless it turns up in another country).</p>
       </div>
     </div>
   );

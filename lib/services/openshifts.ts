@@ -3,6 +3,7 @@ import type { AnyTenantContext } from "@/lib/tenant/context";
 import type { OpenShift, OpenShiftStatus } from "@/lib/db/schema";
 import { writeAudit } from "./audit";
 import { notifyInstructor } from "./notifications";
+import { assignStaff } from "./assignment";
 
 export interface OpenShiftRow {
   id: string;
@@ -35,7 +36,7 @@ export async function createOpenShift(
   return row;
 }
 
-/** An instructor puts their hand up for an open shift (open → offered). */
+/** An instructor puts their hand up for an open shift (open → offered). First come, first served: a shift already offered to someone else can't be claimed. */
 export async function claimOpenShift(
   repos: Repositories,
   ctx: AnyTenantContext,
@@ -43,34 +44,42 @@ export async function claimOpenShift(
   instructorId: string,
 ): Promise<OpenShift | null> {
   const shift = await repos.tenant.openShift.findById(ctx, shiftId);
-  if (!shift || shift.status === "filled" || shift.status === "cancelled") return null;
+  if (!shift || shift.status !== "open") return null;
   const updated = await repos.tenant.openShift.update(ctx, shiftId, { status: "offered", claimedByInstructorId: instructorId });
   if (updated) await writeAudit(repos, ctx, { action: "open_shift_claim", entity: "open_shift", entityId: shiftId, after: { instructorId } });
   return updated;
 }
 
+export type ConfirmShiftResult = { ok: true; shift: OpenShift } | { ok: false; reason: "nothing" | "blocked"; detail: string };
+
 /**
- * Confirm an offered shift (offered → filled): marks it filled AND assigns the
- * claiming instructor to the course with the requested role. Tenant scoped,
- * audited. Returns null if there is nothing to confirm.
+ * Confirm an offered shift (offered → filled): assigns the claiming instructor
+ * to the course with the requested role THROUGH the normal assignment checks
+ * (certs, double-booking, availability — the same ones the Courses page runs),
+ * then marks the shift filled. An admin can pass `override` with a note to
+ * push through a blocked one. Tenant scoped, audited.
  */
 export async function confirmOpenShift(
   repos: Repositories,
   ctx: AnyTenantContext,
   shiftId: string,
-): Promise<OpenShift | null> {
+  opts: { override?: boolean; overrideNote?: string } = {},
+): Promise<ConfirmShiftResult> {
   const shift = await repos.tenant.openShift.findById(ctx, shiftId);
-  if (!shift || !shift.claimedByInstructorId || shift.status !== "offered") return null;
+  if (!shift || !shift.claimedByInstructorId || shift.status !== "offered") return { ok: false, reason: "nothing", detail: "Nothing to confirm" };
 
   const session = await repos.tenant.courseSession.findById(ctx, shift.courseSessionId);
-  if (!session) return null;
+  if (!session) return { ok: false, reason: "nothing", detail: "Session no longer exists" };
 
-  await repos.tenant.courseStaff.insert(ctx, {
+  const assigned = await assignStaff(repos, ctx, {
     courseId: session.courseId,
     instructorId: shift.claimedByInstructorId,
     roleTypeId: shift.roleTypeId,
-    status: "confirmed",
+    override: opts.override,
+    overrideNote: opts.overrideNote,
   });
+  if (!assigned.ok) return { ok: false, reason: "blocked", detail: assigned.detail };
+  await repos.tenant.courseStaff.update(ctx, assigned.courseStaffId, { status: "confirmed" });
 
   const updated = await repos.tenant.openShift.update(ctx, shiftId, {
     status: "filled",
@@ -85,7 +94,7 @@ export async function confirmOpenShift(
       email: true,
     });
   }
-  return updated;
+  return updated ? { ok: true, shift: updated } : { ok: false, reason: "nothing", detail: "Nothing to confirm" };
 }
 
 /** Cancel an open shift (soft — status only). */

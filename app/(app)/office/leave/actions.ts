@@ -26,11 +26,14 @@ export async function createOpenShiftAction(courseSessionId: string, roleTypeId:
   return { ok: true };
 }
 
-export async function confirmOpenShiftAction(shiftId: string): Promise<Result> {
+export async function confirmOpenShiftAction(shiftId: string, override?: { note: string }): Promise<Result> {
   const { ctx, repos } = await requireTenant({ role: "admin" });
-  const res = await confirmOpenShift(repos, ctx, shiftId);
-  if (!res) return { ok: false, error: "Nothing to confirm" };
+  const note = override?.note?.trim();
+  if (override && !note) return { ok: false, error: "Add a reason to override the checks" };
+  const res = await confirmOpenShift(repos, ctx, shiftId, override ? { override: true, overrideNote: note } : {});
+  if (!res.ok) return { ok: false, error: res.reason === "blocked" ? `${res.detail}. Tick “confirm anyway” to override.` : res.detail };
   revalidatePath("/office/leave");
+  revalidatePath("/office/courses");
   return { ok: true };
 }
 

@@ -4,8 +4,10 @@ import { tierMeta } from "@/lib/tiers";
 /** Fallback used before any pricing row is saved. */
 export const DEFAULT_PRICING = {
   id: "default",
-  monthlyPrice: 75,
-  annualPrice: 675,
+  // Tier-less fallback only: every centre has a tier, and the tier price wins
+  // (see lib/tiers). Kept equal to the Standard tier so nothing surprising shows.
+  monthlyPrice: 65,
+  annualPrice: 650,
   currency: "GBP",
   freeFirstMonth: true,
   trialDays: 30,

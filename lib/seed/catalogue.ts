@@ -91,11 +91,11 @@ export interface ComplianceSeed {
 function vettingFor(jurisdiction: Jurisdiction): ComplianceSeed {
   switch (jurisdiction) {
     case "scotland":
-      return { name: "PVG Scheme Membership", code: "PVG", mandatory: true, expiryTracked: false };
+      return { name: "PVG Scheme Membership", code: "PVG", mandatory: false, expiryTracked: false };
     case "northern_ireland":
-      return { name: "AccessNI Enhanced Check", code: "ACCESSNI", mandatory: true, expiryTracked: true };
+      return { name: "AccessNI Enhanced Check", code: "ACCESSNI", mandatory: false, expiryTracked: true };
     case "ireland":
-      return { name: "Garda Vetting", code: "GARDA", mandatory: true, expiryTracked: true };
+      return { name: "Garda Vetting", code: "GARDA", mandatory: false, expiryTracked: true };
     case "other":
       // Outside the UK & Ireland: a generic vetting record, not mandatory (each
       // centre can make it mandatory in Settings if their jurisdiction requires it).
@@ -103,14 +103,14 @@ function vettingFor(jurisdiction: Jurisdiction): ComplianceSeed {
     case "england":
     case "wales":
     default:
-      return { name: "Enhanced DBS Check", code: "DBS", mandatory: true, expiryTracked: true };
+      return { name: "Enhanced DBS Check", code: "DBS", mandatory: false, expiryTracked: true };
   }
 }
 
 export function defaultComplianceTypes(jurisdiction: Jurisdiction): ComplianceSeed[] {
   return [
-    { name: "First Aid Certificate", code: "FIRST_AID", mandatory: true, expiryTracked: true },
-    { name: "Safeguarding Training", code: "SAFEGUARDING", mandatory: true, expiryTracked: true },
+    { name: "First Aid Certificate", code: "FIRST_AID", mandatory: false, expiryTracked: true },
+    { name: "Safeguarding Training", code: "SAFEGUARDING", mandatory: false, expiryTracked: true },
     vettingFor(jurisdiction),
     { name: "RYA Instructor Revalidation", code: "REVALIDATION", mandatory: false, expiryTracked: true },
   ];

@@ -38,7 +38,7 @@ export function ClockPanel({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const nowHHMM = () => new Date().toISOString().slice(11, 16);
+  const nowHHMM = () => new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Europe/London" });
 
   const doIn = (sessionId: string | null, sessionLabel: string | null) => {
     setError(null);

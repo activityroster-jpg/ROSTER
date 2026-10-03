@@ -1,14 +1,15 @@
 import { requireTenant } from "@/lib/tenant/require";
 import { getAttendanceBoard } from "@/lib/services/timeclock";
 import { Card, StatusPill } from "@/components/ui";
+import { fmtClockTime, todayIso } from "@/lib/domain";
 
 export const dynamic = "force-dynamic";
 
-const fmt = (ms: number | null) => (ms == null ? "—" : new Date(ms).toISOString().slice(11, 16));
+const fmt = (ms: number | null) => (ms == null ? "—" : fmtClockTime(ms));
 
 export default async function TimeClockPage() {
   const { ctx, repos } = await requireTenant({ role: "admin" });
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayIso();
   const board = await getAttendanceBoard(repos, ctx, today);
 
   return (

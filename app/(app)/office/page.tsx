@@ -11,6 +11,7 @@ import { listOpenShifts } from "@/lib/services/openshifts";
 import { getSetupStatus } from "@/lib/services/setup";
 import { Card, StatusPill } from "@/components/ui";
 import { WeekCalendarView } from "@/components/office/WeekCalendarView";
+import { todayIso } from "@/lib/domain";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +35,7 @@ function Tile({ href, label, value, sub, tone = "navy" }: { href: string; label:
 export default async function DashboardPage() {
   const { ctx, repos, organisation } = await requireTenant({ role: "admin" });
   const monday = weekStart(new Date());
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayIso();
 
   const [staff, schedule, attendance, leave, shifts, setup, rota, events, settingsRows] = await Promise.all([
     listStaffWithFit(repos, ctx),

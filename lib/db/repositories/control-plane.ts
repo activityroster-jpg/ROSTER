@@ -349,17 +349,20 @@ export class ControlPlaneRepository {
 
   // --- Trusted devices (unfamiliar-device re-auth) ---------------------------
 
-  /** Is this user × device × IP combination already confirmed? Also bumps last-seen. */
-  async isTrustedDevice(userId: string, deviceId: string, ip: string, country: string | null): Promise<boolean> {
+  /**
+   * Is this user × device already confirmed from this country? The IP is
+   * recorded but NOT part of the match: phones change address constantly and
+   * an attacker with a stolen session needs the password either way. Bumps
+   * last-seen on the matching row.
+   */
+  async isTrustedDevice(userId: string, deviceId: string, _ip: string, country: string | null): Promise<boolean> {
+    void _ip;
     const rows = await this.db
       .select({ id: trustedDevice.id, country: trustedDevice.country })
       .from(trustedDevice)
-      .where(and(eq(trustedDevice.userId, userId), eq(trustedDevice.deviceId, deviceId), eq(trustedDevice.ip, ip)))
-      .limit(1);
-    const row = rows[0];
+      .where(and(eq(trustedDevice.userId, userId), eq(trustedDevice.deviceId, deviceId)));
+    const row = rows.find((r) => (r.country ?? null) === (country ?? null));
     if (!row) return false;
-    // Same device + IP but a different country is still unfamiliar.
-    if ((row.country ?? null) !== (country ?? null)) return false;
     await this.db.update(trustedDevice).set({ lastSeenAt: new Date() }).where(eq(trustedDevice.id, row.id));
     return true;
   }

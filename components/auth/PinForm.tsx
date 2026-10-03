@@ -15,6 +15,8 @@ export function PinForm({ mode, next, hasPassword = true, userId }: { mode: "ent
     if (!isNative()) return;
     void biometricsAvailable().then((ok) => {
       setBioAvailable(ok);
+      // Face ID / fingerprint is the default inside the app; the PIN is the backup.
+      if (ok && mode === "set") setRememberBio(true);
       if (!ok || mode !== "enter" || !biometricPinSaved() || bioTried) return;
       setBioTried(true);
       void unlockPinWithBiometrics().then((saved) => {

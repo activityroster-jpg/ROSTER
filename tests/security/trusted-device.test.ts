@@ -3,7 +3,7 @@ import { createTestDb } from "@/tests/helpers/test-db";
 import { createRepositories } from "@/lib/db/repositories";
 
 describe("trusted devices", () => {
-  it("matches only the same user × device × IP × country, and forgets on demand", async () => {
+  it("matches the same user × device × country (any IP), and forgets on demand", async () => {
     const { db } = createTestDb();
     const { control } = createRepositories(db);
     const u = await control.createUser({ name: "Dev", email: "dev@club.test" });
@@ -13,7 +13,7 @@ describe("trusted devices", () => {
     await control.trustDevice({ userId: u.id, deviceId: "d1", ip: "1.2.3.4", country: "GB", userAgent: "UA" });
 
     expect(await control.isTrustedDevice(u.id, "d1", "1.2.3.4", "GB")).toBe(true);
-    expect(await control.isTrustedDevice(u.id, "d1", "9.9.9.9", "GB")).toBe(false); // new IP
+    expect(await control.isTrustedDevice(u.id, "d1", "9.9.9.9", "GB")).toBe(true); // new IP is fine (phones roam)
     expect(await control.isTrustedDevice(u.id, "d1", "1.2.3.4", "IE")).toBe(false); // new country
     expect(await control.isTrustedDevice(u.id, "d2", "1.2.3.4", "GB")).toBe(false); // new device
     expect(await control.isTrustedDevice(other.id, "d1", "1.2.3.4", "GB")).toBe(false); // another user

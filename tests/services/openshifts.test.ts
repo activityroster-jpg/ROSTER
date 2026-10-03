@@ -38,8 +38,10 @@ describe("open shifts service", () => {
     expect(offered?.claimedByInstructorId).toBe(claimantId);
 
     const filled = await confirmOpenShift(repos, ctx, shift.id);
-    expect(filled?.status).toBe("filled");
-    expect(filled?.filledByInstructorId).toBe(claimantId);
+    expect(filled.ok).toBe(true);
+    if (!filled.ok) throw new Error("expected ok");
+    expect(filled.shift.status).toBe("filled");
+    expect(filled.shift.filledByInstructorId).toBe(claimantId);
 
     // Confirmation created a course-staff assignment for the claimant.
     const staff = await repos.tenant.courseStaff.list(ctx, eq(courseStaffTable.instructorId, claimantId));
@@ -50,7 +52,16 @@ describe("open shifts service", () => {
   it("cannot confirm a shift that was never claimed", async () => {
     const shift = await createOpenShift(repos, ctx, sessionId, roleId);
     const res = await confirmOpenShift(repos, ctx, shift.id);
-    expect(res).toBeNull();
+    expect(res.ok).toBe(false);
+  });
+
+  it("is first come, first served — a second claim on an offered shift is refused", async () => {
+    const shift = await createOpenShift(repos, ctx, sessionId, roleId);
+    const second = await repos.tenant.instructor.insert(ctx, { name: "Late Hand", email: null, employmentType: "volunteer", status: "active" });
+    expect(await claimOpenShift(repos, ctx, shift.id, claimantId)).not.toBeNull();
+    expect(await claimOpenShift(repos, ctx, shift.id, second.id)).toBeNull();
+    const row = await repos.tenant.openShift.findById(ctx, shift.id);
+    expect(row?.claimedByInstructorId).toBe(claimantId);
   });
 
   it("onlyClaimable hides filled shifts", async () => {

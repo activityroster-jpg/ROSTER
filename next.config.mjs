@@ -25,7 +25,9 @@ const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "SAMEORIGIN" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(self \"https://checkout.stripe.com\")" },
+  // Camera (licence photos) and geolocation (clock-in) are used by our own pages
+  // — including inside the native app's web view — so they must be allowed for self.
+  { key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=(self), payment=(self \"https://checkout.stripe.com\")" },
   { key: "X-DNS-Prefetch-Control", value: "off" },
 ];
 

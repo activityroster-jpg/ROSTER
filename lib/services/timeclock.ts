@@ -2,7 +2,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
 import { hoursRecord as hoursRecordTable, timeEntry as timeEntryTable, type TimeEntry } from "@/lib/db/schema";
-import { durationMinutes } from "@/lib/domain";
+import { durationMinutes, isoDateInTz } from "@/lib/domain";
 import { writeAudit } from "./audit";
 
 /** Minutes elapsed on an entry — to its clock-out, or to `now` if still open. */
@@ -160,9 +160,6 @@ export async function getAttendanceBoard(
   dayIso: string,
   now: number = Date.now(),
 ): Promise<AttendanceBoard> {
-  const dayStart = Date.parse(`${dayIso}T00:00:00.000Z`);
-  const dayEnd = dayStart + 24 * 60 * 60 * 1000;
-
   const [entries, instructors, sessions, courses] = await Promise.all([
     repos.tenant.timeEntry.list(ctx),
     repos.tenant.instructor.list(ctx),
@@ -175,7 +172,7 @@ export async function getAttendanceBoard(
   const sessionCourse = new Map(sessions.map((s) => [s.id, courseNameById.get(s.courseId) ?? null]));
 
   const rows: AttendanceRow[] = entries
-    .filter((e) => e.clockInAt.getTime() >= dayStart && e.clockInAt.getTime() < dayEnd)
+    .filter((e) => isoDateInTz(e.clockInAt) === dayIso)
     .sort((a, b) => a.clockInAt.getTime() - b.clockInAt.getTime())
     .map((e) => ({
       entryId: e.id,

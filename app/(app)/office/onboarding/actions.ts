@@ -19,6 +19,7 @@ import { apexDomain } from "@/lib/config";
 import { serializeFeatures } from "@/lib/features";
 import { DEFAULT_COURSE_TYPES, DEFAULT_GRADES } from "@/lib/seed/catalogue";
 import { ONBOARDED_COOKIE } from "@/lib/onboarding";
+import { capUpgradeMessage, instructorCapState } from "@/lib/tenant/limits";
 
 type Result = { ok: boolean; error?: string };
 
@@ -112,6 +113,10 @@ export async function addTeamMemberAction(input: {
   const { ctx, repos, organisation } = await requireTenant({ role: "admin" });
   const name = (input.name ?? "").trim();
   if (!name) return { ok: false, error: "Name is required" };
+  // Same hard tier cap as the Staff tab.
+  if ((await instructorCapState(repos, ctx, organisation)).full) {
+    return { ok: false, error: capUpgradeMessage(organisation) };
+  }
   const email = input.email?.trim().toLowerCase() || null;
 
   const employmentType: EmploymentType = (EMPLOYMENT_TYPES as readonly string[]).includes(input.employmentType)

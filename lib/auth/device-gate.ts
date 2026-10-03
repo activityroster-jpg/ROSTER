@@ -14,7 +14,7 @@ export async function currentDeviceId(): Promise<string | null> {
 }
 
 /**
- * Require that this user has confirmed THIS device from THIS IP and country
+ * Require that this user has confirmed THIS device in THIS country
  * with their password. Anything new → /verify-device (password, or an emailed
  * code for magic-link-only accounts), then back to `next`.
  *
