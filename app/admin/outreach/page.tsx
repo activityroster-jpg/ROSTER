@@ -5,7 +5,9 @@ import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { Card } from "@/components/ui";
 import { RunAgentButton } from "@/components/admin/OutreachControls";
 import { OutreachSuppressions } from "@/components/admin/OutreachSuppressions";
-import { windowOpen } from "@/lib/outreach/engine";
+import { londonDayStart, londonMonthStart, londonWeekStart, windowOpen } from "@/lib/outreach/engine";
+import { dailyUsage, summariseUsage } from "@/lib/outreach/usage";
+import { fmtUsd } from "@/lib/outreach/cost";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Outreach" };
@@ -22,6 +24,20 @@ export default async function AdminOutreachPage() {
   let msgCounts = new Map<string, number>();
   let suppressions: Awaited<ReturnType<PlatformRepository["listSuppressions"]>> = [];
   let perCampaign = new Map<string, Map<string, number>>();
+  const now = new Date();
+  let usageRows: Awaited<ReturnType<PlatformRepository["listAiUsageSince"]>> = [];
+  let sentCounts = { day: 0, week: 0, month: 0 };
+  try {
+    const monthStart = londonMonthStart(now);
+    const since = new Date(Math.min(monthStart.getTime(), now.getTime() - 14 * 86_400_000));
+    [usageRows, sentCounts.day, sentCounts.week, sentCounts.month] = await Promise.all([
+      p.listAiUsageSince(since), p.countOutreachSentBetween(londonDayStart(now), now), p.countOutreachSentBetween(londonWeekStart(now), now), p.countOutreachSentBetween(monthStart, now),
+    ]);
+  } catch {
+    // ai_usage table may not exist until the migration is applied
+  }
+  const usage = summariseUsage(usageRows, now, sentCounts);
+  const daily = dailyUsage(usageRows, now, 14).filter((d) => d.calls > 0);
   try {
     [campaigns, leadCounts, msgCounts, suppressions] = await Promise.all([p.listOutreachCampaigns(), p.outreachLeadCountsByStatus(), p.outreachMessageCountsByStatus(), p.listSuppressions(500)]);
     perCampaign = new Map(await Promise.all(campaigns.map(async (c) => [c.id, await p.outreachLeadCountsByStatus(c.id)] as const)));
@@ -61,6 +77,32 @@ export default async function AdminOutreachPage() {
         <Card><p className="text-xs font-semibold text-navy">Replied or booked</p><p className="mt-1 text-2xl font-semibold text-starboard">{replied}</p><p className="text-xs text-slate-400">{pct(replied, totalLeads)} of centres</p></Card>
         <Card><p className="text-xs font-semibold text-navy">Bounced</p><p className={`mt-1 text-2xl font-semibold ${bounced ? "text-port" : "text-navy"}`}>{bounced}</p><p className="text-xs text-slate-400">{n(leadCounts, "opted_out")} opted out</p></Card>
       </div>
+
+      <section className="mb-6 rounded-card border border-slate-200 bg-white p-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-semibold text-navy">Usage &amp; cost</h2>
+          <p className="text-xs text-slate-500">Claude API spend at list price, in US dollars (Anthropic bills in USD). Emails via Resend are free up to 3,000 a month. GitHub and Cloudflare cost nothing at this volume.</p>
+        </div>
+        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+          {usage.map((u) => (
+            <div key={u.label} className="rounded-lg border border-slate-200 p-4">
+              <p className="text-xs font-semibold text-navy">{u.label}</p>
+              <p className="mt-1 text-2xl font-semibold text-navy">{fmtUsd(u.costMicros)}</p>
+              <p className="mt-1 text-xs text-slate-500">{u.research} centre{u.research === 1 ? "" : "s"} researched · {u.drafts} email{u.drafts === 1 ? "" : "s"} drafted · {u.emailsSent} sent</p>
+              <p className="text-[11px] text-slate-400">{(u.inputTokens / 1000).toFixed(1)}k tokens in · {(u.outputTokens / 1000).toFixed(1)}k out</p>
+            </div>
+          ))}
+        </div>
+        {daily.length ? (
+          <details className="mt-3 text-sm">
+            <summary className="cursor-pointer text-xs font-semibold text-teal">Last 14 days, by day</summary>
+            <table className="mt-2 w-full text-xs">
+              <thead><tr className="text-left text-slate-400"><th className="py-1 pr-3 font-medium">Day</th><th className="py-1 pr-3 font-medium">Calls</th><th className="py-1 font-medium">Cost</th></tr></thead>
+              <tbody>{daily.map((d) => <tr key={d.dayKey} className="border-t border-slate-100"><td className="py-1 pr-3 text-navy">{d.dayKey}</td><td className="py-1 pr-3">{d.calls}</td><td className="py-1">{fmtUsd(d.costMicros)}</td></tr>)}</tbody>
+            </table>
+          </details>
+        ) : <p className="mt-3 text-xs text-slate-400">No Claude calls recorded yet. Spend appears here once a campaign researches or drafts.</p>}
+      </section>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
         <div>

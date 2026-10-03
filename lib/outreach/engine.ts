@@ -8,6 +8,7 @@ import { composeEmail } from "./writer";
 import { pickContact, researchProspect } from "./research";
 import { emailLooksDeliverable } from "./validate";
 import type { ResearchResult, SequenceStep } from "./types";
+import { costMicros, type UsageSink } from "./cost";
 
 export const parseSteps = (c: OutreachCampaign): SequenceStep[] => { try { const s = JSON.parse(c.steps) as SequenceStep[]; return Array.isArray(s) && s.length ? s : []; } catch { return []; } };
 export const parseResearch = (l: OutreachLead): ResearchResult | null => { try { return l.research ? (JSON.parse(l.research) as ResearchResult) : null; } catch { return null; } };
@@ -42,6 +43,13 @@ export function unsubscribeUrl(env: CloudflareEnv, token: string): string {
   return `https://${env.APP_APEX_DOMAIN}/u/${token}`;
 }
 
+/** Records one Claude call against a campaign/lead so the Outreach page can show spend by day, week and month. */
+export function usageSink(p: PlatformRepository, ids: { campaignId?: string | null; leadId?: string | null }): UsageSink {
+  return async (kind, model, u) => {
+    await p.insertAiUsage({ kind, model, campaignId: ids.campaignId ?? null, leadId: ids.leadId ?? null, inputTokens: u.inputTokens, outputTokens: u.outputTokens, cacheReadTokens: u.cacheReadTokens, cacheWriteTokens: u.cacheWriteTokens, costMicros: costMicros(model, u) });
+  };
+}
+
 /** Research the next batch of leads in a campaign; those with an address become queued. */
 export async function researchBatch(db: Database, env: CloudflareEnv, campaignId: string, limit = 10): Promise<{ researched: number; queued: number; noEmail: number }> {
   const p = new PlatformRepository(db);
@@ -50,7 +58,7 @@ export async function researchBatch(db: Database, env: CloudflareEnv, campaignId
   const leads = await p.listOutreachLeads(campaignId, { status: "new", limit });
   let researched = 0, queued = 0, noEmail = 0;
   for (const lead of leads) {
-    const r = await researchProspect({ website: lead.website, knownEmail: lead.email, targetRoles: campaign.targetRoles, apiKey: env.ANTHROPIC_API_KEY });
+    const r = await researchProspect({ website: lead.website, knownEmail: lead.email, targetRoles: campaign.targetRoles, apiKey: env.ANTHROPIC_API_KEY, onUsage: usageSink(p, { campaignId, leadId: lead.id }) });
     const contact = pickContact(r, campaign.targetRoles);
     const email = r.chosenEmail ?? lead.email?.toLowerCase() ?? null;
     let verified = false;
@@ -105,7 +113,7 @@ export async function runDueSends(db: Database, env: CloudflareEnv, opts: { limi
       if (!claimed) { out.skipped++; continue; }
       try {
         const previous = (await p.listOutreachMessages(lead.id)).map((m) => ({ subject: m.subject, text: m.bodyText }));
-        const composed = await composeEmail({ campaign: c, lead, step, stepIndex: lead.stepIndex, research: parseResearch(lead), previous, unsubscribeUrl: unsubscribeUrl(env, lead.unsubscribeToken), company, address, apiKey: env.ANTHROPIC_API_KEY });
+        const composed = await composeEmail({ campaign: c, lead, step, stepIndex: lead.stepIndex, research: parseResearch(lead), previous, unsubscribeUrl: unsubscribeUrl(env, lead.unsubscribeToken), company, address, apiKey: env.ANTHROPIC_API_KEY, onUsage: usageSink(p, { campaignId: c.id, leadId: lead.id }) });
         const unsub = unsubscribeUrl(env, lead.unsubscribeToken);
         const res = await sendRawEmail({
           from: `${c.fromName} <${c.fromEmail}>`, to: lead.email, subject: composed.subject, html: composed.html, text: composed.text,
@@ -137,12 +145,26 @@ export async function runDueSends(db: Database, env: CloudflareEnv, opts: { limi
   return out;
 }
 
+/** Start of the current London week (Monday) and month, for the usage tiles. */
+export function londonWeekStart(now: Date): Date {
+  const day = londonDayStart(now);
+  const { weekday } = londonParts(day);
+  const back = (weekday + 6) % 7;
+  return londonDayStart(new Date(day.getTime() - back * 86_400_000 + 3_600_000));
+}
+export function londonMonthStart(now: Date): Date {
+  const { dayKey } = londonParts(now);
+  const first = `${dayKey.slice(0, 7)}-01`;
+  return londonDayStart(new Date(`${first}T12:00:00Z`));
+}
+
 export function londonDayStart(now: Date): Date {
   const { dayKey } = londonParts(now);
-  // Midnight London is 23:00 or 00:00 UTC depending on DST; approximate from the local day key.
+  // Midnight London is 00:00 UTC in winter and 23:00 UTC the previous day in summer:
+  // the London hour at 00:00 UTC tells us which (0 or 1).
   const utcMidnight = new Date(`${dayKey}T00:00:00Z`).getTime();
-  const offsetProbe = londonParts(new Date(utcMidnight)).dayKey === dayKey ? 0 : 3_600_000;
-  return new Date(utcMidnight - offsetProbe);
+  const { hour } = londonParts(new Date(utcMidnight));
+  return new Date(utcMidnight - hour * 3_600_000);
 }
 
 /** Resend webhook payload → our records. Idempotent; unknown ids are ignored. */

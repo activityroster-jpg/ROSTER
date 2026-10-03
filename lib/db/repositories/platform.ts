@@ -20,6 +20,7 @@ import {
   outreachLead,
   outreachMessage,
   outreachSuppression,
+  aiUsage,
   callAvailability,
   callBooking,
   type CallAvailability,
@@ -44,6 +45,8 @@ import {
   type NewOutreachLead,
   type OutreachMessage,
   type OutreachSuppression,
+  type AiUsage,
+  type NewAiUsage,
   type OutreachLeadStatus,
   type SuppressionReason,
   type TaskStatus,
@@ -573,6 +576,20 @@ export class PlatformRepository {
     const q = this.db.select({ status: outreachMessage.status, n: sql<number>`count(*)` }).from(outreachMessage);
     const rows = campaignId ? await q.where(eq(outreachMessage.campaignId, campaignId)).groupBy(outreachMessage.status) : await q.groupBy(outreachMessage.status);
     return new Map(rows.map((r) => [r.status, Number(r.n)]));
+  }
+
+  // --- AI usage (outreach agent spend) --------------------------------------
+
+  async insertAiUsage(values: Omit<NewAiUsage, "id" | "createdAt">): Promise<void> {
+    await this.db.insert(aiUsage).values(values);
+  }
+  /** Every call since `since`, oldest first (bounded by the caller's window; a month is a few hundred rows at most). */
+  async listAiUsageSince(since: Date): Promise<AiUsage[]> {
+    return this.db.select().from(aiUsage).where(gte(aiUsage.createdAt, since)).orderBy(asc(aiUsage.createdAt));
+  }
+  async countOutreachSentBetween(from: Date, to: Date): Promise<number> {
+    const rows = await this.db.select({ id: outreachMessage.id }).from(outreachMessage).where(and(gte(outreachMessage.sentAt, from), lte(outreachMessage.sentAt, to)));
+    return rows.length;
   }
 
   async isSuppressed(email: string): Promise<boolean> {

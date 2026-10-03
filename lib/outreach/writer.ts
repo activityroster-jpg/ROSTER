@@ -3,6 +3,7 @@ import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod/v4";
 import type { OutreachCampaign, OutreachLead } from "@/lib/db/schema";
 import type { ResearchResult, SequenceStep } from "./types";
+import { fromSdkUsage, type UsageSink } from "./cost";
 
 export interface Composed { subject: string; text: string; html: string; usedAi: boolean }
 
@@ -50,6 +51,7 @@ export async function composeEmail(input: {
   company: string;
   address: string;
   apiKey?: string;
+  onUsage?: UsageSink;
 }): Promise<Composed> {
   const { campaign, lead, step } = input;
   const first = firstName(lead.contactName) ?? "there";
@@ -82,6 +84,7 @@ export async function composeEmail(input: {
         ].join("\n"),
         messages: [{ role: "user", content: `Step ${input.stepIndex + 1} of ${JSON.parse(campaign.steps).length}: ${step.purpose}\n\nTemplate to follow loosely:\nSubject: ${subject}\n\n${body}\n\nFacts:\n${context}` }],
       });
+      if (input.onUsage) { try { await input.onUsage("draft", res.model, fromSdkUsage(res.usage)); } catch { /* bookkeeping must never block a send */ } }
       if (res.stop_reason !== "refusal" && res.parsed_output) {
         subject = res.parsed_output.subject.trim() || subject;
         body = res.parsed_output.body.trim() || body;

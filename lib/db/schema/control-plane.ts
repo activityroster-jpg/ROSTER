@@ -629,6 +629,27 @@ export const outreachSuppression = sqliteTable("outreach_suppression", {
 }, (t) => [uniqueIndex("outreach_suppression_email_uq").on(t.email)]);
 export type OutreachSuppression = typeof outreachSuppression.$inferSelect;
 
+export const AI_USAGE_KINDS = ["research", "draft"] as const;
+export type AiUsageKind = (typeof AI_USAGE_KINDS)[number];
+
+/** One row per Claude API call made by the outreach agent, so spend can be tracked by day / week / month. */
+export const aiUsage = sqliteTable("ai_usage", {
+  id: id(),
+  kind: text("kind", { enum: AI_USAGE_KINDS }).notNull(),
+  model: text("model").notNull(),
+  campaignId: text("campaign_id"),
+  leadId: text("lead_id"),
+  inputTokens: integer("input_tokens").notNull().default(0),
+  outputTokens: integer("output_tokens").notNull().default(0),
+  cacheReadTokens: integer("cache_read_tokens").notNull().default(0),
+  cacheWriteTokens: integer("cache_write_tokens").notNull().default(0),
+  /** Estimated cost in millionths of a US dollar (list price at the time of the call). */
+  costMicros: integer("cost_micros").notNull().default(0),
+  createdAt: createdAt(),
+}, (t) => [index("ai_usage_created_idx").on(t.createdAt), index("ai_usage_campaign_idx").on(t.campaignId)]);
+export type AiUsage = typeof aiUsage.$inferSelect;
+export type NewAiUsage = typeof aiUsage.$inferInsert;
+
 // --- Security events --------------------------------------------------------
 
 export const SECURITY_EVENT_KINDS = [

@@ -3,6 +3,7 @@ import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod/v4";
 import { assertSafeFeedUrl } from "@/lib/integrations/url-guard";
 import type { ResearchResult } from "./types";
+import { fromSdkUsage, type UsageSink } from "./cost";
 
 const PAGE_HINT = /contact|about|team|staff|instructor|committee|who|people|meet|principal|office/i;
 const EMAIL_RE = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
@@ -94,7 +95,7 @@ function siteUrl(website: string): string | null {
  * addresses on them, and (with a Claude key) a short summary plus specific
  * hooks for a first email. Never throws; an unreachable site yields an empty result.
  */
-export async function researchProspect(input: { website: string | null; knownEmail: string | null; targetRoles: string; apiKey?: string }): Promise<ResearchResult> {
+export async function researchProspect(input: { website: string | null; knownEmail: string | null; targetRoles: string; apiKey?: string; onUsage?: UsageSink }): Promise<ResearchResult> {
   const result: ResearchResult = { fetchedAt: new Date().toISOString(), pages: [], summary: null, hooks: [], contacts: [], generalEmails: [], phone: null, chosenEmail: null, chosenReason: null, usedAi: false };
   const home = input.website ? siteUrl(input.website) : null;
   let corpus = "";
@@ -136,6 +137,7 @@ export async function researchProspect(input: { website: string | null; knownEma
         system: "You read a sailing centre or club's website text and extract facts for a short, honest business email. Use only what the text says. Prefer named people whose role matches the target roles. Never invent names or addresses.",
         messages: [{ role: "user", content: `Target roles: ${input.targetRoles}\nKnown address from our records: ${input.knownEmail ?? "none"}\nEmail addresses found on the site: ${emails.join(", ") || "none"}\n\nWebsite text:\n${corpus.slice(0, 40_000)}` }],
       });
+      if (input.onUsage) { try { await input.onUsage("research", res.model, fromSdkUsage(res.usage)); } catch { /* never block research on bookkeeping */ } }
       if (res.stop_reason !== "refusal" && res.parsed_output) {
         const p = res.parsed_output;
         result.usedAi = true;

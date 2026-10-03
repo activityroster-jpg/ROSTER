@@ -281,6 +281,13 @@
       "when": 1791027244437,
       "tag": "0039_absent_shadow_king",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "6",
+      "when": 1791037549783,
+      "tag": "0040_faulty_wither",
+      "breakpoints": true
     }
   ]
 }

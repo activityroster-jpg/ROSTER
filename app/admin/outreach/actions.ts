@@ -7,7 +7,7 @@ import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { OUTREACH_LEAD_STATUSES, type OutreachLeadStatus, type SuppressionReason } from "@/lib/db/schema";
 import { parseProspectStatuses } from "@/lib/marketing";
 import { audienceSchema, campaignSchema, type CampaignInput } from "@/lib/outreach/schema";
-import { parseResearch, parseSteps, researchBatch, runDueSends, unsubscribeUrl } from "@/lib/outreach/engine";
+import { parseResearch, parseSteps, researchBatch, runDueSends, unsubscribeUrl, usageSink } from "@/lib/outreach/engine";
 import { composeEmail } from "@/lib/outreach/writer";
 import { pickContact, researchProspect } from "@/lib/outreach/research";
 import { emailLooksDeliverable } from "@/lib/outreach/validate";
@@ -175,7 +175,7 @@ export async function researchLeadAction(leadId: string): Promise<OutreachResult
   const c = await p.getOutreachCampaign(lead.campaignId);
   if (!c) return { ok: false, error: "Campaign missing" };
   const env = getEnv();
-  const r = await researchProspect({ website: lead.website, knownEmail: lead.email, targetRoles: c.targetRoles, apiKey: env.ANTHROPIC_API_KEY });
+  const r = await researchProspect({ website: lead.website, knownEmail: lead.email, targetRoles: c.targetRoles, apiKey: env.ANTHROPIC_API_KEY, onUsage: usageSink(p, { campaignId: c.id, leadId: lead.id }) });
   const contact = pickContact(r, c.targetRoles);
   const email = r.chosenEmail ?? lead.email ?? null;
   const verified = email ? (await emailLooksDeliverable(email)).ok : false;
@@ -252,7 +252,7 @@ export async function previewLeadEmailAction(leadId: string): Promise<{ ok: bool
   const previous = (await p.listOutreachMessages(lead.id)).map((m) => ({ subject: m.subject, text: m.bodyText }));
   const composed = await composeEmail({
     campaign: c, lead, step, stepIndex: Math.min(lead.stepIndex, steps.length - 1), research: parseResearch(lead), previous,
-    unsubscribeUrl: unsubscribeUrl(env, lead.unsubscribeToken), company: env.COMPANY_LEGAL_NAME || COMPANY.legalName, address: env.COMPANY_ADDRESS || COMPANY.addressInline, apiKey: env.ANTHROPIC_API_KEY,
+    unsubscribeUrl: unsubscribeUrl(env, lead.unsubscribeToken), company: env.COMPANY_LEGAL_NAME || COMPANY.legalName, address: env.COMPANY_ADDRESS || COMPANY.addressInline, apiKey: env.ANTHROPIC_API_KEY, onUsage: usageSink(p, { campaignId: c.id, leadId: lead.id }),
   });
   return { ok: true, subject: composed.subject, text: composed.text, usedAi: composed.usedAi };
 }

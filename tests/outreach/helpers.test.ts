@@ -112,3 +112,14 @@ describe("campaign schema", () => {
     expect(campaignSchema.safeParse({ ...base, steps: [] }).success).toBe(false);
   });
 });
+
+describe("london day start", () => {
+  it("is midnight London in summer and winter", async () => {
+    const { londonDayStart, londonWeekStart, londonMonthStart } = await import("@/lib/outreach/engine");
+    expect(londonDayStart(new Date("2026-06-17T15:00:00Z")).toISOString()).toBe("2026-06-16T23:00:00.000Z");
+    expect(londonDayStart(new Date("2026-01-14T15:00:00Z")).toISOString()).toBe("2026-01-14T00:00:00.000Z");
+    expect(londonDayStart(new Date("2026-06-16T23:30:00Z")).toISOString()).toBe("2026-06-16T23:00:00.000Z"); // 00:30 London on the 17th
+    expect(londonWeekStart(new Date("2026-06-17T15:00:00Z")).toISOString()).toBe("2026-06-14T23:00:00.000Z"); // Monday 15th
+    expect(londonMonthStart(new Date("2026-06-17T15:00:00Z")).toISOString()).toBe("2026-05-31T23:00:00.000Z");
+  });
+});
