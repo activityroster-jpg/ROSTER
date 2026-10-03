@@ -228,15 +228,17 @@ counts only, no content.
 | CSV import for staff and students | P2 | Done (staff) | `app/(app)/office/staff/import`, `app/(app)/office/import` (courses). Students are not held. |
 | Customer-facing security overview page | P1 | Missing | `/data-processing` covers part of it. |
 
-## Conflicts for Conor to decide
+## Conflicts, with Conor's decisions (3 October 2026)
 
-- **C1. Second factor for admins.** Spec: authenticator app mandatory for Owner/Admin. App today: emailed code mandatory on every office sign-in (your instruction this morning), authenticator app optional. Options: keep the emailed code as the floor and let a centre require TOTP for its admins (recommended for small clubs), or make TOTP mandatory for everyone.
-- **C2. Ghost Mode.** Spec: no support login. App: read-only Ghost Mode from the Dev Center, logged. Options: remove it, or keep it behind the centre's explicit time-limited consent (a "grant support access for 24 hours" button in the office) with the audit entry visible to the centre.
-- **C3. Approval before production.** Spec: Conor approves every database, security, permission and feature change. App: every push deploys. Recommended: a `main` branch with a GitHub "production" environment that requires your one-click approval, plus auto-deploy to staging. Small fixes could still auto-merge via a label.
-- **C4. Deploy window 23:00–04:00.** This adds a day's delay to every change while the product is still being built daily. Recommended: adopt it once there are paying centres in season; until then, approve-then-deploy at any time.
-- **C5. Vetting certificates.** The app lets centres upload DBS certificates. Spec: status only. Options: remove the upload for vetting types (keep it for RYA certificates and first aid), or keep it encrypted and admin-only. Recommendation: remove it for vetting types.
-- **C6. Emergency contacts and students.** The spec assumes both are held; neither is. Decision: add emergency contact fields for staff (encrypted, admin/welfare only) so the emergency sheet can exist, and leave student personal data out.
-- **C7. AI in the outreach agent.** Confirm Anthropic as a sub-processor for prospect data and update the spec's AI section accordingly.
+Decisions in **bold** at the end of each item.
+
+- **C1. Second factor for admins.** Spec: authenticator app mandatory for Owner/Admin. App today: emailed code mandatory on every office sign-in (your instruction this morning), authenticator app optional. Options: keep the emailed code as the floor and let a centre require TOTP for its admins (recommended for small clubs), or make TOTP mandatory for everyone. **Decision: emailed code the first time a device is used and again after that device has gone 12 hours without using the office; PIN whenever 30 minutes idle. Built the same day (`lib/auth/login-verify.ts`).**
+- **C2. Ghost Mode.** Spec: no support login. App: read-only Ghost Mode from the Dev Center, logged. Options: remove it, or keep it behind the centre's explicit time-limited consent (a "grant support access for 24 hours" button in the office) with the audit entry visible to the centre. **Decision: keep Ghost Mode as it is; centres agree to it in the terms. Action for the solicitor review: make sure the terms say so plainly.**
+- **C3. Approval before production.** Spec: Conor approves every database, security, permission and feature change. App: every push deploys. Recommended: a `main` branch with a GitHub "production" environment that requires your one-click approval, plus auto-deploy to staging. Small fixes could still auto-merge via a label. **Decision: a staging environment where Conor tests before anything reaches production. Built: staging deploys on every push, production deploys only from the "Deploy production" button (`docs/runbooks/deploy.md`).**
+- **C4. Deploy window 23:00–04:00.** This adds a day's delay to every change while the product is still being built daily. Recommended: adopt it once there are paying centres in season; until then, approve-then-deploy at any time. **Decision: deferred until there are paying centres.**
+- **C5. Vetting certificates.** The app lets centres upload DBS certificates. Spec: status only. Options: remove the upload for vetting types (keep it for RYA certificates and first aid), or keep it encrypted and admin-only. Recommendation: remove it for vetting types. **Decision: keep the uploads. Phase 2 restricts them to admins, encrypts them and logs every view; the spec's "status only" line is superseded.**
+- **C6. Emergency contacts and students.** The spec assumes both are held; neither is. Decision: add emergency contact fields for staff (encrypted, admin/welfare only) so the emergency sheet can exist, and leave student personal data out. **Decision: yes.**
+- **C7. AI in the outreach agent.** Confirm Anthropic as a sub-processor for prospect data and update the spec's AI section accordingly. **Decision: yes. Added to `docs/subprocessors.md`.**
 
 ## Owner checklist items this audit could not see
 

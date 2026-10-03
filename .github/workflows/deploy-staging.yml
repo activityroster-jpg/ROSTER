@@ -1,0 +1,71 @@
+name: Deploy staging
+
+# Every push to the working branch goes to staging automatically (after
+# typecheck and tests), so changes can be tried at staging.activityroster.com
+# before anyone presses the production button. Migrations run first against
+# the staging database.
+
+on:
+  push:
+    branches: ["claude/new-session-2wxbwe"]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: true
+
+jobs:
+  staging:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      NEXT_TELEMETRY_DISABLED: "1"
+      NEXT_PUBLIC_APEX_DOMAIN: staging.activityroster.com
+    steps:
+      - name: Check staging is provisioned
+        id: ready
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then echo "::warning::No Cloudflare token; nothing deployed."; echo "ready=false" >> "$GITHUB_OUTPUT"; else echo "ready=true" >> "$GITHUB_OUTPUT"; fi
+      - uses: actions/checkout@v4
+        if: steps.ready.outputs.ready == 'true'
+      - name: Check resource ids are filled in
+        if: steps.ready.outputs.ready == 'true'
+        run: |
+          if grep -q "STAGING_D1_ID\|STAGING_KV_ID" wrangler.toml; then
+            echo "::warning::Staging is not provisioned yet. Run the 'Provision staging' workflow once."
+            exit 0
+          fi
+          echo "provisioned=true" >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v4
+        if: env.provisioned == 'true'
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci || npm install
+        if: env.provisioned == 'true'
+      - name: Typecheck and tests
+        if: env.provisioned == 'true'
+        run: |
+          npm run typecheck:core
+          npm run test
+      - name: Build
+        if: env.provisioned == 'true'
+        run: npx opennextjs-cloudflare build
+      - name: Apply migrations (staging)
+        if: env.provisioned == 'true'
+        run: npx wrangler d1 migrations apply activityroster-staging --env staging --remote
+      - name: Deploy staging
+        if: env.provisioned == 'true'
+        run: npx wrangler deploy --env staging
+      - name: Smoke test
+        if: env.provisioned == 'true'
+        run: |
+          for i in 1 2 3 4 5 6; do
+            if curl -fsS https://staging.activityroster.com/api/health | grep -q '"ok":true'; then echo "staging healthy"; exit 0; fi
+            sleep 10
+          done
+          echo "::error::Staging health check failed after deploy."
+          exit 1

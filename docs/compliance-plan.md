@@ -6,17 +6,17 @@ code or documents Claude Code writes, tests and deploys through GitHub.
 
 Effort is a rough guide: S = under half a day, M = one to two days, L = a week or more.
 
-## Decisions needed before Phase 1 starts
+## Decisions (made 3 October 2026)
 
-| # | Question | Recommendation |
+| # | Question | Decision |
 | --- | --- | --- |
-| C1 | Admin second factor: emailed code (today) or authenticator app mandatory? | Keep the emailed code as the minimum; add a per-centre "require authenticator app for admins" setting. |
-| C2 | Ghost Mode: remove, or keep behind the centre's own time-limited consent? | Keep, gated by a "grant support access for 24 h" button in the office, visible in their change log. |
-| C3 | Production approval: GitHub environment approval on a `main` branch? | Yes. One click from you per production deploy; staging deploys on every push. |
-| C4 | Deploy window 23:00–04:00 now, or once centres are live in season? | Defer until the first paying centres are in season; approval gate first. |
-| C5 | Vetting certificate uploads: remove for DBS/PVG/AccessNI/Garda types? | Remove for vetting types; keep for RYA and first-aid certificates. |
-| C6 | Add staff emergency contacts (encrypted, admin/welfare only) so the emergency sheet exists? | Yes. Leave student personal data out. |
-| C7 | Anthropic as a sub-processor for the outreach agent (prospect data only)? | Yes, and the spec's AI section is updated to say so. |
+| C1 | Admin second factor | Emailed code the first time on a device and after 12 idle hours; PIN after 30 idle minutes. Done. |
+| C2 | Ghost Mode | Keep as is; covered by the terms (solicitor to confirm wording). |
+| C3 | Production approval | Staging on every push; production only from the "Deploy production" button. Done. |
+| C4 | Deploy window | Deferred until paying centres. |
+| C5 | Vetting certificate uploads | Keep; restrict, encrypt and log in Phase 2. |
+| C6 | Emergency contacts | Add for staff, encrypted, admin-only. Students stay out. |
+| C7 | Anthropic | Listed as a sub-processor (prospect data only). Done. |
 
 ## Phase 1 (P0): before onboarding more customers
 
@@ -58,7 +58,7 @@ Effort is a rough guide: S = under half a day, M = one to two days, L = a week o
 - **Conor:** confirm R2 bucket jurisdiction; if not EU, approve a new EU bucket and a
   one-off migration of uploaded documents.
 
-### P0-D Staging, branches and approval (M, needs C3/C4)
+### P0-D Staging, branches and approval (M) — built 3 October, awaiting provisioning
 
 - Second D1, R2, KV and a Resend test key for staging; `wrangler.toml` environments;
   synthetic seed for staging.

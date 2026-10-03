@@ -95,8 +95,8 @@ Working rules from the spec, binding on every session:
    approves it. Flag conflicts between the spec and the app rather than redesigning.
 2. **Protect production data.** No migration, delete or bulk update on production
    without testing on staging first and recording the D1 Time Travel bookmark. Until
-   staging exists (plan P0-D), every production SQL is additive and given to Conor as a
-   plain block to paste.
+   staging exists, every production SQL is additive and given to Conor as a plain block
+   to paste; once staging is provisioned, migrations run only through the deploy workflow.
 3. **Never commit secrets.** Cloudflare secrets and env only. No production personal
    data in the repo, in logs or in docs.
 4. **Plain English, no scripts for Conor.** Automate recurring work in the cloud (GitHub
@@ -105,9 +105,13 @@ Working rules from the spec, binding on every session:
    (rule packs), never hard-coded, and are marked verified or unverified.
 6. **Minors are children under GDPR.** Under-18 staff get higher-privacy defaults; never
    add messaging, profiling or marketing that reaches them.
-7. **Change management (target state, enforced once P0-D lands):** work on branches;
-   tests including `tests/isolation` must pass; database, auth, permission and security
-   changes and new sub-processors need Conor's approval before production; deploys only
-   from GitHub; migrations additive (add, migrate, remove later).
+7. **Change management:** every push to the working branch deploys to **staging**
+   (`staging.activityroster.com`) after typecheck and tests; **production deploys only
+   when Conor presses "Deploy production"** in GitHub Actions, which records the D1 Time
+   Travel bookmark, applies pending migrations, deploys, smoke-tests and rolls back on
+   failure (`docs/runbooks/deploy.md`). Never trigger that workflow yourself; tell Conor
+   what the deploy contains and ask him to press it. Migrations are additive (add,
+   migrate, remove later) and are never pasted into the production console again.
+   Deploys only from GitHub; `main` is the record of production, not a working branch.
 8. **New third party that touches personal data → add it to `docs/subprocessors.md`
    first** and tell Conor, who notifies customers.

@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { getAuth } from "@/lib/auth";
 import { getEnv, getRepositories } from "@/lib/cf/bindings";
 import { currentDeviceId } from "@/lib/auth/device-gate";
-import { LV_COOKIE, LV_IDLE_MAX_AGE_S, LV_PENDING_COOKIE, LV_PENDING_MAX_AGE_S, LV_SESSION_COOKIE, lvCookieValue, lvPendingValue, verifyLvPending } from "@/lib/auth/login-verify";
+import { LV_COOKIE, LV_DEVICE_COOKIE, LV_IDLE_MAX_AGE_S, LV_PENDING_COOKIE, LV_PENDING_MAX_AGE_S, LV_SESSION_COOKIE, lvCookieValue, lvDeviceValue, lvPendingValue, verifyLvDevice, verifyLvPending } from "@/lib/auth/login-verify";
 import { checkCode, issueCode } from "@/lib/security/reset-code";
 import { describeAgent, recordSecurityEvent, requestFingerprint } from "@/lib/security/events";
 import { rateLimit } from "@/lib/security/rate-limit";
@@ -75,10 +75,14 @@ export async function finishLoginAction(stay: boolean, next: string): Promise<Lo
   const jar = await cookies();
   const secret = authSecret();
   const pendingOk = await verifyLvPending(secret, who.sessionId, jar.get(LV_PENDING_COOKIE)?.value);
-  if (!pendingOk && !who.twoFactor) return { ok: false, error: "Enter the code from your email first." };
+  const deviceOk = await verifyLvDevice(secret, who.userId, jar.get(LV_DEVICE_COOKIE)?.value);
+  if (!pendingOk && !who.twoFactor && !deviceOk) return { ok: false, error: "Enter the code from your email first." };
 
   const value = await lvCookieValue(secret, who.sessionId, stay ? "p" : "s");
   jar.set(LV_COOKIE, value, { ...cookieOpts, maxAge: LV_IDLE_MAX_AGE_S });
+  // This device has now proved the email (or 2FA) within the last 12 hours;
+  // the next sign-in from it inside that window skips the code.
+  jar.set(LV_DEVICE_COOKIE, await lvDeviceValue(secret, who.userId), { ...cookieOpts, maxAge: LV_IDLE_MAX_AGE_S });
   if (stay) jar.delete(LV_SESSION_COOKIE); else jar.set(LV_SESSION_COOKIE, value.slice(2), cookieOpts);
   jar.delete(LV_PENDING_COOKIE);
 
@@ -94,6 +98,6 @@ export async function finishLoginAction(stay: boolean, next: string): Promise<Lo
       }
     }
   } catch { /* the device gate will simply ask */ }
-  await recordSecurityEvent("reauth_passed", { userId: who.userId, meta: { step: "login-verified", by: who.twoFactor && !pendingOk ? "2fa" : "email-code", stay } }).catch(() => {});
+  await recordSecurityEvent("reauth_passed", { userId: who.userId, meta: { step: "login-verified", by: pendingOk ? "email-code" : who.twoFactor ? "2fa" : "recent-device", stay } }).catch(() => {});
   redirect(safeNext(next));
 }

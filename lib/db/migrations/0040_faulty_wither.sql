@@ -1,4 +1,4 @@
-CREATE TABLE `ai_usage` (
+CREATE TABLE IF NOT EXISTS `ai_usage` (
 	`id` text PRIMARY KEY NOT NULL,
 	`kind` text NOT NULL,
 	`model` text NOT NULL,
@@ -12,5 +12,5 @@ CREATE TABLE `ai_usage` (
 	`created_at` integer NOT NULL
 );
 --> statement-breakpoint
-CREATE INDEX `ai_usage_created_idx` ON `ai_usage` (`created_at`);--> statement-breakpoint
-CREATE INDEX `ai_usage_campaign_idx` ON `ai_usage` (`campaign_id`);
+CREATE INDEX IF NOT EXISTS `ai_usage_created_idx` ON `ai_usage` (`created_at`);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS `ai_usage_campaign_idx` ON `ai_usage` (`campaign_id`);

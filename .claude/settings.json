@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash(npx wrangler d1 execute *--remote*)",
+      "Bash(wrangler d1 execute *--remote*)",
+      "Bash(npx wrangler d1 delete *)",
+      "Bash(wrangler d1 delete *)",
+      "Bash(npx wrangler d1 time-travel restore *)",
+      "Bash(wrangler d1 time-travel restore *)",
+      "Bash(npx wrangler delete *)",
+      "Bash(wrangler delete *)",
+      "Bash(npx wrangler r2 bucket delete *)",
+      "Bash(wrangler r2 bucket delete *)",
+      "Bash(npx wrangler r2 object delete *)",
+      "Bash(npx wrangler kv namespace delete *)",
+      "Bash(wrangler kv namespace delete *)",
+      "Bash(npx wrangler secret delete *)",
+      "Bash(git push --force origin main*)",
+      "Bash(git push -f origin main*)"
+    ]
+  }
+}

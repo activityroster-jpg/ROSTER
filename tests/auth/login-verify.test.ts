@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { lvCookieValue, lvPendingValue, verifyLvCookies, verifyLvPending } from "@/lib/auth/login-verify";
+import { lvCookieValue, lvDeviceValue, lvPendingValue, verifyLvCookies, verifyLvDevice, verifyLvPending } from "@/lib/auth/login-verify";
 
 const secret = "test-secret-that-is-long-enough-123";
 
@@ -28,5 +28,12 @@ describe("login verified cookie", () => {
     expect(await verifyLvPending(secret, "sess1", p)).toBe(true);
     expect(await verifyLvPending(secret, "sess2", p)).toBe(false);
     expect(await verifyLvPending(secret, "sess1", undefined)).toBe(false);
+  });
+
+  it("device marker is bound to the user", async () => {
+    const d = await lvDeviceValue(secret, "user1");
+    expect(await verifyLvDevice(secret, "user1", d)).toBe(true);
+    expect(await verifyLvDevice(secret, "user2", d)).toBe(false);
+    expect(await verifyLvDevice(secret, "user1", undefined)).toBe(false);
   });
 });

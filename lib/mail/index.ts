@@ -77,10 +77,37 @@ export interface RawEmail {
  * delivery / open / bounce webhooks can be matched back. Used by the outreach
  * agent, whose messages carry their own footer and unsubscribe link.
  */
+/** Environments that really send. Staging also keeps a copy of every email in the Dev Center outbox. */
+const canSend = (env: ReturnType<typeof getEnv>) => Boolean(env.RESEND_API_KEY) && (env.APP_ENV === "production" || env.APP_ENV === "staging");
+
+export interface OutboxEntry { at: string; to: string; from: string; subject: string; text: string }
+const OUTBOX_KEY = "outbox:v1";
+const OUTBOX_MAX = 100;
+
+/** On staging, remember the last emails so testers can read codes and links without a real inbox. */
+async function captureOutbox(env: ReturnType<typeof getEnv>, entry: OutboxEntry): Promise<void> {
+  if (env.APP_ENV !== "staging") return;
+  try {
+    const raw = await env.TENANT_CACHE.get(OUTBOX_KEY);
+    const list: OutboxEntry[] = raw ? (JSON.parse(raw) as OutboxEntry[]) : [];
+    list.unshift(entry);
+    await env.TENANT_CACHE.put(OUTBOX_KEY, JSON.stringify(list.slice(0, OUTBOX_MAX)), { expirationTtl: 7 * 24 * 3600 });
+  } catch { /* the outbox is a convenience, never a blocker */ }
+}
+
+export async function readOutbox(): Promise<OutboxEntry[]> {
+  const env = getEnv();
+  if (env.APP_ENV !== "staging") return [];
+  try { const raw = await env.TENANT_CACHE.get(OUTBOX_KEY); return raw ? (JSON.parse(raw) as OutboxEntry[]) : []; } catch { return []; }
+}
+
+const htmlToText = (html: string) => html.replace(/<style[\s\S]*?<\/style>/gi, " ").replace(/<br\s*\/?>|<\/(p|div|h[1-6]|li|tr)>/gi, "\n").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/[ \t]+/g, " ").replace(/\n\s*\n+/g, "\n").trim();
+
 export async function sendRawEmail(msg: RawEmail): Promise<{ id: string | null; sent: boolean }> {
   const env = getEnv();
-  if (!env.RESEND_API_KEY || env.APP_ENV !== "production") {
-    console.info(`[mail] (not sent: ${env.APP_ENV}) → ${msg.to}: ${msg.subject}`);
+  await captureOutbox(env, { at: new Date().toISOString(), to: msg.to, from: msg.from, subject: msg.subject, text: msg.text });
+  if (!canSend(env)) {
+    console.info(`[mail] (not sent: ${env.APP_ENV ?? "unset"}) ${msg.subject}`);
     return { id: null, sent: false };
   }
   const res = await fetch("https://api.resend.com/emails", {
@@ -102,9 +129,10 @@ export async function sendEmail(msg: EmailMessage): Promise<void> {
   const env = getEnv();
   const from = msg.from ?? "ActivityRoster <no-reply@activityroster.com>";
   const html = renderEmail(msg.html);
+  await captureOutbox(env, { at: new Date().toISOString(), to: msg.to, from, subject: msg.subject, text: htmlToText(msg.html) });
 
-  if (!env.RESEND_API_KEY || env.APP_ENV !== "production") {
-    console.info(`[mail] (not sent: ${env.APP_ENV}) → ${msg.to}: ${msg.subject}`);
+  if (!canSend(env)) {
+    console.info(`[mail] (not sent: ${env.APP_ENV ?? "unset"}) ${msg.subject}`);
     return;
   }
 

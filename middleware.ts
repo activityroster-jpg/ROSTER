@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { resolveHost } from "@/lib/tenant/host";
 import { PIN_COOKIE, PIN_IDLE_MAX_AGE_S } from "@/lib/auth/pin";
-import { LV_COOKIE, LV_IDLE_MAX_AGE_S, LV_SESSION_COOKIE } from "@/lib/auth/login-verify";
+import { LV_COOKIE, LV_DEVICE_COOKIE, LV_IDLE_MAX_AGE_S, LV_SESSION_COOKIE } from "@/lib/auth/login-verify";
 import { DEVICE_COOKIE, DEVICE_HEADER, DEVICE_MAX_AGE_S, PATH_HEADER, isDeviceId } from "@/lib/auth/device";
 import { CENTRE_COOKIE } from "@/lib/auth/centre-cookie";
 import { isNonceCspPath, makeNonce, noncePolicy } from "@/lib/security/csp";
@@ -30,6 +30,8 @@ function slidePinCookie(req: NextRequest, res: NextResponse): NextResponse {
     res.cookies.set(LV_COOKIE, lv, { httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: LV_IDLE_MAX_AGE_S });
     const lvs = req.cookies.get(LV_SESSION_COOKIE)?.value;
     if (lvs) res.cookies.set(LV_SESSION_COOKIE, lvs, { httpOnly: true, secure: true, sameSite: "lax", path: "/" });
+    const lvd = req.cookies.get(LV_DEVICE_COOKIE)?.value;
+    if (lvd) res.cookies.set(LV_DEVICE_COOKIE, lvd, { httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: LV_IDLE_MAX_AGE_S });
   }
   return res;
 }

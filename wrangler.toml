@@ -44,3 +44,40 @@ id = "34fc102ca9744f0793d3e0adb3bf31e1"
 [vars]
 APP_APEX_DOMAIN = "activityroster.com"
 APP_ENV = "production"
+
+# --- Staging ----------------------------------------------------------------
+# A full copy of the stack for testing before production: its own Worker, D1,
+# R2 (EU jurisdiction), KV and secrets, served at staging.activityroster.com
+# with centres at {slug}.staging.activityroster.com. Resource ids are filled in
+# by the "Provision staging" GitHub Actions workflow. DNS: the custom domain
+# below is created automatically; add one proxied CNAME `*.staging` →
+# `staging.activityroster.com` by hand for the centre subdomains.
+[env.staging]
+name = "roster-staging"
+routes = [
+  { pattern = "staging.activityroster.com", custom_domain = true },
+  { pattern = "*.staging.activityroster.com/*", zone_name = "activityroster.com" },
+]
+
+[env.staging.assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
+
+[[env.staging.d1_databases]]
+binding = "DB"
+database_name = "activityroster-staging"
+database_id = "STAGING_D1_ID"
+migrations_dir = "lib/db/migrations"
+
+[[env.staging.r2_buckets]]
+binding = "DOCS"
+bucket_name = "activityroster-docs-staging"
+jurisdiction = "eu"
+
+[[env.staging.kv_namespaces]]
+binding = "TENANT_CACHE"
+id = "STAGING_KV_ID"
+
+[env.staging.vars]
+APP_APEX_DOMAIN = "staging.activityroster.com"
+APP_ENV = "staging"

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requirePlatformAdmin } from "@/lib/platform/admin";
+import { getEnv } from "@/lib/cf/bindings";
 import { Logo } from "@/components/Logo";
 
 export const dynamic = "force-dynamic";
@@ -9,6 +10,7 @@ export const metadata = { title: { default: "Dev Center · ActivityRoster", temp
 /** Dev Center: the platform owner's area (centres, billing, marketing, blog, errors). Lives at /admin on the apex. */
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const { email } = await requirePlatformAdmin();
+  const staging = getEnv().APP_ENV === "staging";
 
   return (
     <div className="min-h-screen bg-canvas">
@@ -29,6 +31,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <Link href="/admin/errors" className="text-white/80 hover:text-white">Errors</Link>
             <Link href="/admin/change-log" className="text-white/80 hover:text-white">Change log</Link>
             <Link href="/admin/security" className="text-white/80 hover:text-white">Security</Link>
+            {staging ? <Link href="/admin/outbox" className="rounded bg-amber-400/20 px-2 text-amber-200 hover:text-white">Outbox · staging</Link> : null}
             <span className="text-white/40">·</span>
             <span className="text-white/60">{email}</span>
           </nav>

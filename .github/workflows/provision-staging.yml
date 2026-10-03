@@ -1,0 +1,110 @@
+name: Provision staging
+
+# One-button set-up of the staging environment: creates the staging D1 database
+# (western Europe), R2 bucket (EU jurisdiction) and KV namespace if they do not
+# exist, writes their ids into wrangler.toml, builds and deploys the staging
+# Worker, applies all migrations to the empty database, and sets the staging
+# secrets (random ones generated here; optional ones from repository secrets).
+# Safe to run again: existing resources are reused, secrets are re-set.
+#
+# Needs the CLOUDFLARE_API_TOKEN to carry: Workers Scripts Edit, Workers KV
+# Storage Edit, Workers R2 Storage Edit, D1 Edit, Workers Routes Edit and
+# Zone DNS Edit (for the staging custom domain).
+
+on:
+  workflow_dispatch:
+    inputs:
+      admin_email:
+        description: "Dev Center admin email(s) for staging, comma separated"
+        required: true
+        default: "conorbourke1@gmail.com"
+
+permissions:
+  contents: write
+
+jobs:
+  provision:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      NEXT_TELEMETRY_DISABLED: "1"
+      NEXT_PUBLIC_APEX_DOMAIN: staging.activityroster.com
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci || npm install
+
+      - name: Create resources if missing and record their ids
+        id: ids
+        run: |
+          set -euo pipefail
+          D1_ID="$(npx wrangler d1 list --json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const l=JSON.parse(s);const d=l.find(x=>x.name==="activityroster-staging");console.log(d?d.uuid:"")})')"
+          if [ -z "$D1_ID" ]; then
+            npx wrangler d1 create activityroster-staging --location=weur
+            D1_ID="$(npx wrangler d1 list --json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const l=JSON.parse(s);const d=l.find(x=>x.name==="activityroster-staging");console.log(d?d.uuid:"")})')"
+          fi
+          echo "D1: $D1_ID"
+          if ! npx wrangler r2 bucket list | grep -q "activityroster-docs-staging"; then
+            npx wrangler r2 bucket create activityroster-docs-staging --jurisdiction eu
+          fi
+          KV_ID="$(npx wrangler kv namespace list | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const l=JSON.parse(s);const d=l.find(x=>x.title==="roster-staging-TENANT_CACHE");console.log(d?d.id:"")})')"
+          if [ -z "$KV_ID" ]; then
+            npx wrangler kv namespace create TENANT_CACHE --env staging
+            KV_ID="$(npx wrangler kv namespace list | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const l=JSON.parse(s);const d=l.find(x=>x.title==="roster-staging-TENANT_CACHE");console.log(d?d.id:"")})')"
+          fi
+          echo "KV: $KV_ID"
+          test -n "$D1_ID" && test -n "$KV_ID"
+          sed -i "s/STAGING_D1_ID/$D1_ID/; s/STAGING_KV_ID/$KV_ID/" wrangler.toml
+          echo "### Staging resources" >> "$GITHUB_STEP_SUMMARY"
+          echo "- D1 activityroster-staging: $D1_ID" >> "$GITHUB_STEP_SUMMARY"
+          echo "- R2 activityroster-docs-staging (EU)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- KV roster-staging-TENANT_CACHE: $KV_ID" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Commit resource ids
+        run: |
+          if ! git diff --quiet wrangler.toml; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add wrangler.toml
+            git commit -m "chore: staging resource ids (provisioned by GitHub Actions)"
+            git push origin HEAD:${GITHUB_REF_NAME}
+          fi
+
+      - name: Build and deploy staging Worker
+        run: npx opennextjs-cloudflare build && npx wrangler deploy --env staging
+
+      - name: Apply all migrations to the staging database
+        run: npx wrangler d1 migrations apply activityroster-staging --env staging --remote
+
+      - name: Set staging secrets
+        env:
+          ADMIN_EMAIL: ${{ inputs.admin_email }}
+          STAGING_RESEND_API_KEY: ${{ secrets.STAGING_RESEND_API_KEY }}
+          STAGING_STRIPE_SECRET_KEY: ${{ secrets.STAGING_STRIPE_SECRET_KEY }}
+          STAGING_STRIPE_WEBHOOK_SECRET: ${{ secrets.STAGING_STRIPE_WEBHOOK_SECRET }}
+          STAGING_ANTHROPIC_API_KEY: ${{ secrets.STAGING_ANTHROPIC_API_KEY }}
+        run: |
+          set -euo pipefail
+          for name in BETTER_AUTH_SECRET TOKEN_ENCRYPTION_KEY OUTREACH_CRON_SECRET; do
+            openssl rand -hex 32 | npx wrangler secret put "$name" --env staging
+          done
+          printf '%s' "$ADMIN_EMAIL" | npx wrangler secret put PLATFORM_ADMIN_EMAILS --env staging
+          printf '%s' "https://staging.activityroster.com" | npx wrangler secret put BETTER_AUTH_URL --env staging
+          [ -n "$STAGING_RESEND_API_KEY" ] && printf '%s' "$STAGING_RESEND_API_KEY" | npx wrangler secret put RESEND_API_KEY --env staging || echo "No STAGING_RESEND_API_KEY: staging emails go to the Dev Center outbox only."
+          [ -n "$STAGING_STRIPE_SECRET_KEY" ] && printf '%s' "$STAGING_STRIPE_SECRET_KEY" | npx wrangler secret put STRIPE_SECRET_KEY --env staging || echo "No STAGING_STRIPE_SECRET_KEY: checkout is off on staging."
+          [ -n "$STAGING_STRIPE_WEBHOOK_SECRET" ] && printf '%s' "$STAGING_STRIPE_WEBHOOK_SECRET" | npx wrangler secret put STRIPE_WEBHOOK_SECRET --env staging || true
+          [ -n "$STAGING_ANTHROPIC_API_KEY" ] && printf '%s' "$STAGING_ANTHROPIC_API_KEY" | npx wrangler secret put ANTHROPIC_API_KEY --env staging || true
+
+      - name: Smoke test
+        run: |
+          for i in 1 2 3 4 5 6; do
+            if curl -fsS https://staging.activityroster.com/api/health; then exit 0; fi
+            sleep 10
+          done
+          echo "::warning::staging.activityroster.com did not answer yet. If the custom domain was just created, DNS may need a few minutes; re-run this workflow or the Deploy staging workflow."

@@ -39,7 +39,7 @@ const SECTIONS: Section[] = [
       { kind: "tip", text: "You can leave the wizard at any time with “Skip for now”. The dashboard keeps a checklist so you can finish setup later." },
       { kind: "sub", text: "Coming back to sign in" },
       { kind: "p", text: "Your centre lives at its own address, yourcentre.activityroster.com. Bookmark it, or use the Sign in link on the homepage: pick Centre admin or Instructor portal, type your centre's address, and you're sent to the right sign-in page." },
-      { kind: "p", text: "Centre admins sign in with email and password, then enter a 6-digit code we email (if you've turned on two-factor, that step counts instead), then choose whether to stay signed in on that device. Pick \"just this once\" on a shared computer and you're signed out when the browser closes. You're asked for your 4-digit PIN after 30 minutes without activity, and after 12 hours away you sign in again from the start." },
+      { kind: "p", text: "Centre admins sign in with email and password. The first time on a device, and again after that device has gone 12 hours without using the office, we email a 6-digit code to enter (if you've turned on two-factor, that step counts instead). Then you choose whether to stay signed in on that device. Pick \"just this once\" on a shared computer and you're signed out when the browser closes. You're asked for your 4-digit PIN after 30 minutes without activity, and after 12 hours away you sign in again from the start." },
     ],
   },
   {
