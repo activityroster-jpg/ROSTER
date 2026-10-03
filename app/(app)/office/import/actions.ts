@@ -37,9 +37,12 @@ const ISO = /^\d{4}-\d{2}-\d{2}$/;
  * guessed. Each row lands under the course type chosen in review; new types
  * (listed or one-off) and locations are created on demand.
  */
+const MAX_IMPORT_ROWS = 500;
+
 export async function importCoursesAction(rows: ConfirmedRow[]): Promise<ImportResult> {
   const { ctx, repos } = await requireTenant({ role: "admin" });
   if (!Array.isArray(rows) || rows.length === 0) return { ok: false, created: 0, skipped: 0, error: "Nothing to import" };
+  if (rows.length > MAX_IMPORT_ROWS) return { ok: false, created: 0, skipped: 0, error: `Import up to ${MAX_IMPORT_ROWS} rows at a time — split a bigger spreadsheet into parts.` };
 
   const t = repos.tenant;
   const resolver = await createCourseTypeResolver(repos, ctx);

@@ -41,14 +41,18 @@ export default async function PortalSchedulePage() {
   const weeksAhead = Math.max(1, Math.min(26, settings?.availabilityWeeksAhead ?? 4));
   const horizonEnd = addDays(monday, weeksAhead * 7);
 
-  const [events, myStaff, allStaff, instructors, courses, published] = await Promise.all([
+  const [events, myStaff, allStaff, instructors, courses, published, courseLocations, locations] = await Promise.all([
     getSessionEvents(repos, ctx, today, horizonEnd),
     repos.tenant.courseStaff.list(ctx, eq(courseStaffTable.instructorId, me.id)),
     repos.tenant.courseStaff.list(ctx),
     repos.tenant.instructor.list(ctx),
     repos.tenant.course.list(ctx),
     publishedWeeks(repos, ctx),
+    repos.tenant.courseLocation.list(ctx),
+    repos.tenant.location.list(ctx),
   ]);
+  const locationName = new Map(locations.map((l) => [l.id, l.name]));
+  const placesOf = (courseId: string) => courseLocations.filter((cl) => cl.courseId === courseId).map((cl) => locationName.get(cl.locationId)).filter((n): n is string => Boolean(n));
   const myByCourse = new Map(myStaff.map((s) => [s.courseId, s]));
   const nameById = new Map(instructors.map((i) => [i.id, i.name]));
   const studentsByCourse = new Map(courses.map((c) => [c.id, c.capacity]));
@@ -104,7 +108,7 @@ export default async function PortalSchedulePage() {
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <p className="font-semibold text-navy">{fmtTime(s.startAt)}–{fmtTime(s.endAt)}</p>
-                          <p className="mt-0.5 text-sm text-slate-600">{s.courseName}</p>
+                          <p className="mt-0.5 text-sm text-slate-600">{s.courseName}{placesOf(s.courseId).length ? <span className="text-slate-400"> · {placesOf(s.courseId).join(", ")}</span> : null}</p>
                           <p className="mt-0.5 text-xs text-slate-500">
                             {others.length ? `With ${joinNames(others)}` : "Just you so far"}
                             {students > 0 ? ` · ${students} student${students === 1 ? "" : "s"}` : ""}

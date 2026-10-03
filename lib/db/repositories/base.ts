@@ -82,8 +82,15 @@ export class TenantRepository<T extends TenantTable> {
     this.assertWritable(ctx);
     if (rows.length === 0) return [];
     const withOrg = rows.map((r) => ({ ...r, organisationId: ctx.organisationId })) as T["$inferInsert"][];
-    const inserted = await this.db.insert(this.table).values(withOrg).returning();
-    return inserted as T["$inferSelect"][];
+    // D1 allows 100 bound parameters per statement; ten rows of any tenant
+    // table stays comfortably under that.
+    const CHUNK = 10;
+    const out: T["$inferSelect"][] = [];
+    for (let i = 0; i < withOrg.length; i += CHUNK) {
+      const inserted = await this.db.insert(this.table).values(withOrg.slice(i, i + CHUNK)).returning();
+      out.push(...(inserted as T["$inferSelect"][]));
+    }
+    return out;
   }
 
   /**

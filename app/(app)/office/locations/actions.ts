@@ -20,6 +20,7 @@ export async function createLocationAction(_prev: ActionState, formData: FormDat
     locationTypeId: (formData.get("locationTypeId") as string) || undefined,
   });
   if (!parsed.success) return { ok: false, error: "Give the location a name" };
+  if (parsed.data.locationTypeId && !(await repos.tenant.locationType.findById(ctx, parsed.data.locationTypeId))) return { ok: false, error: "Pick one of your categories" };
 
   const created = await repos.tenant.location.insert(ctx, {
     name: parsed.data.name,

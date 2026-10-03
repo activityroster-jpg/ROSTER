@@ -1,5 +1,6 @@
 "use server";
 
+import { writeAudit } from "@/lib/services/audit";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { requireTenant } from "@/lib/tenant/require";
@@ -38,6 +39,7 @@ export async function setNotifyEmailAction(enabled: boolean): Promise<Result> {
   const { ctx, repos, m } = await me();
   if (!m) return { ok: false, error: "No linked instructor profile" };
   await repos.tenant.instructor.update(ctx, m.id, { notifyEmail: enabled });
+  await writeAudit(repos, ctx, { action: "set_notify_email", entity: "instructor", entityId: m.id, after: { notifyEmail: enabled } });
   revalidatePath("/portal/notifications");
   return { ok: true };
 }

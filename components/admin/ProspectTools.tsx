@@ -4,6 +4,7 @@ import { useActionState, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   createProspectAction,
+  dedupeProspectsAction,
   importProspectsAction,
   loadRyaDirectoryAction,
   seedSampleProspectsAction,
@@ -58,6 +59,11 @@ export function ProspectTools({ hasRows }: { hasRows: boolean }) {
     }
   };
   const seed = () => startTransition(async () => { await seedSampleProspectsAction(); router.refresh(); });
+  const dedupe = () => {
+    if (!confirm("Merge duplicate centres? Rows with the same name and postcode are combined into one, keeping the furthest-along status and all notes.")) return;
+    setImportMsg(null);
+    startTransition(async () => { const res = await dedupeProspectsAction(); setImportMsg(res); router.refresh(); });
+  };
   const loadDirectory = () => {
     if (!confirm("Add every centre from the RYA directory (2,138)? Centres already on your list are skipped and keep their statuses.")) return;
     setImportMsg(null);
@@ -70,6 +76,7 @@ export function ProspectTools({ hasRows }: { hasRows: boolean }) {
         <button onClick={() => setTab(tab === "add" ? "none" : "add")} className={`rounded-lg px-3 py-1.5 text-sm font-semibold ${tab === "add" ? "bg-navy text-white" : "border border-slate-300 text-navy hover:bg-slate-50"}`}>+ Add prospect</button>
         <button onClick={() => setTab(tab === "import" ? "none" : "import")} className={`rounded-lg px-3 py-1.5 text-sm font-semibold ${tab === "import" ? "bg-navy text-white" : "border border-slate-300 text-navy hover:bg-slate-50"}`}>Import CSV</button>
         <button onClick={loadDirectory} disabled={pending} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-navy hover:bg-slate-50 disabled:opacity-50">{pending ? "Working…" : "Load RYA directory"}</button>
+        {hasRows ? <button onClick={dedupe} disabled={pending} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-navy hover:bg-slate-50 disabled:opacity-50">Merge duplicates</button> : null}
         {!hasRows ? <button onClick={seed} disabled={pending} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-500 hover:bg-slate-50">Add example rows</button> : null}
       </div>
       {tab !== "import" && importMsg ? (

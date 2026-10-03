@@ -153,7 +153,9 @@ const SECTIONS: Section[] = [
       { kind: "sub", text: "What the app adds" },
       { kind: "bullets", items: [
         "Phone notifications for roster changes, new open shifts, leave decisions and expiring certs (they can switch these off).",
-        "One-tap “I'll be there” on each published course — or “Can't make it” with a reason, so the office can find cover. Colleagues and student numbers show once the week is published.",
+        "One-tap “I'll be there” on each published course — or “Can't make it” with a reason, so the office can find cover. Colleagues, student numbers and the location show once the week is published.",
+        "Availability has “Same as last week”, “All free” and “Clear week” so a regular pattern takes two taps.",
+        "Settings: update your name and mobile number, change your PIN, and set or change your password. Docs has a Replace button for a renewed cert.",
         "Face ID / fingerprint instead of typing the PIN every time; the PIN stays as the fallback.",
         "Clock in and out records an approximate location — shown as a 📍 map link on your Time clock page.",
         "A camera button on Documents to photograph a certificate straight into their record.",

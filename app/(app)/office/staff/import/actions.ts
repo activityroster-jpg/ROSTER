@@ -37,9 +37,12 @@ export interface StaffImportResult {
  * catalogue by name (unknowns ignored, never guessed); an invite is emailed
  * only when asked and an email is present. Tenant scoped and audited.
  */
+const MAX_IMPORT_ROWS = 500;
+
 export async function importInstructorsAction(rows: ConfirmedStaff[], opts?: { sendInvites?: boolean }): Promise<StaffImportResult> {
   const { ctx, repos, organisation } = await requireTenant({ role: "admin" });
   if (!Array.isArray(rows) || rows.length === 0) return { ok: false, created: 0, skipped: 0, invited: 0, qualsLinked: 0, coursesLinked: 0, error: "Nothing to import" };
+  if (rows.length > MAX_IMPORT_ROWS) return { ok: false, created: 0, skipped: 0, invited: 0, qualsLinked: 0, coursesLinked: 0, error: `Import up to ${MAX_IMPORT_ROWS} people at a time — split a bigger spreadsheet into parts.` };
 
   const [qualTypes, courseTypes] = await Promise.all([
     repos.tenant.qualificationType.list(ctx),

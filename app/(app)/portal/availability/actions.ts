@@ -14,6 +14,21 @@ export interface SetAvailabilityInput {
 
 const STATUSES: AvailabilityStatus[] = ["available", "tentative", "unavailable"];
 
+/** Set many slots at once (copy last week, mark the week free). Max 50 entries. */
+export async function setAvailabilityBulkAction(entries: SetAvailabilityInput[]): Promise<{ ok: boolean; error?: string }> {
+  const { ctx, repos } = await requireTenant();
+  if (!Array.isArray(entries) || entries.length === 0 || entries.length > 50) return { ok: false, error: "Nothing to set" };
+  for (const e of entries) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(e.date) || !(SLOT_CODES as readonly string[]).includes(e.slot)) return { ok: false, error: "Invalid slot" };
+    if (e.status !== null && !STATUSES.includes(e.status)) return { ok: false, error: "Invalid status" };
+  }
+  const me = (await repos.tenant.instructor.list(ctx, eq(instructorTable.userId, ctx.userId)))[0];
+  if (!me) return { ok: false, error: "No linked instructor profile" };
+  for (const e of entries) await setAvailability(repos, ctx, me.id, e.date, e.slot, e.status);
+  revalidatePath("/portal/availability");
+  return { ok: true };
+}
+
 /** Set the signed-in instructor's own availability for a date + slot. */
 export async function setAvailabilityAction(input: SetAvailabilityInput): Promise<{ ok: boolean; error?: string }> {
   const { ctx, repos } = await requireTenant();

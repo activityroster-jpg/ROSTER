@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { signIn, authClient } from "@/lib/auth/client";
 
 type Mode = "link" | "password";
@@ -14,6 +14,11 @@ export default function SignInPage() {
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [unverified, setUnverified] = useState(false);
+  // Remember how this person last signed in on this device.
+  useEffect(() => {
+    try { if (window.localStorage.getItem("ar.signin.mode") === "password") setMode("password"); } catch { /* blocked storage */ }
+  }, []);
+  const pickMode = (m: Mode) => { setMode(m); try { window.localStorage.setItem("ar.signin.mode", m); } catch { /* ignore */ } };
 
   const sendLink = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,7 +97,7 @@ export default function SignInPage() {
             <button type="submit" disabled={busy} className="w-full rounded-lg bg-teal px-4 py-2.5 font-semibold text-white hover:bg-teal-700 disabled:opacity-50">
               {busy ? "Sending…" : "Email me a sign-in link"}
             </button>
-            <button type="button" onClick={() => { setMode("password"); setError(null); }} className="w-full text-center text-sm font-medium text-slate-500 hover:text-navy">
+            <button type="button" onClick={() => { pickMode("password"); setError(null); }} className="w-full text-center text-sm font-medium text-slate-500 hover:text-navy">
               Sign in with a password instead
             </button>
           </form>
@@ -107,7 +112,7 @@ export default function SignInPage() {
               {busy ? "Signing in…" : "Sign in"}
             </button>
             <div className="flex items-center justify-between text-sm">
-              <button type="button" onClick={() => { setMode("link"); setError(null); setNote(null); }} className="font-medium text-slate-500 hover:text-navy">← Email me a link</button>
+              <button type="button" onClick={() => { pickMode("link"); setError(null); setNote(null); }} className="font-medium text-slate-500 hover:text-navy">← Email me a link</button>
               <button type="button" onClick={forgotPassword} disabled={busy} className="font-medium text-teal hover:underline disabled:opacity-50">Forgot password?</button>
             </div>
           </form>

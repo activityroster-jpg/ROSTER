@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { setAvailabilityAction } from "@/app/(app)/portal/availability/actions";
+import { setAvailabilityAction, setAvailabilityBulkAction } from "@/app/(app)/portal/availability/actions";
 import type { SlotCode } from "@/lib/db/schema";
 
 type Status = "available" | "tentative" | "unavailable";
@@ -55,6 +55,29 @@ export function AvailabilityWeeks({ weeksAhead, initial }: { weeksAhead: number;
     });
   };
 
+  // Set every slot of the visible week in one go (optimistic, with rollback).
+  const setWeek = (statusFor: (date: string, slot: SlotCode) => Status | null) => {
+    const entries = days.flatMap((d) => SLOTS.map((slot) => ({ date: d.iso, slot, status: statusFor(d.iso, slot) })));
+    const before = { ...state };
+    setState((s) => {
+      const next = { ...s };
+      for (const e of entries) { if (e.status) next[`${e.date}|${e.slot}`] = e.status; else delete next[`${e.date}|${e.slot}`]; }
+      return next;
+    });
+    startTransition(async () => {
+      const res = await setAvailabilityBulkAction(entries);
+      if (!res.ok) setState(before);
+    });
+  };
+  const copyLastWeek = () => {
+    const prev = mondays[idx - 1] ?? addDaysIso(monday, -7);
+    setWeek((date, slot) => state[`${addDaysIso(date, -7)}|${slot}`] ?? null);
+    void prev;
+  };
+  const allFree = () => setWeek(() => "available");
+  const clearWeek = () => setWeek(() => null);
+  const hasLastWeek = idx > 0 && days.some((d) => SLOTS.some((slot) => state[`${addDaysIso(d.iso, -7)}|${slot}`]));
+
   return (
     <div>
       {/* Week navigation */}
@@ -75,6 +98,13 @@ export function AvailabilityWeeks({ weeksAhead, initial }: { weeksAhead: number;
           <button key={m} type="button" onClick={() => setIdx(i)} aria-label={`Week of ${fmtRange(m)}`}
             className={`h-2 rounded-full transition-all ${i === idx ? "w-5 bg-teal" : "w-2 bg-slate-300 hover:bg-slate-400"}`} />
         ))}
+      </div>
+
+      {/* Quick fills */}
+      <div className="mb-3 flex flex-wrap items-center justify-center gap-2 text-xs">
+        <button type="button" onClick={copyLastWeek} disabled={pending || !hasLastWeek} title={hasLastWeek ? "Same pattern as the week before" : "Set the week before first"} className="rounded-full border border-slate-300 px-3 py-1 font-medium text-navy hover:bg-slate-50 disabled:opacity-40">Same as last week</button>
+        <button type="button" onClick={allFree} disabled={pending} className="rounded-full border border-slate-300 px-3 py-1 font-medium text-navy hover:bg-slate-50 disabled:opacity-40">All free</button>
+        <button type="button" onClick={clearWeek} disabled={pending} className="rounded-full border border-slate-300 px-3 py-1 font-medium text-slate-500 hover:bg-slate-50 disabled:opacity-40">Clear week</button>
       </div>
 
       {/* Grid */}

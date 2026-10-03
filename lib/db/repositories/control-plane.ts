@@ -11,8 +11,11 @@ import {
   type SecurityEventKind,
   membership,
   organisation,
+  session,
   slugReservation,
+  twoFactor,
   user,
+  verification,
   webhookEvent,
   type ErrorReport,
   type ErrorReportStatus,
@@ -170,6 +173,26 @@ export class ControlPlaneRepository {
     const m = rows[0];
     if (!m || m.status !== "active") return null;
     return { role: m.role };
+  }
+
+  /**
+   * Remove a login that never got a centre (sign-up provisioning failed after
+   * the auth user was created). Only ever called for a user with no membership;
+   * refuses otherwise so it can never delete a real member.
+   */
+  async deleteOrphanUser(userId: string): Promise<boolean> {
+    const ms = await this.db.select({ id: membership.id }).from(membership).where(eq(membership.userId, userId)).limit(1);
+    if (ms.length) return false;
+    const u = await this.userById(userId);
+    if (!u) return false;
+    await this.db.delete(session).where(eq(session.userId, userId));
+    await this.db.delete(account).where(eq(account.userId, userId));
+    await this.db.delete(twoFactor).where(eq(twoFactor.userId, userId));
+    await this.db.delete(pushToken).where(eq(pushToken.userId, userId));
+    await this.db.delete(trustedDevice).where(eq(trustedDevice.userId, userId));
+    await this.db.delete(verification).where(eq(verification.identifier, u.email));
+    await this.db.delete(user).where(eq(user.id, userId));
+    return true;
   }
 
   // --- Slug soft-reservation (during checkout) -----------------------------

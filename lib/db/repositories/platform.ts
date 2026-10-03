@@ -33,6 +33,7 @@ import {
   type ProspectStatus,
 } from "@/lib/db/schema";
 import { DEFAULT_PRICING } from "@/lib/pricing";
+import { parseProspectStatuses, primaryProspectStatus, prospectStatusRank } from "@/lib/marketing";
 
 export interface OrgUsage {
   instructors: number;
@@ -199,6 +200,59 @@ export class PlatformRepository {
     }
     const inserted = await this.insertProspects(fresh);
     return { inserted, skipped };
+  }
+
+  /**
+   * Collapse duplicate prospects (same rule as the import: name matches and the
+   * postcodes agree or one is missing). The row furthest along the outreach
+   * pipeline is kept — ties go to the one with notes, then the oldest — and it
+   * inherits the union of the others' touchpoints and any notes they had.
+   */
+  async dedupeProspects(): Promise<{ removed: number; groups: number }> {
+    const rows = await this.db.select().from(marketingProspect).orderBy(asc(marketingProspect.createdAt));
+    const norm = (v: string | null | undefined) => (v ?? "").trim().toLowerCase().replace(/\s+/g, "");
+    const byName = new Map<string, MarketingProspect[]>();
+    for (const r of rows) {
+      const n = norm(r.name);
+      if (!n) continue;
+      byName.set(n, [...(byName.get(n) ?? []), r]);
+    }
+    let removed = 0;
+    let groups = 0;
+    for (const same of byName.values()) {
+      if (same.length < 2) continue;
+      // Split a name group into postcode clusters. Rows with a postcode are
+      // placed first (equal postcodes share a cluster); rows without one then
+      // join the first cluster, so a blank never bridges two different places.
+      const clusters: MarketingProspect[][] = [];
+      const ordered = [...same].sort((a, b) => Number(norm(a.postcode) === "") - Number(norm(b.postcode) === ""));
+      for (const r of ordered) {
+        const pc = norm(r.postcode);
+        const hit = pc === ""
+          ? clusters[0]
+          : clusters.find((c) => c.some((x) => norm(x.postcode) === pc));
+        if (hit) hit.push(r); else clusters.push([r]);
+      }
+      for (const c of clusters) {
+        if (c.length < 2) continue;
+        groups++;
+        const score = (r: MarketingProspect) => prospectStatusRank(parseProspectStatuses(r.statuses, r.status)) * 10 + (r.notes ? 1 : 0);
+        const keeper = [...c].sort((a, b) => score(b) - score(a) || a.createdAt.getTime() - b.createdAt.getTime())[0]!;
+        const others = c.filter((r) => r.id !== keeper.id);
+        const statuses = [...new Set(c.flatMap((r) => parseProspectStatuses(r.statuses, r.status)))];
+        const notes = [...new Set(c.map((r) => (r.notes ?? "").trim()).filter(Boolean))].join("\n");
+        const fill = <K extends keyof MarketingProspect>(k: K) => keeper[k] ?? others.map((o) => o[k]).find((v) => v != null && v !== "") ?? keeper[k];
+        await this.updateProspect(keeper.id, {
+          statuses: JSON.stringify(statuses),
+          status: primaryProspectStatus(statuses),
+          notes: notes || null,
+          email: fill("email"), website: fill("website"), linkedinUrl: fill("linkedinUrl"), contactName: fill("contactName"), contactRole: fill("contactRole"),
+          addressLine1: fill("addressLine1"), addressLine2: fill("addressLine2"), city: fill("city"), postcode: fill("postcode"), region: fill("region"),
+        });
+        for (const o of others) { await this.deleteProspect(o.id); removed++; }
+      }
+    }
+    return { removed, groups };
   }
 
   async updateProspect(id: string, patch: Partial<Omit<NewMarketingProspect, "id" | "createdAt">>): Promise<MarketingProspect | null> {

@@ -1,6 +1,6 @@
 import type { Repositories } from "@/lib/db/repositories";
 import type { TenantContext } from "@/lib/tenant/context";
-import { putDocument } from "@/lib/r2";
+import { deleteDocument, putDocument } from "@/lib/r2";
 import { writeAudit } from "./audit";
 
 export type DocumentKind = "compliance" | "qualification";
@@ -53,6 +53,11 @@ export async function attachDocument(
   const patch: { docKey: string; expiryDate?: string } = { docKey };
   if (input.expiryDate && /^\d{4}-\d{2}-\d{2}$/.test(input.expiryDate)) patch.expiryDate = input.expiryDate;
   await repo.update(ctx, input.itemId, patch);
+  // Replacing a file: drop the old object so it can't be downloaded any more.
+  const previous = (item as { docKey?: string | null }).docKey;
+  if (previous && previous !== docKey) {
+    try { await deleteDocument(ctx, previous); } catch (err) { console.error("[documents] old file not removed:", (err as Error).message); }
+  }
   await writeAudit(repos, ctx, {
     action: "attach_document",
     entity: input.kind === "compliance" ? "compliance_item" : "qualification",

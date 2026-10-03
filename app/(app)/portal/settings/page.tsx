@@ -7,6 +7,11 @@ import { Card } from "@/components/ui";
 import { SwitchCentre } from "@/components/mobile/SwitchCentre";
 import { SignOutButton } from "@/components/portal/SignOutButton";
 import { NativeSettings } from "@/components/mobile/NativeSettings";
+import { ProfileCard } from "@/components/portal/ProfileCard";
+import { PasswordCard } from "@/components/portal/PasswordCard";
+import { getAuth } from "@/lib/auth";
+import { eq } from "drizzle-orm";
+import { instructor as instructorTable } from "@/lib/db/schema";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +23,12 @@ export default async function PortalSettingsPage() {
   const onApex = host.kind === "apex";
   const joinHref = onApex ? "/app/join" : `https://${env.APP_APEX_DOMAIN}/app/join`;
   const ms = await repos.control.membershipsForUser(ctx.userId);
+  const me = (await repos.tenant.instructor.list(ctx, eq(instructorTable.userId, ctx.userId)))[0] ?? null;
+  let hasPassword = false;
+  try {
+    const accounts = await (await getAuth()).api.listUserAccounts({ headers: new Headers(await headers()) });
+    hasPassword = accounts.some((a) => a.providerId === "credential");
+  } catch { hasPassword = false; }
   const centres = ms
     .filter((m) => m.role === "instructor" || m.status === "active")
     .map((m) => ({ organisationId: m.organisationId, name: m.name, slug: m.slug, status: m.orgStatus !== "active" ? "suspended" : m.status, current: m.organisationId === ctx.organisationId }))
@@ -33,6 +44,13 @@ export default async function PortalSettingsPage() {
         <SwitchCentre centres={centres} joinHref={joinHref} />
       </Card>
 
+      {me ? (
+        <Card>
+          <h2 className="mb-3 font-semibold text-navy">About you</h2>
+          <ProfileCard name={me.name} phone={me.phone} email={me.email} />
+        </Card>
+      ) : null}
+
       <Card>
         <h2 className="mb-1 font-semibold text-navy">Notifications</h2>
         <p className="mb-2 text-xs text-slate-500">In-app notifications are always on. Choose whether you also get emails.</p>
@@ -45,6 +63,7 @@ export default async function PortalSettingsPage() {
         <h2 className="mb-1 font-semibold text-navy">Account</h2>
         <p className="mb-2 text-xs text-slate-500">Your PIN is the quick second check when you sign in. Change it any time; if you&apos;ve forgotten it, you can reset it on the PIN screen at your next sign-in.</p>
         <Link href="/set-pin?next=/portal/settings" className="mb-4 inline-block text-sm font-semibold text-teal">Change my PIN →</Link>
+        <div className="mb-4 border-t border-slate-100 pt-3"><PasswordCard hasPassword={hasPassword} /></div>
         <SignOutButton to={onApex ? "/app" : "/sign-in"} />
       </Card>
     </div>

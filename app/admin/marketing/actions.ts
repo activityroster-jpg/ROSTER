@@ -19,6 +19,14 @@ async function platform() {
 
 const str = (fd: FormData, k: string) => (String(fd.get(k) ?? "").trim() || null);
 
+/** Merge duplicate centres (same name + postcode) into one row each. */
+export async function dedupeProspectsAction(): Promise<ProspectResult> {
+  const p = await platform();
+  const r = await p.dedupeProspects();
+  revalidatePath("/admin/marketing");
+  return { ok: true, count: r.removed, message: r.removed ? `Merged ${r.removed} duplicate row${r.removed === 1 ? "" : "s"} across ${r.groups} centre${r.groups === 1 ? "" : "s"}` : "No duplicates found" };
+}
+
 /** Add one prospect from the admin form. */
 export async function createProspectAction(_prev: ProspectResult, fd: FormData): Promise<ProspectResult> {
   const repo = await platform();

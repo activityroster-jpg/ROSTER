@@ -60,6 +60,10 @@ export async function assignStaff(
     t.courseSession.list(ctx),
   ]);
   if (!course) return { ok: false, reason: "invalid", detail: "Course not found" };
+  // Both ids must belong to this centre (findById is tenant scoped).
+  const [instructorRow, roleRow] = await Promise.all([t.instructor.findById(ctx, input.instructorId), t.roleType.findById(ctx, input.roleTypeId)]);
+  if (!instructorRow) return { ok: false, reason: "invalid", detail: "Instructor not found" };
+  if (!roleRow) return { ok: false, reason: "invalid", detail: "Role not found" };
 
   // Staff can be rostered before a course's sessions are finalised; the conflict
   // check below simply has nothing to compare against until sessions exist.

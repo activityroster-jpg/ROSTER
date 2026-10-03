@@ -82,6 +82,7 @@ export function DocumentManager({ items, admin }: { items: DocItem[]; admin: boo
                 <div className="flex flex-none items-center gap-2">
                   <StatusPill tone={st.tone}>{st.label}</StatusPill>
                   {d.hasFile && d.docKey ? <a href={`/api/documents/download?key=${encodeURIComponent(d.docKey)}`} target="_blank" rel="noreferrer" className="text-xs font-semibold text-teal hover:underline">View</a> : null}
+                  {d.hasFile ? <button type="button" onClick={() => { setSel(`${d.kind}:${d.itemId}`); setMsg(`Choose the new file for ${d.name} below — it replaces the old one.`); fileRef.current?.focus(); fileRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }); }} className="text-xs font-medium text-slate-500 hover:text-navy">Replace</button> : null}
                   {admin ? (
                     <>
                       <input type="date" defaultValue={d.expiryDate ?? ""} onChange={(e) => saveMeta(d, { expiryDate: e.target.value || null })} className="rounded border border-slate-300 px-2 py-1 text-xs" title="Expiry date" />

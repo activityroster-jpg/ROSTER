@@ -7,6 +7,7 @@ import { isPlatformAdminEmail } from "@/lib/platform/admin";
 import { authSecret } from "@/lib/security/secrets";
 import { TOTP_COOKIE, TOTP_MAX_AGE_S, totpCookieValue } from "@/lib/auth/pin";
 import { recordSecurityEvent } from "@/lib/security/events";
+import { isPwnedPassword, PWNED_MESSAGE } from "@/lib/security/pwned";
 
 type Result = { ok: boolean; error?: string };
 
@@ -51,6 +52,7 @@ export async function setAdminPasswordAction(password: string): Promise<Result> 
   const s = await adminSession();
   if (!s) return { ok: false, error: "Please sign in again." };
   if (typeof password !== "string" || password.length < 10) return { ok: false, error: "Use at least 10 characters." };
+  if (await isPwnedPassword(password)) return { ok: false, error: PWNED_MESSAGE };
   try {
     const accounts = await s.auth.api.listUserAccounts({ headers: s.h });
     if (accounts.some((a) => a.providerId === "credential")) return { ok: false, error: "You already have a password — use it below." };

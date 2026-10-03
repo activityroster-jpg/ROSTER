@@ -23,6 +23,7 @@ export async function createEquipmentAction(_prev: ActionState, formData: FormDa
     identifier: (formData.get("identifier") as string) || undefined,
   });
   if (!parsed.success) return { ok: false, error: "Pick a type and give it a name" };
+  if (!(await repos.tenant.equipmentType.findById(ctx, parsed.data.equipmentTypeId))) return { ok: false, error: "Pick one of your equipment types" };
 
   const created = await repos.tenant.equipment.insert(ctx, {
     equipmentTypeId: parsed.data.equipmentTypeId,

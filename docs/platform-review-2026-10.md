@@ -170,10 +170,18 @@ two-factor step at sign-in + authenticator required for the Dev Center; Dev
 Center search / needs-attention / last-active; universal-link files served from
 env; passwords 10+; Learning Centre updated for all of the above.
 
-Still open (low): CSP nonces for inline scripts; HIBP breach check; import row
-cap and batched inserts; scoped `findById` before equipment/location/course_staff
-inserts; audit for email-preference changes; possible duplicate prospect rows
-after the RYA load; Dev Center errors → link to the centre and Ghost Mode.
+Also done (later the same day): sign-up reserves the web address, removes an
+orphaned login if provisioning fails; breached-password check (HIBP k-anonymity)
+on sign-up and every set/change password; imports capped at 500 rows and
+`insertMany` chunked for D1; scoped id checks in `assignStaff`, equipment and
+location creation; email-preference changes audited; sign-in remembers the last
+method; instructor schedule shows the location; Dev Center errors link to the
+centre with a Ghost button; "Merge duplicates" for prospects; availability
+"Same as last week" / "All free" / "Clear week"; document Replace (old file
+removed); profile (name, mobile) and password cards in the app Settings.
+
+Still open (low): CSP nonces for inline scripts (static marketing pages make a
+per-request nonce awkward; revisit with a browser test).
 
 User-side: run `d1-roster-payroll-trial-migration.sql`; set `BETTER_AUTH_SECRET`
 (and optionally `TOKEN_ENCRYPTION_KEY`), rotate the exposed Stripe keys, set
