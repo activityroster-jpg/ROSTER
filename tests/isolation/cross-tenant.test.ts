@@ -116,4 +116,23 @@ describe("cross-tenant isolation", () => {
     const fromB = await repo.findById(ctxB, created.id);
     expect(fromB).toBeNull();
   });
+
+  it("insertMany() forces the caller's org id on every row, in every chunk", async () => {
+    const repo = new TenantRepository(db, instructor);
+    const rows = Array.from({ length: 23 }, (_, i) => ({
+      organisationId: orgB.organisationId, // smuggled; must be overwritten
+      name: `Bulk ${i}`,
+      email: `bulk${i}@x.test`,
+      employmentType: "employed",
+      status: "active",
+    }));
+    const created = await repo.insertMany(ctxA, rows as never);
+    expect(created).toHaveLength(23);
+    expect(created.every((r) => r.organisationId === orgA.organisationId)).toBe(true);
+
+    const ctxB: TenantContext = { organisationId: orgB.organisationId, slug: "bravo", userId: "user-b", role: "admin" };
+    for (const r of created) expect(await repo.findById(ctxB, r.id)).toBeNull();
+    const seenByB = await repo.list(ctxB);
+    expect(seenByB.some((r) => r.name.startsWith("Bulk "))).toBe(false);
+  });
 });

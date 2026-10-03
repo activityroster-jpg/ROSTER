@@ -30,7 +30,8 @@ const ACTION: Record<string, string> = {
   open_shift_create: "Broadcast an open shift", open_shift_claim: "Offered to cover an open shift", open_shift_confirm: "Confirmed cover for an open shift", open_shift_cancel: "Cancelled an open shift",
   clock_in: "Clocked in", clock_out: "Clocked out", set_availability: "Changed availability", attach_document: "Uploaded a document for", update_document_meta: "Updated the details of",
   self_add_licence: "Added a cert to their own record", self_add_licence_type: "Added a new cert type", integration_connect: "Connected", integration_remove: "Disconnected", integration_sync: "Checked", integration_apply_changes: "Applied changes from",
-  booking_create: "Added a booking", booking_status: "Changed a booking", publish_week: "Published the roster for", confirm_assignment: "Confirmed their place on", decline_assignment: "Declined their place on",
+  booking_create: "Added a booking", booking_status: "Changed a booking", publish_week: "Published the roster for", republish_week: "Re-published the roster for", confirm_assignment: "Confirmed their place on", decline_assignment: "Declined their place on",
+  set_students: "Set the number of students on", restore_defaults: "Restored the RYA course list", set_notify_email: "Changed email notifications for", update_profile: "Updated the details of",
 };
 
 export function describeAudit(action: string, entity: string, after?: string | null): string {
@@ -49,6 +50,6 @@ export function describeAudit(action: string, entity: string, after?: string | n
   }
   if (!verb) return `${action.replace(/_/g, " ")} — ${what}${detail}`;
   // Verbs that already name the object don't repeat it.
-  const standalone = /^(Imported|Added the RYA|Chose|Changed what|Changed the|Issued|Switched|Refreshed|Approved payroll|Re-opened payroll|Asked for leave|Broadcast|Offered|Confirmed cover|Cancelled an|Clocked|Changed availability|Added a cert to|Added a new cert|Added a booking|Changed a booking|Set a pay rate|Changed a pay rate|Removed a pay rate)/.test(verb);
+  const standalone = /^(Imported|Added the RYA|Restored the RYA|Chose|Changed what|Changed the lunch|Changed the time clock|Issued|Switched|Refreshed|Approved payroll|Re-opened payroll|Asked for leave|Broadcast|Offered|Confirmed cover|Cancelled an|Clocked|Changed availability|Added a cert to|Added a new cert|Added a booking|Changed a booking|Set a pay rate|Changed a pay rate|Removed a pay rate)/.test(verb);
   return standalone ? `${verb}${detail}` : `${verb} ${what}${detail}`;
 }
