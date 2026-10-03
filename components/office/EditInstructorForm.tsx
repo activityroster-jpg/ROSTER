@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { setInstructorStatusAction, updateInstructorAction } from "@/app/(app)/office/staff/actions";
 
 /** Edit an instructor's basics, and mark them as having left (or bring them back). */
-export function EditInstructorForm({ instructor }: { instructor: { id: string; name: string; email: string | null; phone: string | null; employmentType: string; status: string } }) {
+export function EditInstructorForm({ instructor }: { instructor: { id: string; name: string; email: string | null; phone: string | null; employmentType: string; status: string; dateOfBirth?: string | null } }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [open, setOpen] = useState(false);
@@ -13,11 +13,12 @@ export function EditInstructorForm({ instructor }: { instructor: { id: string; n
   const [email, setEmail] = useState(instructor.email ?? "");
   const [phone, setPhone] = useState(instructor.phone ?? "");
   const [employment, setEmployment] = useState(instructor.employmentType);
+  const [dob, setDob] = useState(instructor.dateOfBirth ?? "");
   const [msg, setMsg] = useState<string | null>(null);
   const left = instructor.status === "inactive";
 
   const save = () => start(async () => {
-    const r = await updateInstructorAction(instructor.id, { name, email, phone, employmentType: employment });
+    const r = await updateInstructorAction(instructor.id, { name, email, phone, employmentType: employment, dateOfBirth: dob });
     setMsg(r.ok ? "Saved" : r.error ?? "Could not save");
     if (r.ok) { setOpen(false); router.refresh(); }
   });
@@ -38,6 +39,7 @@ export function EditInstructorForm({ instructor }: { instructor: { id: string; n
             <label className="text-xs font-medium text-slate-500">Full name<input value={name} onChange={(e) => setName(e.target.value)} className={`mt-1 ${field}`} /></label>
             <label className="text-xs font-medium text-slate-500">Email<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={`mt-1 ${field}`} /></label>
             <label className="text-xs font-medium text-slate-500">Phone<input value={phone} onChange={(e) => setPhone(e.target.value)} className={`mt-1 ${field}`} /></label>
+            <label className="text-xs font-medium text-slate-500">Date of birth<input type="date" value={dob} onChange={(e) => setDob(e.target.value)} className={`mt-1 ${field}`} /></label>
             <label className="text-xs font-medium text-slate-500">Employment
               <select value={employment} onChange={(e) => setEmployment(e.target.value)} className={`mt-1 ${field}`}>
                 <option value="employed">Employed</option><option value="freelance">Freelance</option><option value="volunteer">Volunteer</option>

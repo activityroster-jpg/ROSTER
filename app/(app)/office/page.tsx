@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { isUnder18 } from "@/lib/domain/age";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { requireTenant } from "@/lib/tenant/require";
@@ -136,6 +137,7 @@ export default async function DashboardPage() {
         {clockOn ? <Tile href="/office/timeclock" label="Hours logged today" value={(attendance.minutesToday / 60).toFixed(1)} sub={`${attendance.started} started`} /> : null}
         <Tile href="/office/rota" label="Sessions this week" value={weekSessions} sub="View / print roster" tone="teal" />
         {!clockOn ? <Tile href="/office/staff" label="Instructors" value={staff.filter((s) => s.instructor.status === "active").length} sub="On the team" /> : null}
+        {staff.some((s) => s.instructor.status === "active" && isUnder18(s.instructor.dateOfBirth)) ? <Tile href="/office/staff" label="Under 18 on the team" value={staff.filter((s) => s.instructor.status === "active" && isUnder18(s.instructor.dateOfBirth)).length} sub="Higher-privacy defaults apply" tone="teal" /> : null}
         {!clockOn ? <Tile href="/office/finance" label="Paid hours this month" value={"→"} sub="Review payroll" /> : null}
       </div>
 

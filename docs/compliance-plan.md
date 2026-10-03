@@ -73,7 +73,7 @@ Effort is a rough guide: S = under half a day, M = one to two days, L = a week o
   explicit approval.
 - **Conor:** approve the first deploy through the new gate.
 
-### P0-E Under-18 controls (M, needs C6)
+### P0-E Under-18 controls — done 3 October (parent accounts and the welfare role follow the Phase 2 roles work)
 
 - Date of birth on staff profiles (required for new staff, prompted for existing ones);
   under-18 flag computed daily and shown on the roster and staff list; lifts at 18.

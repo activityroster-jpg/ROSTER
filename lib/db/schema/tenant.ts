@@ -293,6 +293,16 @@ export const instructor = sqliteTable("instructor", {
   status: text("status", { enum: INSTRUCTOR_STATUSES }).notNull().default("active"),
   /** Whether to also email this instructor when they're notified (in-app is always on). */
   notifyEmail: boolCol("notify_email").default(true),
+  /** YYYY-MM-DD. Drives the under-18 flag (computed on read, lifts at 18) and the working-time rules. */
+  dateOfBirth: text("date_of_birth"),
+  /** Parent or guardian for under-18s. Phone and email are sealed (AES-GCM) at rest. */
+  guardianName: text("guardian_name"),
+  guardianPhone: text("guardian_phone"),
+  guardianEmail: text("guardian_email"),
+  /** Emergency contact for every staff member. Name and phone are sealed at rest; admin-only, every view audited. */
+  emergencyName: text("emergency_name"),
+  emergencyPhone: text("emergency_phone"),
+  emergencyRelationship: text("emergency_relationship"),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 }, (t) => [

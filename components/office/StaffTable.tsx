@@ -23,6 +23,8 @@ export interface StaffRow {
   teachesAdult: boolean;
   /** "inactive" = has left; kept for history, hidden from pickers. */
   status: string;
+  under18?: boolean;
+  hasDob?: boolean;
 }
 
 type Tab = "all" | "fit" | "blocked" | "expiring" | "left";
@@ -121,7 +123,7 @@ export function StaffTable({ rows }: { rows: StaffRow[] }) {
                       <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-teal/10 text-xs font-semibold text-teal">
                         {r.name.split(" ").map((p) => p[0]).slice(0, 2).join("")}
                       </span>
-                      <Link href={`/office/staff/${r.id}`} className="font-medium text-navy hover:text-teal hover:underline">{r.name}</Link>
+                      <Link href={`/office/staff/${r.id}`} className="font-medium text-navy hover:text-teal hover:underline">{r.name}</Link>{r.under18 ? <span className="ml-2 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800">Under 18</span> : null}{r.hasDob === false ? <span className="ml-2 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500" title="Add their date of birth so the right protections and hours rules apply">No DOB</span> : null}
                     </div>
                   </td>
                   <td className="px-4 py-3 text-slate-500">{r.email ?? "—"}</td>

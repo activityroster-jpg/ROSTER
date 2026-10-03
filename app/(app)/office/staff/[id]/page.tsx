@@ -10,6 +10,9 @@ import { EditInstructorForm } from "@/components/office/EditInstructorForm";
 import { PayRateForm } from "@/components/office/PayRateForm";
 import { listPayRates } from "@/lib/services/pay-rates";
 import { hasFeature } from "@/lib/features";
+import { ageOn, isUnder18 } from "@/lib/domain/age";
+import { readProtectedContacts } from "@/lib/services/protected-contacts";
+import { ProtectedContactsForm } from "@/components/office/ProtectedContactsForm";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +40,10 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
   const left = instructor.status === "inactive";
   const membership = instructor.userId ? await repos.control.membershipFor(instructor.userId, ctx.organisationId) : null;
   const inviteStatus = !instructor.userId ? "none" : membership?.status === "active" ? "accepted" : "pending";
+  const under18 = isUnder18(instructor.dateOfBirth);
+  const age = ageOn(instructor.dateOfBirth);
+  const contacts = await readProtectedContacts(repos, ctx, instructor);
+  const hasPermissionSlot = documents.some((d) => /parental permission/i.test(d.name));
   const docItems: DocItem[] = documents.map((d) => ({
     kind: d.kind, itemId: d.itemId, name: d.name, expiryDate: d.expiryDate, mandatory: d.mandatory, hasFile: d.hasFile, docKey: d.docKey, verified: d.verified,
   }));
@@ -46,21 +53,26 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
       <Link href="/office/staff" className="text-sm text-slate-400 hover:text-slate-600">← Instructors</Link>
       <div className="mb-6 mt-1 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-semibold text-navy">{instructor.name}{left ? <span className="ml-2 align-middle rounded-full bg-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-600">Left</span> : null}</h1>
-          <p className="text-sm text-slate-500"><span className="capitalize">{instructor.employmentType}</span> · {instructor.email ?? "no email"}{instructor.phone ? ` · ${instructor.phone}` : ""}</p>
+          <h1 className="font-display text-2xl font-semibold text-navy">{instructor.name}{left ? <span className="ml-2 align-middle rounded-full bg-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-600">Left</span> : null}{under18 ? <span className="ml-2 align-middle rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">Under 18</span> : null}</h1>
+          <p className="text-sm text-slate-500"><span className="capitalize">{instructor.employmentType}</span> · {instructor.email ?? "no email"}{instructor.phone ? ` · ${instructor.phone}` : ""}{age !== null ? ` · ${age} years old` : " · no date of birth yet"}</p>
         </div>
         <div className="flex items-center gap-3">
           {instructor.email && !left ? <InviteInstructorButton instructorId={instructor.id} status={inviteStatus} /> : null}
           {left ? null : fit.fit ? <StatusPill tone="covered">Fit to roster</StatusPill> : <StatusPill tone="conflict">{fitReason(fit) || "Not cleared"}</StatusPill>}
         </div>
       </div>
-      <div className="mb-6"><EditInstructorForm instructor={{ id: instructor.id, name: instructor.name, email: instructor.email, phone: instructor.phone, employmentType: instructor.employmentType, status: instructor.status }} /></div>
+      <div className="mb-6"><EditInstructorForm instructor={{ id: instructor.id, name: instructor.name, email: instructor.email, phone: instructor.phone, employmentType: instructor.employmentType, status: instructor.status, dateOfBirth: instructor.dateOfBirth }} /></div>
 
       <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
         <div className="space-y-6">
           <Card>
             <h2 className="mb-3 font-semibold text-navy">Certs &amp; documents</h2>
             <DocumentManager items={docItems} admin />
+          </Card>
+
+          <Card>
+            <h2 className="mb-1 font-semibold text-navy">Emergency &amp; guardian contacts <span className="text-xs font-normal text-slate-400">admin only</span></h2>
+            <ProtectedContactsForm instructorId={instructor.id} initial={contacts} under18={under18} hasPermissionSlot={hasPermissionSlot} />
           </Card>
 
           <Card>

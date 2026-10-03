@@ -66,10 +66,22 @@ export const complianceTypeSchema = z.object({
   active: z.boolean().default(true),
 });
 
+export const dobSchema = z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, "Enter the date of birth as YYYY-MM-DD");
+
+export const protectedContactsSchema = z.object({
+  guardianName: z.string().trim().max(120).optional().or(z.literal("")),
+  guardianPhone: z.string().trim().max(40).optional().or(z.literal("")),
+  guardianEmail: z.string().trim().toLowerCase().email("Enter a valid guardian email").max(200).optional().or(z.literal("")),
+  emergencyName: z.string().trim().max(120).optional().or(z.literal("")),
+  emergencyPhone: z.string().trim().max(40).optional().or(z.literal("")),
+  emergencyRelationship: z.string().trim().max(60).optional().or(z.literal("")),
+});
+
 export const instructorSchema = z.object({
   name: z.string().min(1),
   email: z.string().email().optional().or(z.literal("")),
   phone: z.string().optional(),
+  dateOfBirth: dobSchema.optional().or(z.literal("")),
   employmentType: z.enum(EMPLOYMENT_TYPES).default("employed"),
   status: z.enum(INSTRUCTOR_STATUSES).default("active"),
 });

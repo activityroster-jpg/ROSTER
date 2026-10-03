@@ -1,4 +1,5 @@
 import { requireTenant } from "@/lib/tenant/require";
+import { isUnder18 } from "@/lib/domain/age";
 import { listStaffWithFit } from "@/lib/services/staff";
 import { getTeachingMatrix } from "@/lib/services/teaching";
 import { Card } from "@/components/ui";
@@ -57,16 +58,21 @@ export default async function StaffPage() {
       teachesYouth: teach.some((c) => c.audience === "youth" || c.audience === "all"),
       teachesAdult: teach.some((c) => c.audience === "adult" || c.audience === "all"),
       status: instructor.status,
+      under18: isUnder18(instructor.dateOfBirth),
+      hasDob: Boolean(instructor.dateOfBirth),
     };
   });
   const currentCount = rows.filter((r) => r.status !== "inactive").length;
+  const missingDob = rows.filter((r) => r.status !== "inactive" && !r.hasDob).length;
+  const under18Count = rows.filter((r) => r.status !== "inactive" && r.under18).length;
 
   return (
     <div>
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-bold text-navy">Instructors</h1>
-          <p className="text-sm text-slate-500">{currentCount} instructor{currentCount === 1 ? "" : "s"} · fit-to-roster and the courses each can teach, from the certs they hold</p>
+          <p className="text-sm text-slate-500">{currentCount} instructor{currentCount === 1 ? "" : "s"}{under18Count ? ` · ${under18Count} under 18` : ""} · fit-to-roster and the courses each can teach, from the certs they hold</p>
+          {missingDob ? <p className="mt-1 text-xs text-amber-700">{missingDob} {missingDob === 1 ? "person has" : "people have"} no date of birth yet. Add it from their profile so under-18 protections and working-hours rules apply correctly.</p> : null}
         </div>
         <div className="flex flex-none items-center gap-3">
           <GuideLink topic="staff" />

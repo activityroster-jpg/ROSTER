@@ -8,7 +8,7 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { requireTenant } from "@/lib/tenant/require";
 import { getAuth } from "@/lib/auth";
-import { instructorSchema, complianceItemSchema, qualificationSchema } from "@/lib/validation/entities";
+import { dobSchema, protectedContactsSchema, instructorSchema, complianceItemSchema, qualificationSchema } from "@/lib/validation/entities";
 import { writeAudit } from "@/lib/services/audit";
 import { linkInstructorUser } from "@/lib/services/invite";
 import { toggleOnboarding } from "@/lib/services/hr";
@@ -18,6 +18,8 @@ import { EMPLOYMENT_TYPES, PAY_UNITS, type EmploymentType, type PayUnit } from "
 import { deletePayRate, setPayRate } from "@/lib/services/pay-rates";
 import { rebuildHoursFromRoster } from "@/lib/services/hours";
 import { z } from "zod";
+import { plausibleStaffDob } from "@/lib/domain/age";
+import { sealToken } from "@/lib/security/token-crypto";
 
 /** Absolute URL to a centre's own subdomain (magic links must land on it, not the apex). */
 function centreUrl(slug: string, path: string): string {
@@ -43,6 +45,9 @@ export async function setupInstructorAction(_prev: ActionState, formData: FormDa
     return { ok: false, error: capUpgradeMessage(organisation) };
   }
   const email = String(formData.get("email") ?? "").trim().toLowerCase() || null;
+  const dobParsed = dobSchema.safeParse(formData.get("dateOfBirth"));
+  if (!dobParsed.success) return { ok: false, error: "Enter their date of birth. It decides which working-hours rules and privacy protections apply." };
+  if (!plausibleStaffDob(dobParsed.data)) return { ok: false, error: "That date of birth doesn't look right (staff must be between 13 and 90)." };
   const employmentType: EmploymentType = (EMPLOYMENT_TYPES as readonly string[]).includes(String(formData.get("employmentType")))
     ? (String(formData.get("employmentType")) as EmploymentType)
     : "employed";
@@ -51,7 +56,7 @@ export async function setupInstructorAction(_prev: ActionState, formData: FormDa
   const qualIds = [...new Set(formData.getAll("qual").map(String).filter(Boolean))];
   const checkIds = [...new Set(formData.getAll("check").map(String).filter(Boolean))];
 
-  const instructor = await repos.tenant.instructor.insert(ctx, { name, email, phone: null, employmentType, status: "active" });
+  const instructor = await repos.tenant.instructor.insert(ctx, { name, email, phone: null, employmentType, status: "active", dateOfBirth: dobParsed.data });
 
   // Courses they can teach (validated against active course types).
   const validCourses = new Set((await repos.tenant.courseType.list(ctx)).map((c) => c.id));
@@ -131,6 +136,7 @@ export async function createInstructorAction(_prev: ActionState, formData: FormD
     name: formData.get("name"),
     email: formData.get("email") || undefined,
     phone: formData.get("phone") || undefined,
+    dateOfBirth: formData.get("dateOfBirth") || "",
     employmentType: formData.get("employmentType") || "employed",
     status: "active",
   });
@@ -145,6 +151,7 @@ export async function createInstructorAction(_prev: ActionState, formData: FormD
     name: parsed.data.name,
     email: parsed.data.email || null,
     phone: parsed.data.phone || null,
+    dateOfBirth: parsed.data.dateOfBirth || null,
     employmentType: parsed.data.employmentType,
     status: parsed.data.status,
   });
@@ -279,19 +286,21 @@ const editSchema = z.object({
   name: z.string().trim().min(1, "Enter a name").max(120),
   email: z.string().trim().toLowerCase().email("Enter a valid email").max(200).or(z.literal("")),
   phone: z.string().trim().max(40),
+  dateOfBirth: dobSchema.or(z.literal("")),
   employmentType: z.enum(EMPLOYMENT_TYPES),
 });
 
 /** Edit an instructor's name, email, phone or employment type. Audited. */
-export async function updateInstructorAction(instructorId: string, input: { name: string; email: string; phone: string; employmentType: string }): Promise<ActionState> {
+export async function updateInstructorAction(instructorId: string, input: { name: string; email: string; phone: string; employmentType: string; dateOfBirth?: string }): Promise<ActionState> {
   const { ctx, repos } = await requireTenant({ role: "admin" });
-  const parsed = editSchema.safeParse(input);
+  const parsed = editSchema.safeParse({ ...input, dateOfBirth: input.dateOfBirth ?? "" });
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Please check the details" };
+  if (parsed.data.dateOfBirth && !plausibleStaffDob(parsed.data.dateOfBirth)) return { ok: false, error: "That date of birth doesn't look right (staff must be between 13 and 90)." };
   const before = await repos.tenant.instructor.findById(ctx, instructorId);
   if (!before) return { ok: false, error: "Instructor not found" };
-  const patch = { name: parsed.data.name, email: parsed.data.email || null, phone: parsed.data.phone || null, employmentType: parsed.data.employmentType };
+  const patch = { name: parsed.data.name, email: parsed.data.email || null, phone: parsed.data.phone || null, employmentType: parsed.data.employmentType, dateOfBirth: parsed.data.dateOfBirth || before.dateOfBirth || null };
   await repos.tenant.instructor.update(ctx, instructorId, patch);
-  await writeAudit(repos, ctx, { action: "update", entity: "instructor", entityId: instructorId, before: { name: before.name, email: before.email, phone: before.phone, employmentType: before.employmentType }, after: patch });
+  await writeAudit(repos, ctx, { action: "update", entity: "instructor", entityId: instructorId, before: { name: before.name, email: before.email, phone: before.phone, employmentType: before.employmentType, dateOfBirth: before.dateOfBirth }, after: patch });
   revalidatePath("/office/staff");
   revalidatePath(`/office/staff/${instructorId}`);
   return { ok: true, message: "Saved" };
@@ -347,4 +356,56 @@ export async function deletePayRateAction(id: string): Promise<ActionState> {
   revalidatePath("/office/staff");
   revalidatePath("/office/finance");
   return { ok: true, message: "Rate removed" };
+}
+
+
+/**
+ * Guardian (under-18s) and emergency contact details. Stored sealed (AES-GCM)
+ * and shown only on the admin staff page. The audit entry records that the
+ * fields changed, never their values.
+ */
+export async function updateProtectedContactsAction(instructorId: string, input: unknown): Promise<ActionState> {
+  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const parsed = protectedContactsSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Please check the details" };
+  const before = await repos.tenant.instructor.findById(ctx, instructorId);
+  if (!before) return { ok: false, error: "Instructor not found" };
+  const d = parsed.data;
+  const seal = async (v: string | undefined) => (v && v.trim() ? await sealToken(v.trim()) : null);
+  const patch = {
+    guardianName: d.guardianName?.trim() || null,
+    guardianPhone: await seal(d.guardianPhone),
+    guardianEmail: await seal(d.guardianEmail),
+    emergencyName: await seal(d.emergencyName),
+    emergencyPhone: await seal(d.emergencyPhone),
+    emergencyRelationship: d.emergencyRelationship?.trim() || null,
+  };
+  await repos.tenant.instructor.update(ctx, instructorId, patch);
+  const changed = (Object.keys(patch) as (keyof typeof patch)[]).filter((k) => (patch[k] ?? null) !== (before[k] ?? null));
+  await writeAudit(repos, ctx, { action: "update_protected_contacts", entity: "instructor", entityId: instructorId, after: { fields: changed } });
+  revalidatePath(`/office/staff/${instructorId}`);
+  return { ok: true, message: "Saved" };
+}
+
+/**
+ * Give an under-18 a "Parental permission to work" slot: a compliance item
+ * (upload + date + verified flag) against a compliance type with code
+ * PARENTAL_PERMISSION, created for the centre if it doesn't have one yet.
+ */
+export async function addParentalPermissionAction(instructorId: string): Promise<ActionState> {
+  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const inst = await repos.tenant.instructor.findById(ctx, instructorId);
+  if (!inst) return { ok: false, error: "Instructor not found" };
+  const types = await repos.tenant.complianceType.list(ctx);
+  let type = types.find((t) => t.code === "PARENTAL_PERMISSION");
+  if (!type) {
+    type = await repos.tenant.complianceType.insert(ctx, { name: "Parental permission to work (under 18)", code: "PARENTAL_PERMISSION", mandatory: false, expiryTracked: true, active: true });
+    await writeAudit(repos, ctx, { action: "create", entity: "compliance_type", entityId: type.id, after: { name: type.name } });
+  }
+  const existing = (await repos.tenant.complianceItem.list(ctx)).find((c) => c.instructorId === instructorId && c.complianceTypeId === type!.id);
+  if (existing) return { ok: true, message: "Already on their record" };
+  const item = await repos.tenant.complianceItem.insert(ctx, { instructorId, complianceTypeId: type.id, reference: null, expiryDate: null, verified: false });
+  await writeAudit(repos, ctx, { action: "create", entity: "compliance_item", entityId: item.id, after: { type: type.name } });
+  revalidatePath(`/office/staff/${instructorId}`);
+  return { ok: true, message: "Added. Upload the signed permission and set its date." };
 }

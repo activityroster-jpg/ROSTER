@@ -96,7 +96,7 @@ counts only, no content.
 | Requirement | Pri | Status | Evidence / notes |
 | --- | --- | --- | --- |
 | HTTPS only, TLS ≥1.2, HSTS | P0 | Done / Dashboard | HSTS with preload (`next.config.mjs:29`). "Always Use HTTPS" and minimum TLS are Cloudflare dashboard settings. |
-| App-level AES-GCM for emergency contacts and vetting | P1 | Partial | AES-GCM helper exists for integration tokens (`lib/security/token-crypto.ts`, `TOKEN_ENCRYPTION_KEY`). Not applied to vetting; emergency contacts do not exist yet. |
+| App-level AES-GCM for emergency contacts and vetting | P1 | Partial | Emergency and guardian contacts are sealed with AES-GCM (`sealToken`). Vetting documents: Phase 2. |
 | Parameterised queries only | P0 | Done | Drizzle throughout; no string-built SQL in app code. |
 | Zod on every request, output encoding | P0 | Done | `lib/validation/*`, Zod pass completed this week; React escapes output; `escapeHtml` for emails. |
 | CSRF on every mutating request | P0 | Done | Next.js server-action origin checks; Better Auth CSRF; cookies SameSite=Lax. |
@@ -113,7 +113,7 @@ counts only, no content.
 
 | Requirement | Pri | Status | Evidence / notes |
 | --- | --- | --- | --- |
-| Append-only audit log: who, what, when, record, IP/device; logins, failures, permission changes, sensitive views, exports, deletions, DB access | P0 | Partial | Two logs: `audit_log` (tenant changes to roster, resources, settings, billing) and `security_event` (logins, PIN, devices, 2FA, ghost, invites, with IP/country/agent via `lib/security/events.ts`). **Not logged:** views of sensitive records, admin database access. Data exports are logged since 3 October. Append-only is by convention (no delete method), not enforced in the database. |
+| Append-only audit log: who, what, when, record, IP/device; logins, failures, permission changes, sensitive views, exports, deletions, DB access | P0 | Partial | Two logs: `audit_log` (tenant changes to roster, resources, settings, billing) and `security_event` (logins, PIN, devices, 2FA, ghost, invites, with IP/country/agent via `lib/security/events.ts`). **Not logged:** admin database access. Data exports and views of emergency/guardian contacts are logged since 3 October. Append-only is by convention (no delete method), not enforced in the database. |
 | Schools can view and export their own audit log | P1 | Partial | `app/(app)/office/change-log` shows the centre's changes in plain English; no export; security events not shown. |
 | Clean application logs, 30–90 day retention | P0 | Partial | Sentry events scrubbed (`lib/observability/sentry.ts:31`). Worker console logs are not retained unless Logpush is on (dashboard). A few `console.info` lines include recipient email addresses (`lib/mail/index.ts:83`), to tidy. |
 | Alerts to Conor: email for all, text for critical | P1 | Partial | Error reports land in the Dev Center (`app/admin/errors`) with email on first occurrence. No downtime, backup, deploy-failure or mass-export alerts; no SMS. |
@@ -138,10 +138,10 @@ counts only, no content.
 
 | Requirement | Pri | Status | Evidence / notes |
 | --- | --- | --- | --- |
-| Required date of birth, automatic under-18 flag | P0 | Missing | No DOB field on `instructor`. |
-| Under-18 contact details hidden except Owner/Admin/Welfare | P0 | Missing | Instructors can see colleagues on the rota; phone/email visibility is not role-gated by age. |
+| Required date of birth, automatic under-18 flag | P0 | Done | `instructor.dateOfBirth` (required for new staff, prompted for existing on the staff list); under-18 computed on read from `lib/domain/age.ts`, so it lifts at 18 without a job; badges on the staff list, profile and dashboard. Migration 0042. |
+| Under-18 contact details hidden except Owner/Admin/Welfare | P0 | Done | Confirmed: the portal and mobile app show colleagues' names and shift times only; contact details appear in the admin office alone (`app/(app)/portal`, `app/api/mobile`). A welfare role comes with Phase 2 roles. |
 | No private adult-to-minor messaging | P0 | Done | No messaging feature at all; notifications are rota/system announcements. |
-| Parent/guardian contact, written permission upload, parent accounts | P0 | Missing | |
+| Parent/guardian contact, written permission upload, parent accounts | P0 | Partial | Guardian name, phone (sealed) and email (sealed) on under-18 profiles; "Parental permission to work" compliance slot with upload, date and verified flag (seeded for new centres, one click for existing). Parent accounts need the Phase 2 roles. |
 | No marketing or profiling of under-18s | P0 | Done | Marketing is B2B to centres only (`lib/outreach`); platform users are never emailed marketing. |
 | Under-18 photos off by default | P1 | Done (by absence) | No profile photos exist. |
 | Vetting tracker: status, date, expiry, reminders; store status only; warn or block | P1 | Conflict C5 | `compliance_item` tracks DBS/first aid/safeguarding with expiry and feeds the fit-to-roster check (warn or block via the licence setting). It also allows uploading the certificate file. The spec says never store certificate contents. |
@@ -211,7 +211,7 @@ counts only, no content.
 | Requirement | Pri | Status | Evidence / notes |
 | --- | --- | --- | --- |
 | Daily rota digest (opt-in email + PDF) | P0 | Missing | A printable weekly rota exists (`app/(app)/office/rota`); no scheduled email. |
-| Emergency sheet (today's staff, students, emergency contacts), restricted and logged | P0 | Conflict C6 | No emergency contacts and no student names are held, so the sheet as specified cannot be produced without first adding (and protecting) that data. |
+| Emergency sheet (today's staff, students, emergency contacts), restricted and logged | P0 | Partial | Emergency contacts now exist (sealed, admin-only, every view audited: `lib/services/protected-contacts.ts`). The printable sheet itself is block P0-H. Students stay out by decision C6. |
 | External uptime monitoring and status page | P0 | Missing | |
 | Incident banner via KV flag | P1 | Missing | |
 | Maintenance page | P1 | Missing | |

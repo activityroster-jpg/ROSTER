@@ -51,7 +51,7 @@ export function AddInstructorForm({ courses, quals, checks }: { courses: CourseC
 
   return (
     <form action={action} className="space-y-5">
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-4">
         <div>
           <label className="mb-1 block text-sm font-semibold text-navy">Full name</label>
           <input name="name" required className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal" />
@@ -59,6 +59,11 @@ export function AddInstructorForm({ courses, quals, checks }: { courses: CourseC
         <div>
           <label className="mb-1 block text-sm font-semibold text-navy">Email</label>
           <input name="email" type="email" placeholder="so we can send their invite" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal" />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-semibold text-navy">Date of birth</label>
+          <input name="dateOfBirth" type="date" required className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal" />
+          <p className="mt-1 text-[11px] text-slate-400">Needed for under-18 protections and working-hours rules.</p>
         </div>
         <div>
           <label className="mb-1 block text-sm font-semibold text-navy">Employment</label>
