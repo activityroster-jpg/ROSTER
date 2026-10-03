@@ -15,11 +15,8 @@ jobs:
             if [ "$code" != "200" ] && [ "$code" != "404" ] && [ "$code" != "302" ] && [ "$code" != "307" ]; then head -c 600 /tmp/body; echo; fi
           done
           curl -sS https://activityroster.com/api/health; echo
-      - name: Which build is live (a route that only exists in newer builds)
+      - name: Which build is live (compare the built chunk names)
         run: |
           for host in activityroster.com staging.activityroster.com; do
-            for path in /api/office/young-worker-register /api/office/rota.pdf /learn; do
-              code=$(curl -sS -o /tmp/b -w '%{http_code}' --max-time 30 "https://$host$path" || echo ERR)
-              echo "$host$path -> $code ($(wc -c </tmp/b) bytes)"
-            done
+            echo "$host: $(curl -sS --max-time 30 "https://$host/learn" | grep -o 'learn/page-[a-z0-9]*\.js' | head -1) $(curl -sS --max-time 30 "https://$host/" | grep -o 'chunks/main-app-[a-z0-9]*\.js' | head -1)"
           done
