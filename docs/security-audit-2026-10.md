@@ -195,3 +195,39 @@ will stop sign-in in production instead of silently using a public string.
 3. **M1 + M5** — `escapeHtml` everywhere, global cap on error-report mail.
 4. **M3, M7, L2–L5** — small hardening items.
 5. **Unfamiliar-device re-auth** (your planned feature) builds on 1 and 2.
+
+## Update (3 October 2026, branch `claude/new-session-2wxbwe`)
+
+New controls since the fix round:
+
+- **Trusted devices** keyed on device id + country (not IP), so mobile networks
+  no longer trigger constant password prompts; IP still recorded.
+- **Two-factor at sign-in**: the web and app sign-in now handle an enrolled
+  authenticator (`/two-factor`: TOTP, emailed code, backup code). Before this an
+  admin who enabled 2FA could not complete a password sign-in.
+- **Dev Center requires an authenticator app** (`/admin/security`): one-off
+  enrolment (with a set-password step for link-only owners) and a code once per
+  session, bound to the session id in a signed cookie, on top of the allow-list,
+  device check and PIN.
+- **Integration API keys encrypted at rest** (AES-256-GCM, key from
+  `TOKEN_ENCRYPTION_KEY` or derived from the auth secret), legacy plaintext still
+  read, and **redacted from the GDPR export**.
+- **Breached-password check** (HIBP k-anonymity, 2.5 s timeout, fails open) on
+  sign-up and every set/change of password; new passwords 10+ characters.
+- **Sign-up ordering**: web address reserved first; an orphaned login is removed
+  if provisioning fails; the hold is released afterwards.
+- **Scoped id checks** before `course_staff`, equipment and location inserts.
+- **Imports** capped at 500 rows; batched inserts chunked for D1.
+- **CSP** `connect-src` narrowed to our origin, Stripe and Sentry ingest.
+- **Trial end** enforced server-side: read-only (writes refused in the
+  repository layer), then locked, with only billing reachable.
+- **Audit** now covers email-preference changes, profile edits, publish/confirm
+  and payroll overrides.
+
+Still open: nonce-based CSP for inline scripts (static marketing pages make a
+per-request nonce awkward); dependency bumps for dev tooling.
+
+**Operator action:** run `d1-roster-payroll-trial-migration.sql` in D1; set
+`TOKEN_ENCRYPTION_KEY` (optional) and rotate the Stripe keys that were pasted
+into chat; enrol an authenticator at `/admin/security` on the first Dev Center
+visit.

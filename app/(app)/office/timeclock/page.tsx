@@ -2,16 +2,24 @@ import { requireTenant } from "@/lib/tenant/require";
 import { getAttendanceBoard } from "@/lib/services/timeclock";
 import { Card, StatusPill } from "@/components/ui";
 import { fmtClockTime, todayIso } from "@/lib/domain";
+import { addDays } from "@/lib/services/schedule";
 import { GuideLink } from "@/components/GuideLink";
 
 export const dynamic = "force-dynamic";
 
 const fmt = (ms: number | null) => (ms == null ? "—" : fmtClockTime(ms));
 
-export default async function TimeClockPage() {
+const ISO = /^\d{4}-\d{2}-\d{2}$/;
+const fmtDay = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
+
+export default async function TimeClockPage({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
   const { ctx, repos } = await requireTenant({ role: "admin" });
+  const sp = await searchParams;
   const today = todayIso();
-  const board = await getAttendanceBoard(repos, ctx, today);
+  const day = typeof sp.date === "string" && ISO.test(sp.date) ? sp.date : today;
+  const isToday = day === today;
+  const board = await getAttendanceBoard(repos, ctx, day);
+  const nav = "rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-navy hover:bg-slate-50";
 
   return (
     <div>
@@ -19,12 +27,20 @@ export default async function TimeClockPage() {
         <h1 className="font-display text-2xl font-semibold text-navy">Time clock</h1>
         <GuideLink topic="time" />
       </div>
-      <p className="mb-6 text-sm text-slate-500">Attendance for {today} — built from instructor clock-ins.</p>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-slate-500">{isToday ? "Today, " : ""}{fmtDay(day)} — built from instructor clock-ins.</p>
+        <div className="flex items-center gap-2">
+          <a href={`/office/timeclock?date=${addDays(day, -1)}`} className={nav}>← Prev day</a>
+          {!isToday ? <a href="/office/timeclock" className={nav}>Today</a> : null}
+          <a href={`/office/timeclock?date=${addDays(day, 1)}`} className={`${nav} ${day >= today ? "pointer-events-none opacity-40" : ""}`} aria-disabled={day >= today}>Next day →</a>
+          <form method="get" className="ml-1"><input type="date" name="date" defaultValue={day} max={today} aria-label="Pick a day" className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm" /><button type="submit" className="ml-1 rounded-lg bg-navy px-3 py-1.5 text-sm font-semibold text-white">Go</button></form>
+        </div>
+      </div>
 
       <div className="mb-4 grid gap-3 sm:grid-cols-3">
-        <Card><p className="text-sm font-semibold text-navy">On the water now</p><p className="mt-1 text-3xl font-semibold text-starboard">{board.onWater}</p><p className="text-xs text-slate-500">Clocked in, not yet out</p></Card>
-        <Card><p className="text-sm font-semibold text-navy">Started today</p><p className="mt-1 text-3xl font-semibold text-navy">{board.started}</p><p className="text-xs text-slate-500">Instructors clocked in</p></Card>
-        <Card><p className="text-sm font-semibold text-navy">Hours logged today</p><p className="mt-1 text-3xl font-semibold text-navy">{(board.minutesToday / 60).toFixed(1)}</p><p className="text-xs text-slate-500">Actual, from clock times</p></Card>
+        {isToday ? <Card><p className="text-sm font-semibold text-navy">On the water now</p><p className="mt-1 text-3xl font-semibold text-starboard">{board.onWater}</p><p className="text-xs text-slate-500">Clocked in, not yet out</p></Card> : <Card><p className="text-sm font-semibold text-navy">Still clocked in</p><p className="mt-1 text-3xl font-semibold text-amber">{board.onWater}</p><p className="text-xs text-slate-500">Never clocked out that day</p></Card>}
+        <Card><p className="text-sm font-semibold text-navy">{isToday ? "Started today" : "Clocked in"}</p><p className="mt-1 text-3xl font-semibold text-navy">{board.started}</p><p className="text-xs text-slate-500">Instructors clocked in</p></Card>
+        <Card><p className="text-sm font-semibold text-navy">{isToday ? "Hours logged today" : "Hours logged"}</p><p className="mt-1 text-3xl font-semibold text-navy">{(board.minutesToday / 60).toFixed(1)}</p><p className="text-xs text-slate-500">Actual, from clock times</p></Card>
       </div>
 
       <Card className="p-0">
@@ -42,7 +58,7 @@ export default async function TimeClockPage() {
           <tbody className="divide-y divide-slate-100">
             {board.rows.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-slate-400">No one has clocked in today.</td>
+                <td colSpan={6} className="px-4 py-8 text-center text-slate-400">{isToday ? "No one has clocked in today." : "No clock-ins on this day."}</td>
               </tr>
             ) : (
               board.rows.map((r) => (
