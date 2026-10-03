@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   createProspectAction,
   importProspectsAction,
+  loadRyaDirectoryAction,
   seedSampleProspectsAction,
   type ProspectResult,
 } from "@/app/admin/marketing/actions";
@@ -57,14 +58,23 @@ export function ProspectTools({ hasRows }: { hasRows: boolean }) {
     }
   };
   const seed = () => startTransition(async () => { await seedSampleProspectsAction(); router.refresh(); });
+  const loadDirectory = () => {
+    if (!confirm("Add every centre from the RYA directory (2,138)? Centres already on your list are skipped and keep their statuses.")) return;
+    setImportMsg(null);
+    startTransition(async () => { const res = await loadRyaDirectoryAction(); setImportMsg(res); router.refresh(); });
+  };
 
   return (
     <div className="mb-5">
       <div className="flex flex-wrap gap-2">
         <button onClick={() => setTab(tab === "add" ? "none" : "add")} className={`rounded-lg px-3 py-1.5 text-sm font-semibold ${tab === "add" ? "bg-navy text-white" : "border border-slate-300 text-navy hover:bg-slate-50"}`}>+ Add prospect</button>
         <button onClick={() => setTab(tab === "import" ? "none" : "import")} className={`rounded-lg px-3 py-1.5 text-sm font-semibold ${tab === "import" ? "bg-navy text-white" : "border border-slate-300 text-navy hover:bg-slate-50"}`}>Import CSV</button>
+        <button onClick={loadDirectory} disabled={pending} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-navy hover:bg-slate-50 disabled:opacity-50">{pending ? "Working…" : "Load RYA directory"}</button>
         {!hasRows ? <button onClick={seed} disabled={pending} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-500 hover:bg-slate-50">Add example rows</button> : null}
       </div>
+      {tab !== "import" && importMsg ? (
+        <p role="status" className={`mt-2 text-sm ${importMsg.ok ? "text-starboard" : "text-port"}`}>{importMsg.ok ? importMsg.message : importMsg.error}</p>
+      ) : null}
 
       {tab === "add" ? (
         <form action={addAction} className="mt-3 rounded-card border border-slate-200 bg-white p-4">

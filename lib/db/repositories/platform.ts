@@ -162,15 +162,28 @@ export class PlatformRepository {
     const existing = await this.db
       .select({ name: marketingProspect.name, postcode: marketingProspect.postcode })
       .from(marketingProspect);
-    const keyOf = (name: string, postcode: string | null | undefined) =>
-      `${name.trim().toLowerCase()}|${(postcode ?? "").trim().toLowerCase()}`;
-    const seen = new Set(existing.map((r) => keyOf(r.name, r.postcode)));
+    const norm = (v: string | null | undefined) => (v ?? "").trim().toLowerCase().replace(/\s+/g, "");
+    // A row is a duplicate when the name matches and the postcodes agree — or
+    // either side has no postcode (older rows were often imported without one).
+    const byName = new Map<string, Set<string>>();
+    for (const r of existing) {
+      const n = norm(r.name);
+      if (!byName.has(n)) byName.set(n, new Set());
+      byName.get(n)!.add(norm(r.postcode));
+    }
+    const isDupe = (name: string, postcode: string | null | undefined) => {
+      const codes = byName.get(norm(name));
+      if (!codes) return false;
+      const pc = norm(postcode);
+      return pc === "" || codes.has("") || codes.has(pc);
+    };
     const fresh: typeof rows = [];
     let skipped = 0;
     for (const r of rows) {
-      const k = keyOf(r.name, r.postcode);
-      if (seen.has(k)) { skipped++; continue; }
-      seen.add(k);
+      if (isDupe(r.name, r.postcode)) { skipped++; continue; }
+      const n = norm(r.name);
+      if (!byName.has(n)) byName.set(n, new Set());
+      byName.get(n)!.add(norm(r.postcode));
       fresh.push(r);
     }
     const inserted = await this.insertProspects(fresh);

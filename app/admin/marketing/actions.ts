@@ -7,6 +7,8 @@ import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { PROSPECT_STATUSES, type NewMarketingProspect, type ProspectStatus } from "@/lib/db/schema";
 import { primaryProspectStatus } from "@/lib/marketing";
 import { parseCsv } from "@/lib/import/parse";
+import { addressComplete, parseProspectStatuses, primaryProspectStatus as primaryOf } from "@/lib/marketing";
+import RYA_DIRECTORY from "@/lib/marketing/rya-directory.json";
 
 export type ProspectResult = { ok: boolean; error?: string; message?: string; count?: number };
 
@@ -140,4 +142,55 @@ export async function seedSampleProspectsAction(): Promise<ProspectResult> {
   const count = await repo.insertProspects(samples);
   revalidatePath("/admin/marketing");
   return { ok: true, count, message: `Added ${count} example prospects.` };
+}
+
+/**
+ * Load the bundled RYA "Where's my nearest" directory (every listed training
+ * centre and club). Idempotent: centres already on the list are skipped, so
+ * existing statuses (e.g. letter sent) are untouched.
+ */
+export async function loadRyaDirectoryAction(): Promise<ProspectResult> {
+  const repo = await platform();
+  const rows = (RYA_DIRECTORY as Array<Record<string, string>>).map((r) => ({
+    name: r.name,
+    region: r.region || null,
+    addressLine1: r.addressLine1 || null,
+    addressLine2: r.addressLine2 || null,
+    city: r.city || null,
+    postcode: r.postcode || null,
+    country: r.country || "United Kingdom",
+    email: r.email || null,
+    website: r.website || null,
+    linkedinUrl: r.linkedinUrl || null,
+    contactName: r.contactName || null,
+    contactRole: r.contactRole || null,
+    notes: r.notes || null,
+    source: "rya_directory",
+  }));
+  const { inserted, skipped } = await repo.insertProspectsUnique(rows);
+  revalidatePath("/admin/marketing");
+  return { ok: true, count: inserted, message: `Added ${inserted} centre${inserted === 1 ? "" : "s"} from the RYA directory${skipped ? `; ${skipped} already on your list (kept as they were)` : ""}.` };
+}
+
+/**
+ * Pick the next N prospects that have a complete postal address and no letter
+ * yet, mark them "letter sent" NOW (so the batch is reserved), and return their
+ * ids for the printable batch page.
+ */
+export async function prepareNextLettersAction(count = 10): Promise<{ ok: boolean; ids?: string[]; error?: string }> {
+  const repo = await platform();
+  const n = Math.max(1, Math.min(50, Math.round(Number(count) || 10)));
+  const all = await repo.listProspects(10_000, 0);
+  const next = all
+    .filter((p) => addressComplete({ addressLine1: p.addressLine1 ?? "", city: p.city ?? "", postcode: p.postcode ?? "" }))
+    .filter((p) => !parseProspectStatuses(p.statuses, p.status).includes("letter_sent"))
+    .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime() || a.name.localeCompare(b.name))
+    .slice(0, n);
+  if (next.length === 0) return { ok: false, error: "Everyone with a complete address already has a letter marked as sent." };
+  for (const p of next) {
+    const statuses = Array.from(new Set([...parseProspectStatuses(p.statuses, p.status), "letter_sent" as const]));
+    await repo.setProspectStatuses(p.id, statuses, primaryOf(statuses));
+  }
+  revalidatePath("/admin/marketing");
+  return { ok: true, ids: next.map((p) => p.id) };
 }
