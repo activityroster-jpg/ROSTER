@@ -26,12 +26,14 @@ export default async function AdminErrorsPage() {
   }
   const groups = [...buckets.values()];
   const openCount = reports.filter((r) => r.status !== "resolved").length;
+  const cspCount = reports.filter((r) => r.digest === "csp-report-only").length;
 
   return (
     <div>
       <h1 className="mb-1 font-display text-2xl font-bold text-navy">Error log</h1>
       <p className="mb-6 text-sm text-slate-500">
         Issues users have reported, bucketed by centre. {openCount} open · {reports.length} total. You&apos;re also emailed each one.
+        {cspCount ? <> {cspCount} {cspCount === 1 ? "is a" : "are"} browser CSP report{cspCount === 1 ? "" : "s"} (report-only policy — nothing was blocked; resolve them once reviewed).</> : null}
       </p>
 
       {groups.length === 0 ? (
