@@ -134,24 +134,42 @@ Effort is a rough guide: S = under half a day, M = one to two days, L = a week o
 - Done for the working rules and change management; CLAUDE.md now also points at the
   rule packs (P0-F). Remaining after P0-G: a final pass over the spec's owner checklist.
 
-## Phase 2 (P1): next quarter
+## Phase 2 (P1): approved by Conor 3 October 2026, in this order
 
-- Roles and permission matrix: welfare officer, senior instructor, under-18, parent
-  accounts; per-centre adjustments; contact-detail opt-in. Parent consent records.
-- Per-person data tools: export (JSON/CSV), correct, freeze, delete/anonymise with linked
-  records; deletion log replayed after restores.
-- Retention settings per data type with scheduled deletion and 14-day reminders.
+### P1-A Per-person data rights — built 3–4 October
+- Staff profile → Data & privacy: export (JSON/CSV) of everything held about a person,
+  restrict processing (not rostered, not contacted; reason recorded), anonymise with typed
+  confirmation (identifying fields, certs and files, availability, leave, pay rates,
+  notifications and login removed; roster and payroll history kept as "Former staff
+  member"). `deletion_log` records each anonymisation by one-way hash; "Replay deletions"
+  re-applies them after a restore (Dev Center, centre page).
+- Change log shows sign-in events for the centre's accounts and downloads as CSV.
+- Migration 0049. Guide updated.
+
+### P1-B Sessions and alerts
+- "Log out all devices", configurable idle timeout per centre, alerts to Conor for repeated
+  unusual sign-ins and mass exports, incident banner (KV flag) and maintenance page.
+
+### P1-C Email queue and prospects
+- Queue with retries and a failed-send list; bounce handling for system email; prospect
+  source and lawful-basis columns; sole-trader flag.
+
+### P1-D Retention
+- Retention settings per data type with scheduled deletion and 14-day reminders; the
+  deletion log replayed after restores (done in P1-A) extends to retention deletions.
+
+### P1-E Vetting and reminders
 - App-level encryption of vetting status; remove certificate uploads for vetting types
-  (C5); qualification and vetting expiry reminder emails.
-- "Log out all devices", configurable idle timeout, email-change alerts, alerts to Conor
-  for repeated unusual sign-ins and mass exports.
-- Email queue with retries and a failed-send list; bounce handling for system email.
-- Prospect source and lawful-basis columns; sole-trader flag.
-- Audit log export for centres; security events in the centre's change log.
-- Incident banner (KV flag), maintenance page, monthly DNS zone export.
-- Working-time checks for adults; plain-English under-18 privacy page; free-text warnings.
-- Customer-facing security overview page; accessibility statement and WCAG 2.2 AA audit;
-  Cloudflare WAF managed rules; sub-processor change notices.
+  (decision C5); qualification and vetting expiry reminder emails.
+
+### P1-F Roles and families
+- Roles and permission matrix: welfare officer, senior instructor, under-18, parent
+  accounts; per-centre adjustments; contact-detail opt-in; parent consent records.
+
+### P1-G Public pages and the rest
+- Working-time checks for adults; plain-English under-18 privacy page; free-text warnings;
+  customer-facing security overview; accessibility statement and WCAG 2.2 AA audit;
+  Cloudflare WAF managed rules; monthly DNS zone export; sub-processor change notices.
 
 ## Phase 3 (P2): when customers ask or revenue allows
 

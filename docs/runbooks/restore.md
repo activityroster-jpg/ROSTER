@@ -56,3 +56,12 @@ Use when Time Travel cannot reach the point you need.
 
 Stripe subscriptions (live in Stripe), Resend domains, GitHub. Sessions and PINs are in
 the database and come back with it; people may need to sign in again.
+
+
+## After any restore: replay deletions
+
+A restore brings back everyone who was in the database at the bookmark, including people a
+centre has since anonymised. Before handing the centre back, open its Dev Center page and
+press **Replay deletions** (top of the Leaving box). It re-applies every anonymisation in
+that centre's deletion log and reports how many it re-applied. Do this for every centre
+that was restored.

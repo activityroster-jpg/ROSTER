@@ -72,6 +72,8 @@ export async function assignStaff(
   // Both ids must belong to this centre (findById is tenant scoped).
   const [instructorRow, roleRow] = await Promise.all([t.instructor.findById(ctx, input.instructorId), t.roleType.findById(ctx, input.roleTypeId)]);
   if (!instructorRow) return { ok: false, reason: "invalid", detail: "Instructor not found" };
+  if (instructorRow.restrictedAt) return { ok: false, reason: "invalid", detail: "Processing is restricted for this person (Staff → Data & privacy); they cannot be rostered until the restriction is lifted" };
+  if (instructorRow.anonymisedAt) return { ok: false, reason: "invalid", detail: "This record has been anonymised and cannot be rostered" };
   if (!roleRow) return { ok: false, reason: "invalid", detail: "Role not found" };
 
   // Staff can be rostered before a course's sessions are finalised; the conflict

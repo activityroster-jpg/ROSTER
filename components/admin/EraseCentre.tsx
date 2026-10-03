@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { eraseCentreAction } from "@/app/admin/actions";
+import { eraseCentreAction, replayDeletionsAction } from "@/app/admin/actions";
 
 /**
  * The last step of a centre leaving. Only active once the 90-day export
@@ -22,8 +22,19 @@ export function EraseCentre({ id, slug, status, deadline }: { id: string; slug: 
     setMsg(r.ok ? "Erased. The centre's former admins have been emailed." : r.error ?? "Failed");
     if (r.ok) router.push("/admin");
   });
+  const [replayMsg, setReplayMsg] = useState<string | null>(null);
+  const replay = () => start(async () => {
+    const r = await replayDeletionsAction(id);
+    setReplayMsg(r.ok ? `Checked ${r.checked ?? 0} past anonymisation${(r.checked ?? 0) === 1 ? "" : "s"}; re-applied ${r.reapplied ?? 0}.` : r.error ?? "Failed");
+  });
   return (
     <div className="mt-4 rounded-lg border border-port/30 bg-port/5 p-3 text-sm">
+      <div className="mb-3 flex flex-wrap items-center gap-2 border-b border-port/20 pb-3">
+        <span className="font-semibold text-navy">After a restore from backup</span>
+        <button disabled={pending} onClick={replay} className="rounded-lg border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-navy hover:bg-slate-50 disabled:opacity-50">Replay deletions</button>
+        <span className="text-xs text-slate-500">Re-anonymises anyone this centre erased who has come back with a restore. Safe to run any time.</span>
+        {replayMsg ? <span className="w-full text-xs text-navy">{replayMsg}</span> : null}
+      </div>
       <p className="font-semibold text-port">Leaving</p>
       {!leaving ? (
         <p className="mt-1 text-xs text-slate-500">Set the status to <strong>suspended</strong> or <strong>cancelled</strong> when a centre leaves. Its admins are emailed a confirmation with a 90-day export window and a reminder 14 days before it closes; you are emailed when the window has closed.</p>

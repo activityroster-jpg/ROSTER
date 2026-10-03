@@ -409,3 +409,31 @@ export async function addParentalPermissionAction(instructorId: string): Promise
   revalidatePath(`/office/staff/${instructorId}`);
   return { ok: true, message: "Added. Upload the signed permission and set its date." };
 }
+
+// --- Per-person data rights (P1-A) -------------------------------------------
+import { anonymisePerson, setRestriction } from "@/lib/services/person-data";
+
+/** Restrict processing (kept but not rostered or contacted) or lift it. Reason is recorded. */
+export async function setRestrictionAction(instructorId: string, restricted: boolean, reason: string): Promise<ActionState> {
+  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const r = (reason ?? "").trim().slice(0, 300);
+  if (restricted && r.length < 3) return { ok: false, error: "Give a short reason (it goes in the change log)" };
+  const row = await setRestriction(repos, ctx, instructorId, restricted, restricted ? r : null);
+  if (!row) return { ok: false, error: "Not found" };
+  revalidatePath(`/office/staff/${instructorId}`);
+  revalidatePath("/office/staff");
+  return { ok: true, message: restricted ? "Processing restricted" : "Restriction lifted" };
+}
+
+/** Anonymise a person: typed-name confirmation; irreversible. */
+export async function anonymiseInstructorAction(instructorId: string, typedName: string): Promise<ActionState> {
+  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const i = await repos.tenant.instructor.findById(ctx, instructorId);
+  if (!i) return { ok: false, error: "Not found" };
+  if (typedName.trim().toLowerCase() !== i.name.trim().toLowerCase()) return { ok: false, error: "Type their name exactly as shown to confirm" };
+  const res = await anonymisePerson(repos, ctx, instructorId);
+  if (!res.ok) return { ok: false, error: res.reason };
+  revalidatePath(`/office/staff/${instructorId}`);
+  revalidatePath("/office/staff");
+  return { ok: true, message: "Anonymised. Roster and payroll history stays, attached to “Former staff member”." };
+}

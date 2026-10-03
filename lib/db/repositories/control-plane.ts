@@ -449,6 +449,16 @@ export class ControlPlaneRepository {
   }
 
   /** Ghost Mode visits to one centre (owner-side log), newest first. */
+  /** Sign-in and account events for a centre's members, for the centre's own change log. */
+  async listSecurityEventsForOrg(organisationId: string, limit = 200) {
+    return this.db
+      .select({ id: securityEvent.id, kind: securityEvent.kind, userId: securityEvent.userId, country: securityEvent.country, createdAt: securityEvent.createdAt })
+      .from(securityEvent)
+      .where(eq(securityEvent.organisationId, organisationId))
+      .orderBy(desc(securityEvent.createdAt))
+      .limit(limit);
+  }
+
   async listGhostVisits(organisationId: string, limit = 10) {
     const rows = await this.db
       .select({ id: securityEvent.id, kind: securityEvent.kind, userId: securityEvent.userId, createdAt: securityEvent.createdAt })

@@ -124,7 +124,7 @@ counts only, no content.
 
 | Requirement | Pri | Status | Evidence / notes |
 | --- | --- | --- | --- |
-| Per-person search, export (JSON/CSV), correct, freeze, delete/anonymise | P0 | Partial | Whole-centre JSON export (`lib/services/export.ts`, `app/api/office/export`). No per-person export, no freeze flag, no anonymise. Staff can be deactivated (deactivate-never-delete rule). |
+| Per-person search, export (JSON/CSV), correct, freeze, delete/anonymise | P0 | Done | Staff profile → Data & privacy (P1-A, 3 October): JSON/CSV export of everything held about one person, restrict processing (blocks rostering and notifications), anonymise with linked records removed and files deleted, `deletion_log` with replay after restores (`lib/services/person-data.ts`). Correction is the ordinary profile edit, audited. |
 | Deleted data ages out of backups; deletion log replayed after restore | P1 | Missing | No backups beyond Time Travel, no deletion log. |
 | Per-school retention settings and scheduled deletion | P1 | Missing | `eraseOrganisation` exists for whole-centre deletion only. |
 | Consent records | P1 | Missing | |

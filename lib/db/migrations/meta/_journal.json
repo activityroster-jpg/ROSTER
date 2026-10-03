@@ -344,6 +344,13 @@
       "when": 1791067794955,
       "tag": "0048_smart_maestro",
       "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "6",
+      "when": 1791069967158,
+      "tag": "0049_foamy_morg",
+      "breakpoints": true
     }
   ]
 }

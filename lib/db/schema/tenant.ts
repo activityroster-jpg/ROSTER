@@ -315,6 +315,12 @@ export const instructor = sqliteTable("instructor", {
   emergencyName: text("emergency_name"),
   emergencyPhone: text("emergency_phone"),
   emergencyRelationship: text("emergency_relationship"),
+  // --- Per-person data rights (compliance P1-A) ------------------------------
+  /** Restriction of processing (GDPR art. 18): kept but not rostered or contacted while set. */
+  restrictedAt: integer("restricted_at", { mode: "timestamp_ms" }),
+  restrictedReason: text("restricted_reason"),
+  /** Set when the person was anonymised; identifying fields are blank from then on and the record is kept only for roster and payroll history. */
+  anonymisedAt: integer("anonymised_at", { mode: "timestamp_ms" }),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 }, (t) => [
@@ -720,6 +726,24 @@ export const onboardingItem = sqliteTable("onboarding_item", {
   index("onboarding_item_org_idx").on(t.organisationId),
   index("onboarding_item_instructor_idx").on(t.instructorId),
 ]);
+
+/**
+ * What was anonymised or deleted and when, so a database restore can be
+ * followed by a replay that removes the same people again. Holds no personal
+ * data: a one-way hash of the identity and a summary of what went.
+ */
+export const DELETION_SUBJECTS = ["instructor"] as const;
+export const deletionLog = sqliteTable("deletion_log", {
+  id: id(),
+  organisationId: orgFk(),
+  subjectKind: text("subject_kind", { enum: DELETION_SUBJECTS }).notNull().default("instructor"),
+  subjectId: text("subject_id").notNull(),
+  subjectHash: text("subject_hash").notNull(),
+  summary: text("summary").notNull(), // JSON: counts of what was removed
+  actorUserId: text("actor_user_id"),
+  createdAt: createdAt(),
+}, (t) => [index("deletion_log_org_idx").on(t.organisationId)]);
+export type DeletionLog = typeof deletionLog.$inferSelect;
 
 export const notification = sqliteTable("notification", {
   id: id(),

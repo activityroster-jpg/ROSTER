@@ -13,6 +13,7 @@ import { authSecret } from "@/lib/security/secrets";
 import { recordSecurityEvent } from "@/lib/security/events";
 import { leavingDeadline, onOrganisationStatusChanged } from "@/lib/services/leaving";
 import { eraseOrganisationData } from "@/lib/services/export";
+import { replayDeletions } from "@/lib/services/person-data";
 import { escapeHtml, sendEmail } from "@/lib/mail";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { createStripe } from "@/lib/billing/stripe";
@@ -257,4 +258,15 @@ export async function extendTrialAction(id: string, days: number): Promise<Resul
   revalidatePath("/admin");
   revalidatePath(`/admin/centres/${id}`);
   return { ok: true };
+}
+
+/** After a database restore: re-apply every anonymisation in a centre's deletion log. Safe to run any time. */
+export async function replayDeletionsAction(organisationId: string): Promise<Result & { checked?: number; reapplied?: number }> {
+  const { email } = await requirePlatformAdmin();
+  const repos = await getRepositories();
+  const org = await repos.control.organisationById(organisationId);
+  if (!org) return { ok: false, error: "Not found" };
+  const r = await replayDeletions(repos, { organisationId: org.id, slug: org.slug, system: true, reason: `replay deletions by ${email}` });
+  revalidatePath(`/admin/centres/${organisationId}`);
+  return { ok: true, ...r };
 }

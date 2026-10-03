@@ -26,6 +26,8 @@ export async function notifyInstructor(
 ): Promise<Notification | null> {
   const instructor = await repos.tenant.instructor.findById(ctx, instructorId);
   if (!instructor) return null;
+  // Restricted or anonymised people are not contacted (GDPR art. 18 restriction; nothing to send to after anonymisation).
+  if (instructor.restrictedAt || instructor.anonymisedAt) return null;
 
   const row = await repos.tenant.notification.insert(ctx, {
     userId: instructor.userId ?? null,
