@@ -15,7 +15,8 @@ describe("school-leaving and bands", () => {
     expect(schoolLeavingDate("2010-10-10", "ie")).toBe("2026-10-10");
   });
   it("picks the child band before leaving and the young-worker band after", () => {
-    expect(selectBand(gb, "2010-03-10", "2026-06-01")?.id).toBe("gb-child");
+    expect(selectBand(gb, "2010-03-10", "2026-06-01")?.id).toBe("gb-child-15-16");
+    expect(selectBand(gb, "2012-02-01", "2026-06-01")?.id).toBe("gb-child-13-14");
     expect(selectBand(gb, "2010-03-10", "2026-07-01")?.id).toBe("gb-young");
     expect(selectBand(gb, "2005-01-01", "2026-07-01")).toBeNull();
     expect(selectBand(ie, "2011-05-05", "2026-07-01")?.id).toBe("ie-child");
@@ -27,7 +28,7 @@ describe("school-leaving and bands", () => {
 
 describe("GB school-age child in term time", () => {
   const term = [{ from: "2026-09-01", to: "2026-12-18" }];
-  const dob = "2012-02-01"; // 14 in 2026
+  const dob = "2011-02-01"; // 15 in 2026, school-leaving June 2027
   it("blocks more than 2 hours on a school day and more than 12 a week", () => {
     const f = evaluateWorkingTime({ pack: gb, dateOfBirth: dob, employmentType: "employed", termRanges: term, existing: [], proposed: [at("2026-09-15", 16, 19)] });
     expect(codes(f)).toContain("daily-hours");
@@ -50,6 +51,14 @@ describe("GB school-age child in term time", () => {
     // 8+8+8+8+4 = 36 hours: one over the cap
     const over = evaluateWorkingTime({ pack: gb, dateOfBirth: dob, employmentType: "employed", termRanges: term, existing: four, proposed: [at("2026-08-14", 9, 13)] });
     expect(codes(over)).toEqual(["weekly-hours"]);
+  });
+  it("13–14-year-olds have the lower holiday caps (5 hours a day, 25 a week)", () => {
+    const young = "2012-02-01"; // 14 in 2026
+    const six = evaluateWorkingTime({ pack: gb, dateOfBirth: young, employmentType: "employed", termRanges: term, existing: [], proposed: [at("2026-08-10", 9, 15)] });
+    expect(codes(six)).toEqual(["daily-hours"]);
+    expect(six.find((f) => f.code === "daily-hours")?.verified).toBe(false); // Conor has not verified the 13–14 figures yet
+    const five = evaluateWorkingTime({ pack: gb, dateOfBirth: young, employmentType: "employed", termRanges: term, existing: [], proposed: [at("2026-08-10", 9, 14)] });
+    expect(codes(five)).toEqual([]);
   });
 });
 
