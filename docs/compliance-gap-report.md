@@ -210,12 +210,12 @@ counts only, no content.
 
 | Requirement | Pri | Status | Evidence / notes |
 | --- | --- | --- | --- |
-| Daily rota digest (opt-in email + PDF) | P0 | Missing | A printable weekly rota exists (`app/(app)/office/rota`); no scheduled email. |
-| Emergency sheet (today's staff, students, emergency contacts), restricted and logged | P0 | Partial | Emergency contacts now exist (sealed, admin-only, every view audited: `lib/services/protected-contacts.ts`). The printable sheet itself is block P0-H. Students stay out by decision C6. |
-| External uptime monitoring and status page | P0 | Missing | |
+| Daily rota digest (opt-in email + PDF) | P0 | Done | Office → Settings → "If the platform is ever down": opt-in hour; the hourly tick emails every admin the day's rota with a link to the printable (PDF) roster (`lib/services/digest.ts`). |
+| Emergency sheet (today's staff, students, emergency contacts), restricted and logged | P0 | Done | `/office/rota/emergency` plus CSV: today's sessions, who is on, phone, emergency contact (guardian for under-18s), handling warning, print-ready; admin-only and every open written to the change log (`lib/services/emergency.ts`). Students stay out by decision C6. |
+| External uptime monitoring and status page | P0 | Dashboard | `/api/health` exists for the monitor to call. Conor signs up (Better Stack or UptimeRobot) and points it at `https://activityroster.com/api/health`; the status page comes from the same service. |
 | Incident banner via KV flag | P1 | Missing | |
 | Maintenance page | P1 | Missing | |
-| `docs/runbooks/incident.md`, severity table, breach steps, templates | P0 | Missing | |
+| `docs/runbooks/incident.md`, severity table, breach steps, templates | P0 | Done | Plus `docs/incident-log.md`. |
 
 ## Accessibility, AI and extras
 

@@ -36,6 +36,7 @@ export default async function RotaPage({ searchParams }: { searchParams: Promise
         <div className="flex items-center gap-2 print:hidden">
           <Link href={`/office/rota?week=${addDays(monday, -7)}`} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-navy hover:bg-slate-50">← Prev</Link>
           <Link href={`/office/rota?week=${addDays(monday, 7)}`} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-navy hover:bg-slate-50">Next →</Link>
+          <Link href="/office/rota/emergency" className="rounded-lg border border-port/40 px-3 py-1.5 text-sm font-medium text-port hover:bg-port/5">Emergency sheet</Link>
           <a href="/learn?topic=rota" target="_blank" rel="noreferrer" className="text-sm font-medium text-teal hover:underline">📖 Guide</a>
           <PrintButton downloadName={`${organisation.name} roster ${monday}`} />
         </div>

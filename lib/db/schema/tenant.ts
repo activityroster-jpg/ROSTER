@@ -130,6 +130,9 @@ export const orgSettings = sqliteTable("org_settings", {
   breakPaid: boolCol("break_paid").default(false),
   /** The centre's own privacy notice for its staff; linked beside ActivityRoster's notice in the office and portal. */
   privacyNoticeUrl: text("privacy_notice_url"),
+  /** Opt-in morning email of the day's rota to every admin (offline fallback). Hour is London time, 0–23. */
+  dailyDigestEnabled: boolCol("daily_digest_enabled").default(false),
+  dailyDigestHour: integer("daily_digest_hour").notNull().default(6),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 }, (t) => [uniqueIndex("org_settings_org_uq").on(t.organisationId)]);

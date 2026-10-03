@@ -47,6 +47,20 @@ const SECTIONS: Section[] = [
     ],
   },
   {
+    id: "if-the-platform-is-down",
+    icon: "🛟",
+    label: "If the platform is down",
+    blurb: "Two fallbacks so a session can still run safely without us.",
+    blocks: [
+      { kind: "p", text: "Boats go out whether or not the internet is working. Two things make sure you always have today's plan on paper." },
+      { kind: "sub", text: "The emergency sheet" },
+      { kind: "p", text: "From the roster, press Emergency sheet. It lists today's sessions, who is on each one, their phone number and their emergency contact (and guardian, for under-18s). Print it or save it as a PDF for the duty officer or safety boat, and shred it at the end of the day. Only admins can open it, and each time it is opened is written to your change log. Students aren't recorded in ActivityRoster, so keep your own booking list alongside it." },
+      { kind: "sub", text: "The morning rota email" },
+      { kind: "p", text: "In Office → Settings, switch on \"Email every admin the day's rota each morning\" and pick the hour. Every admin gets today's sessions, who is on them and where, with a link to the printable roster. It's off by default; we recommend it in season." },
+      { kind: "tip", text: "Print tomorrow's emergency sheet the evening before if your signal on the water is poor." },
+    ],
+  },
+  {
     id: "dashboard",
     icon: "📊",
     label: "Dashboard & calendar",

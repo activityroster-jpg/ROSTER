@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getDb, getEnv } from "@/lib/cf/bindings";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { researchBatch, runDueSends } from "@/lib/outreach/engine";
+import { sendDailyDigests } from "@/lib/services/digest";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/security/rate-limit";
 import { checkCronSecret } from "@/lib/security/cron-secret";
 
@@ -24,7 +25,9 @@ async function tick(req: Request) {
   const research: Record<string, { researched: number; queued: number; noEmail: number }> = {};
   for (const c of running) research[c.id] = await researchBatch(db, env, c.id, 10);
   const sends = await runDueSends(db, env, { limit: 25 });
-  return NextResponse.json({ ok: true, campaigns: running.length, research, sends });
+  // Centre-side jobs ride the same heartbeat: the opt-in morning rota digest.
+  const digests = await sendDailyDigests(db, env).catch((e: Error) => ({ checked: 0, sent: 0, skipped: 0, error: e.message }));
+  return NextResponse.json({ ok: true, campaigns: running.length, research, sends, digests });
 }
 
 export async function POST(req: Request) { return tick(req); }

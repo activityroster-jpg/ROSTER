@@ -15,6 +15,8 @@ export function GeneralSettingsForm({
   enforceConflictChecks,
   enforceAvailabilityChecks,
   privacyNoticeUrl = "",
+  dailyDigestEnabled = false,
+  dailyDigestHour = 6,
 }: {
   schedulingMode: string;
   alertLeadDays: number;
@@ -25,6 +27,8 @@ export function GeneralSettingsForm({
   enforceConflictChecks: boolean;
   enforceAvailabilityChecks: boolean;
   privacyNoticeUrl?: string;
+  dailyDigestEnabled?: boolean;
+  dailyDigestHour?: number;
 }) {
   const [state, action, pending] = useActionState(updateSettingsAction, initial);
 
@@ -50,6 +54,18 @@ export function GeneralSettingsForm({
         <input name="privacyNoticeUrl" type="url" defaultValue={privacyNoticeUrl} placeholder="https://yourclub.org.uk/privacy" className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal" />
         <p className="mt-1 text-xs text-slate-400">Shown to your team beside ActivityRoster&rsquo;s own notice. You are the data controller for your staff&rsquo;s details; we process them for you. Need wording? See the template in the Learning Centre.</p>
       </div>
+      <fieldset className="sm:col-span-4 rounded-lg border border-slate-200 p-3">
+        <legend className="px-1 text-xs font-semibold text-slate-500">If the platform is ever down</legend>
+        <label className="flex items-start gap-2 text-sm text-slate-600">
+          <input type="checkbox" name="dailyDigestEnabled" defaultChecked={dailyDigestEnabled} className="mt-0.5 h-4 w-4 rounded border-slate-300" />
+          <span>Email every admin the day&rsquo;s rota each morning at
+            <select name="dailyDigestHour" defaultValue={String(dailyDigestHour)} className="mx-1 rounded border border-slate-300 px-1 py-0.5 text-sm">
+              {Array.from({ length: 24 }, (_, h) => <option key={h} value={h}>{String(h).padStart(2, "0")}:00</option>)}
+            </select>
+            UK time, so you always have today&rsquo;s plan in your inbox. <span className="text-slate-400">Recommended in season.</span></span>
+        </label>
+        <p className="mt-2 text-xs text-slate-400">The <a href="/office/rota/emergency" className="text-teal hover:underline">emergency sheet</a> (today&rsquo;s staff with emergency contacts) is always one click away from the roster and prints to PDF.</p>
+      </fieldset>
       <fieldset className="sm:col-span-4 rounded-lg border border-slate-200 p-3">
         <legend className="px-1 text-xs font-semibold text-slate-500">Checks when rostering</legend>
         <p className="mb-2 text-xs text-slate-400">

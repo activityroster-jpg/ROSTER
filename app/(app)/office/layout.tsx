@@ -3,7 +3,6 @@ import { apexDomain } from "@/lib/config";
 import { requireTenant } from "@/lib/tenant/require";
 import { getRepositories } from "@/lib/cf/bindings";
 import { OfficeSidebar } from "@/components/office/OfficeSidebar";
-import { TwoFactorNudge } from "@/components/office/TwoFactorNudge";
 import { GhostBanner } from "@/components/office/GhostBanner";
 import { eq } from "drizzle-orm";
 import { instructor as instructorTable } from "@/lib/db/schema";
@@ -13,22 +12,16 @@ export default async function OfficeLayout({ children }: { children: React.React
   let clockOn = false;
   let privacyUrl: string | null = null;
 
-  // Nudge the admin to turn on 2FA once they've added staff (dismissible).
-  let show2fa = false;
   // The shared admin login usually has no instructor record of its own; only
   // offer the instructor view when there is one to show.
   let hasInstructorRecord = false;
   try {
-    const { control, tenant } = await getRepositories();
-    const me = await control.userById(ctx.userId);
-    if (me && !me.twoFactorEnabled) {
-      show2fa = (await tenant.instructor.count(ctx)) >= 1;
-    }
+    const { tenant } = await getRepositories();
     hasInstructorRecord = (await tenant.instructor.count(ctx, eq(instructorTable.userId, ctx.userId))) > 0;
     const settings = (await tenant.orgSettings.list(ctx))[0];
     clockOn = Boolean(settings?.timeclockEnabled);
     privacyUrl = settings?.privacyNoticeUrl ?? null;
-  } catch { show2fa = false; }
+  } catch { /* defaults */ }
 
   // Billing nudge: failed payment, or where the free trial is.
   const sub = organisation.subscriptionStatus;
@@ -43,7 +36,6 @@ export default async function OfficeLayout({ children }: { children: React.React
       <OfficeSidebar orgName={organisation.name} clockOn={clockOn} hasInstructorRecord={hasInstructorRecord} />
       <div className="flex-1 overflow-x-hidden pt-14 lg:pt-0">
         {ctx.ghost ? <GhostBanner centreName={organisation.name} /> : null}
-        {show2fa && !ctx.ghost ? <TwoFactorNudge /> : null}
         {banner?.kind === "pastdue" ? (
           <Link href="/office/billing" className="block bg-port/15 px-6 py-2 text-center text-sm font-medium text-port hover:bg-port/20">
             Your last payment failed — update your card within {banner.daysLeft} day{banner.daysLeft === 1 ? "" : "s"} to keep editing. Nothing is ever deleted. →

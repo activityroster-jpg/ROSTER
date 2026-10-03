@@ -54,10 +54,12 @@ export async function updateSettingsAction(_prev: ActionState, formData: FormDat
     enforceConflictChecks: formData.get("enforceConflictChecks") === "on",
     enforceAvailabilityChecks: formData.get("enforceAvailabilityChecks") === "on",
     privacyNoticeUrl: String(formData.get("privacyNoticeUrl") ?? "").trim(),
+    dailyDigestEnabled: formData.get("dailyDigestEnabled") === "on",
+    dailyDigestHour: Number(formData.get("dailyDigestHour") ?? 6),
   });
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Please check the settings values" };
 
-  const values = { ...parsed.data, privacyNoticeUrl: parsed.data.privacyNoticeUrl || null };
+  const values = { ...parsed.data, privacyNoticeUrl: parsed.data.privacyNoticeUrl || null, dailyDigestEnabled: parsed.data.dailyDigestEnabled ?? false, dailyDigestHour: parsed.data.dailyDigestHour ?? 6 };
   const existing = (await repos.tenant.orgSettings.list(ctx))[0];
   if (existing) {
     await repos.tenant.orgSettings.update(ctx, existing.id, values);

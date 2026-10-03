@@ -28,6 +28,8 @@ export const orgSettingsSchema = z.object({
   enforceConflictChecks: z.boolean().optional(),
   enforceAvailabilityChecks: z.boolean().optional(),
   privacyNoticeUrl: z.string().trim().url("Enter a full web address, starting with https://").max(500).optional().or(z.literal("")),
+  dailyDigestEnabled: z.boolean().optional(),
+  dailyDigestHour: z.number().int().min(0).max(23).optional(),
 });
 
 export const sessionSlotSchema = z.object({

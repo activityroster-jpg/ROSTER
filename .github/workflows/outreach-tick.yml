@@ -1,14 +1,14 @@
-name: Outreach tick
+name: Hourly tick
 
-# Wakes the outreach agent (Dev Center → Outreach) once an hour during UK
-# working hours on weekdays. Each tick researches a small batch of new centres
-# and sends whatever is due, inside each campaign's own hours and daily cap.
+# The platform's heartbeat, once an hour, every day. It wakes the outreach
+# agent (which keeps to each campaign's own hours and daily cap) and sends the
+# opt-in morning rota digest to centres whose chosen hour it is.
 # Needs one repository secret: OUTREACH_CRON_SECRET, identical to the
 # Cloudflare Worker secret of the same name. See docs/outreach.md.
 
 on:
   schedule:
-    - cron: "15 7-17 * * 1-5"
+    - cron: "15 * * * *"
   workflow_dispatch:
 
 jobs:

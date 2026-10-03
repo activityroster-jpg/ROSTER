@@ -105,7 +105,7 @@ Effort is a rough guide: S = under half a day, M = one to two days, L = a week o
   Recommended: Postmark (EU data processing addendum available) or Amazon SES (eu-west-1).
 - **Conor:** add the DNS records the two providers list; start DMARC at `p=none`.
 
-### P0-H Offline fallbacks and monitoring (M, needs C6)
+### P0-H Offline fallbacks and monitoring — digest and emergency sheet done 3 October; uptime monitor is Conor's sign-up
 
 - Opt-in daily rota digest email (PDF attached) sent from the existing hourly tick.
 - Emergency sheet: printable today's staff on duty with emergency contacts, admin-only,
