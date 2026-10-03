@@ -19,7 +19,7 @@ Nothing was changed as part of this audit. The phased plan is in
 | Logging and monitoring | 1 | 4 | 0 | 0 |
 | Privacy features | 1 | 6 | 3 | 0 |
 | Under-18 and safeguarding | 2 | 2 | 5 | 1 |
-| Working-time rules engine | 1 | 2 | 3 | 0 |
+| Working-time rules engine | 7 | 0 | 0 | 0 |
 | Email and marketing | 6 | 3 | 4 | 0 |
 | Backups and DR | 1 | 1 | 8 | 0 |
 | Change management | 1 | 2 | 5 | 2 |
@@ -150,16 +150,21 @@ counts only, no content.
 
 ## Working-time rules engine
 
+Built 3 October 2026 (plan P0-F). Engine: `lib/domain/working-time.ts` (pure); packs:
+`lib/rules/working-time/packs.ts` with Dev Center edits in the `rule_pack` table
+(`/admin/rules`); service and assignment hook: `lib/services/working-time.ts`,
+`lib/services/assignment.ts`.
+
 | Requirement | Pri | Status | Evidence / notes |
 | --- | --- | --- | --- |
-| School settings: jurisdiction, term dates, breach mode | P0 (U18) | Partial | `organisation.jurisdiction` exists (used for VAT/pricing). No term dates, no breach-mode setting. |
-| Worker settings: DOB, employee/volunteer | P0 | Partial | `instructor.employmentType` exists; no DOB. |
-| Rules as versioned data with legal citations, per-jurisdiction packs | P0 | Missing | `lib/domain` has conflict, ratio, fit, pay and break rules, no hours limits. |
-| Checks: daily/weekly hours, start/finish, breaks, rests, annual break, term caps | P0 | Missing | |
-| Checks on rota build and on swaps/pick-ups | P0 | Missing | |
-| Actual start/finish times for young workers, exportable register | P0 | Done | `time_entry` clock in/out, payroll export. A dedicated young-worker register export is a small addition. |
-| Change history per shift | P0 | Partial | `roster_week.publishedAt` and `audit_log` entries for roster changes; per-assignment change timestamps not stored. |
-| Disclaimer in the interface | P0 | Missing | |
+| School settings: jurisdiction, term dates, breach mode | P0 (U18) | Done | `organisation.jurisdiction`; `org_settings.term_dates` (JSON ranges) and `org_settings.working_time_mode` (warn / block_override / block, default block_override) edited under Office → Settings → Young workers' hours. No term dates = every week treated as term time (the stricter caps). |
+| Worker settings: DOB, employee/volunteer | P0 | Done | `instructor.date_of_birth` (P0-E) and `employment_type`. Volunteers are checked as best practice and told so. |
+| Rules as versioned data with legal citations, per-jurisdiction packs | P0 | Done | GB, NI and IE packs with `version`, `citations`, per-band `unverified` lists and a pack-level `verified` flag that cannot be set while any figure is unverified. Edited packs are validated with Zod before storage. **Every figure is currently marked unverified where the spec said so; Conor arranges verification.** |
+| Checks: daily/weekly hours, start/finish, breaks, rests, annual break, term caps | P0 | Done | Daily cap (school day / Saturday / Sunday), weekly cap, earliest start, latest finish, break (warning), daily rest, weekly rest days or hours, term vs holiday caps; annual break and paperwork surface as information. |
+| Checks on rota build and on swaps/pick-ups | P0 | Done | `assignStaff` runs the check for every assignment path (course page, availability grid, bulk assign, open-shift confirmation). Findings are written to the audit entry; an override needs a note; "block" mode cannot be overridden. |
+| Actual start/finish times for young workers, exportable register | P0 | Done | Rostered times in the young-worker register CSV (`/api/office/young-worker-register`, linked from the weekly roster); actual times remain in `time_entry`. Each download is audited. |
+| Change history per shift | P0 | Done | The register carries assigned-at, confirmed-at and week-published-at stamps per session; changes are in `audit_log`. |
+| Disclaimer in the interface | P0 | Done | Printed and on-screen roster footer and the Settings fieldset. |
 
 ## Email (Resend) and the marketing tool
 

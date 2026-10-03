@@ -743,4 +743,22 @@ export const pushToken = sqliteTable("push_token", {
 export type PushToken = typeof pushToken.$inferSelect;
 
 // A tiny re-export so migrations pick up the raw-sql helper if needed.
+// --- Rule packs (working-time law as data) -----------------------------------
+// One row per pack key ("gb", "ni", "ie") when Conor has edited the built-in
+// figures in the Dev Center. No row = the built-in pack in
+// lib/rules/working-time/packs.ts applies. Legal figures are never hard-coded
+// in the checks themselves; they are read from the pack at run time.
+export const rulePack = sqliteTable("rule_pack", {
+  key: text("key").primaryKey(),
+  name: text("name").notNull(),
+  version: text("version").notNull(),
+  verified: boolCol("verified").default(false),
+  /** The full WorkingTimePack as JSON (validated with workingTimePackSchema before it is stored). */
+  json: text("json").notNull(),
+  updatedBy: text("updated_by"),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+export type RulePack = typeof rulePack.$inferSelect;
+
 export const _sql = sql;

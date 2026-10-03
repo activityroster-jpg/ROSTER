@@ -41,6 +41,12 @@ function repoFor(t: TenantRepositories, kind: ConfigKind) {
   }
 }
 
+/** The term-dates editor posts a JSON string; anything unreadable becomes "no term dates" and fails validation visibly rather than silently. */
+function parseTermDatesField(v: FormDataEntryValue | null): unknown {
+  if (typeof v !== "string" || !v.trim()) return [];
+  try { return JSON.parse(v); } catch { return "invalid"; }
+}
+
 /** Update the org's general settings (one row per org: upsert). */
 export async function updateSettingsAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const { ctx, repos } = await requireTenant({ role: "admin" });
@@ -56,10 +62,20 @@ export async function updateSettingsAction(_prev: ActionState, formData: FormDat
     privacyNoticeUrl: String(formData.get("privacyNoticeUrl") ?? "").trim(),
     dailyDigestEnabled: formData.get("dailyDigestEnabled") === "on",
     dailyDigestHour: Number(formData.get("dailyDigestHour") ?? 6),
+    workingTimeMode: formData.get("workingTimeMode") ?? "block_override",
+    termDates: parseTermDatesField(formData.get("termDates")),
   });
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Please check the settings values" };
 
-  const values = { ...parsed.data, privacyNoticeUrl: parsed.data.privacyNoticeUrl || null, dailyDigestEnabled: parsed.data.dailyDigestEnabled ?? false, dailyDigestHour: parsed.data.dailyDigestHour ?? 6 };
+  const { termDates, ...rest } = parsed.data;
+  const values = {
+    ...rest,
+    privacyNoticeUrl: rest.privacyNoticeUrl || null,
+    dailyDigestEnabled: rest.dailyDigestEnabled ?? false,
+    dailyDigestHour: rest.dailyDigestHour ?? 6,
+    workingTimeMode: rest.workingTimeMode ?? "block_override",
+    termDates: JSON.stringify((termDates ?? []).map((r) => ({ from: r.from, to: r.to, ...(r.label ? { label: r.label } : {}) }))),
+  };
   const existing = (await repos.tenant.orgSettings.list(ctx))[0];
   if (existing) {
     await repos.tenant.orgSettings.update(ctx, existing.id, values);

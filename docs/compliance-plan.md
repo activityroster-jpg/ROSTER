@@ -83,19 +83,22 @@ Effort is a rough guide: S = under half a day, M = one to two days, L = a week o
   upload slot and date. Parent accounts themselves are Phase 2 (they depend on roles).
 - Emergency contact fields for all staff, encrypted at rest, admin-only, every view logged.
 
-### P0-F Working-time rules engine, under-18 scope (L)
+### P0-F Working-time rules engine, under-18 scope (L) — built 3 October; figures await verification
 
-- Rule packs as versioned JSON with legal citations: Great Britain, Northern Ireland,
-  Ireland, each figure marked verified or unverified; Dev Center screen to view and edit.
-- Centre settings: jurisdiction (already stored), term and holiday dates, breach mode
-  (warn / block with override / block). Default: block with override, reason to audit log.
-- Checks on roster build and on swaps and open-shift pick-ups: daily and weekly hours,
-  earliest start and latest finish, breaks, daily and weekly rest, term-time caps, annual
-  break. Clear "young-worker checks not active for this jurisdiction" notice otherwise.
-- Young-worker time register export; per-assignment published/changed/cancelled stamps;
-  disclaimer text on the rota.
-- **Conor:** supply the qualifying jurisdiction list and arrange verification of the
-  figures (WRC, Education Authority NI, GOV.UK).
+- Done: rule packs for Great Britain, Northern Ireland and Ireland as versioned data with
+  citations and per-figure verified flags; Dev Center → Rules to view, edit and reset them;
+  centre settings for breach mode (default: block with override, reason to the audit log)
+  and term dates; checks on every assignment path (daily and weekly hours, start and finish,
+  breaks, daily and weekly rest, term-time caps, annual break and paperwork as notices);
+  "not active for this jurisdiction" notice for centres outside the three packs;
+  young-worker time register CSV with assigned / confirmed / published stamps; disclaimer on
+  the roster and in Settings; Learning Centre guide (`/learn?topic=young-workers`).
+- **Conor:** arrange verification of the figures (GOV.UK and local authority bylaws for
+  England, Wales and Scotland; Education Authority for Northern Ireland; WRC for Ireland).
+  Then in Dev Center → Rules remove each checked field from the band's `unverified` list,
+  add the source to `citations`, bump `version`, and set `verified` to true once every list
+  is empty. Until then every warning carries "figure not yet verified".
+- Later (Phase 2): adult working-time checks; term dates imported from a public feed.
 
 ### P0-G Email resilience (M)
 
@@ -115,8 +118,8 @@ Effort is a rough guide: S = under half a day, M = one to two days, L = a week o
 
 ### P0-I CLAUDE.md and spec upkeep (S)
 
-- Done in this commit for the working rules; change-management rules are updated again
-  when P0-D lands.
+- Done for the working rules and change management; CLAUDE.md now also points at the
+  rule packs (P0-F). Remaining after P0-G: a final pass over the spec's owner checklist.
 
 ## Phase 2 (P1): next quarter
 

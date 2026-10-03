@@ -32,6 +32,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <Link href="/admin/change-log" className="text-white/80 hover:text-white">Change log</Link>
             <Link href="/admin/privacy" className="text-white/80 hover:text-white">Privacy</Link>
             <Link href="/admin/security" className="text-white/80 hover:text-white">Security</Link>
+            <Link href="/admin/rules" className="text-white/80 hover:text-white">Rules</Link>
             {staging ? <Link href="/admin/outbox" className="rounded bg-amber-400/20 px-2 text-amber-200 hover:text-white">Outbox · staging</Link> : null}
             <span className="text-white/40">·</span>
             <span className="text-white/60">{email}</span>

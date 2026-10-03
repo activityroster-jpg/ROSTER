@@ -27,9 +27,12 @@ in `docs/retention.md`. Sub-processors in `docs/subprocessors.md`.
 | `booking` | **Unused.** Customer name, email, headcount, amount from a retired feature | Customers | Standard | – | Nobody; scheduled for removal |
 | R2 bucket `activityroster-docs` | Uploaded certificate and vetting documents, keyed by centre | Staff | High | As `compliance_item` | Admins, via authenticated download only |
 
-Not held today: dates of birth, emergency contacts, parent or guardian details,
-student names, medical information, photos. Under-18 controls (plan P0-E) add date
-of birth, guardian details and encrypted emergency contacts.
+Held since P0-E (3 October 2026): dates of birth, parent or guardian details and
+encrypted emergency contacts on `instructor`. Not held: student names, medical
+information, photos. Exports that list children's working patterns (the young-worker
+time register CSV) and views of guardian or emergency contacts are each written to
+`audit_log`. The `rule_pack` table (control plane) holds legal figures only, no
+personal data.
 
 ## ActivityRoster's own data (ActivityRoster = controller)
 

@@ -36,3 +36,14 @@ runbook (`docs/runbooks/restore.md`) covers the steps.
 The run stops before deploying, so the live app keeps running the old code against the
 old schema. Claude Code fixes the migration, pushes, you test on staging, then press
 Deploy production again.
+
+## Production deploy log
+
+Each row is a "Deploy production" run Conor pressed. The bookmark is the D1 Time
+Travel point taken immediately before that deploy; the workflow's run summary is
+the source of truth and this table is a convenience copy.
+
+| Date (UTC) | Commit | Bookmark | Contents |
+|---|---|---|---|
+| 2026-10-03 | 7c39fcd | (see run summary, tag `prod-20261003-1929`) | Password rule, strength meter, sign-out buttons, migrations 0040–0043 |
+| 2026-10-03 | 7838db1 | `000001ca-00000000-000050f9-ff60ef9ec57b5ded297c390416b7680b` | Status page link; Cloudflare Turnstile on public forms and sign-in |

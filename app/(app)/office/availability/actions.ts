@@ -77,10 +77,10 @@ export async function assignFromAvailabilityAction(courseId: string, instructorI
   if (!courseId || !roleTypeId) return { ok: false, error: "Pick a role" };
   const res = await assignStaff(repos, ctx, { courseId, instructorId, roleTypeId });
   if (!res.ok) {
-    return { ok: false, error: `${assignBlockMessage(res.reason, res.detail)}. Override from the course page if you need to.` };
+    return { ok: false, error: `${assignBlockMessage(res.reason, res.detail)}${res.noOverride ? "." : ". Override from the course page if you need to."}` };
   }
   revalidatePath("/office/availability");
   revalidatePath("/office/courses");
   revalidatePath("/office");
-  return { ok: true, message: "Assigned" };
+  return { ok: true, message: res.warnings.length ? `Assigned — ⚠ ${res.warnings.join("; ")}` : "Assigned" };
 }

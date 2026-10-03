@@ -55,6 +55,9 @@ export type OptionalFeature = (typeof OPTIONAL_FEATURES)[number];
 export const SLOT_CODES = ["AM", "PM", "EV"] as const;
 export type SlotCode = (typeof SLOT_CODES)[number];
 
+export const WORKING_TIME_MODES = ["warn", "block_override", "block"] as const;
+export type WorkingTimeMode = (typeof WORKING_TIME_MODES)[number];
+
 export const EMPLOYMENT_TYPES = ["employed", "freelance", "volunteer"] as const;
 export type EmploymentType = (typeof EMPLOYMENT_TYPES)[number];
 
@@ -133,6 +136,13 @@ export const orgSettings = sqliteTable("org_settings", {
   /** Opt-in morning email of the day's rota to every admin (offline fallback). Hour is London time, 0–23. */
   dailyDigestEnabled: boolCol("daily_digest_enabled").default(false),
   dailyDigestHour: integer("daily_digest_hour").notNull().default(6),
+  // --- Young workers' hours (compliance block F) ----------------------------
+  // What happens when rostering an under-18 would break their jurisdiction's
+  // working-time rules: warn only, block unless an admin overrides with a note
+  // (the default), or block outright. The figures themselves are rule-pack data.
+  workingTimeMode: text("working_time_mode", { enum: WORKING_TIME_MODES }).notNull().default("block_override"),
+  /** JSON array of {from,to,label?} ISO date ranges that count as school term time. Empty = treat every week as term time (the stricter caps). */
+  termDates: text("term_dates").notNull().default("[]"),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 }, (t) => [uniqueIndex("org_settings_org_uq").on(t.organisationId)]);
@@ -803,6 +813,7 @@ export type CourseType = typeof courseType.$inferSelect;
 export type InstructorCourseType = typeof instructorCourseType.$inferSelect;
 export type Course = typeof course.$inferSelect;
 export type CourseSession = typeof courseSession.$inferSelect;
+export type CourseStaff = typeof courseStaff.$inferSelect;
 export type OrgSettings = typeof orgSettings.$inferSelect;
 export type TimeEntry = typeof timeEntry.$inferSelect;
 export type LeaveRequest = typeof leaveRequest.$inferSelect;

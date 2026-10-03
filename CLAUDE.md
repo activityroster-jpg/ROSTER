@@ -102,7 +102,10 @@ Working rules from the spec, binding on every session:
 4. **Plain English, no scripts for Conor.** Automate recurring work in the cloud (GitHub
    Actions, Workers); when a dashboard step is unavoidable, say exactly what to click.
 5. **Legal figures are data.** Hour limits and similar rules live in versioned data
-   (rule packs), never hard-coded, and are marked verified or unverified.
+   (rule packs), never hard-coded, and are marked verified or unverified. Working-time
+   packs: built-in copies in `lib/rules/working-time/packs.ts`, edits in the `rule_pack`
+   table via Dev Center → Rules, validated by `lib/rules/working-time/schema.ts`; the
+   checks in `lib/domain/working-time.ts` read figures only from the pack they are given.
 6. **Minors are children under GDPR.** Under-18 staff get higher-privacy defaults; never
    add messaging, profiling or marketing that reaches them.
 7. **Change management:** every push to the working branch deploys to **staging**

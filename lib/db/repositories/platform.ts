@@ -22,6 +22,7 @@ import {
   outreachSuppression,
   aiUsage,
   privacyRequest,
+  rulePack,
   callAvailability,
   callBooking,
   type CallAvailability,
@@ -51,6 +52,7 @@ import {
   type PrivacyRequest,
   type NewPrivacyRequest,
   type PrivacyRequestStatus,
+  type RulePack,
   type OutreachLeadStatus,
   type SuppressionReason,
   type TaskStatus,
@@ -599,6 +601,27 @@ export class PlatformRepository {
       ...(notes !== undefined ? { notes } : {}),
     }).where(eq(privacyRequest.id, id));
   }
+  // --- Rule packs (working-time law as data) --------------------------------
+
+  async getRulePack(key: string): Promise<RulePack | null> {
+    return (await this.db.select().from(rulePack).where(eq(rulePack.key, key)).limit(1))[0] ?? null;
+  }
+  async listRulePacks(): Promise<RulePack[]> {
+    return this.db.select().from(rulePack).orderBy(asc(rulePack.key));
+  }
+  /** Store an edited pack (insert or replace by key). */
+  async upsertRulePack(values: { key: string; name: string; version: string; verified: boolean; json: string; updatedBy: string | null }): Promise<void> {
+    const now = new Date();
+    await this.db.insert(rulePack).values({ ...values, createdAt: now, updatedAt: now }).onConflictDoUpdate({
+      target: rulePack.key,
+      set: { name: values.name, version: values.version, verified: values.verified, json: values.json, updatedBy: values.updatedBy, updatedAt: now },
+    });
+  }
+  /** Drop the edit so the built-in pack applies again. */
+  async resetRulePack(key: string): Promise<void> {
+    await this.db.delete(rulePack).where(eq(rulePack.key, key));
+  }
+
   async openPrivacyRequestCount(): Promise<number> {
     const rows = await this.db.select({ id: privacyRequest.id }).from(privacyRequest).where(inArray(privacyRequest.status, ["new", "acknowledged", "in_progress"]));
     return rows.length;

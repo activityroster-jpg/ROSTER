@@ -14,6 +14,7 @@ import { writeAudit } from "./audit";
 import { syncHoursForCourse } from "./hours";
 import { notifyInstructor } from "./notifications";
 import { publishedWeeks, weekOf } from "./roster";
+import { checkWorkingTime, describeFindings } from "./working-time";
 
 export interface AssignInput {
   courseId: string;
@@ -24,19 +25,22 @@ export interface AssignInput {
   overrideNote?: string;
 }
 
+export type AssignBlockReason = "not-fit" | "conflict" | "unavailable" | "working-time" | "invalid";
+
 export type AssignResult =
-  | { ok: true; courseStaffId: string; overridden: boolean }
-  | { ok: false; reason: "not-fit" | "conflict" | "unavailable" | "invalid"; detail: string };
+  | { ok: true; courseStaffId: string; overridden: boolean; /** Non-blocking notes (e.g. an unverified young-worker figure, a missing break). */ warnings: string[] }
+  | { ok: false; reason: AssignBlockReason; detail: string; /** True when the centre's setting forbids overriding this block. */ noOverride?: boolean };
 
 function toMs(v: Date | number): number {
   return v instanceof Date ? v.getTime() : Number(v);
 }
 
 /** Plain-English reason an assignment was refused. */
-export function assignBlockMessage(reason: "not-fit" | "conflict" | "unavailable" | "invalid", detail: string): string {
+export function assignBlockMessage(reason: AssignBlockReason, detail: string): string {
   if (reason === "not-fit") return `Not cleared to roster: ${detail}`;
   if (reason === "conflict") return `Double-booked: ${detail}`;
   if (reason === "unavailable") return `${detail} in their availability`;
+  if (reason === "working-time") return `Young worker's hours: ${detail}`;
   return detail;
 }
 
@@ -44,9 +48,14 @@ export function assignBlockMessage(reason: "not-fit" | "conflict" | "unavailable
  * Assign an instructor to a course, enforcing the compliance moat:
  *   1. FIT — instructor blocked if any mandatory check is missing/expired.
  *   2. CONFLICT — instructor already booked on an overlapping session.
- * Either block can be overridden by an admin WITH a note, which is recorded to
- * the audit log with the overriding user. Ratio/safety-cover is a course-level
- * flag surfaced elsewhere, not a hard block here.
+ *   3. AVAILABILITY — the instructor marked the slot busy.
+ *   4. WORKING TIME — an under-18 would exceed their jurisdiction's hour, rest
+ *      or start/finish rules (figures from the rule pack; the centre's setting
+ *      decides warn / block-with-override / block).
+ * Each block can be overridden by an admin WITH a note, which is recorded to
+ * the audit log with the overriding user — except a working-time block when the
+ * centre has chosen "block". Ratio/safety-cover is a course-level flag surfaced
+ * elsewhere, not a hard block here.
  */
 export async function assignStaff(
   repos: Repositories,
@@ -137,8 +146,31 @@ export async function assignStaff(
     return { ok: false, reason: "unavailable", detail: `Marked busy on ${busy.date} ${busy.slot}` };
   }
 
-  // --- 4. Persist ----------------------------------------------------------
-  const overridden = Boolean(input.override && (!fit.fit || clashing || busy));
+  // --- 4. Young workers' hours (rule pack for the jurisdiction) ----------
+  const wt = await checkWorkingTime(repos, ctx, {
+    instructorId: input.instructorId,
+    courseId: input.courseId,
+    settings: settings ?? null,
+    allSessions: thisCourseSessions,
+    existingAssignments: existingAssignments,
+  });
+  const wtBlocked = wt.blocks.length > 0 && wt.mode !== "warn";
+  if (wtBlocked && (wt.mode === "block" || !input.override)) {
+    const detail = describeFindings(wt.blocks);
+    return {
+      ok: false,
+      reason: "working-time",
+      detail: wt.mode === "block" ? `${detail}. This centre blocks these outright (Settings → Young workers' hours)` : detail,
+      noOverride: wt.mode === "block",
+    };
+  }
+  const warnings = [
+    ...(wt.blocks.length > 0 && !wtBlocked ? wt.blocks : []),
+    ...wt.warns,
+  ].map((f) => (f.verified ? f.message : `${f.message} (figure not yet verified)`));
+
+  // --- 5. Persist ----------------------------------------------------------
+  const overridden = Boolean(input.override && (!fit.fit || clashing || busy || wtBlocked));
   const row = await t.courseStaff.insert(ctx, {
     courseId: input.courseId,
     instructorId: input.instructorId,
@@ -153,7 +185,10 @@ export async function assignStaff(
     action: overridden ? "assign_staff_override" : "assign_staff",
     entity: "course_staff",
     entityId: row.id,
-    after: { courseId: input.courseId, instructorId: input.instructorId, overridden, note: input.overrideNote },
+    after: {
+      courseId: input.courseId, instructorId: input.instructorId, overridden, note: input.overrideNote,
+      ...(wt.findings.length ? { workingTime: wt.findings.map((f) => `${f.severity}:${f.code}:${f.message}`) } : {}),
+    },
   });
 
   // Hours come from the roster: give every session of this course an hours record.
@@ -162,7 +197,7 @@ export async function assignStaff(
   // Tell them — but only once the week is published (publishing itself notifies).
   await notifyRosterChange(repos, ctx, input.instructorId, course.name ?? "a course", targetSessions.map((s) => s.date), "added");
 
-  return { ok: true, courseStaffId: row.id, overridden };
+  return { ok: true, courseStaffId: row.id, overridden, warnings };
 }
 
 export interface BulkAssignInput {

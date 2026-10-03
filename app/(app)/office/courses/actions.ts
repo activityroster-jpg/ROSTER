@@ -308,11 +308,12 @@ export async function assignStaffAction(_prev: ActionState, formData: FormData):
   });
 
   if (!res.ok) {
-    return { ok: false, error: `${assignBlockMessage(res.reason, res.detail)}. Tick “override” to assign anyway.` };
+    return { ok: false, error: `${assignBlockMessage(res.reason, res.detail)}${res.noOverride ? "." : ". Tick “override” to assign anyway."}` };
   }
   revalidatePath("/office/courses");
   revalidatePath("/office");
-  return { ok: true, message: res.overridden ? "Assigned with override (recorded)" : "Assigned" };
+  const note = res.warnings.length ? ` — ⚠ ${res.warnings.join("; ")}` : "";
+  return { ok: true, message: (res.overridden ? "Assigned with override (recorded)" : "Assigned") + note };
 }
 
 /** Assign one instructor (in one role) to several courses at once. */
