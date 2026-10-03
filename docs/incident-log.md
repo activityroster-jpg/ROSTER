@@ -5,6 +5,7 @@ Every incident, whether reported to a regulator or not.
 | Date | Severity | What happened | Data involved | Centres affected | Reported to | Closed |
 | --- | --- | --- | --- | --- | --- | --- |
 | | | | | | | |
+| 2026-10-03 | Major | Cloudflare Workers Builds deployed production from the working branch without migrations (INC-2026-10-03-1 below); fixed by Deploy production 23:21 UTC and disconnecting the integration | None | Any centre using the office between about 21:38 and 23:21 UTC | Nobody (no personal data involved) | 2026-10-03 |
 
 ## INC-2026-10-03-1 · Production deployed outside the change-management gate
 
