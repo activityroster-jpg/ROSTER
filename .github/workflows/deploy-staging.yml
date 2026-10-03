@@ -64,7 +64,9 @@ jobs:
         if: env.provisioned == 'true'
         run: |
           for i in 1 2 3 4 5 6; do
-            if curl -fsS https://staging.activityroster.com/api/health | grep -q '"ok":true'; then echo "staging healthy"; exit 0; fi
+            home="$(curl -sS -L -o /dev/null -w '%{http_code} %{url_effective}' https://staging.activityroster.com/ || true)"
+            if curl -fsS https://staging.activityroster.com/api/health | grep -q '"ok":true' && [ "$home" = "200 https://staging.activityroster.com/" ]; then echo "staging healthy, home page served"; exit 0; fi
+            echo "home page check: $home"
             sleep 10
           done
           echo "::error::Staging health check failed after deploy."

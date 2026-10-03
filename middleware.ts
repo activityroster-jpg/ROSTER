@@ -45,11 +45,18 @@ function slidePinCookie(req: NextRequest, res: NextResponse): NextResponse {
  * app route re-resolves the org and checks membership server-side
  * (lib/tenant/resolve). The subdomain is a hint; membership is the gate.
  */
-const APEX = process.env.NEXT_PUBLIC_APEX_DOMAIN || "activityroster.com";
+/**
+ * The apex domain this deployment serves. Read at request time from the
+ * Worker var (OpenNext copies wrangler vars onto process.env), so the same
+ * build works for production and staging; the build-time public var is only
+ * a fallback for local dev.
+ */
+const apex = () => process.env.APP_APEX_DOMAIN || process.env.NEXT_PUBLIC_APEX_DOMAIN || "activityroster.com";
 
 export function middleware(req: NextRequest) {
   const url = req.nextUrl;
   const path = url.pathname;
+  const APEX = apex();
   const host = resolveHost(req.headers.get("host"), APEX);
 
   // Device identity for the unfamiliar-device check: a random id in a

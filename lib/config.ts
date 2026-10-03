@@ -6,7 +6,9 @@
 export const DEFAULT_APEX = "activityroster.com";
 
 export function apexDomain(): string {
-  return process.env.NEXT_PUBLIC_APEX_DOMAIN || DEFAULT_APEX;
+  // On the server the Worker var wins (staging and production share one build);
+  // in the browser only the build-time public var exists.
+  return process.env.APP_APEX_DOMAIN || process.env.NEXT_PUBLIC_APEX_DOMAIN || DEFAULT_APEX;
 }
 
 /**
