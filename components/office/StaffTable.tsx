@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Search, Settings2, ChevronsUpDown } from "lucide-react";
+import { Search, ChevronsUpDown } from "lucide-react";
 import { StatusPill } from "@/components/ui";
 import { InviteInstructorButton } from "@/components/office/InviteInstructorButton";
 
@@ -21,34 +21,42 @@ export interface StaffRow {
   teaches: string[];
   teachesYouth: boolean;
   teachesAdult: boolean;
+  /** "inactive" = has left; kept for history, hidden from pickers. */
+  status: string;
 }
 
-type Tab = "all" | "fit" | "blocked" | "expiring";
+type Tab = "all" | "fit" | "blocked" | "expiring" | "left";
 
 const TABS: { key: Tab; label: string }[] = [
-  { key: "all", label: "All" },
+  { key: "all", label: "Current" },
   { key: "fit", label: "Fit to roster" },
   { key: "blocked", label: "Blocked" },
   { key: "expiring", label: "Expiring soon" },
+  { key: "left", label: "Left" },
 ];
 
 export function StaffTable({ rows }: { rows: StaffRow[] }) {
   const [tab, setTab] = useState<Tab>("all");
   const [q, setQ] = useState("");
 
+  const current = useMemo(() => rows.filter((r) => r.status !== "inactive"), [rows]);
   const counts = useMemo(
     () => ({
-      all: rows.length,
-      fit: rows.filter((r) => r.fit).length,
-      blocked: rows.filter((r) => !r.fit).length,
-      expiring: rows.filter((r) => r.warnings > 0).length,
+      all: current.length,
+      fit: current.filter((r) => r.fit).length,
+      blocked: current.filter((r) => !r.fit).length,
+      expiring: current.filter((r) => r.warnings > 0).length,
+      left: rows.length - current.length,
     }),
-    [rows],
+    [rows, current],
   );
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
     return rows.filter((r) => {
+      const gone = r.status === "inactive";
+      if (tab === "left") { if (!gone) return false; }
+      else if (gone) return false;
       if (tab === "fit" && !r.fit) return false;
       if (tab === "blocked" && r.fit) return false;
       if (tab === "expiring" && r.warnings === 0) return false;
@@ -62,7 +70,7 @@ export function StaffTable({ rows }: { rows: StaffRow[] }) {
       {/* toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
         <div className="flex flex-wrap gap-1">
-          {TABS.map((t) => (
+          {TABS.filter((t) => t.key !== "left" || counts.left > 0).map((t) => (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
@@ -97,14 +105,13 @@ export function StaffTable({ rows }: { rows: StaffRow[] }) {
               <Th>Employment</Th>
               <Th>Can teach</Th>
               <Th>Fit to roster</Th>
-              <Th>Portal access</Th>
-              <th className="px-4 py-3 text-right"><Settings2 className="ml-auto h-4 w-4 text-slate-300" /></th>
+              <Th>App access</Th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-10 text-center text-slate-400">No staff match this view.</td>
+                <td colSpan={6} className="px-4 py-10 text-center text-slate-400">{tab === "left" ? "Nobody has left." : "No instructors match this view."}</td>
               </tr>
             ) : (
               filtered.map((r) => (
@@ -135,20 +142,19 @@ export function StaffTable({ rows }: { rows: StaffRow[] }) {
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    {r.fit ? <StatusPill tone="covered">Fit</StatusPill> : <StatusPill tone="conflict">{r.blockText || "Not cleared"}</StatusPill>}
+                    {r.status === "inactive" ? <StatusPill tone="neutral">Left</StatusPill> : r.fit ? <StatusPill tone="covered">Fit</StatusPill> : <StatusPill tone="conflict">{r.blockText || "Not cleared"}</StatusPill>}
                     {r.warnings > 0 ? (
                       <span className="ml-2"><StatusPill tone="attention">{r.warnings} expiring</StatusPill></span>
                     ) : null}
                   </td>
                   <td className="px-4 py-3">
-                    {r.hasEmail ? (
+                    {r.status === "inactive" ? (
+                      <span className="text-xs text-slate-400">Access ended</span>
+                    ) : r.hasEmail ? (
                       <InviteInstructorButton instructorId={r.id} status={r.inviteStatus} />
                     ) : (
                       <span className="text-xs text-slate-400">Add email to invite</span>
                     )}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <button className="text-slate-300 hover:text-slate-500" aria-label="Row actions"><Settings2 className="ml-auto h-4 w-4" /></button>
                   </td>
                 </tr>
               ))

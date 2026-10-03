@@ -20,6 +20,8 @@ export default async function PortalLayout({ children }: { children: React.React
   const { ctx, organisation, repos } = await requireTenant();
   const me = (await repos.tenant.instructor.list(ctx, eq(instructorTable.userId, ctx.userId)))[0];
   const unread = me ? await unreadCount(repos, ctx, me.id) : 0;
+  const clockOn = Boolean((await repos.tenant.orgSettings.list(ctx))[0]?.timeclockEnabled);
+  const tabs = TABS.filter((t) => clockOn || t.href !== "/portal/timeclock");
 
   return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col bg-canvas">
@@ -43,7 +45,7 @@ export default async function PortalLayout({ children }: { children: React.React
       </header>
       <main className="flex-1 px-4 py-5 pb-24">{children}</main>
       <nav className="fixed inset-x-0 bottom-0 mx-auto flex max-w-md items-center justify-around border-t border-slate-200 bg-white py-2">
-        {TABS.map((tab) => (
+        {tabs.map((tab) => (
           <Link key={tab.href} href={tab.href} className="flex flex-col items-center gap-1 px-3 py-1 text-slate-500">
             <tab.icon className="h-5 w-5" />
             <span className="text-[11px]">{tab.label}</span>

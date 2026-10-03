@@ -51,6 +51,7 @@ export default async function DashboardPage() {
   const { sessions, coverageByCourse } = schedule;
   const licenceOn = Boolean(settingsRows[0]?.enforceLicenceChecks);
   const ratioOn = Boolean(settingsRows[0]?.enforceRatioChecks);
+  const clockOn = Boolean(settingsRows[0]?.timeclockEnabled);
 
   // Brand-new centre with no staff yet → guide them through onboarding first,
   // unless they've chosen to skip it (cookie).
@@ -109,9 +110,11 @@ export default async function DashboardPage() {
       {/* Today */}
       <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Today</p>
       <div className="mb-6 grid gap-3 sm:grid-cols-3">
-        <Tile href="/office/timeclock" label="On the water now" value={attendance.onWater} sub="Clocked in" tone={attendance.onWater > 0 ? "starboard" : "navy"} />
-        <Tile href="/office/timeclock" label="Hours logged today" value={(attendance.minutesToday / 60).toFixed(1)} sub={`${attendance.started} started`} />
-        <Tile href="/office/rota" label="Sessions this week" value={weekSessions} sub="View / print rota" tone="teal" />
+        {clockOn ? <Tile href="/office/timeclock" label="On the water now" value={attendance.onWater} sub="Clocked in" tone={attendance.onWater > 0 ? "starboard" : "navy"} /> : null}
+        {clockOn ? <Tile href="/office/timeclock" label="Hours logged today" value={(attendance.minutesToday / 60).toFixed(1)} sub={`${attendance.started} started`} /> : null}
+        <Tile href="/office/rota" label="Sessions this week" value={weekSessions} sub="View / print roster" tone="teal" />
+        {!clockOn ? <Tile href="/office/staff" label="Instructors" value={staff.filter((s) => s.instructor.status === "active").length} sub="On the team" /> : null}
+        {!clockOn ? <Tile href="/office/finance" label="Paid hours this month" value={"→"} sub="Review payroll" /> : null}
       </div>
 
       {/* Needs attention */}

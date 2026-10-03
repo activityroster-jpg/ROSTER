@@ -47,7 +47,7 @@ export async function eraseOrganisation(
   const order = [
     // 1. rows that reference courses / people / config
     t.courseStaff, t.courseEquipment, t.courseLocation, t.courseRoleRequirement, t.courseSession,
-    t.hoursRecord, t.availability, t.payRate,
+    t.hoursRecord, t.availability, t.payRate, t.rosterWeek,
     t.courseTypeStaffing, t.courseTypeEquipment,
     t.qualification, t.complianceItem,
     // 2. courses (reference courseType)

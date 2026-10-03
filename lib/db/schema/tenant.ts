@@ -67,9 +67,16 @@ export type CourseStatus = (typeof COURSE_STATUSES)[number];
 export const COURSE_STAFF_STATUSES = ["assigned", "confirmed", "declined"] as const;
 export const AVAILABILITY_STATUSES = ["available", "unavailable", "tentative"] as const;
 export const PAY_UNITS = ["hour", "day", "session"] as const;
+export type PayUnit = (typeof PAY_UNITS)[number];
 export const NOTIFICATION_CHANNELS = ["email", "sms", "in_app"] as const;
 export const TIME_ENTRY_SOURCES = ["clock", "manual"] as const;
 export type TimeEntrySource = (typeof TIME_ENTRY_SOURCES)[number];
+/** Where a payroll line's hours come from: the roster (scheduled), the clock (actual) or typed in. */
+export const HOURS_SOURCES = ["roster", "clock", "manual"] as const;
+export type HoursSource = (typeof HOURS_SOURCES)[number];
+/** A centre's default for payroll: pay what was rostered, or what was clocked. */
+export const PAY_SOURCES = ["roster", "clock"] as const;
+export type PaySource = (typeof PAY_SOURCES)[number];
 export const LEAVE_TYPES = ["annual", "sick", "training", "unpaid", "other"] as const;
 export type LeaveType = (typeof LEAVE_TYPES)[number];
 export const LEAVE_STATUSES = ["pending", "approved", "declined", "cancelled"] as const;
@@ -106,6 +113,14 @@ export const orgSettings = sqliteTable("org_settings", {
   // When on, rostering blocks double-booking an instructor across overlapping
   // sessions (override allowed).
   enforceConflictChecks: boolCol("enforce_conflict_checks").default(false),
+  // When on (the default), rostering blocks an instructor who marked that slot
+  // "Busy" in their availability (override allowed).
+  enforceAvailabilityChecks: boolCol("enforce_availability_checks").default(true),
+  // --- Time clock & pay source -----------------------------------------------
+  // The clock is optional: off, instructors don't see the Clock tab and payroll
+  // runs purely on the roster. paySource is the default for new payroll lines.
+  timeclockEnabled: boolCol("timeclock_enabled").default(false),
+  paySource: text("pay_source", { enum: PAY_SOURCES }).notNull().default("roster"),
   currency: text("currency").notNull().default("GBP"),
   timezone: text("timezone").notNull().default("Europe/London"),
   // --- Lunch / rest breaks: anyone working longer than breakAfterMinutes gets
@@ -440,6 +455,10 @@ export const courseStaff = sqliteTable("course_staff", {
   isOverride: boolCol("is_override").default(false),
   overrideNote: text("override_note"),
   overriddenBy: text("overridden_by"), // user id
+  // The instructor's own answer once the roster is published.
+  confirmedAt: integer("confirmed_at", { mode: "timestamp_ms" }),
+  declinedAt: integer("declined_at", { mode: "timestamp_ms" }),
+  declineNote: text("decline_note"),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 }, (t) => [
@@ -532,6 +551,8 @@ export const payRate = sqliteTable("pay_rate", {
   updatedAt: updatedAt(),
 }, (t) => [index("pay_rate_org_idx").on(t.organisationId)]);
 
+export type PayRate = typeof payRate.$inferSelect;
+
 export const hoursRecord = sqliteTable("hours_record", {
   id: id(),
   organisationId: orgFk(),
@@ -542,6 +563,14 @@ export const hoursRecord = sqliteTable("hours_record", {
   scheduledMinutes: integer("scheduled_minutes").notNull().default(0),
   actualMinutes: integer("actual_minutes"),
   rate: real("rate"),
+  // How the rate applies: per hour, per session or per day (from the pay rate).
+  payUnit: text("pay_unit", { enum: PAY_UNITS }).notNull().default("hour"),
+  // Which minutes this line pays on: roster (scheduled), clock (actual) or manual.
+  source: text("source", { enum: HOURS_SOURCES }).notNull().default("roster"),
+  // Office corrections during payroll review — win over everything else.
+  overrideMinutes: integer("override_minutes"),
+  overridePay: real("override_pay"),
+  note: text("note"),
   approved: boolCol("approved").default(false),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
@@ -549,6 +578,27 @@ export const hoursRecord = sqliteTable("hours_record", {
   index("hours_record_org_idx").on(t.organisationId),
   index("hours_record_instructor_idx").on(t.instructorId),
 ]);
+
+export type HoursRecord = typeof hoursRecord.$inferSelect;
+
+/**
+ * A published roster week. Until a week is published, instructors see nothing
+ * for it and aren't asked to confirm; publishing notifies everyone rostered.
+ */
+export const rosterWeek = sqliteTable("roster_week", {
+  id: id(),
+  organisationId: orgFk(),
+  /** Monday, YYYY-MM-DD. */
+  weekStart: text("week_start").notNull(),
+  publishedAt: integer("published_at", { mode: "timestamp_ms" }),
+  publishedByUserId: text("published_by_user_id"),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, (t) => [
+  index("roster_week_org_idx").on(t.organisationId),
+  uniqueIndex("roster_week_org_week_uq").on(t.organisationId, t.weekStart),
+]);
+export type RosterWeek = typeof rosterWeek.$inferSelect;
 
 /**
  * Time & attendance: a clock-in/clock-out event, optionally tied to the session

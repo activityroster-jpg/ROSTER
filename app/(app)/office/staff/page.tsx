@@ -55,15 +55,17 @@ export default async function StaffPage() {
       teaches: teach.map((c) => c.name),
       teachesYouth: teach.some((c) => c.audience === "youth" || c.audience === "all"),
       teachesAdult: teach.some((c) => c.audience === "adult" || c.audience === "all"),
+      status: instructor.status,
     };
   });
+  const currentCount = rows.filter((r) => r.status !== "inactive").length;
 
   return (
     <div>
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-bold text-navy">Staff</h1>
-          <p className="text-sm text-slate-500">{rows.length} instructors · fit-to-roster and the courses each can teach, from the qualifications they hold</p>
+          <p className="text-sm text-slate-500">{currentCount} instructor{currentCount === 1 ? "" : "s"} · fit-to-roster and the courses each can teach, from the certs they hold</p>
         </div>
         <a href="/office/staff/import" className="flex-none rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-navy hover:bg-slate-50">Import from spreadsheet</a>
       </div>

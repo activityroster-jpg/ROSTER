@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireTenant } from "@/lib/tenant/require";
 import { getWeekSchedule, weekStart } from "@/lib/services/schedule";
 import { getTeachingMatrix } from "@/lib/services/teaching";
-import { assignStaff } from "@/lib/services/assignment";
+import { assignStaff, assignBlockMessage } from "@/lib/services/assignment";
 import { courseStaff as courseStaffTable } from "@/lib/db/schema";
 
 export interface CellCandidate {
@@ -77,13 +77,7 @@ export async function assignFromAvailabilityAction(courseId: string, instructorI
   if (!courseId || !roleTypeId) return { ok: false, error: "Pick a role" };
   const res = await assignStaff(repos, ctx, { courseId, instructorId, roleTypeId });
   if (!res.ok) {
-    return {
-      ok: false,
-      error:
-        res.reason === "conflict" ? "They're already booked on an overlapping session."
-        : res.reason === "not-fit" ? "They're missing a required licence — override from the course, or turn the check off in Settings."
-        : res.detail,
-    };
+    return { ok: false, error: `${assignBlockMessage(res.reason, res.detail)}. Override from the course page if you need to.` };
   }
   revalidatePath("/office/availability");
   revalidatePath("/office/courses");

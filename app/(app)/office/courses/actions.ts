@@ -10,6 +10,8 @@ import { COURSE_STATUSES, SLOT_CODES, type CourseStatus, type SlotCode } from "@
 import { normaliseTime, timeToSlot } from "@/lib/import/parse";
 import { getCourseEditorData, type CourseEditorData } from "@/lib/services/course-editor";
 import { createCourseTypeResolver, TYPE_NEW, TYPE_ONEOFF } from "@/lib/services/course-type-resolve";
+import { syncHoursForCourse } from "@/lib/services/hours";
+import { assignBlockMessage } from "@/lib/services/assignment";
 
 export type ActionState = { ok: boolean; error?: string; message?: string };
 
@@ -154,6 +156,7 @@ export async function renameCourseAction(courseId: string, name: string): Promis
   const clean = name.trim();
   const updated = await repos.tenant.course.update(ctx, courseId, { name: clean || null });
   if (!updated) return { ok: false, error: "Course not found" };
+  await writeAudit(repos, ctx, { action: "rename", entity: "course", entityId: courseId, after: { name: clean || null } });
   revalidatePath(`/office/courses/${courseId}`);
   revalidatePath("/office/courses");
   return { ok: true, message: "Renamed" };
@@ -176,6 +179,7 @@ export async function setStaffRequiredAction(courseId: string, count: number | n
   const n = count == null || !Number.isFinite(count) || count < 0 ? null : Math.min(50, Math.round(count));
   const updated = await repos.tenant.course.update(ctx, courseId, { staffRequired: n });
   if (!updated) return { ok: false, error: "Course not found" };
+  await writeAudit(repos, ctx, { action: "set_staff_required", entity: "course", entityId: courseId, after: { staffRequired: n } });
   revalidatePath("/office/courses");
   revalidatePath(`/office/courses/${courseId}`);
   revalidatePath("/office");
@@ -207,6 +211,7 @@ export async function updateSessionTimesAction(
   });
   if (!updated) return { ok: false, error: "Session not found" };
   await writeAudit(repos, ctx, { action: "update_session", entity: "course", entityId: courseId, after: { sessionId, date, startTime, endTime } });
+  await syncHoursForCourse(repos, ctx, courseId);
   revalidatePath("/office/courses");
   revalidatePath(`/office/courses/${courseId}`);
   revalidatePath("/office");
@@ -230,6 +235,7 @@ export async function addSessionAction(courseId: string, formData: FormData): Pr
   const at = (time: string) => new Date(Date.parse(`${date}T${time}:00.000Z`));
   await repos.tenant.courseSession.insert(ctx, { courseId, date, slot: tpl.t.slot, startAt: at(startTime), endAt: at(endTime) });
   await writeAudit(repos, ctx, { action: "add_session", entity: "course", entityId: courseId, after: { date, slot: tpl.t.slot } });
+  await syncHoursForCourse(repos, ctx, courseId);
   revalidatePath(`/office/courses/${courseId}`);
   revalidatePath("/office/courses");
   revalidatePath("/office");
@@ -242,6 +248,7 @@ export async function removeSessionAction(courseId: string, sessionId: string): 
   const removed = await repos.tenant.courseSession.delete(ctx, sessionId);
   if (removed === 0) return { ok: false, error: "Session not found" };
   await writeAudit(repos, ctx, { action: "remove_session", entity: "course", entityId: courseId, after: { sessionId } });
+  await syncHoursForCourse(repos, ctx, courseId);
   revalidatePath(`/office/courses/${courseId}`);
   revalidatePath("/office/courses");
   revalidatePath("/office");
@@ -254,6 +261,7 @@ export async function removeStaffAction(courseId: string, assignmentId: string):
   const removed = await repos.tenant.courseStaff.delete(ctx, assignmentId);
   if (removed === 0) return { ok: false, error: "Assignment not found" };
   await writeAudit(repos, ctx, { action: "remove_staff", entity: "course", entityId: courseId, after: { assignmentId } });
+  await syncHoursForCourse(repos, ctx, courseId);
   revalidatePath(`/office/courses/${courseId}`);
   revalidatePath("/office/courses");
   revalidatePath("/office");
@@ -272,7 +280,7 @@ export async function assignStaffAction(_prev: ActionState, formData: FormData):
   });
 
   if (!res.ok) {
-    return { ok: false, error: `${res.reason === "not-fit" ? "Not fit to roster" : res.reason === "conflict" ? "Scheduling conflict" : "Invalid"}: ${res.detail}` };
+    return { ok: false, error: `${assignBlockMessage(res.reason, res.detail)}. Tick “override” to assign anyway.` };
   }
   revalidatePath("/office/courses");
   revalidatePath("/office");

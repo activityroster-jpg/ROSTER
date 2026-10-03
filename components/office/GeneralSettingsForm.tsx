@@ -13,6 +13,7 @@ export function GeneralSettingsForm({
   enforceLicenceChecks,
   enforceRatioChecks,
   enforceConflictChecks,
+  enforceAvailabilityChecks,
 }: {
   schedulingMode: string;
   alertLeadDays: number;
@@ -21,6 +22,7 @@ export function GeneralSettingsForm({
   enforceLicenceChecks: boolean;
   enforceRatioChecks: boolean;
   enforceConflictChecks: boolean;
+  enforceAvailabilityChecks: boolean;
 }) {
   const [state, action, pending] = useActionState(updateSettingsAction, initial);
 
@@ -68,6 +70,10 @@ export function GeneralSettingsForm({
           <label className="flex items-start gap-2 text-sm text-slate-600">
             <input type="checkbox" name="enforceConflictChecks" defaultChecked={enforceConflictChecks} className="mt-0.5 h-4 w-4 rounded border-slate-300" />
             <span>Warn when an instructor is double-booked <span className="text-slate-400">(override allowed)</span></span>
+          </label>
+          <label className="flex items-start gap-2 text-sm text-slate-600">
+            <input type="checkbox" name="enforceAvailabilityChecks" defaultChecked={enforceAvailabilityChecks} className="mt-0.5 h-4 w-4 rounded border-slate-300" />
+            <span>Don&apos;t roster someone who marked that slot <strong>Busy</strong> <span className="text-slate-400">(on by default; override allowed)</span></span>
           </label>
         </div>
       </fieldset>

@@ -5,6 +5,7 @@ import { ConfigManager, type ConfigItem } from "@/components/office/ConfigManage
 import { BreakPolicyForm } from "@/components/office/BreakPolicyForm";
 import { CompanyCodeCard } from "@/components/office/CompanyCodeCard";
 import { CourseScheduleDefaults } from "@/components/office/CourseScheduleDefaults";
+import { TimeclockSettingsForm } from "@/components/office/TimeclockSettingsForm";
 import { parseDefaultSchedule } from "@/lib/domain";
 
 export const dynamic = "force-dynamic";
@@ -57,10 +58,11 @@ export default async function SettingsPage() {
           enforceLicenceChecks={Boolean(s?.enforceLicenceChecks)}
           enforceRatioChecks={Boolean(s?.enforceRatioChecks)}
           enforceConflictChecks={Boolean(s?.enforceConflictChecks)}
+          enforceAvailabilityChecks={s?.enforceAvailabilityChecks ?? true}
         />
       </Card>
 
-      <div className="mb-6 grid gap-6 lg:grid-cols-2">
+      <div className="mb-6 grid gap-6 lg:grid-cols-3">
         <Card>
           <div className="mb-1 flex items-center justify-between">
             <h2 className="font-semibold text-navy">Course default schedule</h2>
@@ -68,6 +70,11 @@ export default async function SettingsPage() {
           </div>
           <p className="mb-2 text-xs text-slate-500">How many sessions each course has and when they run. “Add a course” fills these in for you.</p>
           <CourseScheduleDefaults items={scheduleItems} />
+        </Card>
+        <Card>
+          <h2 className="mb-1 font-semibold text-navy">Time clock &amp; pay</h2>
+          <p className="mb-3 text-xs text-slate-500">Hours always come from the roster. Turn the clock on if you also want instructors to clock in and out from the app.</p>
+          <TimeclockSettingsForm timeclockEnabled={Boolean(s?.timeclockEnabled)} paySource={(s?.paySource ?? "roster") as "roster" | "clock"} />
         </Card>
         <Card>
           <h2 className="mb-1 font-semibold text-navy">Lunch breaks</h2>

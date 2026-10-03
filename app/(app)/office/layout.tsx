@@ -56,6 +56,7 @@ const NAV = [
 
 export default async function OfficeLayout({ children }: { children: React.ReactNode }) {
   const { ctx, organisation } = await requireTenant({ role: "admin" });
+  let clockOn = false;
 
   // Nudge the admin to turn on 2FA once they've added staff (dismissible).
   let show2fa = false;
@@ -69,7 +70,9 @@ export default async function OfficeLayout({ children }: { children: React.React
       show2fa = (await tenant.instructor.count(ctx)) >= 1;
     }
     hasInstructorRecord = (await tenant.instructor.count(ctx, eq(instructorTable.userId, ctx.userId))) > 0;
+    clockOn = Boolean((await tenant.orgSettings.list(ctx))[0]?.timeclockEnabled);
   } catch { show2fa = false; }
+  const nav = NAV.map((g) => ({ ...g, items: g.items.filter((i) => clockOn || i.href !== "/office/timeclock") }));
 
   // Billing nudge: distinguish an active free trial from a failed payment.
   const sub = organisation.subscriptionStatus;
@@ -93,7 +96,7 @@ export default async function OfficeLayout({ children }: { children: React.React
           <p className="mt-1 truncate text-sm text-white/70">{organisation.name}</p>
         </div>
         <nav className="flex-1 overflow-y-auto px-3 py-4">
-          {NAV.map((section) => (
+          {nav.map((section) => (
             <div key={section.group} className="mb-5">
               <p className="px-2 pb-2 text-xs font-semibold uppercase tracking-wide text-white/40">
                 {section.group}

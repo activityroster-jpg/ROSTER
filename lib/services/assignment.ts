@@ -9,8 +9,9 @@ import {
   type HeldCompliance,
   type ResourceBooking,
 } from "@/lib/domain";
-import { courseStaff as courseStaffTable } from "@/lib/db/schema";
+import { courseStaff as courseStaffTable, availability as availabilityTable } from "@/lib/db/schema";
 import { writeAudit } from "./audit";
+import { syncHoursForCourse } from "./hours";
 
 export interface AssignInput {
   courseId: string;
@@ -23,10 +24,18 @@ export interface AssignInput {
 
 export type AssignResult =
   | { ok: true; courseStaffId: string; overridden: boolean }
-  | { ok: false; reason: "not-fit" | "conflict" | "invalid"; detail: string };
+  | { ok: false; reason: "not-fit" | "conflict" | "unavailable" | "invalid"; detail: string };
 
 function toMs(v: Date | number): number {
   return v instanceof Date ? v.getTime() : Number(v);
+}
+
+/** Plain-English reason an assignment was refused. */
+export function assignBlockMessage(reason: "not-fit" | "conflict" | "unavailable" | "invalid", detail: string): string {
+  if (reason === "not-fit") return `Not cleared to roster: ${detail}`;
+  if (reason === "conflict") return `Double-booked: ${detail}`;
+  if (reason === "unavailable") return `${detail} in their availability`;
+  return detail;
 }
 
 /**
@@ -110,8 +119,20 @@ export async function assignStaff(
     return { ok: false, reason: "conflict", detail: `Overlaps another booking on ${clashing.date} ${clashing.slot}` };
   }
 
-  // --- 3. Persist ----------------------------------------------------------
-  const overridden = Boolean(input.override && (!fit.fit || clashing));
+  // --- 3. Availability: "Busy" blocks (on by default), override allowed ----
+  const availabilityOn = settings?.enforceAvailabilityChecks ?? true;
+  let busy: { date: string; slot: string } | undefined;
+  if (availabilityOn && targetSessions.length) {
+    const avail = await t.availability.list(ctx, eq(availabilityTable.instructorId, input.instructorId));
+    const busyKeys = new Set(avail.filter((a) => a.status === "unavailable" && a.date).map((a) => `${a.date}|${a.slot}`));
+    busy = targetSessions.find((s) => busyKeys.has(`${s.date}|${s.slot}`));
+  }
+  if (busy && !input.override) {
+    return { ok: false, reason: "unavailable", detail: `Marked busy on ${busy.date} ${busy.slot}` };
+  }
+
+  // --- 4. Persist ----------------------------------------------------------
+  const overridden = Boolean(input.override && (!fit.fit || clashing || busy));
   const row = await t.courseStaff.insert(ctx, {
     courseId: input.courseId,
     instructorId: input.instructorId,
@@ -128,6 +149,9 @@ export async function assignStaff(
     entityId: row.id,
     after: { courseId: input.courseId, instructorId: input.instructorId, overridden, note: input.overrideNote },
   });
+
+  // Hours come from the roster: give every session of this course an hours record.
+  await syncHoursForCourse(repos, ctx, input.courseId);
 
   return { ok: true, courseStaffId: row.id, overridden };
 }

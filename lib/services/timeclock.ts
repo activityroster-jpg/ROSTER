@@ -4,6 +4,7 @@ import type { AnyTenantContext } from "@/lib/tenant/context";
 import { hoursRecord as hoursRecordTable, timeEntry as timeEntryTable, type TimeEntry } from "@/lib/db/schema";
 import { durationMinutes, isoDateInTz } from "@/lib/domain";
 import { writeAudit } from "./audit";
+import { payRatesByInstructor, pickPayRate } from "./pay-rates";
 
 /** Minutes elapsed on an entry — to its clock-out, or to `now` if still open. */
 export function entryMinutes(entry: Pick<TimeEntry, "clockInAt" | "clockOutAt">, now: number): number {
@@ -37,6 +38,7 @@ export async function clockIn(
   courseSessionId: string | null = null,
   now: number = Date.now(),
   fix: ClockFix | null = null,
+  note: string | null = null,
 ): Promise<TimeEntry> {
   const open = await getOpenEntry(repos, ctx, instructorId);
   if (open) return open;
@@ -47,6 +49,7 @@ export async function clockIn(
     clockInAt: new Date(now),
     clockOutAt: null,
     source: "clock",
+    note: note?.trim() || null,
     inLat: fix?.lat ?? null,
     inLng: fix?.lng ?? null,
     inAccuracyM: fix?.accuracyM ?? null,
@@ -119,15 +122,22 @@ async function syncHoursRecord(
     return;
   }
 
-  // No scheduled record yet — create one, taking scheduled minutes from the session.
+  // No scheduled record yet (clocked in to a session they weren't rostered on)
+  // — create one, taking scheduled minutes from the session and the rate from
+  // their pay rate. It pays on the clock since that's all we know.
   const session = await repos.tenant.courseSession.findById(ctx, entry.courseSessionId);
   const scheduled = session ? durationMinutes({ startAt: session.startAt.getTime(), endAt: session.endAt.getTime() }) : minutes;
+  const staff = session ? await repos.tenant.courseStaff.list(ctx) : [];
+  const role = staff.find((a) => a.instructorId === entry.instructorId && a.courseId === session?.courseId)?.roleTypeId ?? null;
+  const rate = pickPayRate((await payRatesByInstructor(repos, ctx)).get(entry.instructorId) ?? [], role);
   await repos.tenant.hoursRecord.insert(ctx, {
     instructorId: entry.instructorId,
     courseSessionId: entry.courseSessionId,
     scheduledMinutes: scheduled,
     actualMinutes: minutes,
-    rate: null,
+    rate: rate?.rate ?? null,
+    payUnit: rate?.unit ?? "hour",
+    source: "clock",
     approved: false,
   });
 }
@@ -137,6 +147,8 @@ export interface AttendanceRow {
   instructorId: string;
   instructorName: string;
   courseName: string | null;
+  /** What they said they were doing when clocking in without a session. */
+  note: string | null;
   clockInAt: number;
   clockOutAt: number | null;
   minutes: number;
@@ -179,6 +191,7 @@ export async function getAttendanceBoard(
       instructorId: e.instructorId,
       instructorName: nameById.get(e.instructorId) ?? "Unknown",
       courseName: e.courseSessionId ? sessionCourse.get(e.courseSessionId) ?? null : null,
+      note: e.note ?? null,
       clockInAt: e.clockInAt.getTime(),
       clockOutAt: e.clockOutAt ? e.clockOutAt.getTime() : null,
       minutes: entryMinutes(e, now),

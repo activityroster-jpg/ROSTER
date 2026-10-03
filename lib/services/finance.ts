@@ -1,8 +1,8 @@
 import { eq } from "drizzle-orm";
 import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
-import { hoursRecord as hoursRecordTable } from "@/lib/db/schema";
-import { applyBreak, fmtClockTime, type BreakPolicy } from "@/lib/domain";
+import { hoursRecord as hoursRecordTable, type HoursSource, type PayUnit } from "@/lib/db/schema";
+import { applyBreak, fmtClockTime, linePay, markFirstOfDay, type BreakPolicy } from "@/lib/domain";
 
 export interface HoursRow {
   instructorName: string;
@@ -71,67 +71,69 @@ export interface InstructorHoursSummary {
   totalPay: number;
 }
 
-/** One instructor's own hours (for the portal): sessions with scheduled vs
- * actual time and estimated pay. Tenant scoped. */
+/** One instructor's own hours (for the portal): the same lines payroll uses, estimated. */
 export async function getInstructorHours(
   repos: Repositories,
   ctx: AnyTenantContext,
   instructorId: string,
 ): Promise<InstructorHoursSummary> {
-  const [records, sessions, courses] = await Promise.all([
-    repos.tenant.hoursRecord.list(ctx, eq(hoursRecordTable.instructorId, instructorId)),
-    repos.tenant.courseSession.list(ctx),
-    repos.tenant.course.list(ctx),
-  ]);
-  const courseName = new Map(courses.map((c) => [c.id, c.name ?? "Session"]));
-  const sessionInfo = new Map(sessions.map((s) => [s.id, { date: s.date, courseId: s.courseId }]));
-
+  const { lines } = await getPayrollLines(repos, ctx, { instructorId });
   let totalMinutes = 0;
   let totalPay = 0;
-  const rows: InstructorHoursRow[] = records
-    .map((r) => {
-      const info = r.courseSessionId ? sessionInfo.get(r.courseSessionId) : undefined;
-      const minutes = r.actualMinutes ?? r.scheduledMinutes;
-      const pay = r.rate != null ? Math.round((minutes / 60) * r.rate * 100) / 100 : null;
-      totalMinutes += minutes;
-      totalPay += pay ?? 0;
+  const rows: InstructorHoursRow[] = lines
+    .map((l) => {
+      totalMinutes += l.payableMinutes;
+      totalPay += l.pay ?? 0;
       return {
-        date: info?.date ?? null,
-        courseName: info ? courseName.get(info.courseId) ?? "Session" : "Session",
-        scheduledMinutes: r.scheduledMinutes,
-        actualMinutes: r.actualMinutes ?? null,
-        minutes,
-        rate: r.rate ?? null,
-        pay,
-        approved: r.approved,
+        date: l.date,
+        courseName: l.courseName,
+        scheduledMinutes: l.scheduledMinutes,
+        actualMinutes: l.clockedMinutes,
+        minutes: l.payableMinutes,
+        rate: l.rate,
+        pay: l.pay,
+        approved: l.approved,
       };
     })
     .sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""));
-
   return { rows, totalMinutes, totalPay: Math.round(totalPay * 100) / 100 };
 }
 
 // ---------------------------------------------------------------------------
-// Payroll lines (per shift) — filterable by period and instructor, with start,
-// finish and the centre's lunch-break rule applied. Feeds the Payroll page and
-// its spreadsheet/PDF exports.
+// Payroll lines — one per rostered (or clocked) session. Hours come from the
+// roster by default; the clock can supply actuals; the office can pick which
+// to pay per line and override minutes or pay outright during review.
 // ---------------------------------------------------------------------------
 
 export interface PayrollFilter { from?: string; to?: string; instructorId?: string }
 
 export interface PayrollLine {
+  recordId: string;
   date: string | null;
   instructorId: string;
   instructorName: string;
   courseName: string;
   start: string | null; // HH:MM
   finish: string | null; // HH:MM
+  /** Minutes on the roster for this session. */
+  scheduledMinutes: number;
+  /** Minutes the clock recorded, if any. */
+  clockedMinutes: number | null;
+  /** Which minutes this line pays on. */
+  source: HoursSource;
+  /** Office override of the minutes (wins over source). */
+  overrideMinutes: number | null;
+  /** The minutes actually used before breaks. */
   workedMinutes: number;
   breakMinutes: number;
   payableMinutes: number;
+  payUnit: PayUnit;
   rate: number | null;
+  /** Office override of the pay (wins over everything). */
+  overridePay: number | null;
   pay: number | null;
   approved: boolean;
+  note: string | null;
   /** true when start/finish come from clock-in/out rather than the schedule. */
   clocked: boolean;
 }
@@ -143,13 +145,16 @@ export interface PayrollSummaryRow {
   breakMinutes: number;
   payableMinutes: number;
   pay: number;
+  /** Lines with no rate set — pay unknown, not zero. */
+  unpriced: number;
 }
 
 const toMs = (v: Date | number | string | null | undefined): number | null =>
   v == null ? null : v instanceof Date ? v.getTime() : Number(v);
+// Session times are wall-clock values stored as UTC — shown as stored.
 const hhmm = (ms: number | null) => (ms == null || Number.isNaN(ms) ? null : new Date(ms).toISOString().slice(11, 16));
 
-/** Every hours record as a payroll line, filtered and with breaks applied. Tenant scoped. */
+/** Every hours record as a payroll line, filtered, with the pay rules applied. Tenant scoped. */
 export async function getPayrollLines(
   repos: Repositories,
   ctx: AnyTenantContext,
@@ -172,37 +177,50 @@ export async function getPayrollLines(
   const entryFor = new Map<string, (typeof entries)[number]>();
   for (const e of entries) if (e.courseSessionId && e.clockOutAt) entryFor.set(`${e.instructorId}|${e.courseSessionId}`, e);
 
-  const lines: PayrollLine[] = [];
+  type Partial1 = Omit<PayrollLine, "pay" | "breakMinutes" | "payableMinutes">;
+  const partials: Partial1[] = [];
   for (const r of records) {
     const session = r.courseSessionId ? sessionById.get(r.courseSessionId) : undefined;
     const date = session?.date ?? (toMs(r.createdAt) != null ? new Date(toMs(r.createdAt)!).toISOString().slice(0, 10) : null);
     if (filter.from && (!date || date < filter.from)) continue;
     if (filter.to && (!date || date > filter.to)) continue;
     const entry = r.courseSessionId ? entryFor.get(`${r.instructorId}|${r.courseSessionId}`) : undefined;
-    // Clock times are real instants (shown in UK time); session times are
-    // wall-clock values stored as UTC (shown as stored).
+    // Clock times are real instants (shown in UK time); session times are wall-clock.
     const startMs = entry ? toMs(entry.clockInAt) : toMs(session?.startAt);
     const endMs = entry ? toMs(entry.clockOutAt) : toMs(session?.endAt);
     const show = (ms: number | null) => (ms == null || Number.isNaN(ms) ? null : entry ? fmtClockTime(ms) : hhmm(ms));
-    const worked = r.actualMinutes ?? r.scheduledMinutes;
-    const { breakMinutes, payableMinutes } = applyBreak(worked, policy);
-    lines.push({
+    const clocked = r.actualMinutes ?? null;
+    const source: HoursSource = r.source ?? "roster";
+    const worked = r.overrideMinutes ?? (source === "clock" ? clocked ?? r.scheduledMinutes : r.scheduledMinutes);
+    partials.push({
+      recordId: r.id,
       date,
       instructorId: r.instructorId,
       instructorName: nameById.get(r.instructorId) ?? "Unknown",
       courseName: session ? courseName.get(session.courseId) ?? "Session" : "Other",
       start: show(startMs),
       finish: show(endMs),
+      scheduledMinutes: r.scheduledMinutes,
+      clockedMinutes: clocked,
+      source,
+      overrideMinutes: r.overrideMinutes ?? null,
       workedMinutes: worked,
-      breakMinutes,
-      payableMinutes,
+      payUnit: r.payUnit ?? "hour",
       rate: r.rate ?? null,
-      pay: r.rate != null ? Math.round((payableMinutes / 60) * r.rate * 100) / 100 : null,
+      overridePay: r.overridePay ?? null,
       approved: r.approved,
+      note: r.note ?? null,
       clocked: Boolean(entry),
     });
   }
-  lines.sort((a, b) => (a.date ?? "").localeCompare(b.date ?? "") || a.instructorName.localeCompare(b.instructorName) || (a.start ?? "").localeCompare(b.start ?? ""));
+  partials.sort((a, b) => (a.date ?? "").localeCompare(b.date ?? "") || a.instructorName.localeCompare(b.instructorName) || (a.start ?? "").localeCompare(b.start ?? ""));
+  const firstOfDay = markFirstOfDay(partials);
+  const lines: PayrollLine[] = partials.map((p, i) => {
+    // Breaks only make sense for hourly pay.
+    const { breakMinutes, payableMinutes } = p.payUnit === "hour" ? applyBreak(p.workedMinutes, policy) : { breakMinutes: 0, payableMinutes: p.workedMinutes };
+    const computed = linePay({ unit: p.payUnit, rate: p.rate, payableMinutes, firstOfDay: firstOfDay[i]! });
+    return { ...p, breakMinutes, payableMinutes, pay: p.overridePay ?? computed };
+  });
   return { lines, policy };
 }
 
@@ -210,11 +228,12 @@ export async function getPayrollLines(
 export function summariseByInstructor(lines: PayrollLine[]): PayrollSummaryRow[] {
   const by = new Map<string, PayrollSummaryRow>();
   for (const l of lines) {
-    const row = by.get(l.instructorId) ?? { instructorName: l.instructorName, shifts: 0, workedMinutes: 0, breakMinutes: 0, payableMinutes: 0, pay: 0 };
+    const row = by.get(l.instructorId) ?? { instructorName: l.instructorName, shifts: 0, workedMinutes: 0, breakMinutes: 0, payableMinutes: 0, pay: 0, unpriced: 0 };
     row.shifts++;
     row.workedMinutes += l.workedMinutes;
     row.breakMinutes += l.breakMinutes;
     row.payableMinutes += l.payableMinutes;
+    if (l.pay == null) row.unpriced++;
     row.pay = Math.round((row.pay + (l.pay ?? 0)) * 100) / 100;
     by.set(l.instructorId, row);
   }
@@ -222,21 +241,23 @@ export function summariseByInstructor(lines: PayrollLine[]): PayrollSummaryRow[]
 }
 
 const h = (m: number) => (m / 60).toFixed(2);
+const UNIT: Record<PayUnit, string> = { hour: "per hour", session: "per session", day: "per day" };
 
 /** Spreadsheet (CSV) — one row per shift. */
 export function payrollLinesToCsv(lines: PayrollLine[]): string {
-  const header = ["Date", "Instructor", "Course", "Start", "Finish", "Worked (h)", "Lunch break (min)", "Paid hours", "Rate", "Pay", "Approved", "Times from"];
+  const header = ["Date", "Instructor", "Course", "Start", "Finish", "Rostered (h)", "Clocked (h)", "Paid on", "Worked (h)", "Lunch break (min)", "Paid hours", "Rate", "Basis", "Pay", "Approved", "Note"];
   const rows = lines.map((l) => [
     l.date ?? "", escapeCsv(l.instructorName), escapeCsv(l.courseName), l.start ?? "", l.finish ?? "",
+    h(l.scheduledMinutes), l.clockedMinutes != null ? h(l.clockedMinutes) : "", l.overrideMinutes != null ? "office" : l.source,
     h(l.workedMinutes), String(l.breakMinutes), h(l.payableMinutes),
-    l.rate != null ? l.rate.toFixed(2) : "", l.pay != null ? l.pay.toFixed(2) : "", l.approved ? "yes" : "no", l.clocked ? "clock" : "schedule",
+    l.rate != null ? l.rate.toFixed(2) : "", UNIT[l.payUnit], l.pay != null ? l.pay.toFixed(2) : "", l.approved ? "yes" : "no", escapeCsv(l.note ?? ""),
   ].join(","));
   return [header.join(","), ...rows].join("\n");
 }
 
 /** Spreadsheet (CSV) — totals per instructor. */
 export function payrollSummaryToCsv(rows: PayrollSummaryRow[]): string {
-  const header = ["Instructor", "Shifts", "Worked (h)", "Lunch breaks (h)", "Paid hours", "Pay"];
-  const out = rows.map((r) => [escapeCsv(r.instructorName), String(r.shifts), h(r.workedMinutes), h(r.breakMinutes), h(r.payableMinutes), r.pay.toFixed(2)].join(","));
+  const header = ["Instructor", "Shifts", "Worked (h)", "Lunch breaks (h)", "Paid hours", "Pay", "Shifts without a rate"];
+  const out = rows.map((r) => [escapeCsv(r.instructorName), String(r.shifts), h(r.workedMinutes), h(r.breakMinutes), h(r.payableMinutes), r.pay.toFixed(2), String(r.unpriced)].join(","));
   return [header.join(","), ...out].join("\n");
 }

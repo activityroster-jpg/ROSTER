@@ -150,6 +150,7 @@ export async function seedFullOrg(
     status: "available",
   });
   await t.payRate.insert(ctx, { instructorId: instructor.id, rate: 25, unit: "hour" });
+  await t.rosterWeek.insert(ctx, { weekStart: "2026-01-05", publishedAt: null, publishedByUserId: null });
   await t.hoursRecord.insert(ctx, {
     instructorId: instructor.id,
     courseSessionId: session.id,

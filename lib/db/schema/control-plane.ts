@@ -170,6 +170,9 @@ export const organisation = sqliteTable("organisation", {
   setupPurchasedAt: integer("setup_purchased_at", { mode: "timestamp_ms" }),
   /** Company code instructors type into the app to join this centre (e.g. "7KD4PX"). */
   joinCode: text("join_code"),
+  // When the free trial ends. Null = created_at + the platform trial length;
+  // the Dev Center can extend it. After it: read-only, then locked (lib/billing/trial).
+  trialEndsAt: integer("trial_ends_at", { mode: "timestamp_ms" }),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 }, (t) => [

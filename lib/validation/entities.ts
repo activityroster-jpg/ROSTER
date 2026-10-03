@@ -26,6 +26,7 @@ export const orgSettingsSchema = z.object({
   enforceLicenceChecks: z.boolean().optional(),
   enforceRatioChecks: z.boolean().optional(),
   enforceConflictChecks: z.boolean().optional(),
+  enforceAvailabilityChecks: z.boolean().optional(),
 });
 
 export const sessionSlotSchema = z.object({

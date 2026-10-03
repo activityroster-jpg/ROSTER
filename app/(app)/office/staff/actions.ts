@@ -14,7 +14,10 @@ import { linkInstructorUser } from "@/lib/services/invite";
 import { toggleOnboarding } from "@/lib/services/hr";
 import { instructorCapState, capUpgradeMessage } from "@/lib/tenant/limits";
 import { apexDomain } from "@/lib/config";
-import { EMPLOYMENT_TYPES, type EmploymentType } from "@/lib/db/schema";
+import { EMPLOYMENT_TYPES, PAY_UNITS, type EmploymentType, type PayUnit } from "@/lib/db/schema";
+import { deletePayRate, setPayRate } from "@/lib/services/pay-rates";
+import { rebuildHoursFromRoster } from "@/lib/services/hours";
+import { z } from "zod";
 
 /** Absolute URL to a centre's own subdomain (magic links must land on it, not the apex). */
 function centreUrl(slug: string, path: string): string {
@@ -269,4 +272,79 @@ export async function declineJoinRequestAction(instructorId: string): Promise<Ac
   await writeAudit(repos, ctx, { action: "decline_join_request", entity: "instructor", entityId: inst.id, before: { email: inst.email } });
   revalidatePath("/office/staff");
   return { ok: true, message: `${inst.name} declined` };
+}
+
+
+const editSchema = z.object({
+  name: z.string().trim().min(1, "Enter a name").max(120),
+  email: z.string().trim().toLowerCase().email("Enter a valid email").max(200).or(z.literal("")),
+  phone: z.string().trim().max(40),
+  employmentType: z.enum(EMPLOYMENT_TYPES),
+});
+
+/** Edit an instructor's name, email, phone or employment type. Audited. */
+export async function updateInstructorAction(instructorId: string, input: { name: string; email: string; phone: string; employmentType: string }): Promise<ActionState> {
+  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const parsed = editSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Please check the details" };
+  const before = await repos.tenant.instructor.findById(ctx, instructorId);
+  if (!before) return { ok: false, error: "Instructor not found" };
+  const patch = { name: parsed.data.name, email: parsed.data.email || null, phone: parsed.data.phone || null, employmentType: parsed.data.employmentType };
+  await repos.tenant.instructor.update(ctx, instructorId, patch);
+  await writeAudit(repos, ctx, { action: "update", entity: "instructor", entityId: instructorId, before: { name: before.name, email: before.email, phone: before.phone, employmentType: before.employmentType }, after: patch });
+  revalidatePath("/office/staff");
+  revalidatePath(`/office/staff/${instructorId}`);
+  return { ok: true, message: "Saved" };
+}
+
+/**
+ * Mark an instructor as left (inactive) or bring them back. Leavers keep their
+ * history and hours but drop out of every picker and lose app access (their
+ * membership is suspended, never deleted).
+ */
+export async function setInstructorStatusAction(instructorId: string, status: "active" | "inactive"): Promise<ActionState> {
+  const { ctx, repos, organisation } = await requireTenant({ role: "admin" });
+  if (status !== "active" && status !== "inactive") return { ok: false, error: "Invalid status" };
+  const inst = await repos.tenant.instructor.findById(ctx, instructorId);
+  if (!inst || inst.status === "pending") return { ok: false, error: "Instructor not found" };
+  if (status === "active" && inst.status !== "active" && (await instructorCapState(repos, ctx, organisation)).full) {
+    return { ok: false, error: capUpgradeMessage(organisation) };
+  }
+  await repos.tenant.instructor.update(ctx, instructorId, { status });
+  if (inst.userId) await repos.control.setMembershipStatus(inst.userId, ctx.organisationId, status === "active" ? "active" : "suspended");
+  await writeAudit(repos, ctx, { action: status === "inactive" ? "instructor_left" : "instructor_returned", entity: "instructor", entityId: instructorId });
+  revalidatePath("/office/staff");
+  revalidatePath(`/office/staff/${instructorId}`);
+  revalidatePath("/office/courses");
+  return { ok: true, message: status === "inactive" ? `${inst.name} marked as left` : `${inst.name} is back on the team` };
+}
+
+const rateSchema = z.object({
+  roleTypeId: z.string().min(1).max(64).nullable(),
+  unit: z.enum(PAY_UNITS),
+  rate: z.number().min(0).max(100_000),
+});
+
+/** Set how an instructor is paid (default, or for one role). Refreshes unpriced payroll lines. */
+export async function setPayRateAction(instructorId: string, input: { roleTypeId: string | null; unit: string; rate: number }): Promise<ActionState> {
+  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const parsed = rateSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Enter an amount and how it's paid" };
+  if (!(await repos.tenant.instructor.findById(ctx, instructorId))) return { ok: false, error: "Instructor not found" };
+  if (parsed.data.roleTypeId && !(await repos.tenant.roleType.findById(ctx, parsed.data.roleTypeId))) return { ok: false, error: "Unknown role" };
+  await setPayRate(repos, ctx, { instructorId, roleTypeId: parsed.data.roleTypeId, unit: parsed.data.unit as PayUnit, rate: parsed.data.rate });
+  // Lines that had no rate pick this one up.
+  await rebuildHoursFromRoster(repos, ctx);
+  revalidatePath(`/office/staff/${instructorId}`);
+  revalidatePath("/office/finance");
+  return { ok: true, message: "Pay rate saved" };
+}
+
+export async function deletePayRateAction(id: string): Promise<ActionState> {
+  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const ok = await deletePayRate(repos, ctx, id);
+  if (!ok) return { ok: false, error: "Rate not found" };
+  revalidatePath("/office/staff");
+  revalidatePath("/office/finance");
+  return { ok: true, message: "Rate removed" };
 }

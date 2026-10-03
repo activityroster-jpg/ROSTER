@@ -37,17 +37,22 @@ export function ClockPanel({
   const [label, setLabel] = useState<string | null>(openLabel);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  // Clocking in without a session needs a reason; this holds it until they press Clock in.
+  const [noteOpen, setNoteOpen] = useState(sessions.length === 0);
+  const [note, setNote] = useState("");
 
   const nowHHMM = () => new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Europe/London" });
 
   const doIn = (sessionId: string | null, sessionLabel: string | null) => {
     setError(null);
+    if (!sessionId && note.trim().length < 3) { setNoteOpen(true); setError("Say what you're working on first."); return; }
     setOpen(true);
     setSince(nowHHMM());
-    setLabel(sessionLabel);
+    setLabel(sessionLabel ?? (note.trim() || null));
     startTransition(async () => {
-      const res = await clockInAction(sessionId, await currentFix());
+      const res = await clockInAction(sessionId, await currentFix(), sessionId ? null : note);
       if (!res.ok) { setOpen(false); setSince(null); setLabel(null); setError(res.error ?? "Could not clock in"); }
+      else { setNote(""); setNoteOpen(false); }
     });
   };
   const doOut = () => {
@@ -95,12 +100,19 @@ export function ClockPanel({
           ))}
         </div>
       ) : null}
+      {noteOpen ? (
+        <div className="mt-3 rounded-lg border border-slate-200 bg-white p-3">
+          <label className="block text-xs font-medium text-slate-500">What are you working on?</label>
+          <input value={note} onChange={(e) => setNote(e.target.value)} maxLength={200} placeholder="e.g. Boat maintenance, beach set-up, office cover" autoFocus className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal" />
+          <p className="mt-1 text-[11px] text-slate-400">Required when there&apos;s no session — the office sees this on your hours.</p>
+        </div>
+      ) : null}
       <button
-        onClick={() => doIn(null, null)}
+        onClick={() => (noteOpen || sessions.length === 0 ? doIn(null, null) : setNoteOpen(true))}
         disabled={pending}
         className="mt-3 w-full rounded-lg bg-navy px-4 py-3 font-semibold text-white transition hover:bg-navy-700 disabled:opacity-60"
       >
-        {pending ? "…" : sessions.length > 0 ? "Clock in (no session)" : "Clock in"}
+        {pending ? "…" : sessions.length > 0 ? (noteOpen ? "Clock in" : "Clock in without a session") : "Clock in"}
       </button>
       {error ? <p className="mt-2 text-xs text-port">{error}</p> : null}
     </div>

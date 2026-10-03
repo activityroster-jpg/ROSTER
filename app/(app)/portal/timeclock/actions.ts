@@ -25,10 +25,16 @@ function cleanFix(fix: GeoFix | null | undefined): { lat: number; lng: number; a
   return { lat: Math.round(lat * 1e5) / 1e5, lng: Math.round(lng * 1e5) / 1e5, accuracyM: acc != null && Number.isFinite(acc) && acc >= 0 ? Math.min(acc, 100_000) : null };
 }
 
-/** Clock the signed-in instructor in, optionally against one of their sessions (with approximate location from the app). */
-export async function clockInAction(courseSessionId?: string | null, fix?: GeoFix | null): Promise<Result> {
+/**
+ * Clock the signed-in instructor in, against one of their sessions (with
+ * approximate location from the app) or, without a session, with a required
+ * note saying what they're working on.
+ */
+export async function clockInAction(courseSessionId?: string | null, fix?: GeoFix | null, note?: string | null): Promise<Result> {
   const { ctx, repos, me } = await resolveMe();
   if (!me) return { ok: false, error: "No linked instructor profile" };
+  const cleanNote = (note ?? "").trim().slice(0, 200);
+  if (!courseSessionId && cleanNote.length < 3) return { ok: false, error: "Say what you're working on (a few words) when there's no session to clock in to." };
 
   // If a session is supplied it must belong to this tenant.
   let sessionId: string | null = null;
@@ -38,7 +44,7 @@ export async function clockInAction(courseSessionId?: string | null, fix?: GeoFi
     sessionId = session.id;
   }
 
-  await clockIn(repos, ctx, me.id, sessionId, Date.now(), cleanFix(fix));
+  await clockIn(repos, ctx, me.id, sessionId, Date.now(), cleanFix(fix), cleanNote || null);
   revalidatePath("/portal/timeclock");
   return { ok: true };
 }

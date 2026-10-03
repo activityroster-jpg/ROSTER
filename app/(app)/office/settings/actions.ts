@@ -52,6 +52,7 @@ export async function updateSettingsAction(_prev: ActionState, formData: FormDat
     enforceLicenceChecks: formData.get("enforceLicenceChecks") === "on",
     enforceRatioChecks: formData.get("enforceRatioChecks") === "on",
     enforceConflictChecks: formData.get("enforceConflictChecks") === "on",
+    enforceAvailabilityChecks: formData.get("enforceAvailabilityChecks") === "on",
   });
   if (!parsed.success) return { ok: false, error: "Please check the settings values" };
 
@@ -210,6 +211,24 @@ export async function updateBreakPolicyAction(input: { afterMinutes: number; bre
   revalidatePath("/office/settings");
   revalidatePath("/office/finance");
   return { ok: true, message: "Break rule saved" };
+}
+
+/** Time clock on/off and whether payroll defaults to rostered or clocked hours. */
+export async function updateTimeclockSettingsAction(input: { timeclockEnabled: boolean; paySource: string }): Promise<ActionState> {
+  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const parsed = z.object({ timeclockEnabled: z.boolean(), paySource: z.enum(["roster", "clock"]) }).safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Please check the values" };
+  // Paying on the clock makes no sense with the clock off.
+  const patch = { timeclockEnabled: parsed.data.timeclockEnabled, paySource: parsed.data.timeclockEnabled ? parsed.data.paySource : ("roster" as const) };
+  const existing = (await repos.tenant.orgSettings.list(ctx))[0];
+  if (existing) await repos.tenant.orgSettings.update(ctx, existing.id, patch);
+  else await repos.tenant.orgSettings.insert(ctx, patch);
+  await writeAudit(repos, ctx, { action: "update_timeclock", entity: "org_settings", after: patch });
+  revalidatePath("/office/settings");
+  revalidatePath("/office/finance");
+  revalidatePath("/office");
+  revalidatePath("/portal");
+  return { ok: true, message: "Saved" };
 }
 
 /** Issue a new company code for the instructor app (the old one stops working). */
