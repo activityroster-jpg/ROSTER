@@ -26,7 +26,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           </div>
         }
       />
-      <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
+      <main id="main" className="mx-auto max-w-6xl px-4 py-8">{children}</main>
     </div>
   );
 }

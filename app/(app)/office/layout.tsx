@@ -80,7 +80,7 @@ export default async function OfficeLayout({ children }: { children: React.React
               : "Your free trial has ended — add payment to keep your centre active →"}
           </Link>
         ) : null}
-        <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">{children}</div>
+        <div id="main" className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">{children}</div>
         <footer className="mx-auto max-w-6xl px-4 pb-6 text-xs text-slate-400 sm:px-6">
           Privacy: {privacyUrl ? <><a href={privacyUrl} target="_blank" rel="noreferrer" className="hover:text-navy">{organisation.name}&rsquo;s notice</a> · </> : null}
           <a href={`https://${apexDomain()}/privacy`} target="_blank" rel="noreferrer" className="hover:text-navy">ActivityRoster&rsquo;s notice</a>

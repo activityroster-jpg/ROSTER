@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { FreeTextHint } from "@/components/FreeTextHint";
 import { confirmAssignmentAction, declineAssignmentAction } from "@/app/(app)/portal/actions";
 
 /** Confirm / can't-make-it controls for one rostered course. */
@@ -36,6 +37,7 @@ export function ConfirmAssignment({ assignmentId, status, declineNote }: {
           Tell your centre why, so they can find cover
           <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder="e.g. Away that weekend" className="mt-1 block w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm text-navy" />
         </label>
+        <FreeTextHint className="mt-1" />
         <div className="mt-2 flex items-center gap-3">
           <button type="button" onClick={decline} disabled={pending || note.trim().length < 2} className="rounded-lg bg-port px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50">{pending ? "Sending…" : "Send"}</button>
           <button type="button" onClick={() => { setDeclining(false); setErr(null); }} className="text-sm text-slate-500">Cancel</button>

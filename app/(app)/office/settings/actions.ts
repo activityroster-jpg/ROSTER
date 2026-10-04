@@ -144,6 +144,7 @@ export async function addConfigAction(_prev: ActionState, formData: FormData): P
           code: code || name.toUpperCase().replace(/\s+/g, "_"),
           mandatory: formData.get("mandatory") === "on",
           expiryTracked: formData.get("expiryTracked") === "on",
+          isVetting: formData.get("isVetting") === "on",
           active: true,
         });
         await t.complianceType.insert(ctx, v);

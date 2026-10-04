@@ -1,5 +1,7 @@
 "use client";
 
+import { FreeTextHint } from "@/components/FreeTextHint";
+
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { anonymiseInstructorAction, setRestrictionAction } from "@/app/(app)/office/staff/actions";
@@ -40,8 +42,9 @@ export function PersonDataTools({ instructorId, name, restricted, restrictedReas
           </div>
         ) : (
           <div className="mt-1.5 flex flex-wrap items-center gap-2">
-            <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Reason (goes in the change log)" className="w-64 rounded-lg border border-slate-300 px-2 py-1.5 text-xs" />
+            <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Reason (goes in the change log)" aria-label="Reason for restriction" className="w-64 rounded-lg border border-slate-300 px-2 py-1.5 text-xs" />
             <button disabled={pending} onClick={() => run(() => setRestrictionAction(instructorId, true, reason))} className="rounded-lg border border-port/40 px-3 py-1.5 text-xs font-medium text-port hover:bg-port/5">Restrict</button>
+            <FreeTextHint className="basis-full" />
           </div>
         )}
       </div>

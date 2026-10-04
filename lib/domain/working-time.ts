@@ -1,5 +1,5 @@
 /**
- * Working-time rules for young workers (and, later, adults). Pure: no DB, no
+ * Working-time rules for young workers and adults. Pure: no DB, no
  * I/O. The figures come from a jurisdiction "pack" (data, see
  * lib/rules/working-time), never from code, and every pack figure carries a
  * verified flag so unverified numbers are shown as such. The centre remains
@@ -151,8 +151,9 @@ const fmtH = (h: number) => (Number.isInteger(h) ? `${h}h` : `${h.toFixed(1)}h`)
 /**
  * Evaluate a person's rostered and proposed shifts against the pack. Returns
  * findings; "block" ones are breaches, "warn" ones need a human look, "info"
- * ones explain why checks are limited. Adults return no breaches (adult checks
- * are a later phase); people with no date of birth get one info finding.
+ * ones explain why checks are limited. Adults get warnings only (their limits
+ * are averaged and can be opted out of); people with no date of birth get one
+ * info finding.
  */
 export function evaluateWorkingTime(input: WorkingTimeInput): WtFinding[] {
   const out: WtFinding[] = [];
@@ -183,7 +184,8 @@ export function evaluateWorkingTime(input: WorkingTimeInput): WtFinding[] {
         verified: true,
       });
     }
-    return out; // adult, or below the minimum age
+    if (age !== null && age >= 18) return [...out, ...evaluateAdult(input, pack, inScope, proposedDates, touchedWeeks)];
+    return out; // below the minimum age
   }
   const unv = (field: string) => !band.unverified.includes(field);
   if (input.employmentType === "volunteer" && !pack.volunteersCovered) {
@@ -256,6 +258,49 @@ export function evaluateWorkingTime(input: WorkingTimeInput): WtFinding[] {
   return out;
 }
 
+/**
+ * Adults (18+): the Working Time Regulations figures from the pack's `adults`
+ * block, as warnings rather than blocks. The weekly limit is an average over a
+ * reference period and a worker may opt out in writing, and a break can be taken
+ * inside a long session, so a single rostered week can only ever suggest a look.
+ */
+function evaluateAdult(input: WorkingTimeInput, pack: WorkingTimePack, inScope: Shift[], proposedDates: Set<string>, touchedWeeks: Set<string>): WtFinding[] {
+  const a = pack.adults;
+  const out: WtFinding[] = [];
+  if (!a) return out;
+  const label = "adults";
+  for (const s of input.proposed) {
+    if (a.breakAfterHours != null && a.breakMinutes != null && hours(s) > a.breakAfterHours) {
+      out.push({ code: "break", severity: "warn", date: s.date, message: `${s.date}: ${fmtH(hours(s))} on one session. Adults working more than ${a.breakAfterHours} hours are entitled to a ${a.breakMinutes}-minute break; make sure it is scheduled.`, verified: pack.verified });
+    }
+  }
+  for (const monday of touchedWeeks) {
+    const end = addDaysIso(monday, 6);
+    const weekShifts = inScope.filter((s) => s.date >= monday && s.date <= end);
+    const total = weekShifts.reduce((n, s) => n + hours(s), 0);
+    if (a.maxHoursPerWeekAveraged != null && total > a.maxHoursPerWeekAveraged + 1e-9) {
+      out.push({ code: "weekly-hours", severity: "warn", date: monday, message: `Week of ${monday}: ${fmtH(total)} rostered. The adult limit is ${fmtH(a.maxHoursPerWeekAveraged)} a week averaged over the reference period, unless this person has opted out in writing; check the surrounding weeks.`, verified: pack.verified });
+    }
+    const workedDays = new Set(weekShifts.map((s) => s.date)).size;
+    if (a.weeklyRestHours != null && workedDays >= 7) {
+      out.push({ code: "weekly-rest", severity: "warn", date: monday, message: `Week of ${monday}: rostered on all 7 days. Adults are entitled to ${a.weeklyRestHours} hours' rest a week (or twice that a fortnight); check the week either side.`, verified: pack.verified });
+    }
+  }
+  if (a.dailyRestHours != null) {
+    const sorted = [...inScope].sort((x, y) => x.startAt - y.startAt);
+    for (let i = 1; i < sorted.length; i++) {
+      const prev = sorted[i - 1]!, cur = sorted[i]!;
+      if (cur.date === prev.date) continue;
+      if (!proposedDates.has(cur.date) && !proposedDates.has(prev.date)) continue;
+      const gap = (cur.startAt - prev.endAt) / H;
+      if (gap < a.dailyRestHours && cur.startAt - prev.endAt < DAY) {
+        out.push({ code: "daily-rest", severity: "warn", date: cur.date, message: `${prev.date} → ${cur.date}: only ${fmtH(Math.max(0, gap))} between finishing and starting; ${label} are entitled to ${a.dailyRestHours} hours' rest between working days.`, verified: pack.verified });
+      }
+    }
+  }
+  return out;
+}
+
 /** Summary helper for the staff page: hours this week vs the applicable cap. */
 export function weekSummary(pack: WorkingTimePack | null, dob: string | null, shifts: Shift[], weekMondayIso: string, termRanges: TermRange[]): { hours: number; cap: number | null; band: string | null } {
   const days = Array.from({ length: 7 }, (_, i) => addDaysIso(weekMondayIso, i));
@@ -263,7 +308,11 @@ export function weekSummary(pack: WorkingTimePack | null, dob: string | null, sh
   const total = week.reduce((a, s) => a + hours(s), 0);
   if (!pack || !dob) return { hours: total, cap: null, band: null };
   const band = selectBand(pack, dob, weekMondayIso);
-  if (!band) return { hours: total, cap: null, band: null };
+  if (!band) {
+    const age = ageOn(dob, new Date(`${weekMondayIso}T12:00:00Z`));
+    if (age !== null && age >= 18 && pack.adults) return { hours: total, cap: pack.adults.maxHoursPerWeekAveraged, band: "adults (48-hour average)" };
+    return { hours: total, cap: null, band: null };
+  }
   const anyTerm = days.some((d) => inTerm(d, termRanges));
   return { hours: total, cap: (anyTerm ? band.termTime : band.holiday).maxHoursPerWeek, band: band.label };
 }

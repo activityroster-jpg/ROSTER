@@ -8,7 +8,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
     <div className="min-h-screen bg-canvas">
       <IncidentBanner />
       <SiteHeader />
-      <main>{children}</main>
+      <main id="main">{children}</main>
       <footer className="border-t border-slate-200 bg-white">
         <div className="mx-auto max-w-6xl px-4 py-8 text-sm text-slate-500">
           <nav className="mb-3 flex flex-wrap gap-x-5 gap-y-2 font-medium text-slate-600">
@@ -24,6 +24,9 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
             <Link href="/data-processing" className="hover:text-navy">Data processing</Link>
             <Link href="/trust" className="hover:text-navy">Security</Link>
             <Link href="/privacy-request" className="hover:text-navy">Data requests</Link>
+            <Link href="/privacy/young-people" className="hover:text-navy">Under-18s</Link>
+            <Link href="/subprocessors" className="hover:text-navy">Sub-processors</Link>
+            <Link href="/accessibility" className="hover:text-navy">Accessibility</Link>
             <Link href="/cookies" className="hover:text-navy">Cookies</Link>
           </nav>
           <div className="mb-3 flex items-center gap-3">

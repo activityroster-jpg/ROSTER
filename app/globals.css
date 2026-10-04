@@ -2,6 +2,26 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Accessibility (compliance P1-G): a keyboard user's first Tab reveals a skip link;
+   every focusable element shows a visible ring; animation respects the OS setting. */
+.skip-link {
+  position: absolute;
+  left: 0.75rem;
+  top: -4rem;
+  z-index: 100;
+  padding: 0.5rem 0.9rem;
+  border-radius: 0.5rem;
+  background: var(--navy);
+  color: #fff;
+  font-weight: 600;
+  transition: top 0.15s ease-out;
+}
+.skip-link:focus { top: 0.75rem; outline: 3px solid #fff; outline-offset: 2px; }
+:focus-visible { outline: 3px solid var(--ryablue-bright); outline-offset: 2px; border-radius: 0.25rem; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
+
 :root {
   /* The whole product is a light theme. Pin the color-scheme so dark-mode
      browsers don't invert form controls (which made input text white on our

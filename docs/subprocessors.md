@@ -1,7 +1,11 @@
 # Sub-processor register
 
-Third parties that handle personal data for ActivityRoster. Schools are told before a new
-one is added. Keep in step with `docs/compliance-spec.md`.
+Third parties that handle personal data for ActivityRoster. Centres are told before a new
+one is added. Keep in step with `docs/compliance-spec.md` **and** the public page at
+`/subprocessors`, which is rendered from `lib/legal/subprocessors.ts` (same rows, plus a dated
+change list). To notify centres: Dev Center → Trust & compliance → Privacy requests →
+"Sub-processor change notice" (test to yourself first; refuses to send with under 30 days'
+notice).
 
 | Sub-processor | Purpose | Data involved | Location | DPA | Transfer mechanism |
 | --- | --- | --- | --- | --- | --- |

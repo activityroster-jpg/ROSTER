@@ -2,6 +2,7 @@ import { requirePlatformAdmin } from "@/lib/platform/admin";
 import { getDb } from "@/lib/cf/bindings";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { PrivacyQueue, type PrivacyRow } from "@/components/admin/PrivacyQueue";
+import { SubprocessorNotice } from "@/components/admin/SubprocessorNotice";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Privacy requests" };
@@ -21,6 +22,7 @@ export default async function AdminPrivacyPage() {
       <h1 className="mb-1 font-display text-2xl font-bold text-navy">Privacy requests <span className="text-base font-normal text-slate-400">{open.length} open</span></h1>
       <p className="mb-5 max-w-3xl text-sm text-slate-500">Everything sent through the public data-request form, with its 30-day acknowledgement deadline. Requesters get an automatic receipt. Where a request concerns a centre&rsquo;s own records, the centre is the controller: pass it on, note who you passed it to, and keep the thread until it&rsquo;s closed.</p>
       <PrivacyQueue rows={rows} />
+      <div className="mt-8"><SubprocessorNotice /></div>
     </div>
   );
 }

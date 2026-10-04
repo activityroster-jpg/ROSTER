@@ -74,6 +74,26 @@ public forms and sign-in, the per-IP rate limits, and Cloudflare's always-on DDo
 protection and managed rules. The workflow now says so in plain words when it sees
 the challenge header.
 
+## Cloudflare WAF managed rules (one-off, your clicks)
+
+The Worker already rate-limits sign-in and the public forms, validates every input and
+sets strict security headers. Cloudflare's managed firewall rules add a layer in front
+of all that for known attack patterns (SQL injection probes, path traversal, exploit
+scanners). They are free on the current plan and take two minutes:
+
+1. Cloudflare dashboard → the domain → **Security → WAF → Managed rules**.
+2. Turn on **Cloudflare Managed Ruleset**. Leave its action on the default (block).
+3. Turn on **Cloudflare OWASP Core Ruleset** with the paranoia level at **PL1** and the
+   score threshold at **Medium**. Start with the action set to **Log** for a week.
+4. After a week, open **Security → Events**, filter to the OWASP rule, and check that
+   nothing genuine was logged (expect nothing from `/api/webhooks/stripe`, sign-in, the
+   office or the portal). Then switch the OWASP action to **Managed Challenge**.
+5. Leave **Bot Fight Mode off** (see above); the managed rules do not challenge the
+   deploy checks or the uptime monitor the way Bot Fight Mode did.
+
+If a centre ever reports being blocked, the event is in Security → Events with the rule
+id; tell Claude Code the id and the path and the rule can be excluded for that path.
+
 ## Dependency updates (Dependabot)
 
 Dependabot opens pull requests against the working branch every Monday, plus

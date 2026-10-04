@@ -28,7 +28,7 @@ export function SetPasswordCard() {
 
   const save = () => {
     setMsg(null);
-    if (pw.length < 10) { setMsg({ ok: false, text: "Use at least 10 characters." }); return; }
+    if (pw.length < 8 || !/[A-Za-z]/.test(pw) || !/\d/.test(pw)) { setMsg({ ok: false, text: "Use at least 8 characters with a mix of letters and numbers." }); return; }
     if (pw !== confirm) { setMsg({ ok: false, text: "The two passwords don't match." }); return; }
     start(async () => {
       const res = await setMyPasswordAction(pw);

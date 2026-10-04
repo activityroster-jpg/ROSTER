@@ -159,10 +159,11 @@ export default async function SettingsPage() {
         <ConfigManager
           title="Checks (DBS, first aid, safeguarding…)"
           kind="compliance"
-          items={toItems(compliance, (c) => c.name, (c) => (c.mandatory ? "must have" : "optional"))}
+          items={toItems(compliance, (c) => c.name, (c) => [c.mandatory ? "must have" : "optional", c.isVetting ? "vetting: status only" : ""].filter(Boolean).join(" · "))}
           extraFields={[
             { name: "mandatory", label: "Must have to be rostered", type: "checkbox" },
             { name: "expiryTracked", label: "Has an expiry date", type: "checkbox" },
+            { name: "isVetting", label: "Vetting check (DBS, PVG, AccessNI, Garda): record the status and reference only, never the certificate", type: "checkbox" },
           ]}
         />
       </div>

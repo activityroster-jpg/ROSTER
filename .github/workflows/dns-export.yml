@@ -1,0 +1,60 @@
+name: Monthly DNS zone export
+
+# Compliance P1-G: keep a copy of the DNS zone outside Cloudflare's dashboard so the
+# domain can be rebuilt quickly after an account problem (docs/runbooks/restore.md,
+# Case C). Runs on the 1st of each month; the BIND-format export is kept as a
+# workflow artifact (90 days) and, when the backup bucket exists, in the EU R2
+# backup bucket under dns/ alongside the database exports.
+#
+# Required repository secrets: CLOUDFLARE_API_TOKEN (with Zone → DNS → Read on the
+# zone), CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_ZONE_ID (Cloudflare dashboard → the domain
+# → Overview → API, right-hand column).
+
+on:
+  schedule:
+    - cron: "15 3 1 * *"
+  workflow_dispatch:
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+      BUCKET: activityroster-backups
+    steps:
+      - name: Check required secrets
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then echo "::error::CLOUDFLARE_API_TOKEN is not set."; exit 1; fi
+          if [ -z "$ZONE_ID" ]; then echo "::error::CLOUDFLARE_ZONE_ID is not set. In the Cloudflare dashboard open the domain, scroll the Overview page to the API box on the right, copy the Zone ID and add it as a repository secret named CLOUDFLARE_ZONE_ID."; exit 1; fi
+
+      - name: Export the zone (BIND format)
+        run: |
+          set -euo pipefail
+          MONTH=$(date -u +%Y-%m)
+          echo "MONTH=$MONTH" >> "$GITHUB_ENV"
+          code=$(curl -sS -o zone.txt -w '%{http_code}' -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records/export")
+          if [ "$code" != "200" ]; then
+            echo "::error::Cloudflare answered HTTP $code. If it is 403, the API token needs the permission Zone → DNS → Read for this zone (My Profile → API Tokens → edit the token)."
+            head -c 600 zone.txt; echo; exit 1
+          fi
+          records=$(grep -cE '^[^;$]' zone.txt || true)
+          echo "Exported $records records for $MONTH"
+          if [ "$records" -lt 3 ]; then echo "::error::The export has fewer than 3 records, which cannot be right for a live zone."; exit 1; fi
+
+      - name: Keep it as a workflow artifact (90 days)
+        uses: actions/upload-artifact@v4
+        with:
+          name: dns-zone-${{ env.MONTH }}
+          path: zone.txt
+          retention-days: 90
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Copy to the EU backup bucket
+        run: |
+          npx --yes wrangler r2 object put "$BUCKET/dns/$MONTH.txt" --file zone.txt -J eu --remote \
+            || echo "::warning::Could not write to the backup bucket (it is created by the first nightly backup); the artifact above still holds this month's export."

@@ -66,7 +66,7 @@ export default async function PortalLayout({ children }: { children: React.React
       {trial.kind === "read_only" ? (
         <p className="bg-amber/25 px-4 py-2 text-center text-xs font-medium text-navy">Your centre&apos;s free trial has ended, so nothing can be changed for now. Please let whoever runs your centre know.</p>
       ) : null}
-      <main className="flex-1 px-4 py-5 pb-24">
+      <main id="main" className="flex-1 px-4 py-5 pb-24">
         {children}
         <p className="mt-8 text-center text-[11px] text-slate-400">
           Privacy: {privacyUrl ? <><a href={privacyUrl} target="_blank" rel="noreferrer" className="underline">{organisation.name}&rsquo;s notice</a> · </> : null}

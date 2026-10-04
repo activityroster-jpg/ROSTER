@@ -52,6 +52,16 @@ Use when Time Travel cannot reach the point you need.
 5. Point DNS at the new account, deploy production, smoke test, tell centres.
 6. Rotate every secret that lived in the old account.
 
+## DNS zone copy (monthly, automatic)
+
+The `Monthly DNS zone export` workflow (Actions → Monthly DNS zone export) saves the
+whole zone in BIND format on the 1st of each month: as a workflow artifact kept 90 days
+and as `dns/YYYY-MM.txt` in the EU backup bucket. Case C step 5 uses it: in the new
+account, DNS → Records → **Import and Export → Import**, choose the latest file, then
+check the proxied (orange cloud) status of the apex, `www`, `staging` and the wildcard.
+It needs the `CLOUDFLARE_ZONE_ID` secret and the API token to carry Zone → DNS → Read;
+the workflow says so in plain words if either is missing.
+
 ## What is NOT restored
 
 Stripe subscriptions (live in Stripe), Resend domains, GitHub. Sessions and PINs are in

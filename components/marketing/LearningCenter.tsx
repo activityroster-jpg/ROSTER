@@ -277,7 +277,7 @@ const SECTIONS: Section[] = [
     blurb: "Track every cert and check, with expiry alerts.",
     blocks: [
       { kind: "p", text: "Every instructor has a document area for their qualifications (dinghy, keelboat, windsurf, SUP, powerboat, first aid…) and their checks (DBS, safeguarding, first aid)." },
-      { kind: "p", text: "Vetting checks (DBS, PVG, AccessNI, Garda) are different: the centre records the status, the certificate number and the dates, and marks the check verified once it has seen the certificate. The certificate itself is never uploaded or stored, and the number is encrypted. That keeps the most sensitive document out of the system entirely." },
+      { kind: "p", text: "Vetting checks (DBS, PVG, AccessNI, Garda) are different: the centre records the status, the certificate number and the dates, and marks the check verified once it has seen the certificate. The certificate itself is never uploaded or stored, and the number is encrypted. That keeps the most sensitive document out of the system entirely. The built-in vetting checks are already marked this way; if you add your own check type under Settings → Checks, tick “Vetting check” and it is treated the same." },
       { kind: "sub", text: "Two ways to add documents" },
       { kind: "bullets", items: [
         "The instructor uploads their own: they pick the cert from a dropdown, add a photo/scan and the expiry date.",

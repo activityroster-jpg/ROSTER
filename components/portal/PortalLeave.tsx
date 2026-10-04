@@ -1,5 +1,7 @@
 "use client";
 
+import { FreeTextHint } from "@/components/FreeTextHint";
+
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { claimOpenShiftAction, requestLeaveAction } from "@/app/(app)/portal/leave/actions";
@@ -61,7 +63,8 @@ export function PortalLeave({ myLeave, shifts }: { myLeave: LeaveRow[]; shifts: 
             <label className="text-xs text-slate-500">To<input type="date" value={end} min={start || undefined} onChange={(e) => onEnd(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" /></label>
           </div>
           <label className="text-xs text-slate-500">Days <span className="text-slate-400">(worked out from the dates — change it for half days)</span><input type="number" min="0.5" step="0.5" value={days} onChange={(e) => { setDays(e.target.value); setDaysEdited(true); }} className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" /></label>
-          <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Reason (optional)" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+          <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Reason (optional)" aria-label="Reason (optional)" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+          <FreeTextHint />
         </div>
         <button disabled={pending} className="mt-3 w-full rounded-lg bg-teal px-4 py-2.5 font-semibold text-white hover:bg-teal-700 disabled:opacity-60">Submit request</button>
         {msg ? <p className="mt-2 text-center text-xs text-slate-500">{msg}</p> : null}

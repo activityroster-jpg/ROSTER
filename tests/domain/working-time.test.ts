@@ -77,6 +77,20 @@ describe("Ireland", () => {
     const days = evaluateWorkingTime({ pack: ie, dateOfBirth: dob, employmentType: "employed", termRanges: [], existing: ["06", "07", "08", "09", "10"].map((d) => at(`2026-07-${d}`, 9, 13)), proposed: [at("2026-07-11", 9, 13)] });
     expect(codes(days)).toContain("weekly-rest");
   });
+  it("adults get warnings for a 48+ hour week, a 7-day week, short rest and long sessions, never blocks", () => {
+    const dob = "1990-05-05";
+    const long = evaluateWorkingTime({ pack: gb, dateOfBirth: dob, employmentType: "employed", termRanges: [], existing: [], proposed: [at("2026-07-06", 9, 17)] });
+    expect(long.filter((f) => f.severity === "block")).toEqual([]);
+    expect(long.map((f) => f.code)).toContain("break");
+    const week = Array.from({ length: 7 }, (_, i) => at(`2026-07-${String(6 + i).padStart(2, "0")}`, 8, 16));
+    const f = evaluateWorkingTime({ pack: gb, dateOfBirth: dob, employmentType: "employed", termRanges: [], existing: week.slice(0, 6), proposed: [week[6]!] });
+    expect(f.filter((x) => x.severity === "block")).toEqual([]);
+    expect(f.filter((x) => x.severity === "warn").map((x) => x.code)).toEqual(expect.arrayContaining(["weekly-hours", "weekly-rest", "break"]));
+    const rest = evaluateWorkingTime({ pack: gb, dateOfBirth: dob, employmentType: "employed", termRanges: [], existing: [at("2026-07-06", 14, 22)], proposed: [at("2026-07-07", 6, 9)] });
+    expect(rest.map((x) => `${x.severity}:${x.code}`)).toContain("warn:daily-rest");
+    const fine = evaluateWorkingTime({ pack: gb, dateOfBirth: dob, employmentType: "employed", termRanges: [], existing: [], proposed: [at("2026-07-07", 9, 14)] });
+    expect(fine).toEqual([]);
+  });
   it("adults and people without a date of birth get no breaches", () => {
     expect(codes(evaluateWorkingTime({ pack: ie, dateOfBirth: "1990-01-01", employmentType: "employed", termRanges: [], existing: [], proposed: [at("2026-07-07", 6, 23)] }))).toEqual([]);
     const none = evaluateWorkingTime({ pack: ie, dateOfBirth: null, employmentType: "employed", termRanges: [], existing: [], proposed: [at("2026-07-07", 6, 23)] });

@@ -1,5 +1,7 @@
 "use client";
 
+import { FreeTextHint } from "@/components/FreeTextHint";
+
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { bulkAssignStaffAction } from "@/app/(app)/office/courses/actions";
@@ -119,7 +121,10 @@ export function BulkAssignForm({
             Assign anyway despite missing checks / clashes (records why)
           </label>
           {override ? (
-            <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Override reason (required)" className="mt-2 w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal" />
+            <>
+              <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Override reason (required)" aria-label="Override reason" className="mt-2 w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal" />
+              <FreeTextHint className="mt-1" />
+            </>
           ) : null}
 
           <div className="mt-3 flex items-center gap-3">

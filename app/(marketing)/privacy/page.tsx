@@ -34,7 +34,10 @@ export default function PrivacyPage() {
       <P>We keep account and centre data for as long as the centre is active, and for a limited retention window afterwards so a centre can export its data before deletion. Billing records are kept as long as the law requires. You can request earlier deletion (see below).</P>
 
       <H2>Sharing</H2>
-      <P>We do not sell personal data. We share it only with the sub-processors needed to run the service (hosting, payments, email) and where legally required. A current list of sub-processors is available on request.</P>
+      <P>We do not sell personal data. We share it only with the sub-processors needed to run the service (hosting, payments, email) and where legally required. The current list, with every change dated, is at <a className="text-teal hover:underline" href="/subprocessors">activityroster.com/subprocessors</a>; centres are told before a new one is added.</P>
+
+      <H2>Under-18s</H2>
+      <P>Some instructors and assistants are under 18. They get higher-privacy defaults, their parents or guardians can be given a read-only view of their rota, and nothing we build markets to them. The plain-English version for young people and their families is at <a className="text-teal hover:underline" href="/privacy/young-people">activityroster.com/privacy/young-people</a>.</P>
 
       <H2>Your rights</H2>
       <P>You have the right to access, correct, delete, restrict or object to processing, and to data portability. Centres can export their data at any time from Settings. To exercise a right, email <a className="text-teal hover:underline" href="mailto:privacy@activityroster.com">privacy@activityroster.com</a>. You may also complain to the UK Information Commissioner&apos;s Office (ICO) or your local supervisory authority.</P>

@@ -204,10 +204,23 @@ Effort is a rough guide: S = under half a day, M = one to two days, L = a week o
   anonymisation. Migration 0055. Per-centre matrix adjustments are not offered (roles are
   fixed and documented) — raise if a centre needs one.
 
-### P1-G Public pages and the rest
-- Working-time checks for adults; plain-English under-18 privacy page; free-text warnings;
-  customer-facing security overview; accessibility statement and WCAG 2.2 AA audit;
-  Cloudflare WAF managed rules; monthly DNS zone export; sub-processor change notices.
+### P1-G Public pages and the rest — built 4 October
+- Done in code: working-time warnings for adults (48-hour average, 20-minute break after 6
+  hours, 11 hours' daily and 24 hours' weekly rest, warn-only because of averaging and
+  opt-outs); plain-English under-18 privacy page (`/privacy/young-people`, linked from the
+  footer, the privacy policy and the guardian card); free-text reminders under every
+  note/reason box; `/trust` brought in line with the platform (roles, PIN timeout, sign-in
+  by email, retention, append-only logs); accessibility statement (`/accessibility`), skip
+  link, visible focus ring and reduced-motion support, with the self-audit's known gaps
+  listed on the page; public sub-processor register (`/subprocessors`) with a dated change
+  list and a Dev Center "Sub-processor change notice" that emails every centre admin at
+  least 30 days ahead; monthly DNS zone export workflow; custom vetting-type flag under
+  Settings → Checks.
+- Conor's clicks: WAF managed rules (`docs/runbooks/deploy.md`, "Cloudflare WAF managed
+  rules"); add the `CLOUDFLARE_ZONE_ID` secret and give the API token Zone → DNS → Read for
+  the DNS export.
+- Still open from the WCAG self-audit: a list view of the availability grid and roster for
+  screen readers; label association on a few Dev Center forms; contrast of some mobile icons.
 
 ## Phase 3 (P2): when customers ask or revenue allows
 

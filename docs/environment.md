@@ -47,6 +47,7 @@ Non-secret vars live in `wrangler.toml` (`APP_APEX_DOMAIN`, `APP_ENV`).
 | --- | --- |
 | `CLOUDFLARE_API_TOKEN` | all deploy workflows; token needs Workers Scripts, KV, R2, D1, Routes and Zone DNS edit |
 | `CLOUDFLARE_ACCOUNT_ID` | all deploy workflows |
+| `CLOUDFLARE_ZONE_ID` | the monthly DNS zone export (dashboard → the domain → Overview → API box on the right); the API token also needs Zone → DNS → Read |
 | `OUTREACH_CRON_SECRET` | the hourly outreach tick |
 | `STAGING_RESEND_API_KEY` (optional) | Provision staging: lets staging send real email |
 | `STAGING_STRIPE_SECRET_KEY`, `STAGING_STRIPE_WEBHOOK_SECRET` (optional) | Provision staging: Stripe test mode |

@@ -73,6 +73,8 @@ export const complianceTypeSchema = z.object({
   code: z.string().min(1),
   mandatory: z.boolean().default(false),
   expiryTracked: z.boolean().default(true),
+  /** Vetting checks (DBS, PVG, AccessNI, Garda) are recorded by status and reference only; no certificate file is stored. */
+  isVetting: z.boolean().default(false),
   active: z.boolean().default(true),
 });
 
