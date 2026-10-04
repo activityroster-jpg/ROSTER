@@ -11,6 +11,9 @@ import {
 import { and, gte, lt, courseSessionTable, type CourseAudience, type SlotCode } from "@/lib/db/schema-helpers";
 import { liveSessions } from "@/lib/domain/sessions";
 import { welfareForRange } from "./welfare";
+import { effectiveStaffBySession, coveringStaff } from "@/lib/domain/session-staff";
+import { sessionStaffOverride as overrideTable } from "@/lib/db/schema";
+import { inArray } from "drizzle-orm";
 
 export interface CourseCoverage {
   courseId: string;
@@ -173,10 +176,17 @@ export async function getWeekSchedule(
   }
 
   const sunday = addDays(mondayIso, 7);
-  const weekSessions: WeekSession[] = sessions
-    .filter((s) => s.date >= mondayIso && s.date < sunday)
+  const inWeek = sessions.filter((s) => s.date >= mondayIso && s.date < sunday);
+  // Per-day overrides change who is on a given session, so cover is judged per session.
+  const overrides = inWeek.length ? await t.sessionStaffOverride.list(ctx, inArray(overrideTable.courseSessionId, inWeek.map((s) => s.id))) : [];
+  const staffBySessionId = effectiveStaffBySession(inWeek, staffAssignments, overrides);
+  const courseById = new Map(courses.map((c) => [c.id, c]));
+  const weekSessions: WeekSession[] = inWeek
     .map((s) => {
-      const cov = coverageByCourse.get(s.courseId);
+      const course = courseById.get(s.courseId);
+      const ct = course ? courseTypeById.get(course.courseTypeId) : undefined;
+      const members = coveringStaff(staffBySessionId.get(s.id) ?? []).map((m) => { const role = roleById.get(m.roleTypeId); return { instructorId: m.instructorId, countsTowardRatio: role?.countsTowardRatio ?? false, isSafetyCover: role?.isSafetyCover ?? false }; });
+      const cov = course ? { courseName: course.name ?? ct?.name ?? "Course", ratio: evaluateRatio({ groupSize: course.capacity, ratio: course.ratio, requiresSafetyBoat: ct?.requiresSafetyBoat ?? false, assigned: members }) } : coverageByCourse.get(s.courseId);
       return {
         sessionId: s.id,
         courseId: s.courseId,
@@ -255,7 +265,7 @@ export interface RotaSession {
   coverageOk: boolean;
   understaffed: boolean;
   missingSafetyCover: boolean;
-  staff: { name: string; role: string; status: "assigned" | "confirmed" | "declined" }[];
+  staff: { name: string; role: string; status: "assigned" | "confirmed" | "declined"; /** On this day only (a per-day add). */ dayOnly?: boolean }[];
   locations: string[];
   /** Equipment on the course, e.g. "Safety RIB 1", "Pico ×2". */
   equipment: string[];
@@ -319,12 +329,7 @@ export async function getRotaDays(
   const instructorName = new Map(instructors.map((i) => [i.id, i.name]));
   const locationName = new Map(locations.map((l) => [l.id, l.name]));
 
-  const staffByCourse = new Map<string, RotaSession["staff"]>();
-  for (const sa of staffAssignments) {
-    const arr = staffByCourse.get(sa.courseId) ?? [];
-    arr.push({ name: instructorName.get(sa.instructorId) ?? "—", role: roleName.get(sa.roleTypeId) ?? "Staff", status: sa.status });
-    staffByCourse.set(sa.courseId, arr);
-  }
+  const roleById = new Map(roleTypes.map((r) => [r.id, r]));
   const locsByCourse = new Map<string, string[]>();
   for (const cl of courseLocations) {
     const arr = locsByCourse.get(cl.courseId) ?? [];
@@ -343,6 +348,8 @@ export async function getRotaDays(
 
   const sunday = addDays(mondayIso, dayCount);
   const inWeek = sessions.filter((s) => s.date >= mondayIso && s.date < sunday);
+  const overrides = inWeek.length ? await t.sessionStaffOverride.list(ctx, inArray(overrideTable.courseSessionId, inWeek.map((s) => s.id))) : [];
+  const staffBySessionId = effectiveStaffBySession(inWeek, staffAssignments, overrides);
   const slotRank: Record<SlotCode, number> = { AM: 0, PM: 1, EV: 2 };
   const welfare = await welfareForRange(repos, ctx, mondayIso, sunday);
 
@@ -355,7 +362,9 @@ export async function getRotaDays(
       .map((s) => {
         const course = courseById.get(s.courseId);
         const ct = course ? ctById.get(course.courseTypeId) : undefined;
-        const cov = coverageByCourse.get(s.courseId);
+        const members = staffBySessionId.get(s.id) ?? [];
+        const assignedRoles = coveringStaff(members).map((m) => { const role = roleById.get(m.roleTypeId); return { instructorId: m.instructorId, countsTowardRatio: role?.countsTowardRatio ?? false, isSafetyCover: role?.isSafetyCover ?? false }; });
+        const cov = course ? { ratio: evaluateRatio({ groupSize: course.capacity, ratio: course.ratio, requiresSafetyBoat: ct?.requiresSafetyBoat ?? false, assigned: assignedRoles }) } : coverageByCourse.get(s.courseId);
         return {
           sessionId: s.id,
           courseId: s.courseId,
@@ -369,7 +378,7 @@ export async function getRotaDays(
           coverageOk: cov?.ratio.ok ?? true,
           understaffed: cov?.ratio.understaffed ?? false,
           missingSafetyCover: cov?.ratio.missingSafetyCover ?? false,
-          staff: staffByCourse.get(s.courseId) ?? [],
+          staff: members.map((m) => ({ name: instructorName.get(m.instructorId) ?? "—", role: roleName.get(m.roleTypeId) ?? "Staff", status: m.status as "assigned" | "confirmed" | "declined", ...(m.source === "day" ? { dayOnly: true } : {}) })),
           locations: locsByCourse.get(s.courseId) ?? [],
           equipment: equipByCourse.get(s.courseId) ?? [],
           students: course?.capacity ?? 0,

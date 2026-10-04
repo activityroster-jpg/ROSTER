@@ -64,7 +64,15 @@ export interface ProblemAssignment {
   courseId: string;
   instructorId: string;
   status: string;
+  /** A per-day add: only these sessions of the course. */
+  onlySessionIds?: readonly string[];
+  /** Per-day skips: these sessions of the course don't count. */
+  skipSessionIds?: readonly string[];
 }
+
+/** The sessions of a course this assignment actually covers. */
+export const sessionsOf = <S extends { id: string }>(a: ProblemAssignment, courseSessions: readonly S[]): S[] =>
+  courseSessions.filter((s) => (!a.onlySessionIds || a.onlySessionIds.includes(s.id)) && !(a.skipSessionIds?.includes(s.id)));
 export interface ProblemInstructor {
   id: string;
   name: string;
@@ -94,8 +102,10 @@ export function sortProblems(problems: Problem[]): Problem[] {
 }
 
 const live = (a: ProblemAssignment) => a.status !== "declined";
-const firstSessionOf = (courseId: string, sessions: readonly ProblemSession[]): ProblemSession | undefined =>
-  sessions.filter((s) => s.courseId === courseId).sort((a, b) => a.date.localeCompare(b.date) || a.startAt - b.startAt)[0];
+const firstSessionOf = (courseId: string, sessions: readonly ProblemSession[], a?: ProblemAssignment): ProblemSession | undefined => {
+  const mine = sessions.filter((s) => s.courseId === courseId);
+  return (a ? sessionsOf(a, mine) : mine).sort((x, y) => x.date.localeCompare(y.date) || x.startAt - y.startAt)[0];
+};
 
 /** The same instructor on two overlapping sessions of different courses. One problem per clash, dated by the earlier session. */
 export function doubleBookings(sessions: readonly ProblemSession[], assignments: readonly ProblemAssignment[], courses: ReadonlyMap<string, ProblemCourse>, instructors: ReadonlyMap<string, ProblemInstructor>): Problem[] {
@@ -104,7 +114,7 @@ export function doubleBookings(sessions: readonly ProblemSession[], assignments:
   const bookings: ResourceBooking[] = [];
   for (const a of assignments) {
     if (!live(a)) continue;
-    for (const s of byCourse.get(a.courseId) ?? []) bookings.push({ sessionId: s.id, resourceId: a.instructorId, startAt: s.startAt, endAt: s.endAt, courseId: a.courseId });
+    for (const s of sessionsOf(a, byCourse.get(a.courseId) ?? [])) bookings.push({ sessionId: s.id, resourceId: a.instructorId, startAt: s.startAt, endAt: s.endAt, courseId: a.courseId });
   }
   const sessionById = new Map(sessions.map((s) => [s.id, s]));
   return findConflicts(bookings).map((c) => {
@@ -136,7 +146,7 @@ export function availabilityProblems(
   for (const a of assignments) {
     if (!live(a)) continue;
     const mine = availability.get(a.instructorId) ?? { index: { dated: {}, pattern: {} }, setBy: {} };
-    for (const s of byCourse.get(a.courseId) ?? []) {
+    for (const s of sessionsOf(a, byCourse.get(a.courseId) ?? [])) {
       const e = effectiveAvailability(mine.index, horizon, s.date, s.slot);
       if (e.status !== "unavailable") continue;
       const base = { date: s.date, slot: s.slot, courseId: s.courseId, courseName: courses.get(s.courseId)?.name ?? "Course", sessionId: s.id, instructorId: a.instructorId, instructorName: instructors.get(a.instructorId)?.name ?? "Instructor" };
@@ -153,7 +163,7 @@ export function declinedProblems(sessions: readonly ProblemSession[], assignment
   const out: Problem[] = [];
   for (const a of assignments) {
     if (a.status !== "declined") continue;
-    const first = firstSessionOf(a.courseId, sessions);
+    const first = firstSessionOf(a.courseId, sessions, a);
     if (!first) continue;
     out.push({ kind: "declined", severity: "warn", date: first.date, slot: first.slot, courseId: a.courseId, courseName: courses.get(a.courseId)?.name ?? "Course", sessionId: first.id, instructorId: a.instructorId, instructorName: instructors.get(a.instructorId)?.name ?? "Instructor", detail: "Said they can't make it; find cover or remove them" });
   }
@@ -175,7 +185,7 @@ export function perAssignmentProblems(
   for (const a of assignments) {
     if (!live(a)) continue;
     const course = courses.get(a.courseId);
-    const first = firstSessionOf(a.courseId, sessions);
+    const first = firstSessionOf(a.courseId, sessions, a);
     if (!course || !first) continue;
     const detail = detailFor(a.instructorId, course);
     if (!detail) continue;

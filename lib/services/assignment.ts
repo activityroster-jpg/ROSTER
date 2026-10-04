@@ -21,6 +21,7 @@ import { liveSessions } from "@/lib/domain/sessions";
 import { parentApprovalFor } from "./guardians";
 import { getTeachingMatrix } from "./teaching";
 import { qualificationGap } from "./problems";
+import { sessionsForInstructor } from "./session-staff";
 import { qualification as qualificationTable } from "@/lib/db/schema";
 
 export interface AssignInput {
@@ -146,9 +147,9 @@ export async function assignStaff(
   if (existingAssignments.some((a) => a.courseId === input.courseId && a.roleTypeId === input.roleTypeId)) {
     return { ok: false, reason: "invalid", detail: `${instructorRow.name} is already on this course as ${roleRow.name}` };
   }
-  const otherCourseIds = new Set(existingAssignments.map((a) => a.courseId).filter((id) => id !== input.courseId));
-  const existingBookings: ResourceBooking[] = thisCourseSessions
-    .filter((s) => otherCourseIds.has(s.courseId))
+  // What they are actually on elsewhere: course-level minus per-day skips, plus per-day adds.
+  const existingBookings: ResourceBooking[] = (await sessionsForInstructor(repos, ctx, input.instructorId, thisCourseSessions))
+    .filter((s) => s.courseId !== input.courseId)
     .map((s) => ({
       sessionId: s.id,
       resourceId: input.instructorId,

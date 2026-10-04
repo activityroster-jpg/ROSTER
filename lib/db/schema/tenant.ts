@@ -577,6 +577,39 @@ export const courseLocation = sqliteTable("course_location", {
  * The staff a course needs, by role — e.g. 2× Instructor + 1× Safety Boat
  * Driver. Set when the course is built; assignments are measured against it.
  */
+/** Who is on one day of a course when it differs from the course as a whole (audit A3-3, option B). */
+export const SESSION_STAFF_MODES = ["add", "skip"] as const;
+export type SessionStaffMode = (typeof SESSION_STAFF_MODES)[number];
+
+/**
+ * Per-day staffing override. A course's assignments (course_staff) still cover
+ * every session by default; a "skip" takes one person off one day, an "add"
+ * puts someone on one day only (the Wednesday cover on a five-day Stage 3, or
+ * an open shift filled for a single session).
+ */
+export const sessionStaffOverride = sqliteTable("session_staff_override", {
+  id: id(),
+  organisationId: orgFk(),
+  courseSessionId: text("course_session_id")
+    .notNull()
+    .references(() => courseSession.id, { onDelete: "cascade" }),
+  instructorId: text("instructor_id")
+    .notNull()
+    .references(() => instructor.id, { onDelete: "restrict" }),
+  roleTypeId: text("role_type_id")
+    .notNull()
+    .references(() => roleType.id, { onDelete: "restrict" }),
+  mode: text("mode", { enum: SESSION_STAFF_MODES }).notNull(),
+  note: text("note"),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, (t) => [
+  index("session_staff_override_org_idx").on(t.organisationId),
+  index("session_staff_override_session_idx").on(t.courseSessionId),
+  uniqueIndex("session_staff_override_session_instructor_uq").on(t.courseSessionId, t.instructorId),
+]);
+export type SessionStaffOverride = typeof sessionStaffOverride.$inferSelect;
+
 export const courseRoleRequirement = sqliteTable("course_role_requirement", {
   id: id(),
   organisationId: orgFk(),

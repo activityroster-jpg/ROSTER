@@ -6,6 +6,7 @@ import { courseSession as courseSessionTable } from "@/lib/db/schema";
 import { openToken } from "@/lib/security/token-crypto";
 import { isUnder18 } from "@/lib/domain/age";
 import { writeAudit } from "./audit";
+import { staffBySession } from "./session-staff";
 import { addDays } from "./schedule";
 import { liveSessions } from "@/lib/domain/sessions";
 import { welfareForRange } from "./welfare";
@@ -59,11 +60,12 @@ export async function getDaySheet(repos: Repositories, ctx: AnyTenantContext, da
     people.set(id, p);
     return p;
   };
+  const membersBySession = await staffBySession(repos, ctx, sessions, assignments);
   const out: SheetSession[] = [];
   for (const s of sessions.sort((a, b) => a.startAt.getTime() - b.startAt.getTime())) {
     const course = courseById.get(s.courseId);
     const staff: SheetPerson[] = [];
-    for (const a of assignments.filter((x) => x.courseId === s.courseId && x.status !== "declined")) {
+    for (const a of (membersBySession.get(s.id) ?? []).filter((m) => m.status !== "declined")) {
       const p = await person(a.instructorId);
       if (p) staff.push({ ...p, role: roleName.get(a.roleTypeId) ?? "Staff", status: a.status });
     }

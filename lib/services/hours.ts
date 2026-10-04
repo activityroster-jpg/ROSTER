@@ -6,6 +6,8 @@ import { durationMinutes } from "@/lib/domain";
 import { payRatesByInstructor, pickPayRate } from "./pay-rates";
 import { writeAudit } from "./audit";
 import { liveSessions } from "@/lib/domain/sessions";
+import { effectiveStaffBySession } from "@/lib/domain/session-staff";
+import { sessionStaffOverride as overrideTable } from "@/lib/db/schema";
 
 /**
  * Hours come from the ROSTER. Every (assignment × session) has an hours record
@@ -35,15 +37,20 @@ export async function syncHoursForCourse(repos: Repositories, ctx: AnyTenantCont
   if (allSessions.length === 0) return out;
   const paySource = settingsRows[0]?.paySource ?? "roster";
 
-  const existing = await t.hoursRecord.list(ctx, inArray(hoursRecordTable.courseSessionId, allSessions.map((s) => s.id)));
+  const [existing, overrides] = await Promise.all([
+    t.hoursRecord.list(ctx, inArray(hoursRecordTable.courseSessionId, allSessions.map((s) => s.id))),
+    t.sessionStaffOverride.list(ctx, inArray(overrideTable.courseSessionId, allSessions.map((s) => s.id))),
+  ]);
   const byKey = new Map<string, HoursRecord>();
   for (const r of existing) if (r.courseSessionId) byKey.set(`${r.instructorId}|${r.courseSessionId}`, r);
+  // Who is on each session: the course's people minus per-day skips, plus per-day adds.
+  const members = effectiveStaffBySession(sessions, staff, overrides);
 
   const wanted = new Set<string>();
-  for (const a of staff) {
-    if (a.status === "declined") continue;
-    const rate = pickPayRate(rates.get(a.instructorId) ?? [], a.roleTypeId);
-    for (const s of sessions) {
+  for (const s of sessions) {
+    for (const a of members.get(s.id) ?? []) {
+      if (a.status === "declined") continue;
+      const rate = pickPayRate(rates.get(a.instructorId) ?? [], a.roleTypeId);
       const key = `${a.instructorId}|${s.id}`;
       wanted.add(key);
       const scheduled = durationMinutes({ startAt: toMs(s.startAt), endAt: toMs(s.endAt) });

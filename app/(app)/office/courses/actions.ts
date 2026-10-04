@@ -19,6 +19,8 @@ import { eq } from "drizzle-orm";
 import { courseSession as courseSessionTable, courseStaff as courseStaffTable } from "@/lib/db/schema";
 import { problemsForCourse, problemsSuffix } from "@/lib/services/problems";
 import { setCourseEquipment, setCourseLocations, setCourseStaffing } from "@/lib/services/course-resources";
+import { clearDayStaff, setDayStaff } from "@/lib/services/session-staff";
+import { SESSION_STAFF_MODES, type SessionStaffMode } from "@/lib/db/schema";
 import { courseEquipmentSchema, courseLocationsSchema, courseStaffingSchema } from "@/lib/validation/actions";
 
 export type ActionState = { ok: boolean; error?: string; message?: string };
@@ -256,6 +258,35 @@ export async function setCourseStaffingAction(input: { courseId: string; student
   revalidatePath(`/office/courses/${parsed.data.courseId}`);
   revalidatePath("/office");
   return { ok: true, message: "Saved" };
+}
+
+/** Put someone on one day only, or take them off one day (the rest of the course stands). */
+export async function setDayStaffAction(input: { sessionId: string; instructorId: string; roleTypeId: string; mode: string; override?: boolean; note?: string | null }): Promise<ActionState> {
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
+  if (![input.sessionId, input.instructorId, input.roleTypeId].every((v) => idSchema.safeParse(v).success)) return { ok: false, error: "Invalid request" };
+  if (!(SESSION_STAFF_MODES as readonly string[]).includes(input.mode)) return { ok: false, error: "Invalid request" };
+  const note = typeof input.note === "string" ? input.note.trim().slice(0, 300) || null : null;
+  if (input.override && !note) return { ok: false, error: "Say why you're overriding" };
+  const r = await setDayStaff(repos, ctx, { sessionId: input.sessionId, instructorId: input.instructorId, roleTypeId: input.roleTypeId, mode: input.mode as SessionStaffMode, override: Boolean(input.override), note });
+  if (!r.ok) return { ok: false, error: `${r.error}. Tick override and add a note to push it through.` };
+  revalidatePath("/office/courses");
+  revalidatePath("/office/rota");
+  revalidatePath("/office");
+  revalidatePath("/portal");
+  return { ok: true, message: r.overridden ? `Done (overriding: ${r.warnings.join("; ")})` : "Done" };
+}
+
+/** Undo a one-day staffing change. */
+export async function clearDayStaffAction(sessionId: string, instructorId: string): Promise<ActionState> {
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
+  if (!idSchema.safeParse(sessionId).success || !idSchema.safeParse(instructorId).success) return { ok: false, error: "Invalid request" };
+  const r = await clearDayStaff(repos, ctx, sessionId, instructorId);
+  if (!r.ok) return { ok: false, error: r.error ?? "Failed" };
+  revalidatePath("/office/courses");
+  revalidatePath("/office/rota");
+  revalidatePath("/office");
+  revalidatePath("/portal");
+  return { ok: true, message: "Undone" };
 }
 
 /** Replace a course's locations (editable after creation). */

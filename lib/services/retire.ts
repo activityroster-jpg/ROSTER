@@ -12,6 +12,7 @@ import {
   leaveRequest as leaveRequestTable,
   openShift as openShiftTable,
   qualification as qualificationTable,
+  sessionStaffOverride as overrideTable,
   timeEntry as timeEntryTable,
 } from "@/lib/db/schema";
 import { writeAudit } from "./audit";
@@ -79,8 +80,9 @@ export async function deleteOrRetireEquipmentType(repos: Repositories, ctx: AnyT
 /** What stops an instructor being deleted outright: anything that is a record of work. */
 export async function instructorReferences(repos: Repositories, ctx: AnyTenantContext, id: string): Promise<string[]> {
   const t = repos.tenant;
-  const [rostered, hours, clock, leave, shifts] = await Promise.all([
+  const [rostered, days, hours, clock, leave, shifts] = await Promise.all([
     t.courseStaff.count(ctx, eq(courseStaffTable.instructorId, id)),
+    t.sessionStaffOverride.count(ctx, eq(overrideTable.instructorId, id)),
     t.hoursRecord.count(ctx, eq(hoursRecordTable.instructorId, id)),
     t.timeEntry.count(ctx, eq(timeEntryTable.instructorId, id)),
     t.leaveRequest.count(ctx, eq(leaveRequestTable.instructorId, id)),
@@ -88,6 +90,7 @@ export async function instructorReferences(repos: Repositories, ctx: AnyTenantCo
   ]);
   const why: string[] = [];
   if (rostered) why.push(`rostered on ${rostered} course${rostered === 1 ? "" : "s"}`);
+  if (days) why.push(`${days} single-day staffing change${days === 1 ? "" : "s"}`);
   if (hours) why.push(`${hours} payroll line${hours === 1 ? "" : "s"}`);
   if (clock) why.push(`${clock} clock record${clock === 1 ? "" : "s"}`);
   if (leave) why.push(`${leave} leave request${leave === 1 ? "" : "s"}`);

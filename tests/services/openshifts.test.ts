@@ -43,10 +43,11 @@ describe("open shifts service", () => {
     expect(filled.shift.status).toBe("filled");
     expect(filled.shift.filledByInstructorId).toBe(claimantId);
 
-    // Confirmation created a course-staff assignment for the claimant.
+    // Confirmation puts the claimant on that one session (a per-day add), not on the whole course.
     const staff = await repos.tenant.courseStaff.list(ctx, eq(courseStaffTable.instructorId, claimantId));
-    expect(staff.length).toBe(1);
-    expect(staff[0]!.status).toBe("confirmed");
+    expect(staff.length).toBe(0);
+    const day = (await repos.tenant.sessionStaffOverride.list(ctx)).filter((o) => o.instructorId === claimantId);
+    expect(day.map((o) => [o.courseSessionId, o.mode])).toEqual([[sessionId, "add"]]);
   });
 
   it("cannot confirm a shift that was never claimed", async () => {

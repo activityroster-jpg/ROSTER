@@ -12,6 +12,7 @@ import {
   notification as notificationTable,
   payRate as payRateTable,
   qualification as qualificationTable,
+  sessionStaffOverride as overrideTable,
   timeEntry as timeEntryTable,
 } from "@/lib/db/schema";
 import type { Instructor } from "@/lib/db/schema";
@@ -161,7 +162,7 @@ export async function anonymisePerson(repos: Repositories, ctx: AnyTenantContext
   for (const q of quals) { if (q.docKey) await deleteDocument(ctx, q.docKey).catch(() => {}); await t.qualification.delete(ctx, q.id); }
   for (const c of checks) { if (c.docKey) await deleteDocument(ctx, c.docKey).catch(() => {}); await t.complianceItem.delete(ctx, c.id); }
   removed.qualifications = quals.length; removed.checks = checks.length;
-  for (const [name, repo, table] of [["availability", t.availability, availabilityTable], ["availabilityNotes", t.availabilityNote, availabilityNoteTable], ["leave", t.leaveRequest, leaveRequestTable], ["notifications", t.notification, notificationTable], ["payRates", t.payRate, payRateTable]] as const) {
+  for (const [name, repo, table] of [["dayStaffing", t.sessionStaffOverride, overrideTable], ["availability", t.availability, availabilityTable], ["availabilityNotes", t.availabilityNote, availabilityNoteTable], ["leave", t.leaveRequest, leaveRequestTable], ["notifications", t.notification, notificationTable], ["payRates", t.payRate, payRateTable]] as const) {
     const rows = await repo.list(ctx, by(table));
     for (const r of rows) await repo.delete(ctx, r.id);
     removed[name] = rows.length;

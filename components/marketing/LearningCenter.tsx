@@ -91,6 +91,8 @@ const SECTIONS: Section[] = [
         "Open “More options” if you want to say who's needed (e.g. 2× Instructor and 1× Safety Boat) or tick the locations and equipment the course uses — all optional.",
         "Click “Create course”.",
       ] },
+      { kind: "sub", text: "Staffing one day differently" },
+      { kind: "p", text: "People are put on the whole course by default. On a multi-day course you can change a single day: on the course page each session lists who's on it, with “skip this day” next to anyone who isn't needed that day and “+ add for this day” for one-day cover. Open shifts are filled this way too, so cover for one session never puts someone on the whole week. The roster, the PDF, the emergency sheet, payroll and the app all follow." },
       { kind: "sub", text: "Staffing: one panel" },
       { kind: "p", text: "Each course has a single Staffing panel (on the course page, and under 👥 on the course card). Enter the students booked; it shows what the RYA ratio from the course type implies and can suggest the roles. Adjust the role lines (say, 2 × Instructor and 1 × Safety boat) and the number of staff needed follows from them. If the lines fall short of the ratio, the panel says so." },
       { kind: "sub", text: "Manage a course" },

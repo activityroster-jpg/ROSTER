@@ -7,6 +7,8 @@ import { todayIso } from "@/lib/domain";
 import { Card, StatusPill } from "@/components/ui";
 import { ConfirmAssignment } from "@/components/portal/ConfirmAssignment";
 import { problemsForInstructor } from "@/lib/services/problems";
+import { loadOverrides } from "@/lib/services/session-staff";
+import { effectiveStaffBySession } from "@/lib/domain/session-staff";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -54,6 +56,10 @@ export default async function PortalSchedulePage() {
     repos.tenant.location.list(ctx),
     problemsForInstructor(repos, ctx, me.id, { from: today, to: horizonEnd }).then((ps) => ps.filter((p) => ["busy", "on-leave", "double-booked", "not-answered"].includes(p.kind))).catch(() => []),
   ]);
+  const overrides = await loadOverrides(repos, ctx, events.map((e) => e.id));
+  const membersBySession = effectiveStaffBySession(events, allStaff, overrides);
+  // Declines stay visible (the card shows "can't make it"); per-day skips do not.
+  const onSession = (sessionId: string) => (membersBySession.get(sessionId) ?? []).some((m) => m.instructorId === me.id);
   // Only published weeks: a draft roster is the office's business until it goes out.
   const myProblems = myProblemsAll.filter((p) => published.has(weekOf(p.date)));
   const locationName = new Map(locations.map((l) => [l.id, l.name]));
@@ -65,10 +71,10 @@ export default async function PortalSchedulePage() {
     .filter((i) => i.id !== me.id && i.status === "active" && i.shareContact && !i.anonymisedAt && !i.restrictedAt && (i.phone || i.email))
     .map((i) => ({ id: i.id, name: i.name, phone: i.phone, email: i.email }))
     .sort((a, b) => a.name.localeCompare(b.name));
-  const colleaguesOf = (courseId: string) =>
-    allStaff.filter((s) => s.courseId === courseId && s.instructorId !== me.id && s.status !== "declined").map((s) => nameById.get(s.instructorId) ?? "Instructor");
+  const colleaguesOf = (sessionId: string) =>
+    (membersBySession.get(sessionId) ?? []).filter((m) => m.instructorId !== me.id && m.status !== "declined").map((m) => nameById.get(m.instructorId) ?? "Instructor");
 
-  const mineAll = events.filter((e) => myByCourse.has(e.courseId)).sort((a, b) => a.startAt - b.startAt);
+  const mineAll = events.filter((e) => onSession(e.id)).sort((a, b) => a.startAt - b.startAt);
   const mine = mineAll.filter((e) => published.has(weekOf(e.date)));
   const pencilled = mineAll.length - mine.length;
 
@@ -122,10 +128,11 @@ export default async function PortalSchedulePage() {
               </p>
               <div className="space-y-2">
                 {sessions.map((s) => {
-                  const mineRow = myByCourse.get(s.courseId)!;
-                  const first = !seen.has(s.courseId);
+                  const mineRow = myByCourse.get(s.courseId) ?? null;
+                  const dayOnly = !mineRow;
+                  const first = !dayOnly && !seen.has(s.courseId);
                   seen.add(s.courseId);
-                  const others = colleaguesOf(s.courseId);
+                  const others = colleaguesOf(s.id);
                   const students = studentsByCourse.get(s.courseId) ?? 0;
                   return (
                     <Card key={s.id}>
@@ -140,7 +147,9 @@ export default async function PortalSchedulePage() {
                         </div>
                         <StatusPill tone="neutral">{SLOT_LABEL[s.slot] ?? s.slot}</StatusPill>
                       </div>
-                      {first ? (
+                      {dayOnly ? (
+                        <p className="mt-2 text-xs text-teal">Cover for this day only.</p>
+                      ) : first && mineRow ? (
                         <ConfirmAssignment assignmentId={mineRow.id} status={mineRow.status} declineNote={mineRow.declineNote} />
                       ) : (
                         <p className={`mt-2 text-xs ${mineRow.status === "confirmed" ? "text-starboard" : mineRow.status === "declined" ? "text-port" : "text-slate-400"}`}>

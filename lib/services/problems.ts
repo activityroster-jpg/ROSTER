@@ -69,7 +69,7 @@ export async function findProblems(repos: Repositories, ctx: AnyTenantContext, o
   const from = opts.from ?? todayIso(settings?.timezone ?? undefined);
   const to = opts.to ?? addDays(from, 56);
 
-  const [allSessions, courseRows, courseTypes, assignmentRows, instructorRows, availRows, complianceTypes, complianceItems, roleTypes, courseEquipment, equipment, teaching, qualifications, equipmentTypes] = await Promise.all([
+  const [allSessions, courseRows, courseTypes, assignmentRows, instructorRows, availRows, complianceTypes, complianceItems, roleTypes, courseEquipment, equipment, teaching, qualifications, equipmentTypes, overrideRows] = await Promise.all([
     t.courseSession.list(ctx).then(liveSessions),
     t.course.list(ctx),
     t.courseType.list(ctx),
@@ -84,6 +84,7 @@ export async function findProblems(repos: Repositories, ctx: AnyTenantContext, o
     getTeachingMatrix(repos, ctx),
     t.qualification.list(ctx),
     t.equipmentType.list(ctx),
+    t.sessionStaffOverride.list(ctx),
   ]);
 
   const cancelled = new Set(courseRows.filter((c) => c.cancelledAt || c.status === "cancelled").map((c) => c.id));
@@ -93,9 +94,18 @@ export async function findProblems(repos: Repositories, ctx: AnyTenantContext, o
   const courses = new Map<string, ProblemCourse>(courseRows.map((c) => [c.id, { id: c.id, name: c.name ?? courseTypes.find((ct) => ct.id === c.courseTypeId)?.name ?? "Course", courseTypeId: c.courseTypeId }]));
   const instructors = new Map<string, ProblemInstructor>(instructorRows.map((i) => [i.id, { id: i.id, name: i.name }]));
   const inRange = new Set(sessions.map((s) => s.courseId));
-  let assignments: ProblemAssignment[] = assignmentRows
-    .filter((a) => inRange.has(a.courseId))
-    .map((a) => ({ id: a.id, courseId: a.courseId, instructorId: a.instructorId, status: a.status }));
+  // Course-level assignments carry their per-day skips; per-day adds are assignments for one session.
+  const sessionCourse = new Map(allSessions.map((s) => [s.id, s.courseId]));
+  const skipsFor = new Map<string, string[]>();
+  for (const o of overrideRows) if (o.mode === "skip") { const k = `${sessionCourse.get(o.courseSessionId) ?? ""}|${o.instructorId}`; skipsFor.set(k, [...(skipsFor.get(k) ?? []), o.courseSessionId]); }
+  let assignments: ProblemAssignment[] = [
+    ...assignmentRows
+      .filter((a) => inRange.has(a.courseId))
+      .map((a) => { const skips = skipsFor.get(`${a.courseId}|${a.instructorId}`); return { id: a.id, courseId: a.courseId, instructorId: a.instructorId, status: a.status, ...(skips ? { skipSessionIds: skips } : {}) }; }),
+    ...overrideRows
+      .filter((o) => o.mode === "add" && sessionCourse.has(o.courseSessionId) && inRange.has(sessionCourse.get(o.courseSessionId)!))
+      .map((o) => ({ id: `day:${o.id}`, courseId: sessionCourse.get(o.courseSessionId)!, instructorId: o.instructorId, status: "assigned", onlySessionIds: [o.courseSessionId] })),
+  ];
   if (opts.instructorId) assignments = assignments.filter((a) => a.instructorId === opts.instructorId);
 
   const problems: Problem[] = [];

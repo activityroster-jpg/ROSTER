@@ -3,7 +3,7 @@ import type { AnyTenantContext } from "@/lib/tenant/context";
 import type { OpenShift, OpenShiftStatus } from "@/lib/db/schema";
 import { writeAudit } from "./audit";
 import { notifyInstructor } from "./notifications";
-import { assignStaff } from "./assignment";
+import { setDayStaff } from "./session-staff";
 import { emailAdmins } from "./admin-mail";
 import { escapeHtml } from "@/lib/mail";
 
@@ -83,15 +83,16 @@ export async function confirmOpenShift(
   const session = await repos.tenant.courseSession.findById(ctx, shift.courseSessionId);
   if (!session) return { ok: false, reason: "nothing", detail: "Session no longer exists" };
 
-  const assigned = await assignStaff(repos, ctx, {
-    courseId: session.courseId,
+  // An open shift is one session: the cover goes on that day only (audit A3-3), through the day's own checks.
+  const assigned = await setDayStaff(repos, ctx, {
+    sessionId: session.id,
     instructorId: shift.claimedByInstructorId,
     roleTypeId: shift.roleTypeId,
+    mode: "add",
     override: opts.override,
-    overrideNote: opts.overrideNote,
+    note: opts.overrideNote ?? "Open shift",
   });
-  if (!assigned.ok) return { ok: false, reason: "blocked", detail: assigned.detail };
-  await repos.tenant.courseStaff.update(ctx, assigned.courseStaffId, { status: "confirmed" });
+  if (!assigned.ok) return { ok: false, reason: "blocked", detail: assigned.error };
 
   const updated = await repos.tenant.openShift.update(ctx, shiftId, {
     status: "filled",

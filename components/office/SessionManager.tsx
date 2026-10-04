@@ -4,12 +4,13 @@ import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { addSessionAction, cancelSessionAction, removeSessionAction, restoreSessionAction } from "@/app/(app)/office/courses/actions";
 import { CancelPanel, type CancelChoice } from "./CancelPanel";
+import { DayStaff, type DayStaffMember, type DayStaffOption } from "./DayStaff";
 
 export interface SessionRow { id: string; date: string; slot: string; start: string; end: string; cancelled?: boolean; cancelReason?: string | null }
 
 const SLOT_LABEL: Record<string, string> = { AM: "Morning", PM: "Afternoon", EV: "Evening" };
 
-export function SessionManager({ courseId, slotStyle, sessions, staffCount }: { courseId: string; slotStyle: "slots" | "times"; sessions: SessionRow[]; staffCount: number }) {
+export function SessionManager({ courseId, slotStyle, sessions, staffCount, dayStaff, instructorOptions = [], roleOptions = [] }: { courseId: string; slotStyle: "slots" | "times"; sessions: SessionRow[]; staffCount: number; /** Who is on each session, with per-day changes. */ dayStaff?: Record<string, { members: DayStaffMember[]; skipped: { instructorId: string; name: string }[] }>; instructorOptions?: DayStaffOption[]; roleOptions?: DayStaffOption[] }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
@@ -59,6 +60,7 @@ export function SessionManager({ courseId, slotStyle, sessions, staffCount }: { 
                   </span>
                 )}
               </div>
+              {dayStaff?.[s.id] ? <DayStaff sessionId={s.id} members={dayStaff[s.id]!.members} skipped={dayStaff[s.id]!.skipped} instructors={instructorOptions} roles={roleOptions} disabled={Boolean(s.cancelled)} /> : null}
               {cancelling === s.id ? <CancelPanel what={`this day (${s.date})`} people={staffCount} pending={pending} onConfirm={(c) => cancel(s.id, c)} onClose={() => setCancelling(null)} /> : null}
             </li>
           ))}

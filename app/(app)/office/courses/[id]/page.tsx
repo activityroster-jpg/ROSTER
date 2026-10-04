@@ -17,6 +17,7 @@ import { getCourseResources, staffingViewFrom } from "@/lib/services/course-reso
 import { hasFeature } from "@/lib/features";
 import { getTeachingMatrix } from "@/lib/services/teaching";
 import { qualificationGap } from "@/lib/services/problems";
+import { staffBySession } from "@/lib/services/session-staff";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +54,17 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
 
   const ct = courseTypes.find((c) => c.id === course.courseTypeId);
   const staffing = staffingViewFrom(course, ct, roles, requirements.filter((r) => r.courseId === id), assignments);
+  const membersBySession = await staffBySession(repos, ctx, sessions, assignments);
+  const roleNameOf = (rid: string) => roles.find((r) => r.id === rid)?.name ?? "Role";
+  const dayStaffBySession: Record<string, { members: { instructorId: string; name: string; role: string; roleTypeId: string; status: string; source: "course" | "day" }[]; skipped: { instructorId: string; name: string }[] }> = {};
+  for (const s of sessions) {
+    const members = membersBySession.get(s.id) ?? [];
+    const present = new Set(members.map((m) => m.instructorId));
+    dayStaffBySession[s.id] = {
+      members: members.map((m) => ({ instructorId: m.instructorId, name: nameById.get(m.instructorId) ?? "Instructor", role: roleNameOf(m.roleTypeId), roleTypeId: m.roleTypeId, status: m.status, source: m.source })),
+      skipped: assignments.filter((a) => a.status !== "declined" && !present.has(a.instructorId)).map((a) => ({ instructorId: a.instructorId, name: nameById.get(a.instructorId) ?? "Instructor" })),
+    };
+  }
   const equipmentOn = hasFeature(settings[0]?.enabledFeatures, "equipment");
   const holdsAny = new Set(quals.map((q) => q.instructorId));
   const slotStyle = (settings[0]?.slotStyle ?? "slots") as "slots" | "times";
@@ -110,7 +122,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
       <Card className="mb-6">
         <h2 className="mb-1 font-semibold text-navy">Sessions</h2>
         <p className="mb-3 text-xs text-slate-500">Add every date this course runs — a 5-day camp has five sessions, a weekly club has one per week.</p>
-        <SessionManager courseId={course.id} slotStyle={slotStyle} sessions={sessionRows} staffCount={staffCount} />
+        <SessionManager courseId={course.id} slotStyle={slotStyle} sessions={sessionRows} staffCount={staffCount} dayStaff={dayStaffBySession} instructorOptions={instructors.filter((i) => i.status === "active").map((i) => ({ id: i.id, name: i.name })).sort((a, b) => a.name.localeCompare(b.name))} roleOptions={activeRoles} />
       </Card>
 
       <Card>

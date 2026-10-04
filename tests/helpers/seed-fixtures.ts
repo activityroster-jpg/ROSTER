@@ -134,6 +134,7 @@ export async function seedFullOrg(
     roleTypeId: role.id,
     status: "assigned",
   });
+  await t.sessionStaffOverride.insert(ctx, { courseSessionId: session.id, instructorId: instructor.id, roleTypeId: role.id, mode: "add", note: `Day cover ${opts.slug}` });
   await t.courseEquipment.insert(ctx, {
     courseId: course.id,
     equipmentId: equipment.id,
