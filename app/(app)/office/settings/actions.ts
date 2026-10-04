@@ -14,6 +14,7 @@ import {
 import type { TenantRepositories } from "@/lib/db/repositories";
 import { rotaTemplateSchema } from "@/lib/rota/template";
 import { parseRetention, RETENTION_DEFAULTS } from "@/lib/services/retention";
+import { SLOT_CODES } from "@/lib/db/schema";
 
 export type ActionState = { ok: boolean; error?: string; message?: string };
 
@@ -65,6 +66,7 @@ export async function updateSettingsAction(_prev: ActionState, formData: FormDat
     dailyDigestHour: Number(formData.get("dailyDigestHour") ?? 6),
     workingTimeMode: formData.get("workingTimeMode") ?? "block_override",
     idleTimeoutMinutes: Number(formData.get("idleTimeoutMinutes") ?? 30),
+    requireParentApproval: formData.get("requireParentApproval") === "on",
     termDates: parseTermDatesField(formData.get("termDates")),
   });
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Please check the settings values" };
@@ -77,6 +79,7 @@ export async function updateSettingsAction(_prev: ActionState, formData: FormDat
     dailyDigestHour: rest.dailyDigestHour ?? 6,
     workingTimeMode: rest.workingTimeMode ?? "block_override",
     idleTimeoutMinutes: rest.idleTimeoutMinutes ?? 30,
+    requireParentApproval: rest.requireParentApproval ?? true,
     termDates: JSON.stringify((termDates ?? []).map((r) => ({ from: r.from, to: r.to, ...(r.label ? { label: r.label } : {}) }))),
   };
   const existing = (await repos.tenant.orgSettings.list(ctx))[0];
@@ -278,6 +281,27 @@ export async function setRotaTemplateAction(input: unknown): Promise<ActionState
   await writeAudit(repos, ctx, { action: "update", entity: "org_settings", after: { rotaTemplate: value } });
   revalidatePath("/office/settings");
   revalidatePath("/office/rota");
+  return { ok: true, message: "Saved" };
+}
+
+const welfareSchema = z.object({
+  officers: z.array(z.string().trim().min(1).max(80)).max(50),
+  defaults: z.array(z.object({ weekday: z.number().int().min(0).max(6), slot: z.enum(SLOT_CODES), name: z.string().trim().min(1).max(80) })).max(21),
+});
+
+/** Settings → Welfare officers: the names and the default duty pattern. Not accounts; a note the roster shows. */
+export async function setWelfareAction(input: unknown): Promise<ActionState> {
+  const { ctx, repos } = await requireTenant({ permission: "settings.edit" });
+  const parsed = welfareSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Check the welfare officer names" };
+  const officers = [...new Set(parsed.data.officers)];
+  const defaults = parsed.data.defaults.filter((d) => officers.includes(d.name));
+  const existing = (await repos.tenant.orgSettings.list(ctx))[0];
+  const values = { welfareOfficers: JSON.stringify(officers), welfareDuty: JSON.stringify(defaults) };
+  if (existing) await repos.tenant.orgSettings.update(ctx, existing.id, values);
+  else await repos.tenant.orgSettings.insert(ctx, values);
+  await writeAudit(repos, ctx, { action: "update_welfare", entity: "org_settings", after: { officers, defaults: defaults.length } });
+  revalidatePath("/office/settings"); revalidatePath("/office/rota");
   return { ok: true, message: "Saved" };
 }
 

@@ -421,6 +421,13 @@
       "when": 1791136021189,
       "tag": "0059_roles_owner_features",
       "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "6",
+      "when": 1791136706278,
+      "tag": "0060_welfare_parent_city",
+      "breakpoints": true
     }
   ]
 }

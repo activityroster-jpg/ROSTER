@@ -22,17 +22,22 @@ export async function currentDeviceId(): Promise<string | null> {
  * sign-in) has the current one trusted silently: the sign-in itself was the
  * proof, and there is no baseline to compare against.
  */
-export async function enforceDeviceGate(userId: string, next: string, organisationId: string | null): Promise<void> {
+/**
+ * `strict` (office users and platform admins): a new CITY also asks for the
+ * password again, not only a new country. Instructors stay at country level,
+ * since 4G on a beach changes network often but rarely city.
+ */
+export async function enforceDeviceGate(userId: string, next: string, organisationId: string | null, strict = false): Promise<void> {
   const deviceId = await currentDeviceId();
   const fp = await requestFingerprint();
   const ip = fp.ip ?? "unknown";
   if (!deviceId) redirect(`/verify-device?next=${encodeURIComponent(next)}`);
 
   const { control } = await getRepositories();
-  if (await control.isTrustedDevice(userId, deviceId, ip, fp.country)) return;
+  if (await control.isTrustedDevice(userId, deviceId, ip, fp.country, fp.city, strict)) return;
 
   if ((await control.countTrustedDevices(userId)) === 0) {
-    await control.trustDevice({ userId, deviceId, ip, country: fp.country, userAgent: fp.userAgent });
+    await control.trustDevice({ userId, deviceId, ip, country: fp.country, city: fp.city, userAgent: fp.userAgent });
     await control.logSecurityEvent({ userId, organisationId, kind: "new_device", ...fp, meta: JSON.stringify({ first: true }) }).catch(() => {});
     return;
   }

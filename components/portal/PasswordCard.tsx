@@ -39,6 +39,7 @@ export function PasswordCard({ hasPassword }: { hasPassword: boolean }) {
       {hasPassword ? <label className="block text-xs font-medium text-slate-500">Current password<input type="password" value={current} onChange={(e) => setCurrent(e.target.value)} className={field} autoComplete="current-password" /></label> : null}
       <label className="block text-xs font-medium text-slate-500">New password (8+ characters, letters and numbers)<input type="password" value={pw} onChange={(e) => setPw(e.target.value)} className={field} autoComplete="new-password" /></label>
       <PasswordStrength password={pw} />
+      <PasswordStrength password={pw} />
       <label className="block text-xs font-medium text-slate-500">Repeat it<input type="password" value={pw2} onChange={(e) => setPw2(e.target.value)} className={field} autoComplete="new-password" /></label>
       {msg ? <p className={`text-xs ${msg.ok ? "text-starboard" : "text-port"}`} role="status">{msg.text}</p> : null}
       <div className="flex items-center gap-3">

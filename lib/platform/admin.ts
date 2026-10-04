@@ -31,7 +31,7 @@ export async function requirePlatformAdmin(): Promise<{ email: string }> {
   const email = session?.user?.email ?? null;
   if (!(await isPlatformAdminEmail(email))) redirect("/sign-in");
   // Unfamiliar device/network → password again; then the 4-digit PIN.
-  await enforceDeviceGate(session!.user.id, "/admin", null);
+  await enforceDeviceGate(session!.user.id, "/admin", null, true);
   // The money-facing admin also requires the 4-digit PIN each session…
   await enforcePinGate(session!.user.id, session!.session?.id, "/admin");
   // …and an authenticator-app code (TOTP), enrolled once and entered per session.

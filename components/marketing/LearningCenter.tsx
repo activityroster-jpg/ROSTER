@@ -264,7 +264,7 @@ const SECTIONS: Section[] = [
         "Superadmin — the person who set the centre up and pays for it. One per centre; can do everything, including giving office access. To hand it to someone else, contact ActivityRoster support.",
         "Office admin — uses the office. The superadmin ticks which parts each office admin can reach, under Instructors → Office access: Roster & courses, Staff, Emergency & guardian contacts, Payroll, Settings, Billing, Exports & data tools. A new office admin starts with none ticked.",
         "Instructor — the instructor app: shifts, availability, confirmations, certs and hours. Senior instructors and volunteers are instructors too; “senior” is a qualification, not access.",
-        "Parent / guardian — a read-only view of their under-18 child's roster, and the parental permission answer.",
+        "Parent / guardian — a read-only view of their under-18 child's roster, and the parental permission answer. When a young person signs up in the app and their date of birth shows they are under 18, they give a parent's email; the parent is emailed, makes a small account and approves or declines. Until a parent approves, the office can't roster them (an admin can override with a note). Settings → Young workers switches the requirement off.",
       ] },
       { kind: "p", text: "A welfare officer isn't an account: under Settings you list your welfare officers by name and, if you like, who is on duty by default on each day and slot. The roster can then show “Welfare on duty” beside each session, like locations and equipment." },
       { kind: "sub", text: "Contact details between colleagues" },

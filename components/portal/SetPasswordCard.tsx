@@ -51,6 +51,7 @@ export function SetPasswordCard() {
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
               <input type="password" value={pw} onChange={(e) => setPw(e.target.value)} placeholder="New password (8+ characters, letters and numbers)" autoComplete="new-password" className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal" />
               <PasswordStrength password={pw} />
+              <PasswordStrength password={pw} />
               <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Confirm password" autoComplete="new-password" className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal" />
               <div className="sm:col-span-2 flex items-center gap-3">
                 <button type="button" onClick={save} disabled={pending} className="rounded-lg bg-teal px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{pending ? "Saving…" : "Save password"}</button>

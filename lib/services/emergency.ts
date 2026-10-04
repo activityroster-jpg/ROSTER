@@ -8,6 +8,7 @@ import { isUnder18 } from "@/lib/domain/age";
 import { writeAudit } from "./audit";
 import { addDays } from "./schedule";
 import { liveSessions } from "@/lib/domain/sessions";
+import { welfareForRange } from "./welfare";
 
 export interface SheetPerson {
   instructorId: string;
@@ -23,7 +24,7 @@ export interface SheetPerson {
   guardianPhone: string | null;
 }
 export interface SheetSession { courseName: string; slot: string; startAt: number; endAt: number; locations: string[]; staff: SheetPerson[] }
-export interface DaySheet { date: string; sessions: SheetSession[]; onDuty: SheetPerson[] }
+export interface DaySheet { date: string; sessions: SheetSession[]; onDuty: SheetPerson[]; welfare: Partial<Record<string, string>> }
 
 /**
  * The emergency sheet: everyone on duty today with the contact details the
@@ -74,7 +75,8 @@ export async function getDaySheet(repos: Repositories, ctx: AnyTenantContext, da
   }
   const onDuty = [...people.values()].filter((p) => out.some((s) => s.staff.some((x) => x.instructorId === p.instructorId)));
   await writeAudit(repos, ctx, { action: "view_emergency_sheet", entity: "organisation", entityId: ctx.organisationId, after: { date: dateIso, people: onDuty.length } }).catch(() => {});
-  return { date: dateIso, sessions: out, onDuty };
+  const welfare = (await welfareForRange(repos, ctx, dateIso, addDays(dateIso, 1))).byDate.get(dateIso) ?? {};
+  return { date: dateIso, sessions: out, onDuty, welfare };
 }
 
 export function sheetToCsv(sheet: DaySheet): string {

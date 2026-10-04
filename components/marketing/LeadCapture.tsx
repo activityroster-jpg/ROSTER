@@ -137,6 +137,7 @@ export function LeadCapture({
       <div className="grid gap-3">
         <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@yourcentre.com" className={field} aria-label="Email" autoComplete="email" />
         <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Create a password" className={field} aria-label="Password" autoComplete="new-password" />
+        <PasswordStrength password={password} />
         <PasswordStrength password={password} className="mt-1" />
         <input required value={centreName} onChange={(e) => onCentreName(e.target.value)} placeholder="Centre / club name" className={field} aria-label="Centre name" />
 

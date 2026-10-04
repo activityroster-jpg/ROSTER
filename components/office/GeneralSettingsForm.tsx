@@ -22,6 +22,7 @@ export function GeneralSettingsForm({
   dailyDigestHour = 6,
   workingTimeMode = "block_override",
   termDates = [],
+  requireParentApproval = true,
   packStatus = null,
   idleTimeoutMinutes = 30,
 }: {
@@ -37,6 +38,7 @@ export function GeneralSettingsForm({
   dailyDigestHour?: number;
   workingTimeMode?: string;
   termDates?: TermDate[];
+  requireParentApproval?: boolean;
   packStatus?: PackStatus | null;
   idleTimeoutMinutes?: number;
 }) {
@@ -118,6 +120,10 @@ export function GeneralSettingsForm({
           </ul>
           <button type="button" onClick={() => setTerms((x) => [...x, { from: "", to: "", label: "" }])} className="mt-2 rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-navy hover:bg-slate-50">+ Add a term</button>
         </div>
+        <label className="mt-3 flex items-start gap-2 text-sm text-slate-700">
+          <input type="checkbox" name="requireParentApproval" defaultChecked={requireParentApproval} className="mt-0.5 h-4 w-4 rounded border-slate-300" />
+          <span>Needs a parent or guardian&rsquo;s approval before an under-18 can be rostered <span className="block text-xs text-slate-500">When a young person signs up they give a parent&rsquo;s email; the parent approves from their own account. Legally required for under-16s in Ireland; good practice everywhere. An admin can still override with a note.</span></span>
+        </label>
         <p className="mt-3 text-[11px] leading-snug text-slate-400">ActivityRoster applies the published working-time rules for your jurisdiction as a planning aid. It is not legal advice: the employer remains responsible for complying with child-employment law, local authority permits and the school-leaving rules that apply to each young person.</p>
       </fieldset>
       <fieldset className="sm:col-span-4 rounded-lg border border-slate-200 p-3">

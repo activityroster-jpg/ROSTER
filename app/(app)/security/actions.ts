@@ -87,3 +87,18 @@ export async function signOutEverywhereAction(): Promise<Result & { message?: st
   revalidatePath("/security");
   return { ok: true, message: ended ? `Signed out ${ended} other session${ended === 1 ? "" : "s"}` : "No other sessions were open" };
 }
+
+/** Superadmin only: end every session of another office user of this centre (lost phone, someone leaving). */
+export async function signOutUserEverywhereAction(userId: string): Promise<Result & { message?: string }> {
+  const { ctx } = await requireTenant({ owner: true });
+  if (!/^[A-Za-z0-9_-]{1,64}$/.test(userId) || userId === ctx.userId) return { ok: false, error: "Not found" };
+  const { control } = await getRepositories();
+  const m = await control.membershipFor(userId, ctx.organisationId);
+  if (!m || (m.role !== "admin" && m.role !== "owner")) return { ok: false, error: "Not an office user of this centre" };
+  const ended = await control.deleteOtherSessions(userId, null);
+  await control.forgetTrustedDevices(userId);
+  await recordSecurityEvent("sessions_revoked", { userId, organisationId: ctx.organisationId, meta: { ended, by: ctx.userId } });
+  await notifySecurityChange(userId, "You were signed out of every device", `<p>The superadmin of your centre signed your ActivityRoster account out of every device. Sign in again to carry on; if you did not expect this, contact your centre.</p>`).catch(() => {});
+  revalidatePath("/security");
+  return { ok: true, message: ended ? `Ended ${ended} session${ended === 1 ? "" : "s"}` : "No sessions were open" };
+}

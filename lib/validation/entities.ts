@@ -33,6 +33,7 @@ export const orgSettingsSchema = z.object({
   dailyDigestHour: z.number().int().min(0).max(23).optional(),
   workingTimeMode: z.enum(WORKING_TIME_MODES).optional(),
   idleTimeoutMinutes: z.number().int().min(5).max(240).optional(),
+  requireParentApproval: z.boolean().optional(),
   termDates: z.array(z.object({
     from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Term dates are YYYY-MM-DD"),
     to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Term dates are YYYY-MM-DD"),

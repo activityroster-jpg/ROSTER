@@ -70,7 +70,7 @@ export async function eraseOrganisationData(repos: Repositories, ctx: AnyTenantC
     // 5. config
     t.roleType, t.qualificationType, t.complianceType, t.equipmentType, t.locationType, t.courseType,
     // 6. standalone
-    t.sessionSlot, t.orgSettings, t.notification,
+    t.sessionSlot, t.orgSettings, t.notification, t.welfareDuty,
   ];
   for (const repo of order) {
     await repo.deleteAllForOrg(ctx);

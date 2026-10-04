@@ -14,6 +14,8 @@ import { RotaTemplateForm } from "@/components/office/RotaTemplateForm";
 import { parseRotaTemplate } from "@/lib/rota/template";
 import { RetentionForm } from "@/components/office/RetentionForm";
 import { retentionPlan } from "@/lib/services/retention";
+import { WelfareSettingsForm } from "@/components/office/WelfareSettingsForm";
+import { parseWelfareSettings } from "@/lib/services/welfare";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +35,7 @@ export default async function SettingsPage() {
     .map((c) => ({ id: c.id, name: c.name, schedule: parseDefaultSchedule(c.defaultSchedule) }))
     .sort((a, b) => a.name.localeCompare(b.name));
   const s = settings[0];
+  const welfare = parseWelfareSettings(s?.welfareOfficers, s?.welfareDuty);
   const joinCode = await repos.control.ensureJoinCode(ctx.organisationId);
   const retention = await retentionPlan(repos, ctx, s, new Date());
   const packKey = packKeyFor(organisation.jurisdiction);
@@ -74,6 +77,7 @@ export default async function SettingsPage() {
           termDates={termRangesOf(s)}
           packStatus={packStatus}
           idleTimeoutMinutes={s?.idleTimeoutMinutes ?? 30}
+          requireParentApproval={s?.requireParentApproval ?? true}
           enforceLicenceChecks={Boolean(s?.enforceLicenceChecks)}
           enforceRatioChecks={Boolean(s?.enforceRatioChecks)}
           enforceConflictChecks={Boolean(s?.enforceConflictChecks)}
@@ -93,6 +97,12 @@ export default async function SettingsPage() {
       </div>
 
       <div id="rota-pdf" className="mb-6">
+      <Card className="mb-6">
+        <div className="mb-1 flex items-center justify-between"><h2 className="font-semibold text-navy">Welfare officers</h2><a href="/learn?topic=roles" target="_blank" rel="noreferrer" className="text-xs font-medium text-teal hover:underline">📖 Read the guide</a></div>
+        <p className="mb-3 text-xs text-slate-500">Not accounts: just names, so the roster and the emergency sheet can say who is on welfare duty. Set a default pattern here and change any single day on the roster.</p>
+        <WelfareSettingsForm officers={welfare.officers} defaults={welfare.defaults} />
+      </Card>
+
       <Card>
         <div className="mb-1 flex items-center justify-between">
           <h2 className="font-semibold text-navy">Roster PDF</h2>

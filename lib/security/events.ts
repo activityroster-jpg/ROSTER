@@ -9,6 +9,8 @@ export interface RequestFingerprint {
   ip: string | null;
   userAgent: string | null;
   country: string | null;
+  /** Cloudflare's best guess at the city; office users are challenged again from a new one. */
+  city: string | null;
 }
 
 export async function requestFingerprint(): Promise<RequestFingerprint> {
@@ -18,9 +20,10 @@ export async function requestFingerprint(): Promise<RequestFingerprint> {
       ip: h.get("cf-connecting-ip") ?? h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
       userAgent: h.get("user-agent")?.slice(0, 300) ?? null,
       country: h.get("cf-ipcountry") ?? null,
+      city: h.get("cf-ipcity") ?? null,
     };
   } catch {
-    return { ip: null, userAgent: null, country: null };
+    return { ip: null, userAgent: null, country: null, city: null };
   }
 }
 

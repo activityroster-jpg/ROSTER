@@ -16,6 +16,7 @@ import { notifyInstructor } from "./notifications";
 import { publishedWeeks, weekOf } from "./roster";
 import { checkWorkingTime, describeFindings } from "./working-time";
 import { liveSessions } from "@/lib/domain/sessions";
+import { parentApprovalFor } from "./guardians";
 
 export interface AssignInput {
   courseId: string;
@@ -26,7 +27,7 @@ export interface AssignInput {
   overrideNote?: string;
 }
 
-export type AssignBlockReason = "not-fit" | "conflict" | "unavailable" | "working-time" | "invalid";
+export type AssignBlockReason = "not-fit" | "conflict" | "unavailable" | "working-time" | "parent-approval" | "invalid";
 
 export type AssignResult =
   | { ok: true; courseStaffId: string; overridden: boolean; /** Non-blocking notes (e.g. an unverified young-worker figure, a missing break). */ warnings: string[] }
@@ -42,6 +43,7 @@ export function assignBlockMessage(reason: AssignBlockReason, detail: string): s
   if (reason === "conflict") return `Double-booked: ${detail}`;
   if (reason === "unavailable") return `${detail} in their availability`;
   if (reason === "working-time") return `Young worker's hours: ${detail}`;
+  if (reason === "parent-approval") return `Parental permission: ${detail}`;
   return detail;
 }
 
@@ -110,6 +112,14 @@ export async function assignStaff(
     };
   }
 
+  // --- 1b. Under-18: a parent's approval first (centre setting, on by default) ---
+  const parentApproval = settings?.requireParentApproval !== false ? await parentApprovalFor(repos, ctx, input.instructorId, instructorRow.dateOfBirth) : "not-needed";
+  const parentBlocked = parentApproval !== "not-needed" && parentApproval !== "approved";
+  if (parentBlocked && !input.override) {
+    const detail = parentApproval === "none" ? "no parent or guardian has been invited to approve yet" : parentApproval === "pending" ? "their parent or guardian hasn't approved yet" : `their parent or guardian ${parentApproval} it`;
+    return { ok: false, reason: "parent-approval", detail };
+  }
+
   // --- 2. Conflict check ---------------------------------------------------
   const existingAssignments = await t.courseStaff.list(
     ctx,
@@ -174,7 +184,7 @@ export async function assignStaff(
   ].map((f) => (f.verified ? f.message : `${f.message} (figure not yet verified)`));
 
   // --- 5. Persist ----------------------------------------------------------
-  const overridden = Boolean(input.override && (!fit.fit || clashing || busy || wtBlocked));
+  const overridden = Boolean(input.override && (!fit.fit || clashing || busy || wtBlocked || parentBlocked));
   const row = await t.courseStaff.insert(ctx, {
     courseId: input.courseId,
     instructorId: input.instructorId,

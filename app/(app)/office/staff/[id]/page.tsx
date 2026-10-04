@@ -20,6 +20,7 @@ import { hasFeature } from "@/lib/features";
 import { ageOn, isUnder18 } from "@/lib/domain/age";
 import { readProtectedContacts } from "@/lib/services/protected-contacts";
 import { ProtectedContactsForm } from "@/components/office/ProtectedContactsForm";
+import { parentApprovalFromLinks } from "@/lib/services/guardians";
 
 export const dynamic = "force-dynamic";
 
@@ -49,8 +50,8 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
   const inviteStatus = !instructor.userId ? "none" : membership?.status === "active" ? "accepted" : "pending";
   const under18 = isUnder18(instructor.dateOfBirth);
   const age = ageOn(instructor.dateOfBirth);
-  const canEdit = can(ctx.role, "staff.edit");
-  const canProtected = can(ctx.role, "protected.view");
+  const canEdit = can(ctx, "staff.edit");
+  const canProtected = can(ctx, "protected.view");
   const contacts = canProtected ? await readProtectedContacts(repos, ctx, instructor) : { guardianName: "", guardianPhone: "", guardianEmail: "", emergencyName: "", emergencyPhone: "", emergencyRelationship: "" };
   const guardians = under18 ? await guardianLinksFor(repos, ctx, instructor.id) : [];
   const retention = left && !instructor.anonymisedAt ? await retentionPlan(repos, ctx, settings[0], new Date()) : null;
@@ -85,7 +86,7 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
 
           <Card>
             <div className="mb-2 flex items-center justify-between"><h2 className="font-semibold text-navy">Access</h2><GuideLink topic="roles" className="text-xs" /></div>
-            <AccessCard instructorId={instructor.id} linked={Boolean(instructor.userId)} role={membership?.role ?? null} canManageGuardians={can(ctx, "protected.view")} under18={under18} guardianEmailOnFile={Boolean(contacts.guardianEmail)} guardians={guardians.map((g) => ({ id: g.id, email: g.email, status: g.status, consentGivenAt: g.consentGivenAt?.toISOString() ?? null, consentNote: g.consentNote, createdAt: g.createdAt.toISOString() }))} />
+            <AccessCard instructorId={instructor.id} linked={Boolean(instructor.userId)} role={membership?.role ?? null} canManageGuardians={can(ctx, "protected.view")} parentApproval={parentApprovalFromLinks(instructor.dateOfBirth, guardians)} under18={under18} guardianEmailOnFile={Boolean(contacts.guardianEmail)} guardians={guardians.map((g) => ({ id: g.id, email: g.email, status: g.status, consentGivenAt: g.consentGivenAt?.toISOString() ?? null, consentNote: g.consentNote, createdAt: g.createdAt.toISOString() }))} />
           </Card>
 
           {canProtected ? (
@@ -115,7 +116,7 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
         </div>
 
         <div className="space-y-6">
-          {payOn && can(ctx.role, "finance.view") ? (
+          {payOn && can(ctx, "finance.view") ? (
             <Card>
               <h2 className="mb-1 font-semibold text-navy">Pay</h2>
               <p className="mb-3 text-xs text-slate-500">How this instructor is paid. Payroll uses it for every session they&apos;re rostered on.</p>

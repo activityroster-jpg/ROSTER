@@ -77,7 +77,7 @@ export async function requireTenant(opts?: { role?: "admin"; owner?: boolean; pe
   if (isOfficeRole(res.ctx.role) && !res.ctx.ghost) await enforceLoginVerified(res.sessionId);
 
   // Unfamiliar device, country or IP → password again first; then the PIN.
-  await enforceDeviceGate(res.ctx.userId, landing, res.ctx.organisationId);
+  await enforceDeviceGate(res.ctx.userId, landing, res.ctx.organisationId, isOfficeRole(res.ctx.role));
   // Office roles and instructors set and enter a 4-digit PIN each session.
   // Parents (read-only roster of their child) sign in with their password only.
   if (res.ctx.role !== "parent") await enforcePinGate(res.ctx.userId, res.sessionId, landing);

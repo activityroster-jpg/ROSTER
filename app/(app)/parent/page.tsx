@@ -4,6 +4,7 @@ import { childrenFor } from "@/lib/services/guardians";
 import { getRotaDays } from "@/lib/services/schedule";
 import { Card } from "@/components/ui";
 import { SignOutLink } from "@/components/SignOutLink";
+import { ParentDecision } from "@/components/portal/ParentDecision";
 
 export const dynamic = "force-dynamic";
 
@@ -31,12 +32,13 @@ export default async function ParentPage() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
       <p className="text-xs text-slate-400">{organisation.name} · parent / guardian view</p>
-      <h1 className="font-display text-2xl font-semibold text-navy">Upcoming sessions</h1>
+      <h1 className="font-display text-2xl font-semibold text-navy">Your child at {organisation.name}</h1>
       <p className="mb-5 mt-1 text-sm text-slate-500">The next four weeks, as currently rostered by the centre. This page is read-only; questions go to the centre.</p>
       {children.length === 0 ? <Card><p className="text-sm text-slate-600">No young person is linked to your account at this centre any more.</p></Card> : null}
       {children.map(({ link, child, sessions }) => (
         <Card key={link.id} className="mb-5">
           <h2 className="font-semibold text-navy">{child?.name ?? "Young person"}</h2>
+          <div className="mb-3"><ParentDecision linkId={link.id} childName={child?.name ?? "your child"} centreName={organisation.name} decision={link.parentDecision} decidedAt={link.parentDecidedAt?.toISOString() ?? null} /></div>
           <p className="mb-3 text-xs text-slate-500">Consent recorded by the centre{link.consentGivenAt ? ` on ${link.consentGivenAt.toLocaleDateString("en-GB")}` : ""}{link.consentNote ? `: ${link.consentNote}` : ""}.</p>
           {sessions.length === 0 ? <p className="text-sm text-slate-500">Nothing rostered in the next four weeks.</p> : (
             <ul className="divide-y divide-slate-100 text-sm">

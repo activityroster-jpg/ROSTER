@@ -9,6 +9,7 @@ import { StaffTable, type StaffRow } from "@/components/office/StaffTable";
 import { GuideLink } from "@/components/GuideLink";
 import { OfficeAccess } from "@/components/office/OfficeAccess";
 import { listOfficeMembers } from "@/lib/services/office-access";
+import { parentApprovalFromLinks } from "@/lib/services/guardians";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +35,7 @@ export default async function StaffPage() {
 
   const membershipStatus = await repos.control.membershipStatusByUser(ctx.organisationId);
   const officeMembers = await listOfficeMembers(repos, ctx);
+  const links = await repos.tenant.guardianLink.list(ctx);
   const inviteStatusFor = (userId: string | null): StaffRow["inviteStatus"] => {
     if (!userId) return "none";
     return membershipStatus.get(userId) === "active" ? "accepted" : "pending";
@@ -62,6 +64,7 @@ export default async function StaffPage() {
       teachesAdult: teach.some((c) => c.audience === "adult" || c.audience === "all"),
       status: instructor.status,
       under18: isUnder18(instructor.dateOfBirth),
+      parentApproval: parentApprovalFromLinks(instructor.dateOfBirth, links.filter((l) => l.instructorId === instructor.id)),
       hasDob: Boolean(instructor.dateOfBirth),
       restricted: Boolean(instructor.restrictedAt),
       anonymised: Boolean(instructor.anonymisedAt),

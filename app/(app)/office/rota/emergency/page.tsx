@@ -37,6 +37,9 @@ export default async function EmergencySheetPage({ searchParams }: { searchParam
         <strong>Handle with care.</strong> This sheet contains personal phone numbers and emergency contacts. Keep it with the duty officer or in the safety boat, don&rsquo;t photograph or share it, and shred it at the end of the day. Printing it is recorded in your change log.
       </div>
 
+      {Object.keys(sheet.welfare).length ? (
+        <p className="mb-4 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-navy"><span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Welfare on duty</span> {(["AM", "PM", "EV"] as const).filter((s) => sheet.welfare[s]).map((s) => `${SLOT[s] ?? s}: ${sheet.welfare[s]}`).join(" · ")}</p>
+      ) : null}
       {sheet.sessions.length === 0 ? (
         <p className="rounded-card border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">No sessions on this day.</p>
       ) : (

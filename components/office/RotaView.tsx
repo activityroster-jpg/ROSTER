@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { RotaDay, RotaSession } from "@/lib/services/schedule";
 import { AUDIENCE_META } from "@/lib/features";
+import { WelfareDutyPicker } from "./WelfareDutyPicker";
 
 /** The three roster templates. */
 export type RotaTemplate = "week" | "day" | "grid";
@@ -63,12 +64,20 @@ function Audience({ s }: { s: RotaSession }) {
 }
 
 /* ---------- Template: By week (one table per day) ---------- */
-function ByWeek({ rota, f }: { rota: RotaDay[]; f: Fields }) {
+function Welfare({ day, officers, canEdit }: { day: RotaDay; officers: string[]; canEdit: boolean }) {
+  if (officers.length === 0) return null;
+  const slots = (["AM", "PM", "EV"] as const).filter((s) => day.sessions.some((x) => x.slot === s) || day.welfare?.[s]);
+  if (slots.length === 0) return null;
+  return <div className="px-4 py-1.5"><WelfareDutyPicker date={day.date} slots={slots} bySlot={day.welfare ?? {}} officers={officers} canEdit={canEdit} /></div>;
+}
+
+function ByWeek({ rota, f, officers, canEdit }: { rota: RotaDay[]; f: Fields; officers: string[]; canEdit: boolean }) {
   return (
     <div className="space-y-4">
       {rota.map((day) => (
         <div key={day.date} className="break-inside-avoid rounded-card border border-slate-200 bg-white">
           <div className="border-b border-slate-100 bg-slate-50 px-4 py-2 font-semibold text-navy print:bg-white">{day.label}</div>
+          <Welfare day={day} officers={officers} canEdit={canEdit} />
           {day.sessions.length === 0 ? (
             <p className="px-4 py-3 text-sm text-slate-400">No sessions.</p>
           ) : (
@@ -113,7 +122,7 @@ function ByWeek({ rota, f }: { rota: RotaDay[]; f: Fields }) {
 }
 
 /* ---------- Template: By day (one page per day, big cards) ---------- */
-function ByDay({ rota, f }: { rota: RotaDay[]; f: Fields }) {
+function ByDay({ rota, f, officers, canEdit }: { rota: RotaDay[]; f: Fields; officers: string[]; canEdit: boolean }) {
   const [idx, setIdx] = useState(() => {
     const today = new Date().toISOString().slice(0, 10);
     const i = rota.findIndex((d) => d.date === today);
@@ -133,7 +142,8 @@ function ByDay({ rota, f }: { rota: RotaDay[]; f: Fields }) {
       </div>
       {rota.map((d, i) => (
         <section key={d.date} className={`${i === idx ? "" : "hidden print:block"} print:break-after-page`}>
-          <h2 className="mb-3 font-display text-xl font-bold text-navy">{d.label}</h2>
+          <h2 className="mb-1 font-display text-xl font-bold text-navy">{d.label}</h2>
+          <div className="mb-3 -mx-4"><Welfare day={d} officers={officers} canEdit={canEdit} /></div>
           {d.sessions.length === 0 ? (
             <p className="rounded-card border border-dashed border-slate-200 p-6 text-center text-sm text-slate-400">No sessions.</p>
           ) : (
@@ -217,7 +227,7 @@ function CompactGrid({ rota, f }: { rota: RotaDay[]; f: Fields }) {
  * The printable roster in three templates (by week, by day, compact grid), with
  * each field switchable. Choices are remembered in this browser.
  */
-export function RotaView({ rota }: { rota: RotaDay[] }) {
+export function RotaView({ rota, welfareOfficers = [], canEditWelfare = false }: { rota: RotaDay[]; welfareOfficers?: string[]; canEditWelfare?: boolean }) {
   const [template, setTemplate] = useState<RotaTemplate>("week");
   const [fields, setFields] = useState<Fields>(ALL_ON);
   const [ready, setReady] = useState(false);
@@ -261,7 +271,7 @@ export function RotaView({ rota }: { rota: RotaDay[] }) {
         </div>
       </div>
 
-      {template === "week" ? <ByWeek rota={rota} f={fields} /> : template === "day" ? <ByDay rota={rota} f={fields} /> : <CompactGrid rota={rota} f={fields} />}
+      {template === "week" ? <ByWeek rota={rota} f={fields} officers={welfareOfficers} canEdit={canEditWelfare} /> : template === "day" ? <ByDay rota={rota} f={fields} officers={welfareOfficers} canEdit={canEditWelfare} /> : <CompactGrid rota={rota} f={fields} />}
     </div>
   );
 }

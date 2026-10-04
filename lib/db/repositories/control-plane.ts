@@ -131,6 +131,20 @@ export class ControlPlaneRepository {
       .where(and(eq(membership.userId, userId), eq(membership.organisationId, organisationId), eq(membership.role, "admin"))).returning({ id: membership.id });
     return rows.length > 0;
   }
+  /** Last sign-in and open sessions per user, for the office security list. */
+  async sessionSummaries(userIds: string[]): Promise<Map<string, { lastSeen: Date | null; active: number }>> {
+    const out = new Map<string, { lastSeen: Date | null; active: number }>();
+    if (userIds.length === 0) return out;
+    const rows = await this.db.select({ userId: session.userId, updatedAt: session.updatedAt, expiresAt: session.expiresAt }).from(session).where(inArray(session.userId, userIds));
+    const now = Date.now();
+    for (const id of userIds) out.set(id, { lastSeen: null, active: 0 });
+    for (const r of rows) {
+      const cur = out.get(r.userId)!;
+      if (!cur.lastSeen || r.updatedAt > cur.lastSeen) cur.lastSeen = r.updatedAt;
+      if (r.expiresAt.getTime() > now) cur.active++;
+    }
+    return out;
+  }
   /** Everyone who can open a centre's office (owner and office admins), with their account details. */
   async officeMembersForOrg(organisationId: string): Promise<{ userId: string; name: string; email: string; role: MembershipRole; status: MembershipStatus; features: string; createdAt: Date }[]> {
     return this.db
@@ -432,13 +446,14 @@ export class ControlPlaneRepository {
    * an attacker with a stolen session needs the password either way. Bumps
    * last-seen on the matching row.
    */
-  async isTrustedDevice(userId: string, deviceId: string, _ip: string, country: string | null): Promise<boolean> {
+  /** Known device in a known country; with `strict` (office users) the city must match too. A row with no city recorded (older) still counts. */
+  async isTrustedDevice(userId: string, deviceId: string, _ip: string, country: string | null, city: string | null = null, strict = false): Promise<boolean> {
     void _ip;
     const rows = await this.db
-      .select({ id: trustedDevice.id, country: trustedDevice.country })
+      .select({ id: trustedDevice.id, country: trustedDevice.country, city: trustedDevice.city })
       .from(trustedDevice)
       .where(and(eq(trustedDevice.userId, userId), eq(trustedDevice.deviceId, deviceId)));
-    const row = rows.find((r) => (r.country ?? null) === (country ?? null));
+    const row = rows.find((r) => (r.country ?? null) === (country ?? null) && (!strict || !city || !r.city || r.city === city));
     if (!row) return false;
     await this.db.update(trustedDevice).set({ lastSeenAt: new Date() }).where(eq(trustedDevice.id, row.id));
     return true;
@@ -450,13 +465,13 @@ export class ControlPlaneRepository {
   }
 
   /** Record (or refresh) a confirmed device × IP for the user. */
-  async trustDevice(input: { userId: string; deviceId: string; ip: string; country: string | null; userAgent: string | null }): Promise<void> {
+  async trustDevice(input: { userId: string; deviceId: string; ip: string; country: string | null; city?: string | null; userAgent: string | null }): Promise<void> {
     await this.db
       .insert(trustedDevice)
-      .values({ ...input, lastSeenAt: new Date() })
+      .values({ ...input, city: input.city ?? null, lastSeenAt: new Date() })
       .onConflictDoUpdate({
         target: [trustedDevice.userId, trustedDevice.deviceId, trustedDevice.ip],
-        set: { country: input.country, userAgent: input.userAgent, lastSeenAt: new Date() },
+        set: { country: input.country, city: input.city ?? null, userAgent: input.userAgent, lastSeenAt: new Date() },
       });
   }
 

@@ -31,6 +31,9 @@ describe("working-time checks on assignment", () => {
     ctx = seeded.ctx;
     roleId = (await repos.tenant.roleType.list(ctx))[0]!.id;
     courseId = (await repos.tenant.course.list(ctx))[0]!.id;
+    // These tests are about hours; parental approval has its own test (welfare-parent), so it is off here.
+    const st = (await repos.tenant.orgSettings.list(ctx))[0]!;
+    await repos.tenant.orgSettings.update(ctx, st.id, { requireParentApproval: false });
   });
 
   it("blocks a school-age child on a 3-hour school day (default: block with override)", async () => {
@@ -79,7 +82,7 @@ describe("working-time checks on assignment", () => {
 
   it("term dates switch a week to the holiday caps", async () => {
     const st = (await repos.tenant.orgSettings.list(ctx))[0]!;
-    // Term runs later in January, so 5 January is a holiday week: 8h/day allowed.
+    await repos.tenant.orgSettings.update(ctx, st.id, { termDates: JSON.stringify([{ from: "2026-01-12", to: "2026-03-27", label: "Spring" }]), requireParentApproval: false });
     await repos.tenant.orgSettings.update(ctx, st.id, { termDates: JSON.stringify([{ from: "2026-01-12", to: "2026-03-27", label: "Spring" }]) });
     const kid = await addInstructor("Kid", "2010-06-01");
     const check = await checkWorkingTime(repos, ctx, { instructorId: kid.id, courseId });

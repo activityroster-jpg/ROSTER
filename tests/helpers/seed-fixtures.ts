@@ -193,6 +193,7 @@ export async function seedFullOrg(
     summary: JSON.stringify({ qualifications: 0 }),
     actorUserId: owner.id,
   });
+  await t.welfareDuty.insert(ctx, { date: "2026-01-05", slot: "AM", name: `Welfare ${opts.slug}` });
   await t.guardianLink.insert(ctx, {
     instructorId: instructor.id,
     userId: owner.id,

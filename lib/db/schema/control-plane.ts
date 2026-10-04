@@ -745,6 +745,8 @@ export const trustedDevice = sqliteTable("trusted_device", {
   deviceId: text("device_id").notNull(),
   ip: text("ip").notNull(),
   country: text("country"),
+  /** Cloudflare's city for the request; office users are challenged again from a new city (instructors only from a new country). */
+  city: text("city"),
   userAgent: text("user_agent"),
   lastSeenAt: integer("last_seen_at", { mode: "timestamp_ms" }).notNull(),
   createdAt: createdAt(),

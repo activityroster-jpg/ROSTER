@@ -10,6 +10,7 @@ import {
 } from "@/lib/domain";
 import { and, gte, lt, courseSessionTable, type CourseAudience, type SlotCode } from "@/lib/db/schema-helpers";
 import { liveSessions } from "@/lib/domain/sessions";
+import { welfareForRange } from "./welfare";
 
 export interface CourseCoverage {
   courseId: string;
@@ -265,6 +266,8 @@ export interface RotaDay {
   date: string;
   label: string;
   sessions: RotaSession[];
+  /** Welfare officer on duty per slot (a name from Settings), when the centre lists any. */
+  welfare?: Partial<Record<SlotCode, string>>;
 }
 
 /**
@@ -341,6 +344,7 @@ export async function getRotaDays(
   const sunday = addDays(mondayIso, dayCount);
   const inWeek = sessions.filter((s) => s.date >= mondayIso && s.date < sunday);
   const slotRank: Record<SlotCode, number> = { AM: 0, PM: 1, EV: 2 };
+  const welfare = await welfareForRange(repos, ctx, mondayIso, sunday);
 
   const days: RotaDay[] = [];
   for (let i = 0; i < dayCount; i++) {
@@ -372,7 +376,8 @@ export async function getRotaDays(
         };
       })
       .sort((a, b) => slotRank[a.slot] - slotRank[b.slot] || a.startAt - b.startAt);
-    days.push({ date, label, sessions: daySessions });
+    const w = welfare.byDate.get(date);
+    days.push({ date, label, sessions: daySessions, ...(w ? { welfare: w } : {}) });
   }
   return days;
 }

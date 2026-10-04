@@ -191,6 +191,11 @@ function drawBreakdown(c: Ctx, input: RotaPdfInput, names: Map<string, string>, 
     c.page.drawText(count, { x: M + inner - 6 - c.font.widthOfTextAtSize(count, size - 1), y: c.y - L.dayH + (L.dayH - size + 1) / 2, size: size - 1, font: c.font, color: L.dayFill && L.dayText === WHITE ? rgb(0.85, 0.9, 0.95) : L.muted });
     c.y -= L.dayH + 2;
     if (!L.dayFill) { c.page.drawLine({ start: { x: M, y: c.y }, end: { x: M + inner, y: c.y }, thickness: 1.2, color: L.text }); c.y -= 2; }
+    if (day.welfare && Object.keys(day.welfare).length) {
+      const w = (["AM", "PM", "EV"] as const).filter((s) => day.welfare?.[s]).map((s) => `${s === "AM" ? "Morning" : s === "PM" ? "Afternoon" : "Evening"}: ${day.welfare?.[s]}`).join("   ");
+      c.page.drawText(safe(`Welfare on duty   ${w}`), { x: M + 6, y: c.y - size - 2, size: size - 1, font: c.font, color: L.muted });
+      c.y -= size + 6;
+    }
     if (day.sessions.length === 0) { c.y -= 10; continue; }
     drawColumnHeader();
 

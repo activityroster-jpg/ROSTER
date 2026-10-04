@@ -6,6 +6,8 @@ import { parseRotaTemplate } from "@/lib/rota/template";
 import { RotaView } from "@/components/office/RotaView";
 import { PublishWeek } from "@/components/office/PublishWeek";
 import { publishedWeeks } from "@/lib/services/roster";
+import { parseWelfareSettings } from "@/lib/services/welfare";
+import { can } from "@/lib/auth/rbac";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +20,7 @@ export default async function RotaPage({ searchParams }: { searchParams: Promise
   const monday = typeof sp.week === "string" && ISO.test(sp.week) ? weekStart(new Date(`${sp.week}T00:00:00Z`)) : thisMonday;
   const [rota, published, settingsRows] = await Promise.all([getWeekRota(repos, ctx, monday), publishedWeeks(repos, ctx), repos.tenant.orgSettings.list(ctx)]);
   const rotaTemplate = parseRotaTemplate(settingsRows[0]?.rotaTemplate);
+  const welfare = parseWelfareSettings(settingsRows[0]?.welfareOfficers, settingsRows[0]?.welfareDuty);
   const publishedAt = published.get(monday) ?? null;
   // One assignment per course, however many sessions it has.
   const perCourse = new Map<string, { status: string }[]>();
@@ -47,7 +50,7 @@ export default async function RotaPage({ searchParams }: { searchParams: Promise
 
       <PublishWeek weekStart={monday} publishedAt={publishedAt ? publishedAt.toISOString() : null} sessions={total} assigned={allStaff.length} confirmed={confirmed} declined={declined} />
 
-      <RotaView rota={rota} />
+      <RotaView rota={rota} welfareOfficers={welfare.officers} canEditWelfare={can(ctx, "roster.edit")} />
       <p className="mt-4 text-center text-xs text-slate-400 print:mt-2">Generated from ActivityRoster · {new Date().toLocaleDateString("en-GB")}</p>
       <p className="mx-auto mt-2 max-w-2xl text-center text-[11px] leading-snug text-slate-400">
         Under-18s on this roster were checked against the published working-time rules for {organisation.name}&rsquo;s jurisdiction when they were assigned; any override is recorded in the change log.

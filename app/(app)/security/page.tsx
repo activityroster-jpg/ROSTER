@@ -7,6 +7,7 @@ import { describeAgent } from "@/lib/security/events";
 import { TrustedDevices } from "@/components/office/TrustedDevices";
 import { SignOutEverywhere } from "@/components/office/SignOutEverywhere";
 import { maskEmail } from "@/lib/security/mask";
+import { OfficeUsersSecurity, type OfficeUserSecurityRow } from "@/components/office/OfficeUsersSecurity";
 
 const EVENT_LABEL: Record<string, string> = {
   sessions_revoked: "Signed out all other devices",
@@ -48,6 +49,18 @@ export default async function SecurityPage() {
     method: prefs.method,
     hint: prefs.method === "email" && me?.email ? maskEmail(me.email) : null,
   } : undefined;
+  // The superadmin sees everyone with office access; office admins see only their own account.
+  let officeRows: OfficeUserSecurityRow[] | null = null;
+  if (ctx.role === "owner") {
+    const members = (await control.officeMembersForOrg(ctx.organisationId)).filter((m) => m.status === "active" || m.status === "invited");
+    const sessions = await control.sessionSummaries(members.map((m) => m.userId));
+    officeRows = await Promise.all(members.map(async (m) => {
+      const p = await control.getTwoFactorPrefs(m.userId);
+      const s = sessions.get(m.userId);
+      return { userId: m.userId, name: m.name, email: m.email, role: m.role, twoFactor: p?.enabled && p.method ? p.method : "off" as const, lastSignIn: s?.lastSeen ? s.lastSeen.toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" }) : null, activeSessions: s?.active ?? 0 };
+    }));
+    officeRows.sort((a, b) => (a.role === b.role ? a.name.localeCompare(b.name) : a.role === "owner" ? -1 : 1));
+  }
   const devices = (await control.listTrustedDevices(ctx.userId)).map((d) => ({
     id: d.id,
     device: describeAgent(d.userAgent),
@@ -81,6 +94,14 @@ export default async function SecurityPage() {
         <TrustedDevices rows={devices} />
         <SignOutEverywhere />
       </div>
+
+      {officeRows ? (
+        <div className="mt-5 rounded-card border border-slate-200 bg-white p-5">
+          <h2 className="mb-1 font-semibold text-navy">Office users</h2>
+          <p className="mb-3 text-xs text-slate-500">Everyone who can open {organisation.name}&rsquo;s office: whether they use a second step at sign-in, when they last signed in, and a way to sign someone out of every device.</p>
+          <OfficeUsersSecurity rows={officeRows} meId={ctx.userId} isOwner={ctx.role === "owner"} />
+        </div>
+      ) : null}
 
       <div className="mt-5 rounded-card border border-slate-200 bg-white p-5">
         <h2 className="mb-1 font-semibold text-navy">Recent security activity</h2>

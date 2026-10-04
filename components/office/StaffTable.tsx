@@ -17,6 +17,8 @@ export interface StaffRow {
   linked: boolean;
   /** Portal access: none yet, invite sent but not accepted, or accepted. */
   inviteStatus: "none" | "pending" | "accepted";
+  /** Under-18s: where the parent's approval stands. */
+  parentApproval?: "approved" | "pending" | "declined" | "withdrawn" | "none" | "not-needed";
   hasEmail: boolean;
   teaches: string[];
   teachesYouth: boolean;
@@ -149,6 +151,9 @@ export function StaffTable({ rows }: { rows: StaffRow[] }) {
                     {r.status === "inactive" ? <StatusPill tone="neutral">Left</StatusPill> : r.fit ? <StatusPill tone="covered">Fit</StatusPill> : <StatusPill tone="conflict">{r.blockText || "Not cleared"}</StatusPill>}
                     {r.warnings > 0 ? (
                       <span className="ml-2"><StatusPill tone="attention">{r.warnings} expiring</StatusPill></span>
+                    ) : null}
+                    {r.parentApproval && r.parentApproval !== "not-needed" ? (
+                      <span className="ml-2" title="Parent or guardian's approval to work"><StatusPill tone={r.parentApproval === "approved" ? "covered" : r.parentApproval === "pending" ? "attention" : "conflict"}>{r.parentApproval === "approved" ? "Parent approved" : r.parentApproval === "pending" ? "Parent approval pending" : r.parentApproval === "none" ? "No parent invited" : `Parent ${r.parentApproval}`}</StatusPill></span>
                     ) : null}
                   </td>
                   <td className="px-4 py-3">
