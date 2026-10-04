@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { courseAvailLabel, type CourseAvailState } from "@/lib/domain/availability";
 import { useRouter } from "next/navigation";
 import {
   renameCourseAction,
@@ -12,7 +13,7 @@ import {
 
 export interface CardSession { id: string; date: string; startMs: number; endMs: number }
 export interface CardAssigned { id: string; instructorName: string; roleName: string; isOverride: boolean; status: "assigned" | "confirmed" | "declined"; declineNote?: string | null }
-export interface CardInstructor { id: string; name: string; fit: boolean; reason?: string; avail?: string }
+export interface CardInstructor { id: string; name: string; fit: boolean; reason?: string; avail?: string; qualified?: boolean | null }
 export interface CardRole { id: string; name: string }
 export interface CardRatio { ok: boolean; understaffed: boolean; missingSafetyCover: boolean }
 
@@ -212,7 +213,7 @@ export function CourseCard({
             <select aria-label="Instructor" value={instr} onChange={(ev) => setInstr(ev.target.value)} className={`${inputCls} min-w-[10rem] flex-1`}>
               <option value="">Instructor…</option>
               {instructors.map((i) => (
-                <option key={i.id} value={i.id}>{i.name}{i.fit ? "" : ` — ${i.reason || "not cleared"}`}</option>
+                <option key={i.id} value={i.id}>{i.name}{i.fit ? "" : ` — ${i.reason || "not cleared"}`}{i.qualified === false ? " — not qualified for this type" : ""}{i.avail && i.avail !== "none" ? ` · ${courseAvailLabel(i.avail as CourseAvailState)}` : ""}</option>
               ))}
             </select>
             <select aria-label="Role" value={role} onChange={(ev) => setRole(ev.target.value)} className={`${inputCls} min-w-[8rem]`}>

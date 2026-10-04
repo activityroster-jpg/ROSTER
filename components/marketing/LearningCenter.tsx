@@ -67,7 +67,7 @@ const SECTIONS: Section[] = [
     label: "Dashboard & calendar",
     blurb: "Your week at a glance — the visual heart of the platform.",
     blocks: [
-      { kind: "p", text: "The dashboard opens on today. At the top you'll find quick tiles (on the water now, hours logged, sessions this week) and anything needing attention (staff not cleared, checks expiring, courses to cover, leave to approve, open shifts)." },
+      { kind: "p", text: "The dashboard opens on today. At the top you'll find quick tiles (on the water now, hours logged, sessions this week) and anything needing attention (staff not cleared, checks expiring, courses to cover, leave to approve, open shifts, and problems on the roster)." },
       { kind: "sub", text: "The week calendar" },
       { kind: "p", text: "Below the tiles is a colour-coded week calendar — youth courses in amber, adult in teal. Use the ← → buttons to move between weeks, or “This week” to jump back. Click any course block to open it." },
       { kind: "sub", text: "This week's roster" },
@@ -313,6 +313,33 @@ const SECTIONS: Section[] = [
       { kind: "sub", text: "The availability window" },
       { kind: "p", text: "Settings → General sets how many weeks ahead instructors are asked (4 by default, up to 26). Beyond the window nobody has been asked yet, so nothing blocks rostering there; the roster and the availability sheet show a note with a link to lengthen it." },
       { kind: "tip", text: "The number under each slot tells you how many instructors are free then — handy before you start assigning." },
+    ],
+  },
+  {
+    id: "problems",
+    icon: "⚠️",
+    label: "Problems on the roster",
+    blurb: "What contradicts your rules right now, not just at the moment someone was assigned.",
+    blocks: [
+      { kind: "p", text: "Checks used to run only when you assigned someone. Sessions move, people mark themselves Busy afterwards, leave gets approved, a boat goes into maintenance. The problems list looks at the roster as it stands today and tells you what no longer adds up." },
+      { kind: "sub", text: "What it finds" },
+      { kind: "bullets", items: [
+        "Double-booked: the same instructor on two courses at once (when you check for clashes).",
+        "Rostered while Busy or on approved leave, and anyone who hasn't marked a slot Free yet (counts as Busy).",
+        "Someone who said they can't make it and still needs replacing.",
+        "Not cleared to roster (an expired mandatory check), and qualifications that don't cover the course type.",
+        "Young workers' hours and parental permission for under-18s.",
+        "Short of instructors or no safety cover (when you flag ratios), and equipment clashes or units in maintenance.",
+      ] },
+      { kind: "sub", text: "Where you see it" },
+      { kind: "bullets", items: [
+        "Dashboard: a tile with the count for the next four weeks and the list underneath.",
+        "Roster: the week's problems above the roster, and a ⚠ on each affected session.",
+        "The morning digest email lists today's problems.",
+        "Instructors see their own in the app (rostered while Busy, on leave, or on two courses at once) with a link to fix their availability.",
+        "After you move or add a session, the message tells you straight away who it now clashes with.",
+      ] },
+      { kind: "tip", text: "Red items block rostering (an override with a note was used, or something changed later); amber ones are warnings. Click the course name to sort it out." },
     ],
   },
   {

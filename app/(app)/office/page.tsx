@@ -15,6 +15,7 @@ import { WeekCalendarView } from "@/components/office/WeekCalendarView";
 import { todayIso } from "@/lib/domain";
 import { GuideLink } from "@/components/GuideLink";
 import { confirmationSummary } from "@/lib/services/roster";
+import { findProblems, problemLabel } from "@/lib/services/problems";
 
 export const dynamic = "force-dynamic";
 
@@ -52,7 +53,7 @@ export default async function DashboardPage() {
     repos.tenant.orgSettings.list(ctx),
   ]);
   const { sessions, coverageByCourse } = schedule;
-  const confirmations = await confirmationSummary(repos, ctx, today);
+  const [confirmations, problems] = await Promise.all([confirmationSummary(repos, ctx, today), findProblems(repos, ctx, { from: today, to: addDays(today, 28) })]);
   const licenceOn = Boolean(settingsRows[0]?.enforceLicenceChecks);
   const ratioOn = Boolean(settingsRows[0]?.enforceRatioChecks);
   const clockOn = Boolean(settingsRows[0]?.timeclockEnabled);
@@ -150,7 +151,30 @@ export default async function DashboardPage() {
         <Tile href="/office/leave" label="Leave to approve" value={pendingLeave} sub="Pending requests" tone={pendingLeave > 0 ? "amber" : "navy"} />
         <Tile href="/office/leave" label="Open shifts" value={openShifts} sub="Need cover" tone={openShifts > 0 ? "amber" : "navy"} />
         <Tile href="/office/rota" label="Awaiting confirmation" value={confirmations.awaiting} sub={confirmations.declined ? `${confirmations.declined} can't make it` : "On published weeks"} tone={confirmations.declined > 0 ? "port" : confirmations.awaiting > 0 ? "amber" : "navy"} />
+        <Tile href="#problems" label="Problems on the roster" value={problems.problems.length} sub={problems.blocks ? `${problems.blocks} blocking · next 4 weeks` : "Next 4 weeks"} tone={problems.blocks > 0 ? "port" : problems.warns > 0 ? "amber" : "navy"} />
       </div>
+
+      {/* Problems: what contradicts a rule the centre has switched on, as the data stands now */}
+      {problems.problems.length > 0 ? (
+        <div id="problems" className="mb-8">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="font-display text-lg font-semibold text-navy">Problems to sort out</h2>
+            <a href="/learn?topic=problems" target="_blank" rel="noreferrer" className="text-xs font-medium text-teal hover:underline">📖 Read the guide</a>
+          </div>
+          <Card className="p-0">
+            <ul className="divide-y divide-slate-100">
+              {problems.problems.slice(0, 10).map((p, i) => (
+                <li key={`${p.kind}-${p.courseId}-${p.instructorId ?? ""}-${p.date}-${i}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-sm">
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${p.severity === "block" ? "bg-port/15 text-port" : "bg-amber/15 text-amber"}`}>{problemLabel(p.kind)}</span>
+                  <span className="font-medium text-navy">{p.instructorName ? `${p.instructorName} · ` : ""}<Link href={`/office/courses/${p.courseId}`} className="hover:underline">{p.courseName}</Link></span>
+                  <span className="text-xs text-slate-500">{p.date}{p.slot ? ` ${p.slot}` : ""} · {p.detail}</span>
+                </li>
+              ))}
+            </ul>
+            {problems.problems.length > 10 ? <p className="px-4 py-2 text-xs text-slate-400">{problems.problems.length - 10} more on the <Link href="/office/rota" className="text-teal hover:underline">roster</Link>, week by week.</p> : null}
+          </Card>
+        </div>
+      ) : null}
 
       {/* Calendar — the visual heart of the week */}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">

@@ -12,7 +12,7 @@ export function AssignStaffForm({
   roles,
 }: {
   courseId: string;
-  instructors: { id: string; name: string; fit: boolean; reason?: string; avail?: CourseAvailState }[];
+  instructors: { id: string; name: string; fit: boolean; reason?: string; avail?: CourseAvailState; qualified?: boolean | null }[];
   roles: { id: string; name: string }[];
 }) {
   const [state, action, pending] = useActionState(assignStaffAction, initial);
@@ -33,6 +33,7 @@ export function AssignStaffForm({
           <option key={i.id} value={i.id}>
             {i.name}
             {i.fit ? "" : ` — ${i.reason || "not cleared"}`}
+            {i.qualified === false ? " — not qualified for this type" : ""}
             {i.avail && i.avail !== "none" ? ` · ${availLabel(i.avail)}` : ""}
           </option>
         ))}
@@ -49,6 +50,11 @@ export function AssignStaffForm({
         <input type="checkbox" name="override" checked={override} onChange={(e) => setOverride(e.target.checked)} />
         Assign anyway (override checks)
       </label>
+      {selected?.qualified === false ? (
+        <p className="sm:col-span-2 rounded-lg bg-port/10 px-2.5 py-1.5 text-xs text-navy">
+          ✕ {selected.name}&apos;s recorded qualifications don&apos;t cover this course type. Assigning them needs an override with a note; or update their qualifications on the Instructors tab.
+        </p>
+      ) : null}
       {availWarn ? (
         <p className="sm:col-span-2 rounded-lg bg-amber/10 px-2.5 py-1.5 text-xs text-navy">
           ⚠ {selected!.name} {warnText} for this course&apos;s times — you can still assign them{selected!.avail === "unset" ? <>, or <a href="/office/settings#availability-window" className="text-teal hover:underline">lengthen the window</a> so they&apos;re asked</> : null}.

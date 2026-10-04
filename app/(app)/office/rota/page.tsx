@@ -9,6 +9,7 @@ import { publishedWeeks } from "@/lib/services/roster";
 import { parseWelfareSettings } from "@/lib/services/welfare";
 import { can } from "@/lib/auth/rbac";
 import { availabilityHorizon } from "@/lib/services/availability";
+import { findProblems, problemLabel } from "@/lib/services/problems";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +20,8 @@ export default async function RotaPage({ searchParams }: { searchParams: Promise
   const thisMonday = weekStart(new Date());
   const sp = await searchParams;
   const monday = typeof sp.week === "string" && ISO.test(sp.week) ? weekStart(new Date(`${sp.week}T00:00:00Z`)) : thisMonday;
-  const [rota, published, settingsRows] = await Promise.all([getWeekRota(repos, ctx, monday), publishedWeeks(repos, ctx), repos.tenant.orgSettings.list(ctx)]);
+  const [rota, published, settingsRows, problems] = await Promise.all([getWeekRota(repos, ctx, monday), publishedWeeks(repos, ctx), repos.tenant.orgSettings.list(ctx), findProblems(repos, ctx, { from: monday, to: addDays(monday, 7) })]);
+  const flags: Record<string, string[]> = Object.fromEntries(Object.entries(problems.bySession).map(([id, ps]) => [id, ps.map((p) => `${p.instructorName ? `${p.instructorName}: ` : ""}${problemLabel(p.kind)} (${p.detail})`)]));
   const rotaTemplate = parseRotaTemplate(settingsRows[0]?.rotaTemplate);
   const welfare = parseWelfareSettings(settingsRows[0]?.welfareOfficers, settingsRows[0]?.welfareDuty);
   const publishedAt = published.get(monday) ?? null;
@@ -59,7 +61,20 @@ export default async function RotaPage({ searchParams }: { searchParams: Promise
         </p>
       ) : null}
 
-      <RotaView rota={rota} welfareOfficers={welfare.officers} canEditWelfare={can(ctx, "roster.edit")} />
+      {problems.problems.length > 0 ? (
+        <details className="mb-4 rounded-card border border-port/30 bg-port/5 px-4 py-2 text-sm print:hidden" open={problems.blocks > 0}>
+          <summary className="cursor-pointer font-semibold text-navy">⚠ {problems.problems.length} problem{problems.problems.length === 1 ? "" : "s"} this week{problems.blocks ? ` (${problems.blocks} blocking)` : ""}</summary>
+          <ul className="mt-2 space-y-1 text-xs text-slate-700">
+            {problems.problems.map((p, i) => (
+              <li key={`${p.kind}-${p.courseId}-${p.instructorId ?? ""}-${p.date}-${i}`}>
+                <span className={`mr-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${p.severity === "block" ? "bg-port/15 text-port" : "bg-amber/15 text-amber"}`}>{problemLabel(p.kind)}</span>
+                {p.instructorName ? `${p.instructorName} · ` : ""}<Link href={`/office/courses/${p.courseId}`} className="font-medium text-navy hover:underline">{p.courseName}</Link> · {p.date}{p.slot ? ` ${p.slot}` : ""} · {p.detail}
+              </li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
+      <RotaView rota={rota} welfareOfficers={welfare.officers} canEditWelfare={can(ctx, "roster.edit")} problems={flags} />
       <p className="mt-4 text-center text-xs text-slate-400 print:mt-2">Generated from ActivityRoster · {new Date().toLocaleDateString("en-GB")}</p>
       <p className="mx-auto mt-2 max-w-2xl text-center text-[11px] leading-snug text-slate-400">
         Under-18s on this roster were checked against the published working-time rules for {organisation.name}&rsquo;s jurisdiction when they were assigned; any override is recorded in the change log.

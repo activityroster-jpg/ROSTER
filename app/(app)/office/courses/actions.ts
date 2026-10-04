@@ -17,6 +17,7 @@ import { assignBlockMessage, notifyRosterChange } from "@/lib/services/assignmen
 import { firstIssue, idSchema, studentsSchema } from "@/lib/validation/actions";
 import { eq } from "drizzle-orm";
 import { courseSession as courseSessionTable, courseStaff as courseStaffTable } from "@/lib/db/schema";
+import { problemsForCourse, problemsSuffix } from "@/lib/services/problems";
 
 export type ActionState = { ok: boolean; error?: string; message?: string };
 
@@ -289,7 +290,9 @@ export async function updateSessionTimesAction(
   revalidatePath("/office/courses");
   revalidatePath(`/office/courses/${courseId}`);
   revalidatePath("/office");
-  return { ok: true, message: "Session updated" };
+  // Re-check everyone on the course against the new time: clashes, Busy, leave, hours.
+  const problems = await problemsForCourse(repos, ctx, courseId).catch(() => []);
+  return { ok: true, message: `Session updated.${problemsSuffix(problems)}` };
 }
 
 /** Add one session to an existing course. */
@@ -313,7 +316,8 @@ export async function addSessionAction(courseId: string, formData: FormData): Pr
   revalidatePath(`/office/courses/${courseId}`);
   revalidatePath("/office/courses");
   revalidatePath("/office");
-  return { ok: true, message: "Session added" };
+  const problems = await problemsForCourse(repos, ctx, courseId).catch(() => []);
+  return { ok: true, message: `Session added.${problemsSuffix(problems)}` };
 }
 
 /** Remove one session from a course (scoped to the tenant). */

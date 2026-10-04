@@ -11,6 +11,8 @@ import { parseDefaultSchedule } from "@/lib/domain";
 import { BulkAssignForm } from "@/components/office/BulkAssignForm";
 import { CourseUpdatesCheck } from "@/components/office/CourseUpdatesCheck";
 import { providerName, providerColor } from "@/lib/integrations/catalogue";
+import { getTeachingMatrix } from "@/lib/services/teaching";
+import { qualificationGap } from "@/lib/services/problems";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +24,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
   const qLower = q.toLowerCase();
   const qs = (v: "upcoming" | "past") => `/office/courses?${v === "past" ? "view=past" : ""}${q ? `${v === "past" ? "&" : ""}q=${encodeURIComponent(q)}` : ""}`.replace(/\?$/, "");
   const monday = weekStart(new Date());
-  const [{ coverageByCourse }, courseTypes, staff, roles, assignments, instructors, settings, events, locationRows, equipmentRows] = await Promise.all([
+  const [{ coverageByCourse }, courseTypes, staff, roles, assignments, instructors, settings, events, locationRows, equipmentRows, teaching, quals] = await Promise.all([
     getWeekSchedule(repos, ctx, monday),
     repos.tenant.courseType.list(ctx),
     listStaffWithFit(repos, ctx),
@@ -33,7 +35,10 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
     getSessionEvents(repos, ctx, addDays(monday, -28), addDays(monday, 7 * 26)),
     repos.tenant.location.list(ctx),
     repos.tenant.equipment.list(ctx),
+    getTeachingMatrix(repos, ctx),
+    repos.tenant.qualification.list(ctx),
   ]);
+  const holdsAny = new Set(quals.map((q) => q.instructorId));
   const plannerLocations = locationRows.filter((l) => l.active).map((l) => ({ id: l.id, name: l.name })).sort((a, b) => a.name.localeCompare(b.name));
   const plannerEquipment = equipmentRows.filter((e) => e.status === "available").map((e) => ({ id: e.id, name: e.identifier ? `${e.name} (${e.identifier})` : e.name })).sort((a, b) => a.name.localeCompare(b.name));
   const slotStyle = settings[0]?.slotStyle ?? "slots";
@@ -45,6 +50,8 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
   const courseRows = await repos.tenant.course.list(ctx);
   const audienceByCourse = new Map(courseRows.map((c) => [c.id, courseTypes.find((t) => t.id === c.courseTypeId)?.audience ?? "all"]));
   const staffReqByCourse = new Map(courseRows.map((c) => [c.id, c.staffRequired ?? null]));
+  const typeByCourse = new Map(courseRows.map((c) => [c.id, c.courseTypeId]));
+  const qualifiedFor = (instructorId: string, courseId: string): boolean | null => { const g = qualificationGap(teaching.get(instructorId) ?? [], holdsAny.has(instructorId), typeByCourse.get(courseId) ?? ""); return g.known ? g.qualified : null; };
   const activeRoles = roles.filter((r) => r.active).map((r) => ({ id: r.id, name: r.name }));
   const fitById = new Map(staff.map((s) => [s.instructor.id, s.fit]));
   const instructorOptions = instructors
@@ -148,7 +155,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
         audience={audienceByCourse.get(c.courseId) ?? "all"}
         sessions={sessionsFullByCourse.get(c.courseId) ?? []}
         assigned={assigned}
-        instructors={instructorOptions.map((o) => ({ ...o, avail: courseAvail.get(c.courseId)?.get(o.id) ?? "none" }))}
+        instructors={instructorOptions.map((o) => ({ ...o, avail: courseAvail.get(c.courseId)?.get(o.id) ?? "none", qualified: qualifiedFor(o.id, c.courseId) }))}
         roles={activeRoles}
         ratioOn={ratioOn}
         ratio={ratioOn ? { ok: c.ratio.ok, understaffed: c.ratio.understaffed, missingSafetyCover: c.ratio.missingSafetyCover } : undefined}

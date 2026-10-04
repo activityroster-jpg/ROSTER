@@ -4,6 +4,8 @@ import { evaluateRatio, type AssignedRole } from "@/lib/domain";
 import { fitReason, listStaffWithFit } from "@/lib/services/staff";
 import { getCourseAvailabilityStates } from "@/lib/services/availability";
 import { liveSessions } from "@/lib/domain/sessions";
+import { getTeachingMatrix } from "@/lib/services/teaching";
+import { qualificationGap } from "@/lib/services/problems";
 
 /** Everything the editable CourseCard needs for one course (serialisable). */
 export interface CourseEditorData {
@@ -11,7 +13,7 @@ export interface CourseEditorData {
   audience: string;
   sessions: { id: string; date: string; startMs: number; endMs: number }[];
   assigned: { id: string; instructorName: string; roleName: string; isOverride: boolean; status: "assigned" | "confirmed" | "declined"; declineNote?: string | null }[];
-  instructors: { id: string; name: string; fit: boolean; reason?: string; avail?: string }[];
+  instructors: { id: string; name: string; fit: boolean; reason?: string; avail?: string; /** false = their qualifications don't cover this course type; null = nothing recorded for them. */ qualified?: boolean | null }[];
   roles: { id: string; name: string }[];
   ratioOn: boolean;
   ratio?: { ok: boolean; understaffed: boolean; missingSafetyCover: boolean };
@@ -52,7 +54,7 @@ export async function getCourseEditorData(
   const course = await t.course.findById(ctx, courseId);
   if (!course) return null;
 
-  const [courseTypes, sessions, assignments, instructors, roles, settingsRows, staff, availStates, requirements] = await Promise.all([
+  const [courseTypes, sessions, assignments, instructors, roles, settingsRows, staff, availStates, requirements, teaching, quals] = await Promise.all([
     t.courseType.list(ctx),
     t.courseSession.list(ctx).then(liveSessions),
     t.courseStaff.list(ctx),
@@ -62,7 +64,11 @@ export async function getCourseEditorData(
     listStaffWithFit(repos, ctx),
     getCourseAvailabilityStates(repos, ctx),
     t.courseRoleRequirement.list(ctx),
+    getTeachingMatrix(repos, ctx),
+    t.qualification.list(ctx),
   ]);
+  const holdsAny = new Set(quals.map((q) => q.instructorId));
+  const qualifiedFor = (instructorId: string): boolean | null => { const g = qualificationGap(teaching.get(instructorId) ?? [], holdsAny.has(instructorId), course.courseTypeId); return g.known ? g.qualified : null; };
 
   const ct = courseTypes.find((c) => c.id === course.courseTypeId);
   const licenceOn = Boolean(settingsRows[0]?.enforceLicenceChecks);
@@ -115,6 +121,7 @@ export async function getCourseEditorData(
           fit: licenceOn ? (f?.fit ?? true) : true,
           reason: licenceOn && f ? fitReason(f) : "",
           avail: avail?.get(i.id) ?? "none",
+          qualified: qualifiedFor(i.id),
         };
       }),
     roles: roles.filter((r) => r.active).map((r) => ({ id: r.id, name: r.name })),

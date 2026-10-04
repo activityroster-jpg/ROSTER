@@ -43,6 +43,13 @@ function CoverBadge({ s }: { s: RotaSession }) {
   return <span className="rounded-full bg-starboard/15 px-1.5 py-0.5 text-[10px] font-semibold text-starboard">Covered</span>;
 }
 
+/** Problems the office should see on this session (from the problems service), as a small count with the detail on hover. */
+function ProblemBadge({ id, problems }: { id: string; problems?: Record<string, string[]> }) {
+  const list = problems?.[id];
+  if (!list?.length) return null;
+  return <span title={list.join("\n")} className="rounded-full bg-port/15 px-1.5 py-0.5 text-[10px] font-semibold text-port print:hidden">⚠ {list.length}</span>;
+}
+
 function Staff({ s, f, compact = false }: { s: RotaSession; f: Fields; compact?: boolean }) {
   if (!f.staff && !f.role) return null;
   if (s.staff.length === 0) return <span className="text-xs text-port">Unassigned</span>;
@@ -71,7 +78,7 @@ function Welfare({ day, officers, canEdit }: { day: RotaDay; officers: string[];
   return <div className="px-4 py-1.5"><WelfareDutyPicker date={day.date} slots={slots} bySlot={day.welfare ?? {}} officers={officers} canEdit={canEdit} /></div>;
 }
 
-function ByWeek({ rota, f, officers, canEdit }: { rota: RotaDay[]; f: Fields; officers: string[]; canEdit: boolean }) {
+function ByWeek({ rota, f, officers, canEdit, problems }: { rota: RotaDay[]; f: Fields; officers: string[]; canEdit: boolean; problems?: Record<string, string[]> }) {
   return (
     <div className="space-y-4">
       {rota.map((day) => (
@@ -105,6 +112,7 @@ function ByWeek({ rota, f, officers, canEdit }: { rota: RotaDay[]; f: Fields; of
                       <div className="flex flex-wrap items-center gap-1 text-xs text-slate-400">
                         <Audience s={s} /> {s.courseTypeName}
                         {f.cover ? <CoverBadge s={s} /> : null}
+                        <ProblemBadge id={s.sessionId} problems={problems} />
                       </div>
                     </td>
                     {f.staff || f.role ? <td className="px-4 py-2 text-slate-600"><Staff s={s} f={f} /></td> : null}
@@ -122,7 +130,7 @@ function ByWeek({ rota, f, officers, canEdit }: { rota: RotaDay[]; f: Fields; of
 }
 
 /* ---------- Template: By day (one page per day, big cards) ---------- */
-function ByDay({ rota, f, officers, canEdit }: { rota: RotaDay[]; f: Fields; officers: string[]; canEdit: boolean }) {
+function ByDay({ rota, f, officers, canEdit, problems }: { rota: RotaDay[]; f: Fields; officers: string[]; canEdit: boolean; problems?: Record<string, string[]> }) {
   const [idx, setIdx] = useState(() => {
     const today = new Date().toISOString().slice(0, 10);
     const i = rota.findIndex((d) => d.date === today);
@@ -161,7 +169,7 @@ function ByDay({ rota, f, officers, canEdit }: { rota: RotaDay[]; f: Fields; off
                     {f.staff || f.role ? <><dt className="text-xs font-semibold uppercase text-slate-400">Instructors</dt><dd><Staff s={s} f={f} /></dd></> : null}
                     {f.location ? <><dt className="text-xs font-semibold uppercase text-slate-400">Location</dt><dd className="text-slate-700">{s.locations.join(", ") || "—"}</dd></> : null}
                     {f.equipment ? <><dt className="text-xs font-semibold uppercase text-slate-400">Equipment</dt><dd className="text-slate-700">{s.equipment.join(", ") || "—"}</dd></> : null}
-                    {f.cover ? <><dt className="text-xs font-semibold uppercase text-slate-400">Cover</dt><dd><CoverBadge s={s} /></dd></> : null}
+                    {f.cover ? <><dt className="text-xs font-semibold uppercase text-slate-400">Cover</dt><dd><CoverBadge s={s} /> <ProblemBadge id={s.sessionId} problems={problems} /></dd></> : null}
                   </dl>
                 </div>
               ))}
@@ -174,7 +182,7 @@ function ByDay({ rota, f, officers, canEdit }: { rota: RotaDay[]; f: Fields; off
 }
 
 /* ---------- Template: Compact grid (days across, slots down) ---------- */
-function CompactGrid({ rota, f }: { rota: RotaDay[]; f: Fields }) {
+function CompactGrid({ rota, f, problems }: { rota: RotaDay[]; f: Fields; problems?: Record<string, string[]> }) {
   const slots = (["AM", "PM", "EV"] as const).filter((code) => rota.some((d) => d.sessions.some((s) => s.slot === code)));
   const rows = slots.length ? slots : (["AM", "PM"] as const);
   return (
@@ -207,7 +215,7 @@ function CompactGrid({ rota, f }: { rota: RotaDay[]; f: Fields }) {
                             {f.staff || f.role ? <div className="leading-tight"><Staff s={s} f={f} compact /></div> : null}
                             {f.location && s.locations.length ? <div className="text-[10px] text-slate-500">📍 {s.locations.join(", ")}</div> : null}
                             {f.equipment && s.equipment.length ? <div className="text-[10px] text-slate-500">⛵ {s.equipment.join(", ")}</div> : null}
-                            {f.cover ? <div className="mt-0.5"><CoverBadge s={s} /></div> : null}
+                            {f.cover ? <div className="mt-0.5"><CoverBadge s={s} /> <ProblemBadge id={s.sessionId} problems={problems} /></div> : null}
                           </div>
                         ))}
                       </div>
@@ -227,7 +235,7 @@ function CompactGrid({ rota, f }: { rota: RotaDay[]; f: Fields }) {
  * The printable roster in three templates (by week, by day, compact grid), with
  * each field switchable. Choices are remembered in this browser.
  */
-export function RotaView({ rota, welfareOfficers = [], canEditWelfare = false }: { rota: RotaDay[]; welfareOfficers?: string[]; canEditWelfare?: boolean }) {
+export function RotaView({ rota, welfareOfficers = [], canEditWelfare = false, problems }: { rota: RotaDay[]; welfareOfficers?: string[]; canEditWelfare?: boolean; problems?: Record<string, string[]> }) {
   const [template, setTemplate] = useState<RotaTemplate>("week");
   const [fields, setFields] = useState<Fields>(ALL_ON);
   const [ready, setReady] = useState(false);
@@ -271,7 +279,7 @@ export function RotaView({ rota, welfareOfficers = [], canEditWelfare = false }:
         </div>
       </div>
 
-      {template === "week" ? <ByWeek rota={rota} f={fields} officers={welfareOfficers} canEdit={canEditWelfare} /> : template === "day" ? <ByDay rota={rota} f={fields} officers={welfareOfficers} canEdit={canEditWelfare} /> : <CompactGrid rota={rota} f={fields} />}
+      {template === "week" ? <ByWeek rota={rota} f={fields} officers={welfareOfficers} canEdit={canEditWelfare} problems={problems} /> : template === "day" ? <ByDay rota={rota} f={fields} officers={welfareOfficers} canEdit={canEditWelfare} problems={problems} /> : <CompactGrid rota={rota} f={fields} problems={problems} />}
     </div>
   );
 }

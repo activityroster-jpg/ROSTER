@@ -19,6 +19,9 @@ import { publishedWeeks, weekOf } from "./roster";
 import { checkWorkingTime, describeFindings } from "./working-time";
 import { liveSessions } from "@/lib/domain/sessions";
 import { parentApprovalFor } from "./guardians";
+import { getTeachingMatrix } from "./teaching";
+import { qualificationGap } from "./problems";
+import { qualification as qualificationTable } from "@/lib/db/schema";
 
 export interface AssignInput {
   courseId: string;
@@ -29,7 +32,7 @@ export interface AssignInput {
   overrideNote?: string;
 }
 
-export type AssignBlockReason = "not-fit" | "conflict" | "unavailable" | "working-time" | "parent-approval" | "invalid";
+export type AssignBlockReason = "not-fit" | "not-qualified" | "conflict" | "unavailable" | "working-time" | "parent-approval" | "invalid";
 
 export type AssignResult =
   | { ok: true; courseStaffId: string; overridden: boolean; /** Non-blocking notes (e.g. an unverified young-worker figure, a missing break). */ warnings: string[] }
@@ -42,6 +45,7 @@ function toMs(v: Date | number): number {
 /** Plain-English reason an assignment was refused. */
 export function assignBlockMessage(reason: AssignBlockReason, detail: string): string {
   if (reason === "not-fit") return `Not cleared to roster: ${detail}`;
+  if (reason === "not-qualified") return `Not an instructor for this course type: ${detail}`;
   if (reason === "conflict") return `Double-booked: ${detail}`;
   if (reason === "unavailable") return `${detail} in their availability`;
   if (reason === "working-time") return `Young worker's hours: ${detail}`;
@@ -112,6 +116,17 @@ export async function assignStaff(
       reason: "not-fit",
       detail: fit.blocks.map((b) => (b.kind === "missing" ? `${b.name} missing` : `${b.name} expired`)).join(", "),
     };
+  }
+
+  // --- 1a. Qualification match: the course type must be one they can teach ----
+  // Only judged when the centre has recorded something for them (a qualification
+  // or an approval); with nothing on file nobody is blocked. Override allowed.
+  const [teaching, heldQuals] = await Promise.all([getTeachingMatrix(repos, ctx), t.qualification.list(ctx, eq(qualificationTable.instructorId, input.instructorId))]);
+  const gap = qualificationGap(teaching.get(input.instructorId) ?? [], heldQuals.length > 0, course.courseTypeId);
+  const notQualified = gap.known && !gap.qualified;
+  if (notQualified && !input.override) {
+    const ctName = (await t.courseType.findById(ctx, course.courseTypeId))?.name ?? "this course type";
+    return { ok: false, reason: "not-qualified", detail: `${instructorRow.name}'s qualifications don't cover ${ctName}` };
   }
 
   // --- 1b. Under-18: a parent's approval first (centre setting, on by default) ---
@@ -191,7 +206,7 @@ export async function assignStaff(
   ].map((f) => (f.verified ? f.message : `${f.message} (figure not yet verified)`));
 
   // --- 5. Persist ----------------------------------------------------------
-  const overridden = Boolean(input.override && (!fit.fit || clashing || busy || wtBlocked || parentBlocked));
+  const overridden = Boolean(input.override && (!fit.fit || notQualified || clashing || busy || wtBlocked || parentBlocked));
   const row = await t.courseStaff.insert(ctx, {
     courseId: input.courseId,
     instructorId: input.instructorId,

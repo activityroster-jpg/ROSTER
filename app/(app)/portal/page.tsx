@@ -6,6 +6,8 @@ import { instructor as instructorTable, courseStaff as courseStaffTable } from "
 import { todayIso } from "@/lib/domain";
 import { Card, StatusPill } from "@/components/ui";
 import { ConfirmAssignment } from "@/components/portal/ConfirmAssignment";
+import { problemsForInstructor } from "@/lib/services/problems";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +43,7 @@ export default async function PortalSchedulePage() {
   const weeksAhead = Math.max(1, Math.min(26, settings?.availabilityWeeksAhead ?? 4));
   const horizonEnd = addDays(monday, weeksAhead * 7);
 
-  const [events, myStaff, allStaff, instructors, courses, published, courseLocations, locations] = await Promise.all([
+  const [events, myStaff, allStaff, instructors, courses, published, courseLocations, locations, myProblemsAll] = await Promise.all([
     getSessionEvents(repos, ctx, today, horizonEnd),
     repos.tenant.courseStaff.list(ctx, eq(courseStaffTable.instructorId, me.id)),
     repos.tenant.courseStaff.list(ctx),
@@ -50,7 +52,10 @@ export default async function PortalSchedulePage() {
     publishedWeeks(repos, ctx),
     repos.tenant.courseLocation.list(ctx),
     repos.tenant.location.list(ctx),
+    problemsForInstructor(repos, ctx, me.id, { from: today, to: horizonEnd }).then((ps) => ps.filter((p) => ["busy", "on-leave", "double-booked", "not-answered"].includes(p.kind))).catch(() => []),
   ]);
+  // Only published weeks: a draft roster is the office's business until it goes out.
+  const myProblems = myProblemsAll.filter((p) => published.has(weekOf(p.date)));
   const locationName = new Map(locations.map((l) => [l.id, l.name]));
   const placesOf = (courseId: string) => courseLocations.filter((cl) => cl.courseId === courseId).map((cl) => locationName.get(cl.locationId)).filter((n): n is string => Boolean(n));
   const myByCourse = new Map(myStaff.map((s) => [s.courseId, s]));
@@ -80,6 +85,21 @@ export default async function PortalSchedulePage() {
       <p className="mb-4 text-sm text-slate-500">
         {thisWeek === 0 ? "Nothing this week." : `${thisWeek} session${thisWeek === 1 ? "" : "s"} this week.`} Showing the next {weeksAhead} weeks.
       </p>
+      {myProblems.length > 0 ? (
+        <div className="mb-4 rounded-card border border-port/40 bg-port/5 px-4 py-3 text-sm text-navy">
+          <p className="font-semibold">Please check {myProblems.length === 1 ? "this" : "these"}:</p>
+          <ul className="mt-1 list-disc space-y-0.5 pl-5 text-xs">
+            {myProblems.slice(0, 5).map((p, i) => (
+              <li key={`${p.kind}-${p.courseId}-${p.date}-${i}`}>
+                {p.kind === "double-booked" ? <>You&apos;re on two courses at once on {fmtDay(p.date)} ({p.courseName} and another). Tell your centre.</>
+                  : p.kind === "on-leave" ? <>You&apos;re rostered on {p.courseName} on {fmtDay(p.date)} but on approved leave. Tell your centre.</>
+                  : p.kind === "busy" ? <>You&apos;re rostered on {p.courseName} on {fmtDay(p.date)} {p.slot} but marked Busy. <Link href="/portal/availability" className="font-medium text-teal hover:underline">Change your availability</Link> or tell your centre.</>
+                  : <>You haven&apos;t marked {fmtDay(p.date)} {p.slot} as Free, but you&apos;re rostered on {p.courseName}. <Link href="/portal/availability" className="font-medium text-teal hover:underline">Confirm you&apos;re free</Link>.</>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       {toConfirm > 0 ? (
         <div className="mb-4 rounded-card border border-amber/50 bg-amber/10 px-4 py-3 text-sm text-navy">
           <span className="font-semibold">{toConfirm} course{toConfirm === 1 ? "" : "s"} to confirm.</span> Tap “I&apos;ll be there” on each so your centre knows you&apos;ve seen it.
