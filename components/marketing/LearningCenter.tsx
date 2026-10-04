@@ -353,7 +353,7 @@ const SECTIONS: Section[] = [
         "Changed something after publishing? Anyone you add, remove or move in a published week is told straight away. “Re-publish & remind everyone” nudges the whole week again.",
       ] },
       { kind: "sub", text: "The PDF" },
-      { kind: "p", text: "“Download PDF” on the Roster page produces a proper document, not a picture of the screen. It is a breakdown of each day: a row for every course, with the course name on the left, then its times, then who is working, then any extras you have turned on (location, equipment, staff roles). Pick the period beside the button: one day, the week, or the whole month. The columns, the style (Classic, Bold, Minimal or Compact) and portrait or landscape follow what you chose when you set up, and you can change them any time under Settings → Rota PDF." },
+      { kind: "p", text: "“Download PDF” on the Roster page produces a proper document, not a picture of the screen. It is a breakdown of each day: a row for every course, with the course name on the left, then its times, then who is working, then any extras you have turned on (number of students booked, location, equipment, staff roles). Pick the period beside the button: one day, the week, or the whole month. The columns, the style (Classic, Bold, Minimal or Compact) and portrait or landscape follow what you chose when you set up, and you can change them any time under Settings → Rota PDF." },
       { kind: "bullets", items: [
         "What goes on it — tick start and finish times, locations, instructors, their roles, and equipment. The course name and date are always there.",
         "Vertical — portrait pages with a table for each day. The classic noticeboard roster.",

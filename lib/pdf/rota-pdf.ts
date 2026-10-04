@@ -8,7 +8,7 @@ import { shortNames, type RotaStyle, type RotaTemplateSettings } from "@/lib/rot
  *
  * It is a full breakdown of each day: one table per day, a row per course
  * (session), with the course name on the left, then the times, then who is
- * working, then whichever extras the centre ticked (location, equipment).
+ * working, then whichever extras the centre ticked (students, location, equipment).
  * Vertical is a portrait page; horizontal is the same breakdown on a
  * landscape page, which gives the staff and extras columns more room.
  *
@@ -101,7 +101,7 @@ function newPage(c: Ctx): void {
 
 function ensure(c: Ctx, needed: number): void { if (c.y - needed < M) newPage(c); }
 
-interface Col { key: "course" | "times" | "staff" | "where" | "kit"; label: string; w: number; weight: number }
+interface Col { key: "course" | "times" | "staff" | "students" | "where" | "kit"; label: string; w: number; weight: number }
 
 /** The columns, in the order the centre reads them: course, times, staff, then the extras. */
 export function rotaColumns(t: RotaTemplateSettings): { key: Col["key"]; label: string }[] {
@@ -109,6 +109,7 @@ export function rotaColumns(t: RotaTemplateSettings): { key: Col["key"]; label: 
   const cols: { key: Col["key"]; label: string }[] = [{ key: "course", label: "Course" }];
   if (f.times) cols.push({ key: "times", label: "Times" });
   if (f.instructors) cols.push({ key: "staff", label: f.roles ? "Staff working (role)" : "Staff working" });
+  if (f.students) cols.push({ key: "students", label: "Students" });
   if (f.locations) cols.push({ key: "where", label: "Location" });
   if (f.equipment) cols.push({ key: "kit", label: "Equipment" });
   return cols;
@@ -123,6 +124,7 @@ function cell(key: Col["key"], s: RotaSession, t: RotaTemplateSettings, names: M
       const who = s.staff.filter((x) => x.status !== "declined").map((x) => (t.fields.roles ? `${names.get(x.name) ?? x.name} (${x.role})` : names.get(x.name) ?? x.name));
       return who.length ? who : ["Unassigned"];
     }
+    case "students": return [s.students > 0 ? String(s.students) : "—"];
     case "where": return s.locations.length ? [s.locations.join(", ")] : ["—"];
     case "kit": return s.equipment.length ? [s.equipment.join(", ")] : ["—"];
   }
@@ -155,8 +157,9 @@ export async function renderRotaPdf(input: RotaPdfInput): Promise<Uint8Array> {
 function layoutColumns(t: RotaTemplateSettings, inner: number, look: Look, font: PDFFont): Col[] {
   const cols: Col[] = rotaColumns(t).map((col) => ({ ...col, w: 0, weight: col.key === "staff" ? 1.5 : col.key === "course" ? 1.3 : col.key === "kit" ? 0.9 : 0.9 }));
   const timesW = font.widthOfTextAtSize("00:00 – 00:00", look.size) + 2 * look.pad + 6;
-  for (const col of cols) if (col.key === "times") col.w = timesW;
-  const flex = cols.filter((col) => col.key !== "times");
+  const studentsW = font.widthOfTextAtSize("Students", look.size - 1) + 2 * look.pad + 6;
+  for (const col of cols) { if (col.key === "times") col.w = timesW; if (col.key === "students") col.w = studentsW; }
+  const flex = cols.filter((col) => col.key !== "times" && col.key !== "students");
   const free = inner - cols.reduce((n, col) => n + col.w, 0);
   const weight = flex.reduce((n, col) => n + col.weight, 0);
   for (const col of flex) col.w = (free * col.weight) / weight;

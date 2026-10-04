@@ -254,6 +254,8 @@ export interface RotaSession {
   locations: string[];
   /** Equipment on the course, e.g. "Safety RIB 1", "Pico ×2". */
   equipment: string[];
+  /** Places on the course (its capacity): the number of students the session is planned for. */
+  students: number;
 }
 export interface RotaDay {
   date: string;
@@ -361,6 +363,7 @@ export async function getRotaDays(
           staff: staffByCourse.get(s.courseId) ?? [],
           locations: locsByCourse.get(s.courseId) ?? [],
           equipment: equipByCourse.get(s.courseId) ?? [],
+          students: course?.capacity ?? 0,
         };
       })
       .sort((a, b) => slotRank[a.slot] - slotRank[b.slot] || a.startAt - b.startAt);

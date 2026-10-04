@@ -12,6 +12,7 @@ export type RotaOrientation = (typeof ROTA_ORIENTATIONS)[number];
 export const ROTA_FIELDS = [
   { key: "times", label: "Start and finish times" },
   { key: "instructors", label: "Staff working" },
+  { key: "students", label: "Number of students booked" },
   { key: "roles", label: "Their role (Senior Instructor, Safety Boat…)" },
   { key: "locations", label: "Locations / classrooms" },
   { key: "equipment", label: "Equipment (boats, RIBs…)" },
@@ -42,14 +43,14 @@ export const rotaTemplateSchema = z.object({
   range: z.enum(ROTA_RANGES),
   orientation: z.enum(ROTA_ORIENTATIONS),
   style: z.enum(["classic", "bold", "minimal", "compact"]).default("classic"),
-  fields: z.object({ times: z.boolean(), locations: z.boolean(), instructors: z.boolean(), roles: z.boolean(), equipment: z.boolean() }),
+  fields: z.object({ times: z.boolean(), locations: z.boolean(), instructors: z.boolean(), roles: z.boolean(), equipment: z.boolean(), students: z.boolean().default(false) }),
 });
 
 export const DEFAULT_ROTA_TEMPLATE: RotaTemplateSettings = {
   range: "day",
   orientation: "vertical",
   style: "classic",
-  fields: { times: true, locations: true, instructors: true, roles: false, equipment: false },
+  fields: { times: true, locations: true, instructors: true, roles: false, equipment: false, students: false },
 };
 
 /** Parse the stored JSON; partial or broken values fall back field by field. */

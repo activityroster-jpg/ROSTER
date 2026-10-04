@@ -12,20 +12,21 @@ function day(date: string, n: number): RotaDay {
     courseName: i % 2 ? "RYA Youth Stage 2 – dinghy sailing for juniors with a long name" : "Powerboat Level 2", courseTypeName: "x", audience: "all" as const, status: "scheduled",
     coverageOk: true, understaffed: false, missingSafetyCover: false,
     staff: [{ name: "Sam Jones", role: "Senior Instructor", status: "confirmed" as const }, { name: "Sam Patel", role: "Instructor", status: "assigned" as const }, { name: "Alex Brown", role: "Safety Boat", status: "declined" as const }],
-    locations: ["Main lake", "Classroom 1"], equipment: ["Safety RIB 1", "Pico ×4"],
+    locations: ["Main lake", "Classroom 1"], equipment: ["Safety RIB 1", "Pico ×4"], students: 6,
   }));
   return { date, label: new Date(`${date}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short", timeZone: "UTC" }), sessions };
 }
 const week = ["05", "06", "07", "08", "09", "10", "11"].map((d, i) => day(`2026-10-${d}`, i === 6 ? 0 : 3));
-const all: RotaTemplateSettings["fields"] = { times: true, locations: true, instructors: true, roles: true, equipment: true };
+const all: RotaTemplateSettings["fields"] = { times: true, locations: true, instructors: true, roles: true, equipment: true, students: true };
 
 async function pages(bytes: Uint8Array) { return (await PDFDocument.load(bytes)).getPageCount(); }
 
 describe("rota PDF", () => {
   it("lays the columns out as course, times, staff, then the extras", () => {
-    expect(rotaColumns({ ...DEFAULT_ROTA_TEMPLATE, fields: all }).map((c) => c.key)).toEqual(["course", "times", "staff", "where", "kit"]);
-    expect(rotaColumns({ ...DEFAULT_ROTA_TEMPLATE, fields: { ...all, times: false, locations: false } }).map((c) => c.key)).toEqual(["course", "staff", "kit"]);
+    expect(rotaColumns({ ...DEFAULT_ROTA_TEMPLATE, fields: all }).map((c) => c.key)).toEqual(["course", "times", "staff", "students", "where", "kit"]);
+    expect(rotaColumns({ ...DEFAULT_ROTA_TEMPLATE, fields: { ...all, times: false, locations: false, students: false } }).map((c) => c.key)).toEqual(["course", "staff", "kit"]);
     expect(rotaColumns({ ...DEFAULT_ROTA_TEMPLATE, fields: all })[2]!.label).toBe("Staff working (role)");
+    expect(rotaColumns({ ...DEFAULT_ROTA_TEMPLATE, fields: all })[3]!.label).toBe("Students");
   });
   it("renders every style without error", async () => {
     for (const style of ["classic", "bold", "minimal", "compact"] as const) {

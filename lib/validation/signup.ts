@@ -37,7 +37,8 @@ export const trialSignupSchema = z.object({
   ownerEmail: z.string().trim().toLowerCase().email(),
   password: z.string().min(8, "Use at least 8 characters with a mix of letters and numbers.").max(200).regex(/[A-Za-z]/, "Include at least one letter.").regex(/\d/, "Include at least one number."),
   jurisdiction: z.enum(JURISDICTIONS),
-  setupMode: z.enum(SETUP_MODES),
+  /** Legacy: the home-page form no longer offers a choice; onboarding in the office covers it. */
+  setupMode: z.enum(SETUP_MODES).default("basic"),
   acceptedTerms: z.literal(true, {
     errorMap: () => ({ message: "Please agree to the Terms and Privacy Policy to continue." }),
   }),

@@ -61,7 +61,7 @@ export function RotaTemplateForm({ initial, onSaved, compact = false }: { initia
             </label>
           ))}
         </div>
-        <p className="mt-1 text-xs text-slate-400">The course name and the date are always shown. Staff appear by first name, one per line; a surname initial is added only when two people on the sheet share a first name.</p>
+        <p className="mt-1 text-xs text-slate-400">The course name and the date are always shown. The number of students comes from how many are booked on each course. Staff appear by first name, one per line; a surname initial is added only when two people on the sheet share a first name.</p>
       </div>
       <div>
         <p className="mb-1 text-xs font-medium text-slate-500">Style</p>
