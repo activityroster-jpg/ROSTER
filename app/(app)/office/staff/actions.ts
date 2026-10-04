@@ -20,7 +20,7 @@ import { instructorCapState, capUpgradeMessage } from "@/lib/tenant/limits";
 import { apexDomain } from "@/lib/config";
 import { EMPLOYMENT_TYPES, PAY_UNITS, type EmploymentType, type PayUnit } from "@/lib/db/schema";
 import { deletePayRate, setPayRate } from "@/lib/services/pay-rates";
-import { rebuildHoursFromRoster } from "@/lib/services/hours";
+import { applyRateToUnapprovedLines, rebuildHoursFromRoster } from "@/lib/services/hours";
 import { z } from "zod";
 import { plausibleStaffDob } from "@/lib/domain/age";
 import { sealToken } from "@/lib/security/token-crypto";
@@ -351,7 +351,7 @@ const rateSchema = z.object({
 });
 
 /** Set how an instructor is paid (default, or for one role). Refreshes unpriced payroll lines. */
-export async function setPayRateAction(instructorId: string, input: { roleTypeId: string | null; unit: string; rate: number }): Promise<ActionState> {
+export async function setPayRateAction(instructorId: string, input: { roleTypeId: string | null; unit: string; rate: number; /** Apply the new rate to unapproved lines dated on or after this day (YYYY-MM-DD); omit to leave existing lines alone. */ applyFrom?: string | null }): Promise<ActionState> {
   const { ctx, repos } = await requireTenant({ permission: "finance.view" });
   const parsed = rateSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Enter an amount and how it's paid" };
@@ -360,9 +360,12 @@ export async function setPayRateAction(instructorId: string, input: { roleTypeId
   await setPayRate(repos, ctx, { instructorId, roleTypeId: parsed.data.roleTypeId, unit: parsed.data.unit as PayUnit, rate: parsed.data.rate });
   // Lines that had no rate pick this one up.
   await rebuildHoursFromRoster(repos, ctx);
+  // A corrected rate reaches the unapproved lines it should have priced (approved ones keep their pay).
+  const applyFrom = typeof input.applyFrom === "string" && /^\d{4}-\d{2}-\d{2}$/.test(input.applyFrom) ? input.applyFrom : null;
+  const applied = applyFrom ? await applyRateToUnapprovedLines(repos, ctx, instructorId, applyFrom) : 0;
   revalidatePath(`/office/staff/${instructorId}`);
   revalidatePath("/office/finance");
-  return { ok: true, message: "Pay rate saved" };
+  return { ok: true, message: applied ? `Pay rate saved and applied to ${applied} unapproved line${applied === 1 ? "" : "s"} from ${applyFrom}` : "Pay rate saved" };
 }
 
 export async function deletePayRateAction(id: string): Promise<ActionState> {

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireTenant } from "@/lib/tenant/require";
 import { writeAudit } from "@/lib/services/audit";
-import { rebuildHoursFromRoster } from "@/lib/services/hours";
+import { markApproval, rebuildHoursFromRoster } from "@/lib/services/hours";
 import { getPayrollLines } from "@/lib/services/finance";
 import { HOURS_SOURCES, PAY_SOURCES, type HoursSource, type PaySource } from "@/lib/db/schema";
 
@@ -31,8 +31,16 @@ export async function updatePayrollLineAction(recordId: string, patch: PayrollLi
   if (!parsed.success) return { ok: false, error: "Please check the values" };
   const clean = Object.fromEntries(Object.entries(parsed.data).filter(([, v]) => v !== undefined));
   if ("note" in clean) clean.note = (clean.note as string | null)?.trim() || null;
-  const updated = await repos.tenant.hoursRecord.update(ctx, recordId, clean);
-  if (!updated) return { ok: false, error: "Line not found" };
+  if ("overridePay" in clean) clean.overridePayPence = clean.overridePay == null ? null : Math.round((clean.overridePay as number) * 100);
+  if ("approved" in clean) {
+    const approved = clean.approved as boolean;
+    delete clean.approved;
+    if (!(await markApproval(repos, ctx, recordId, approved))) return { ok: false, error: "Line not found" };
+  }
+  if (Object.keys(clean).length) {
+    const updated = await repos.tenant.hoursRecord.update(ctx, recordId, clean);
+    if (!updated) return { ok: false, error: "Line not found" };
+  }
   await writeAudit(repos, ctx, { action: "payroll_line_edit", entity: "hours_record", entityId: recordId, after: clean });
   revalidate();
   return { ok: true };
@@ -43,7 +51,7 @@ export async function approvePayrollLinesAction(recordIds: string[], approved: b
   const { ctx, repos } = await requireTenant({ permission: "finance.view" });
   const ids = [...new Set((recordIds ?? []).filter((id) => typeof id === "string" && id.length <= 64))].slice(0, 2000);
   let n = 0;
-  for (const id of ids) if (await repos.tenant.hoursRecord.update(ctx, id, { approved })) n++;
+  for (const id of ids) if (await markApproval(repos, ctx, id, approved)) n++;
   await writeAudit(repos, ctx, { action: approved ? "payroll_approve" : "payroll_unapprove", entity: "hours_record", after: { count: n } });
   revalidate();
   return { ok: true, message: `${n} line${n === 1 ? "" : "s"} ${approved ? "approved" : "re-opened"}` };

@@ -105,7 +105,7 @@ export async function getInstructorHours(
 // to pay per line and override minutes or pay outright during review.
 // ---------------------------------------------------------------------------
 
-export interface PayrollFilter { from?: string; to?: string; instructorId?: string }
+export interface PayrollFilter { from?: string; to?: string; instructorId?: string; /** Volunteers (no pay) are hidden unless asked for (audit A8-2). */ includeVolunteers?: boolean }
 
 export interface PayrollLine {
   recordId: string;
@@ -132,7 +132,13 @@ export interface PayrollLine {
   /** Office override of the pay (wins over everything). */
   overridePay: number | null;
   pay: number | null;
+  /** Rolled-up holiday pay on this line (centre setting, workers only), or null when off. */
+  holidayPay: number | null;
   approved: boolean;
+  approvedAt: string | null;
+  /** The session moved, changed length or lost this person after the line was approved (audit A8-5). */
+  changedSinceApproval: boolean;
+  volunteer: boolean;
   note: string | null;
   /** true when start/finish come from clock-in/out rather than the schedule. */
   clocked: boolean;
@@ -145,8 +151,10 @@ export interface PayrollSummaryRow {
   breakMinutes: number;
   payableMinutes: number;
   pay: number;
+  holidayPay: number;
   /** Lines with no rate set — pay unknown, not zero. */
   unpriced: number;
+  changedSinceApproval: number;
 }
 
 const toMs = (v: Date | number | string | null | undefined): number | null =>
@@ -172,14 +180,17 @@ export async function getPayrollLines(
   const s = settings[0];
   const policy: BreakPolicy = { afterMinutes: s?.breakAfterMinutes ?? 360, breakMinutes: s?.breakMinutes ?? 0, paid: Boolean(s?.breakPaid) };
   const nameById = new Map(instructors.map((i) => [i.id, i.name]));
+  const volunteers = new Set(instructors.filter((i) => i.employmentType === "volunteer").map((i) => i.id));
+  const holidayPct = s?.holidayPayPercent && s.holidayPayPercent > 0 ? s.holidayPayPercent : null;
   const sessionById = new Map(sessions.map((x) => [x.id, x]));
   const courseName = new Map(courses.map((c) => [c.id, c.name ?? "Course"]));
   const entryFor = new Map<string, (typeof entries)[number]>();
   for (const e of entries) if (e.courseSessionId && e.clockOutAt) entryFor.set(`${e.instructorId}|${e.courseSessionId}`, e);
 
-  type Partial1 = Omit<PayrollLine, "pay" | "breakMinutes" | "payableMinutes">;
+  type Partial1 = Omit<PayrollLine, "pay" | "holidayPay" | "breakMinutes" | "payableMinutes">;
   const partials: Partial1[] = [];
   for (const r of records) {
+    if (!filter.includeVolunteers && volunteers.has(r.instructorId)) continue;
     const session = r.courseSessionId ? sessionById.get(r.courseSessionId) : undefined;
     // A line whose session is gone and that nobody approved, edited or clocked is a leftover, not pay.
     if (!session && !r.approved && r.actualMinutes == null && r.overrideMinutes == null && r.overridePay == null) continue;
@@ -208,9 +219,12 @@ export async function getPayrollLines(
       overrideMinutes: r.overrideMinutes ?? null,
       workedMinutes: worked,
       payUnit: r.payUnit ?? "hour",
-      rate: r.rate ?? null,
-      overridePay: r.overridePay ?? null,
+      rate: r.ratePence != null ? r.ratePence / 100 : r.rate ?? null,
+      overridePay: r.overridePayPence != null ? r.overridePayPence / 100 : r.overridePay ?? null,
       approved: r.approved,
+      approvedAt: r.approvedAt ? r.approvedAt.toISOString() : null,
+      changedSinceApproval: Boolean(r.approved && r.rosterChangedAt),
+      volunteer: volunteers.has(r.instructorId),
       note: r.note ?? null,
       clocked: Boolean(entry),
     });
@@ -221,7 +235,9 @@ export async function getPayrollLines(
     // Breaks only make sense for hourly pay.
     const { breakMinutes, payableMinutes } = p.payUnit === "hour" ? applyBreak(p.workedMinutes, policy) : { breakMinutes: 0, payableMinutes: p.workedMinutes };
     const computed = linePay({ unit: p.payUnit, rate: p.rate, payableMinutes, firstOfDay: firstOfDay[i]! });
-    return { ...p, breakMinutes, payableMinutes, pay: p.overridePay ?? computed };
+    const pay = p.overridePay ?? computed;
+    const holidayPay = holidayPct && pay != null && !p.volunteer ? Math.round(pay * holidayPct) / 100 : null;
+    return { ...p, breakMinutes, payableMinutes, pay, holidayPay };
   });
   return { lines, policy };
 }
@@ -230,8 +246,10 @@ export async function getPayrollLines(
 export function summariseByInstructor(lines: PayrollLine[]): PayrollSummaryRow[] {
   const by = new Map<string, PayrollSummaryRow>();
   for (const l of lines) {
-    const row = by.get(l.instructorId) ?? { instructorName: l.instructorName, shifts: 0, workedMinutes: 0, breakMinutes: 0, payableMinutes: 0, pay: 0, unpriced: 0 };
+    const row = by.get(l.instructorId) ?? { instructorName: l.instructorName, shifts: 0, workedMinutes: 0, breakMinutes: 0, payableMinutes: 0, pay: 0, holidayPay: 0, unpriced: 0, changedSinceApproval: 0 };
     row.shifts++;
+    if (l.changedSinceApproval) row.changedSinceApproval++;
+    row.holidayPay = Math.round((row.holidayPay + (l.holidayPay ?? 0)) * 100) / 100;
     row.workedMinutes += l.workedMinutes;
     row.breakMinutes += l.breakMinutes;
     row.payableMinutes += l.payableMinutes;
@@ -247,19 +265,19 @@ const UNIT: Record<PayUnit, string> = { hour: "per hour", session: "per session"
 
 /** Spreadsheet (CSV) — one row per shift. */
 export function payrollLinesToCsv(lines: PayrollLine[]): string {
-  const header = ["Date", "Instructor", "Course", "Start", "Finish", "Rostered (h)", "Clocked (h)", "Paid on", "Worked (h)", "Lunch break (min)", "Paid hours", "Rate", "Basis", "Pay", "Approved", "Note"];
+  const header = ["Date", "Instructor", "Course", "Start", "Finish", "Rostered (h)", "Clocked (h)", "Paid on", "Worked (h)", "Lunch break (min)", "Paid hours", "Rate", "Basis", "Pay", "Holiday pay", "Approved", "Roster changed since approval", "Note"];
   const rows = lines.map((l) => [
     l.date ?? "", escapeCsv(l.instructorName), escapeCsv(l.courseName), l.start ?? "", l.finish ?? "",
     h(l.scheduledMinutes), l.clockedMinutes != null ? h(l.clockedMinutes) : "", l.overrideMinutes != null ? "office" : l.source,
     h(l.workedMinutes), String(l.breakMinutes), h(l.payableMinutes),
-    l.rate != null ? l.rate.toFixed(2) : "", UNIT[l.payUnit], l.pay != null ? l.pay.toFixed(2) : "", l.approved ? "yes" : "no", escapeCsv(l.note ?? ""),
+    l.rate != null ? l.rate.toFixed(2) : "", UNIT[l.payUnit], l.pay != null ? l.pay.toFixed(2) : "", l.holidayPay != null ? l.holidayPay.toFixed(2) : "", l.approved ? "yes" : "no", l.changedSinceApproval ? "yes" : "", escapeCsv(l.note ?? ""),
   ].join(","));
   return [header.join(","), ...rows].join("\n");
 }
 
 /** Spreadsheet (CSV) — totals per instructor. */
 export function payrollSummaryToCsv(rows: PayrollSummaryRow[]): string {
-  const header = ["Instructor", "Shifts", "Worked (h)", "Lunch breaks (h)", "Paid hours", "Pay", "Shifts without a rate"];
-  const out = rows.map((r) => [escapeCsv(r.instructorName), String(r.shifts), h(r.workedMinutes), h(r.breakMinutes), h(r.payableMinutes), r.pay.toFixed(2), String(r.unpriced)].join(","));
+  const header = ["Instructor", "Shifts", "Worked (h)", "Lunch breaks (h)", "Paid hours", "Pay", "Holiday pay", "Shifts without a rate", "Changed since approval"];
+  const out = rows.map((r) => [escapeCsv(r.instructorName), String(r.shifts), h(r.workedMinutes), h(r.breakMinutes), h(r.payableMinutes), r.pay.toFixed(2), r.holidayPay.toFixed(2), String(r.unpriced), String(r.changedSinceApproval)].join(","));
   return [header.join(","), ...out].join("\n");
 }

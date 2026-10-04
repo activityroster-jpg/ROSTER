@@ -142,6 +142,10 @@ export async function assignStaff(
     ctx,
     eq(courseStaffTable.instructorId, input.instructorId),
   );
+  // Already on this course in this role: nothing to add (the unique key would refuse it anyway).
+  if (existingAssignments.some((a) => a.courseId === input.courseId && a.roleTypeId === input.roleTypeId)) {
+    return { ok: false, reason: "invalid", detail: `${instructorRow.name} is already on this course as ${roleRow.name}` };
+  }
   const otherCourseIds = new Set(existingAssignments.map((a) => a.courseId).filter((id) => id !== input.courseId));
   const existingBookings: ResourceBooking[] = thisCourseSessions
     .filter((s) => otherCourseIds.has(s.courseId))

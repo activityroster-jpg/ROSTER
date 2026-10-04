@@ -19,6 +19,7 @@ export function GeneralSettingsForm({
   enforceConflictChecks,
   enforceAvailabilityChecks,
   checkEquipmentQuantities = true,
+  holidayPayPercent = null,
   privacyNoticeUrl = "",
   dailyDigestEnabled = false,
   dailyDigestHour = 6,
@@ -37,6 +38,7 @@ export function GeneralSettingsForm({
   enforceConflictChecks: boolean;
   enforceAvailabilityChecks: boolean;
   checkEquipmentQuantities?: boolean;
+  holidayPayPercent?: number | null;
   privacyNoticeUrl?: string;
   dailyDigestEnabled?: boolean;
   dailyDigestHour?: number;
@@ -57,6 +59,11 @@ export function GeneralSettingsForm({
       <div className="sm:col-span-2">
         <label className="mb-1 block text-xs font-medium text-slate-500">Warn me this many days before a cert or check expires</label>
         <input name="alertLeadDays" type="number" defaultValue={alertLeadDays} min={0} max={365} className="w-28 rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal" />
+      </div>
+      <div className="sm:col-span-2">
+        <label className="mb-1 block text-xs font-medium text-slate-500">Holiday pay shown on payroll (% of pay; blank = off)</label>
+        <input name="holidayPayPercent" type="number" step={0.01} min={0} max={50} defaultValue={holidayPayPercent ?? ""} placeholder="e.g. 12.07" className="w-28 rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal" />
+        <p className="mt-1 text-[11px] text-slate-400">Rolled-up holiday pay for casual workers (UK: 12.07%). Shown as its own column and total for employed and freelance staff; never for volunteers. Check the rule for your staff with your payroll provider.</p>
       </div>
       <div id="availability-window" className="sm:col-span-2">
         <label className="mb-1 block text-xs font-medium text-slate-500">Ask instructors for availability this many weeks ahead</label>

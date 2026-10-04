@@ -1,9 +1,10 @@
-import { eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, gte, inArray, isNull } from "drizzle-orm";
 import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
 import { courseStaff as courseStaffTable, courseSession as courseSessionTable, hoursRecord as hoursRecordTable, type HoursRecord } from "@/lib/db/schema";
 import { durationMinutes } from "@/lib/domain";
 import { payRatesByInstructor, pickPayRate } from "./pay-rates";
+import { writeAudit } from "./audit";
 import { liveSessions } from "@/lib/domain/sessions";
 
 /**
@@ -48,23 +49,32 @@ export async function syncHoursForCourse(repos: Repositories, ctx: AnyTenantCont
       const scheduled = durationMinutes({ startAt: toMs(s.startAt), endAt: toMs(s.endAt) });
       const row = byKey.get(key);
       if (!row) {
-        await t.hoursRecord.insert(ctx, {
-          instructorId: a.instructorId,
-          courseSessionId: s.id,
-          scheduledMinutes: scheduled,
-          actualMinutes: null,
-          rate: rate?.rate ?? null,
-          payUnit: rate?.unit ?? "hour",
-          source: paySource,
-          approved: false,
-        });
-        out.created++;
+        try {
+          await t.hoursRecord.insert(ctx, {
+            instructorId: a.instructorId,
+            courseSessionId: s.id,
+            scheduledMinutes: scheduled,
+            actualMinutes: null,
+            rate: rate?.rate ?? null,
+            ratePence: rate?.ratePence ?? null,
+            payUnit: rate?.unit ?? "hour",
+            source: paySource,
+            approved: false,
+          });
+          out.created++;
+        } catch {
+          // The unique key says a parallel sync got there first: nothing to add.
+        }
       } else if (!row.approved) {
         const patch: Partial<HoursRecord> = {};
         if (row.scheduledMinutes !== scheduled) patch.scheduledMinutes = scheduled;
         // Fill in a rate the record never had (set after the person was rostered).
-        if (row.rate == null && rate) { patch.rate = rate.rate; patch.payUnit = rate.unit; }
+        if (row.rate == null && rate) { patch.rate = rate.rate; patch.ratePence = rate.ratePence; patch.payUnit = rate.unit; }
         if (Object.keys(patch).length) { await t.hoursRecord.update(ctx, row.id, patch); out.updated++; }
+      } else if (row.approvedMinutes != null && !row.rosterChangedAt && (row.approvedMinutes !== scheduled || (row.approvedDate && row.approvedDate !== s.date))) {
+        // Approved and frozen, but the roster moved under it: flag for review (audit A8-5).
+        await t.hoursRecord.update(ctx, row.id, { rosterChangedAt: new Date() });
+        out.updated++;
       }
     }
   }
@@ -72,11 +82,60 @@ export async function syncHoursForCourse(repos: Repositories, ctx: AnyTenantCont
   // has approved or edited them, or the clock recorded real time.
   for (const [key, row] of byKey) {
     if (wanted.has(key)) continue;
-    if (row.approved || row.actualMinutes != null || row.overrideMinutes != null || row.overridePay != null) continue;
+    if (row.approved) {
+      if (!row.rosterChangedAt) { await t.hoursRecord.update(ctx, row.id, { rosterChangedAt: new Date() }); out.updated++; }
+      continue;
+    }
+    if (row.actualMinutes != null || row.overrideMinutes != null || row.overridePay != null) continue;
     await t.hoursRecord.delete(ctx, row.id);
     out.removed++;
   }
   return out;
+}
+
+/**
+ * A corrected pay rate applied to the lines it should have priced: every
+ * unapproved line of this instructor dated on or after `fromIso` whose pay the
+ * office hasn't overridden takes the rate for its role (audit A8-3). Approved
+ * lines keep the pay they were approved at.
+ */
+export async function applyRateToUnapprovedLines(repos: Repositories, ctx: AnyTenantContext, instructorId: string, fromIso: string): Promise<number> {
+  const t = repos.tenant;
+  const [records, rates, staff] = await Promise.all([
+    t.hoursRecord.list(ctx, and(eq(hoursRecordTable.instructorId, instructorId), eq(hoursRecordTable.approved, false))),
+    payRatesByInstructor(repos, ctx),
+    t.courseStaff.list(ctx, eq(courseStaffTable.instructorId, instructorId)),
+  ]);
+  const sessionIds = records.map((r) => r.courseSessionId).filter((x): x is string => Boolean(x));
+  const sessions = sessionIds.length ? await t.courseSession.list(ctx, and(inArray(courseSessionTable.id, sessionIds), gte(courseSessionTable.date, fromIso))) : [];
+  const sessionById = new Map(sessions.map((s) => [s.id, s]));
+  const roleByCourse = new Map(staff.map((a) => [a.courseId, a.roleTypeId]));
+  let n = 0;
+  for (const r of records) {
+    const s = r.courseSessionId ? sessionById.get(r.courseSessionId) : undefined;
+    if (!s || r.overridePay != null) continue;
+    const rate = pickPayRate(rates.get(instructorId) ?? [], roleByCourse.get(s.courseId) ?? null);
+    if (!rate) continue;
+    if (r.ratePence === rate.ratePence && r.payUnit === rate.unit) continue;
+    await t.hoursRecord.update(ctx, r.id, { rate: rate.rate, ratePence: rate.ratePence, payUnit: rate.unit });
+    n++;
+  }
+  if (n) await writeAudit(repos, ctx, { action: "apply_pay_rate", entity: "hours_record", after: { instructorId, from: fromIso, lines: n } });
+  return n;
+}
+
+/** Freeze what the roster says for a line being approved, or clear the snapshot and any change flag when it is re-opened. */
+export async function markApproval(repos: Repositories, ctx: AnyTenantContext, recordId: string, approved: boolean): Promise<boolean> {
+  const t = repos.tenant;
+  const row = await t.hoursRecord.findById(ctx, recordId);
+  if (!row) return false;
+  if (!approved) {
+    await t.hoursRecord.update(ctx, recordId, { approved: false, approvedAt: null, approvedMinutes: null, approvedDate: null, rosterChangedAt: null });
+    return true;
+  }
+  const session = row.courseSessionId ? await t.courseSession.findById(ctx, row.courseSessionId) : null;
+  await t.hoursRecord.update(ctx, recordId, { approved: true, approvedAt: new Date(), approvedMinutes: row.scheduledMinutes, approvedDate: session?.date ?? null, rosterChangedAt: null });
+  return true;
 }
 
 /**

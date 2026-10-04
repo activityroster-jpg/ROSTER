@@ -84,6 +84,7 @@ export default async function SettingsPage() {
           enforceConflictChecks={Boolean(s?.enforceConflictChecks)}
           enforceAvailabilityChecks={s?.enforceAvailabilityChecks ?? true}
           checkEquipmentQuantities={s?.checkEquipmentQuantities ?? true}
+          holidayPayPercent={s?.holidayPayPercent ?? null}
         />
       </Card>
 

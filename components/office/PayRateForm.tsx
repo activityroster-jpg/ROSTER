@@ -27,6 +27,9 @@ export function PayRateForm({ instructorId, rates, roles, currency }: { instruct
   const [roleId, setRoleId] = useState("");
   const [roleUnit, setRoleUnit] = useState<PayRateRow["unit"]>("hour");
   const [roleAmount, setRoleAmount] = useState("");
+  const today = new Date().toISOString().slice(0, 10);
+  const [applyFrom, setApplyFrom] = useState<string>(today);
+  const [applyOn, setApplyOn] = useState(true);
 
   const run = (fn: () => Promise<{ ok: boolean; error?: string; message?: string }>) => {
     setMsg(null);
@@ -46,9 +49,15 @@ export function PayRateForm({ instructorId, rates, roles, currency }: { instruct
             {UNITS.map((u) => <option key={u.value} value={u.value}>{u.label}</option>)}
           </select>
         </label>
-        <button type="button" disabled={pending || amount === ""} onClick={() => run(() => setPayRateAction(instructorId, { roleTypeId: null, unit, rate: Number(amount) }))} className="rounded-lg bg-teal px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{base ? "Update" : "Set rate"}</button>
+        <button type="button" disabled={pending || amount === ""} onClick={() => run(() => setPayRateAction(instructorId, { roleTypeId: null, unit, rate: Number(amount), applyFrom: applyOn ? applyFrom : null }))} className="rounded-lg bg-teal px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{base ? "Update" : "Set rate"}</button>
         {base ? <button type="button" disabled={pending} onClick={() => { if (confirm("Remove this rate? Their pay will show as blank until a new one is set.")) run(() => deletePayRateAction(base.id)); }} className="text-xs text-slate-400 hover:text-port">Remove</button> : null}
       </div>
+      <label className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+        <input type="checkbox" checked={applyOn} onChange={(e) => setApplyOn(e.target.checked)} className="h-4 w-4 rounded border-slate-300" />
+        Apply to unapproved payroll lines from
+        <input type="date" value={applyFrom} onChange={(e) => setApplyFrom(e.target.value)} disabled={!applyOn} className={`${field} py-1 disabled:bg-slate-50`} aria-label="Apply from" />
+        <span className="text-slate-400">(approved lines keep the pay they were approved at)</span>
+      </label>
       {!base ? <p className="mt-2 text-xs text-slate-400">No rate yet — hours will show on Payroll with pay left blank (fine for volunteers).</p> : null}
 
       {roles.length ? (
@@ -73,7 +82,7 @@ export function PayRateForm({ instructorId, rates, roles, currency }: { instruct
             <select value={roleUnit} onChange={(e) => setRoleUnit(e.target.value as PayRateRow["unit"])} aria-label="Paid" className={field}>
               {UNITS.map((u) => <option key={u.value} value={u.value}>{u.label}</option>)}
             </select>
-            <button type="button" disabled={pending || !roleId || roleAmount === ""} onClick={() => run(() => setPayRateAction(instructorId, { roleTypeId: roleId, unit: roleUnit, rate: Number(roleAmount) }))} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-navy hover:bg-slate-50 disabled:opacity-50">Add</button>
+            <button type="button" disabled={pending || !roleId || roleAmount === ""} onClick={() => run(() => setPayRateAction(instructorId, { roleTypeId: roleId, unit: roleUnit, rate: Number(roleAmount), applyFrom: applyOn ? applyFrom : null }))} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-navy hover:bg-slate-50 disabled:opacity-50">Add</button>
           </div>
         </div>
       ) : null}

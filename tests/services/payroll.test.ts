@@ -30,6 +30,6 @@ describe("payroll lines", () => {
     expect(q.from).toBeUndefined();
     expect(q.format).toBe("detail");
     expect(periodRange("last-month", new Date(Date.UTC(2026, 2, 15)))).toEqual({ from: "2026-02-01", to: "2026-02-28" });
-    expect(resolvePayrollFilter({ ...q, period: "custom", from: "2026-01-01" })).toEqual({ from: "2026-01-01", to: undefined, instructorId: undefined });
+    expect(resolvePayrollFilter({ ...q, period: "custom", from: "2026-01-01" })).toEqual({ from: "2026-01-01", to: undefined, instructorId: undefined, includeVolunteers: false });
   });
 });

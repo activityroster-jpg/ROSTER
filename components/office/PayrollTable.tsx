@@ -37,6 +37,8 @@ export function PayrollTable({
   const unapproved = useMemo(() => lines.filter((l) => !l.approved).map((l) => l.recordId), [lines]);
   const approvedIds = useMemo(() => lines.filter((l) => l.approved).map((l) => l.recordId), [lines]);
   const unpriced = lines.filter((l) => l.rate == null).length;
+  const changed = lines.filter((l) => l.changedSinceApproval).length;
+  const holidayOn = lines.some((l) => l.holidayPay != null);
 
   const input = "w-20 rounded border border-slate-300 px-1.5 py-0.5 text-xs outline-none focus:border-teal disabled:bg-slate-50";
 
@@ -68,6 +70,7 @@ export function PayrollTable({
       </div>
       {msg ? <p role="status" className="px-4 pt-2 text-xs text-slate-600 print:hidden">{msg}</p> : null}
       {unpriced > 0 ? <p className="px-4 pt-2 text-xs text-amber print:hidden">⚠ {unpriced} line{unpriced === 1 ? " has" : "s have"} no pay rate — set one on the instructor&apos;s page and press “Refresh from roster”.</p> : null}
+      {changed > 0 ? <p className="px-4 pt-2 text-xs text-port print:hidden">⚠ {changed} approved line{changed === 1 ? "" : "s"} changed on the roster after approval (moved, resized or the person was taken off). Untick OK to re-check, then approve again.</p> : null}
 
       <div className="overflow-x-auto">
         <table className="w-full min-w-[980px] text-left text-sm">
@@ -82,20 +85,21 @@ export function PayrollTable({
               <th className="px-3 py-2">Lunch</th>
               <th className="px-3 py-2">Rate</th>
               <th className="px-3 py-2" title="Type an amount to set the pay for this line">Pay</th>
+              {holidayOn ? <th className="px-3 py-2" title="Rolled-up holiday pay (Settings → General)">Holiday</th> : null}
               <th className="px-3 py-2">Note</th>
               <th className="px-3 py-2">OK</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {lines.length === 0 ? (
-              <tr><td colSpan={13} className="px-4 py-6 text-center text-slate-400">No hours in this period. Roster staff onto courses and lines appear here; “Refresh from roster” brings in anything older.</td></tr>
+              <tr><td colSpan={14} className="px-4 py-6 text-center text-slate-400">No hours in this period. Roster staff onto courses and lines appear here; “Refresh from roster” brings in anything older.</td></tr>
             ) : lines.map((l) => {
               const locked = l.approved;
               const dim = busy === l.recordId ? "opacity-50" : "";
               return (
-                <tr key={l.recordId} className={`break-inside-avoid ${dim} ${locked ? "bg-starboard/5" : ""}`}>
-                  <td className="whitespace-nowrap px-3 py-1.5 text-slate-600">{l.date ?? "—"}</td>
-                  <td className="px-3 py-1.5 font-medium text-navy">{l.instructorName}</td>
+                <tr key={l.recordId} className={`break-inside-avoid ${dim} ${l.changedSinceApproval ? "bg-port/5" : locked ? "bg-starboard/5" : ""}`}>
+                  <td className="whitespace-nowrap px-3 py-1.5 text-slate-600">{l.date ?? "—"}{l.changedSinceApproval ? <span title="Roster changed since approval: review" className="ml-1 rounded bg-port/15 px-1 text-[10px] font-semibold text-port">changed</span> : null}</td>
+                  <td className="px-3 py-1.5 font-medium text-navy">{l.instructorName}{l.volunteer ? <span className="ml-1 rounded bg-slate-100 px-1 text-[10px] font-medium text-slate-500">volunteer</span> : null}</td>
                   <td className="px-3 py-1.5 text-slate-600">{l.courseName}</td>
                   <td className="whitespace-nowrap px-3 py-1.5 text-slate-600" title={l.clocked ? "From clock-in/out" : "From the roster"}>{l.start ?? "—"}–{l.finish ?? "—"}{l.clocked ? <span className="ml-1 text-[10px] text-teal">⏱</span> : null}</td>
                   <td className="px-3 py-1.5 text-slate-600">{h(l.scheduledMinutes)}h</td>
@@ -121,6 +125,7 @@ export function PayrollTable({
                     <input type="number" min={0} step={0.5} disabled={locked || pending} placeholder={l.pay != null ? l.pay.toFixed(2) : "—"} defaultValue={l.overridePay ?? ""} aria-label="Pay override"
                       onBlur={(e) => { const v = e.target.value === "" ? null : Number(e.target.value); if (v !== (l.overridePay ?? null)) edit(l, { overridePay: v }); }} className={`${input} font-medium text-navy`} />
                   </td>
+                  {holidayOn ? <td className="px-3 py-1.5 text-slate-600">{l.holidayPay != null ? money(l.holidayPay) : "—"}</td> : null}
                   <td className="px-3 py-1.5">
                     <input disabled={locked || pending} defaultValue={l.note ?? ""} placeholder="…" maxLength={300} aria-label="Note"
                       onBlur={(e) => { if ((e.target.value.trim() || null) !== (l.note ?? null)) edit(l, { note: e.target.value }); }} className="w-28 rounded border border-slate-300 px-1.5 py-0.5 text-xs outline-none focus:border-teal disabled:bg-slate-50" />

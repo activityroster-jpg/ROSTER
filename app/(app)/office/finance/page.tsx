@@ -34,6 +34,11 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
   const totalPay = summary.reduce((sum, r) => sum + r.pay, 0);
   const totalPaidMins = summary.reduce((sum, r) => sum + r.payableMinutes, 0);
   const approved = lines.filter((l) => l.approved).length;
+  const changed = lines.filter((l) => l.changedSinceApproval).length;
+  const unpricedLines = lines.filter((l) => l.pay == null).length;
+  const people = new Set(lines.map((l) => l.instructorId)).size;
+  const totalHoliday = summary.reduce((sum, r) => sum + r.holidayPay, 0);
+  const holidayOn = Boolean(s?.holidayPayPercent && s.holidayPayPercent > 0);
   const who = filter.instructorId ? instructors.find((i) => i.id === filter.instructorId)?.name : null;
   const span = filter.from || filter.to ? `${fmtDate(filter.from ?? null)} – ${fmtDate(filter.to ?? null)}` : "All time";
 
@@ -41,6 +46,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
   qs.set("period", period);
   if (period === "custom") { if (filter.from) qs.set("from", filter.from); if (filter.to) qs.set("to", filter.to); }
   if (filter.instructorId) qs.set("instructor", filter.instructorId);
+  if (q.volunteers === "1") qs.set("volunteers", "1");
   const exportHref = (format: "detail" | "summary") => `/api/office/finance/csv?${qs.toString()}&format=${format}`;
   const field = "rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal";
 
@@ -90,12 +96,20 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
             {instructors.slice().sort((a, b) => a.name.localeCompare(b.name)).map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
           </select>
         </label>
+        <label className="flex items-center gap-2 pb-2 text-xs font-medium text-slate-500" title="Volunteers have no pay; they are hidden from payroll unless you tick this">
+          <input type="checkbox" name="volunteers" value="1" defaultChecked={q.volunteers === "1"} className="h-4 w-4 rounded border-slate-300" /> Show volunteers
+        </label>
         <button type="submit" className="rounded-lg bg-navy px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700">Show</button>
         {period !== "custom" ? <span className="text-xs text-slate-400">Pick “Custom dates” to choose your own range.</span> : null}
       </form>
 
+      <p className="mb-3 text-sm text-navy">
+        <span className="font-semibold">{span}:</span> {people} {people === 1 ? "person" : "people"}, {hrs(totalPaidMins)} paid hours, {money(totalPay)}{holidayOn ? ` plus ${money(totalHoliday)} holiday pay` : ""}
+        {unpricedLines ? <>, <span className="font-medium text-amber">{unpricedLines} line{unpricedLines === 1 ? "" : "s"} need{unpricedLines === 1 ? "s" : ""} a rate</span></> : null}
+        {changed ? <>, <span className="font-medium text-port">{changed} approved line{changed === 1 ? "" : "s"} changed since approval</span></> : null}.
+      </p>
       <div className="mb-4 grid gap-4 sm:grid-cols-4">
-        <Card><p className="text-sm text-slate-500">Total pay</p><p className="mt-1 text-3xl font-semibold text-navy">{money(totalPay)}</p></Card>
+        <Card><p className="text-sm text-slate-500">Total pay</p><p className="mt-1 text-3xl font-semibold text-navy">{money(totalPay)}</p>{holidayOn ? <p className="text-xs text-slate-500">+ {money(totalHoliday)} holiday pay ({s?.holidayPayPercent}%)</p> : null}</Card>
         <Card><p className="text-sm text-slate-500">Paid hours</p><p className="mt-1 text-3xl font-semibold text-navy">{hrs(totalPaidMins)}</p></Card>
         <Card><p className="text-sm text-slate-500">Checked</p><p className="mt-1 text-3xl font-semibold text-navy">{approved}<span className="text-base font-normal text-slate-400"> / {lines.length}</span></p></Card>
         <Card>

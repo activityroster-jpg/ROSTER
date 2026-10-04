@@ -63,6 +63,7 @@ export async function updateSettingsAction(_prev: ActionState, formData: FormDat
     enforceConflictChecks: formData.get("enforceConflictChecks") === "on",
     enforceAvailabilityChecks: formData.get("enforceAvailabilityChecks") === "on",
     checkEquipmentQuantities: formData.get("checkEquipmentQuantities") === "on",
+    holidayPayPercent: String(formData.get("holidayPayPercent") ?? "").trim() === "" ? null : Number(formData.get("holidayPayPercent")),
     privacyNoticeUrl: String(formData.get("privacyNoticeUrl") ?? "").trim(),
     dailyDigestEnabled: formData.get("dailyDigestEnabled") === "on",
     dailyDigestHour: Number(formData.get("dailyDigestHour") ?? 6),

@@ -9,6 +9,8 @@ export const payrollQuerySchema = z.object({
   instructor: z.string().min(1).max(64).optional().catch(undefined),
   format: z.enum(["detail", "summary"]).catch("detail"),
   period: z.enum(["week", "month", "last-month", "custom", "all"]).optional().catch(undefined),
+  /** "1" shows volunteers (no pay) alongside paid staff. */
+  volunteers: z.enum(["1", "0"]).optional().catch(undefined),
 });
 export type PayrollQuery = z.infer<typeof payrollQuerySchema>;
 
@@ -27,7 +29,8 @@ export function periodRange(period: PayrollQuery["period"], today = new Date()):
 }
 
 /** The effective filter for a query: an explicit quick period wins over from/to. */
-export function resolvePayrollFilter(q: PayrollQuery): { from?: string; to?: string; instructorId?: string } {
+export function resolvePayrollFilter(q: PayrollQuery): { from?: string; to?: string; instructorId?: string; includeVolunteers?: boolean } {
   const range = q.period && q.period !== "custom" ? periodRange(q.period) : { from: q.from, to: q.to };
-  return { ...range, instructorId: q.instructor };
+  // One named person is shown whatever their employment; the volunteer filter is for the whole-centre view.
+  return { ...range, instructorId: q.instructor, includeVolunteers: q.volunteers === "1" || Boolean(q.instructor) };
 }

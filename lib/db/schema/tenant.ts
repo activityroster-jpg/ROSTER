@@ -126,6 +126,8 @@ export const orgSettings = sqliteTable("org_settings", {
   // When on (the default), the problems list flags a date/slot whose courses need
   // more of an equipment type than the centre owns (types with a quantity set).
   checkEquipmentQuantities: boolCol("check_equipment_quantities").default(true),
+  // Rolled-up holiday pay as a percentage of pay (UK casual workers: 12.07%). Null or 0 = off. Shown as its own figure, never added silently.
+  holidayPayPercent: real("holiday_pay_percent"),
   // --- Time clock & pay source -----------------------------------------------
   // The clock is optional: off, instructors don't see the Clock tab and payroll
   // runs purely on the roster. paySource is the default for new payroll lines.
@@ -532,6 +534,8 @@ export const courseStaff = sqliteTable("course_staff", {
 }, (t) => [
   index("course_staff_org_idx").on(t.organisationId),
   index("course_staff_course_idx").on(t.courseId),
+  // One assignment per person per role per course (audit A3-6); duplicates came from double taps.
+  uniqueIndex("course_staff_course_instructor_role_uq").on(t.courseId, t.instructorId, t.roleTypeId),
   index("course_staff_instructor_idx").on(t.instructorId),
 ]);
 
@@ -636,6 +640,8 @@ export const payRate = sqliteTable("pay_rate", {
   instructorId: text("instructor_id").references(() => instructor.id, { onDelete: "cascade" }),
   roleTypeId: text("role_type_id").references(() => roleType.id, { onDelete: "restrict" }),
   rate: real("rate").notNull(),
+  /** The same amount in integer pence (additive; written alongside `rate`, read in preference to it). */
+  ratePence: integer("rate_pence"),
   unit: text("unit", { enum: PAY_UNITS }).notNull().default("hour"),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
@@ -662,11 +668,22 @@ export const hoursRecord = sqliteTable("hours_record", {
   overridePay: real("override_pay"),
   note: text("note"),
   approved: boolCol("approved").default(false),
+  /** Money in integer pence, written alongside the float columns (additive migration; read in preference). */
+  ratePence: integer("rate_pence"),
+  overridePayPence: integer("override_pay_pence"),
+  /** What the roster said when the line was approved, so a later change can be flagged. */
+  approvedAt: integer("approved_at", { mode: "timestamp_ms" }),
+  approvedMinutes: integer("approved_minutes"),
+  approvedDate: text("approved_date"),
+  /** Set when the session moved, changed length or lost this person after approval. Cleared on re-approval. */
+  rosterChangedAt: integer("roster_changed_at", { mode: "timestamp_ms" }),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 }, (t) => [
   index("hours_record_org_idx").on(t.organisationId),
   index("hours_record_instructor_idx").on(t.instructorId),
+  // One line per person per session (audit A3-6).
+  uniqueIndex("hours_record_instructor_session_uq").on(t.instructorId, t.courseSessionId).where(sql`"course_session_id" IS NOT NULL`),
 ]);
 
 export type HoursRecord = typeof hoursRecord.$inferSelect;

@@ -451,7 +451,8 @@ const SECTIONS: Section[] = [
       { kind: "steps", items: [
         "Open an instructor's page → Pay. Choose how they're paid — per hour, per session or per day — and the rate. Volunteers simply have no rate.",
         "Add a different rate for a particular role if you need to (e.g. Senior Instructor days). The role rate wins when they work in that role.",
-        "Rates apply from the next payroll line onwards; lines you've already approved keep the pay they were approved at.",
+        "When you change a rate, tick “Apply to unapproved payroll lines from” and pick the date it should count from: every unapproved line from then on takes the new rate. Approved lines always keep the pay they were approved at.",
+        "Volunteers have no rate and are hidden from payroll unless you tick “Show volunteers”.",
       ] },
       { kind: "sub", text: "The time clock (optional)" },
       { kind: "p", text: "Settings → Time clock & pay switches on clock in / out in the app. Instructors see the session they're clocking in to; clocking in with no session needs a short note. The office sees who's on the water now, and can step back to any earlier day. Choose whether pay follows the roster or the clock — and change it line by line on the payroll page." },
@@ -459,7 +460,9 @@ const SECTIONS: Section[] = [
       { kind: "steps", items: [
         "Open Payroll. Pick a period (this week, this month, last month, custom dates or all time) and, if you like, one instructor.",
         "Every line shows the rostered time and, where the clock was used, the clocked time side by side. Pick which to pay per line, or use the main switch at the top for the whole period. Any field can be overridden — minutes, pay, a note.",
-        "Tick Approve on each line (or Approve all). Approved lines are locked: later roster changes don't touch them.",
+        "Tick Approve on each line (or Approve all). Approved lines are locked: later roster changes don't touch them. If a session is moved, resized or the person is taken off after approval, the line is flagged “changed” so you can re-check it.",
+        "The line above the totals sums the period: people, paid hours, pay, holiday pay, lines needing a rate and lines changed since approval.",
+        "Holiday pay: Settings → General can show rolled-up holiday pay (for example 12.07%) as its own column and total for employed and freelance staff; it is never added silently and never applied to volunteers.",
         "Download “Spreadsheet · every shift” or “Spreadsheet · totals” (CSV for Excel or Google Sheets), or print to PDF.",
       ] },
       { kind: "sub", text: "Lunch breaks" },
