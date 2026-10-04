@@ -239,6 +239,7 @@ const SECTIONS: Section[] = [
         "Earliest start and latest finish.",
         "A break after a set number of hours, daily rest between two working days, and the weekly rest day(s).",
         "Everything already on their roster across all courses counts, so the check looks at the whole week, not just the course you are adding.",
+        "Adults (18+) are checked too, as warnings rather than blocks: a week over 48 hours, no 20-minute break on a session longer than 6 hours, less than 11 hours between working days, or seven days in a row. They are warnings because the adult limits are averaged over several weeks and a person can opt out of the 48-hour limit in writing.",
       ] },
       { kind: "sub", text: "What happens when a rule would be broken" },
       { kind: "p", text: "Office → Settings → Young workers' hours lets you choose: block unless an admin overrides with a note (the default; the override and the reason are written to your change log), block outright, or warn only. Whatever you pick, the findings are recorded against the assignment." },

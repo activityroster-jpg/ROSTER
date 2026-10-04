@@ -4,7 +4,7 @@ export const metadata = { title: "Privacy Policy · ActivityRoster" };
 
 export default function PrivacyPage() {
   return (
-    <LegalPage title="Privacy Policy" updated="29 September 2026">
+    <LegalPage title="Privacy Policy" updated="4 October 2026">
       <P>This policy explains what personal data ActivityRoster (&ldquo;we&rdquo;) processes, why, and your rights under the UK GDPR and the EU GDPR. It covers the ActivityRoster website and the rostering platform used by sailing &amp; watersports centres.</P>
 
       <H2>Who is the data controller</H2>

@@ -4,7 +4,7 @@ export const metadata = { title: "Data Processing · ActivityRoster" };
 
 export default function DataProcessingPage() {
   return (
-    <LegalPage title="Data Processing Terms" updated="29 September 2026">
+    <LegalPage title="Data Processing Terms" updated="4 October 2026">
       <P>These terms apply where ActivityRoster processes personal data on behalf of a centre (the &ldquo;Controller&rdquo;) — for example the instructor, cert (qualification) and compliance records a centre stores in the platform. They form part of our agreement with each centre and reflect Article 28 UK/EU GDPR.</P>
 
       <H2>Roles</H2>
@@ -34,7 +34,7 @@ export default function DataProcessingPage() {
       ]} />
 
       <H2>Sub-processors</H2>
-      <P>Current sub-processors: Cloudflare (EU hosting: database, file storage, edge), Stripe (payments), Resend (transactional email), and Sentry (error monitoring with PII scrubbing). A current list is available on request; we&apos;ll give notice before adding new ones.</P>
+      <P>The current sub-processors, what each does, where it runs and a dated record of every change are published at <a className="text-teal hover:underline" href="/subprocessors">activityroster.com/subprocessors</a>. We tell centre admins by email at least 30 days before a new sub-processor handles their data, and a centre may object in that time.</P>
 
       <H2>International transfers</H2>
       <P>Platform data is stored in the EU. Where a sub-processor transfers data outside the UK/EEA, it is covered by an adequacy decision or Standard Contractual Clauses.</P>

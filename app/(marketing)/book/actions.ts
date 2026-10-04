@@ -5,6 +5,8 @@ import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { openSlots } from "@/lib/calls/slots";
 import { escapeHtml, sendEmail } from "@/lib/mail";
 import { LETTER_SENDER } from "@/lib/marketing";
+import { rateLimit } from "@/lib/security/rate-limit";
+import { requestFingerprint } from "@/lib/security/events";
 
 export type BookResult = { ok: boolean; error?: string };
 
@@ -18,6 +20,11 @@ const whenLabel = (d: Date) =>
 
 /** Public: book a 30-minute discovery call in one of the admin's open GMT slots. */
 export async function bookCallAction(input: { startAtIso: string; name: string; email: string; centre?: string; notes?: string }): Promise<BookResult> {
+  // Public and unauthenticated: a handful of bookings an hour per address is plenty for a
+  // person and stops a script filling the diary or using the confirmation email as spam.
+  const { ip } = await requestFingerprint();
+  const limit = await rateLimit(`book-call:${ip ?? "unknown"}`, 5, 60 * 60);
+  if (!limit.allowed) return { ok: false, error: "Too many booking attempts from this connection. Please try again in an hour, or email us." };
   const name = (input.name ?? "").trim().slice(0, 120);
   const email = (input.email ?? "").trim().slice(0, 254);
   const centre = (input.centre ?? "").trim().slice(0, 160) || null;

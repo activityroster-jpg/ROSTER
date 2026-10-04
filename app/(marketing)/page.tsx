@@ -16,16 +16,16 @@ const PLATFORM = [
   { icon: Repeat, title: "Open shifts & swaps", body: "Uncovered sessions claimed by fit, free staff." },
   { icon: ShieldCheck, title: "Compliance engine", body: "Ratios, safety cover and tickets enforced." },
   { icon: FileCheck, title: "Cert tracking", body: "Every RYA cert and vetting check, with expiry alerts." },
-  { icon: UserPlus, title: "HR & onboarding", body: "Records, contracts and a new-starter checklist." },
+  { icon: UserPlus, title: "HR & onboarding", body: "Staff records, documents and a new-starter checklist." },
   { icon: FolderLock, title: "Document vault", body: "Certificates held privately, encrypted, in the EU." },
   { icon: Wallet, title: "Payroll export", body: "Real hours × pay rates, one click a month." },
-  { icon: BarChart3, title: "Reporting", body: "Labour cost, utilisation and budgets." },
+  { icon: BarChart3, title: "Emergency sheet & registers", body: "Today's staff and emergency contacts, printable; a young-worker register." },
   { icon: Smartphone, title: "Instructor app", body: "Schedule, hours and documents in their pocket." },
   { icon: ClipboardCheck, title: "Audit trail", body: "Every change logged, nothing off the record." },
 ];
 
 const SAFETY = [
-  { icon: ShieldCheck, title: "Won't roster the under-qualified", body: "Lapsed first aid or vetting? They can't be assigned." },
+  { icon: ShieldCheck, title: "Won't roster the under-qualified", body: "Lapsed first aid or vetting? They can't be assigned without a recorded override." },
   { icon: Users, title: "Ratio-aware", body: "Flags a course the moment it's short of instructors." },
   { icon: LifeBuoy, title: "Safety-boat cover enforced", body: "Nothing goes afloat without cover — overrides are recorded." },
   { icon: AlertTriangle, title: "Nothing lapses quietly", body: "Expiry alerts on every ticket and check." },
@@ -324,7 +324,7 @@ export default function MarketingHome() {
               { href: "/compare", icon: GitCompare, title: "Compare", body: "Against the tools centres use today." },
               { href: "/learn", icon: BookOpen, title: "Learning Centre", body: "Guides to every part of the platform." },
               { href: "/blog", icon: Newspaper, title: "Blog", body: "Running and filling RYA courses." },
-              { href: "/pricing", icon: Tag, title: "Pricing", body: "One simple plan. First month free." },
+              { href: "/pricing", icon: Tag, title: "Pricing", body: "Two flat plans, nothing per user. First month free." },
             ].map((c) => (
               <Link key={c.href} href={c.href} className="group rounded-card border border-slate-200 bg-white p-4 transition hover:border-teal hover:shadow-md md:p-5">
                 <c.icon className="h-7 w-7 text-teal" />

@@ -40,7 +40,7 @@ export default async function RotaPage({ searchParams }: { searchParams: Promise
           <Link href={`/office/rota?week=${addDays(monday, 7)}`} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-navy hover:bg-slate-50">Next →</Link>
           <Link href="/office/rota/emergency" className="rounded-lg border border-port/40 px-3 py-1.5 text-sm font-medium text-port hover:bg-port/5">Emergency sheet</Link>
           <a href="/learn?topic=rota" target="_blank" rel="noreferrer" className="text-sm font-medium text-teal hover:underline">📖 Guide</a>
-          <RotaDownload weekStart={monday} defaultRange={rotaTemplate.range} />
+          <RotaDownload weekStart={monday} today={new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date())} defaultRange={rotaTemplate.range} />
           <Link href="/office/settings#rota-pdf" className="text-xs text-slate-400 hover:text-navy">Change layout</Link>
         </div>
       </div>
