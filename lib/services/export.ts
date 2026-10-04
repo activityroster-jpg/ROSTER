@@ -39,7 +39,7 @@ export async function eraseOrganisation(
   ctx: TenantContext,
   confirmationSlug: string,
 ): Promise<{ erased: boolean }> {
-  if (ctx.role !== "admin") throw new Error("Only an admin can erase a centre");
+  if (ctx.role !== "owner") throw new Error("Only the superadmin can erase a centre");
   if (confirmationSlug !== ctx.slug) throw new Error("Confirmation slug does not match");
   return eraseOrganisationData(repos, ctx);
 }

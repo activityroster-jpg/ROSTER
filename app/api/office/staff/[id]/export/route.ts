@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 /** Everything held about one person, as JSON (default) or CSV (?format=csv). Admin only; audited. */
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "data.export" });
   const { id } = await params;
   const data = await exportPerson(repos, ctx, id);
   if (!data) return new Response("Not found", { status: 404 });

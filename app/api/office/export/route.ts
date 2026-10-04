@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 /** Download the whole centre's data as JSON (GDPR portability). Admin only. */
 export async function GET() {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "data.export" });
   const data = await exportOrganisationData(repos, ctx);
   // Bulk exports are sensitive: always on the centre's own record.
   await writeAudit(repos, ctx, { action: "data_export", entity: "organisation", entityId: ctx.organisationId, after: { format: "json" } });

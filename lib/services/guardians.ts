@@ -6,6 +6,7 @@ import { guardianLink as guardianLinkTable, type GuardianLink } from "@/lib/db/s
 import { openToken } from "@/lib/security/token-crypto";
 import { isUnder18 } from "@/lib/domain/age";
 import { writeAudit } from "./audit";
+import { isOfficeRole } from "@/lib/auth/rbac";
 
 /**
  * Parent / guardian accounts (compliance P1-F): a read-only view of an
@@ -27,7 +28,7 @@ export async function inviteGuardian(repos: Repositories, ctx: AnyTenantContext,
   const user = (await repos.control.userByEmail(email)) ?? (await repos.control.createUser({ name: child.guardianName || "Parent / guardian", email }));
   const membership = await repos.control.membershipFor(user.id, ctx.organisationId);
   if (!membership) await repos.control.createMembership({ userId: user.id, organisationId: ctx.organisationId, role: "parent" }, "invited");
-  else if (membership.role !== "parent" && membership.role !== "admin") return { ok: false, error: "That email already belongs to a team member here; a guardian account must be separate" };
+  else if (membership.role !== "parent" && !isOfficeRole(membership.role)) return { ok: false, error: "That email already belongs to a team member here; a guardian account must be separate" };
 
   const existing = (await t.guardianLink.list(ctx, eq(guardianLinkTable.instructorId, instructorId))).find((l) => l.userId === user.id);
   const now = new Date();

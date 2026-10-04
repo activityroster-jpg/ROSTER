@@ -26,7 +26,7 @@ export async function seedFullOrg(
     subscriptionStatus: "active",
   });
   const owner = await repos.control.createUser({ name: `${opts.name} Owner`, email: `owner@${opts.slug}.test` });
-  await repos.control.createMembership({ userId: owner.id, organisationId: org.id, role: "admin" });
+  await repos.control.createMembership({ userId: owner.id, organisationId: org.id, role: "owner" });
 
   const ctx: SystemTenantContext = {
     organisationId: org.id,

@@ -51,7 +51,7 @@ function parseTermDatesField(v: FormDataEntryValue | null): unknown {
 
 /** Update the org's general settings (one row per org: upsert). */
 export async function updateSettingsAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "settings.edit" });
   const parsed = orgSettingsSchema.safeParse({
     schedulingMode: formData.get("schedulingMode"),
     alertLeadDays: Number(formData.get("alertLeadDays")),
@@ -92,7 +92,7 @@ export async function updateSettingsAction(_prev: ActionState, formData: FormDat
 
 /** Add a config item to one of the editable lists. */
 export async function addConfigAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "settings.edit" });
   const kind = String(formData.get("kind") ?? "") as ConfigKind;
   const name = String(formData.get("name") ?? "").trim();
   const code = String(formData.get("code") ?? "").trim();
@@ -170,7 +170,7 @@ export async function addConfigAction(_prev: ActionState, formData: FormData): P
 
 /** Rename a config item (the "edit name" option beside deactivate). */
 export async function setConfigNameAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "settings.edit" });
   const kind = String(formData.get("kind") ?? "") as ConfigKind;
   const id = String(formData.get("id") ?? "");
   const name = String(formData.get("name") ?? "").trim();
@@ -198,7 +198,7 @@ export async function setConfigNameAction(_prev: ActionState, formData: FormData
 
 /** Deactivate/reactivate a config item (deactivate-never-delete). */
 export async function setConfigActiveAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "settings.edit" });
   const kind = String(formData.get("kind") ?? "") as ConfigKind;
   const id = String(formData.get("id") ?? "");
   const active = formData.get("active") === "true";
@@ -220,7 +220,7 @@ export async function setConfigActiveAction(_prev: ActionState, formData: FormDa
 
 /** Lunch/rest break rule: break of N minutes after working more than M; paid or unpaid. */
 export async function updateBreakPolicyAction(input: { afterMinutes: number; breakMinutes: number; paid: boolean }): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "settings.edit" });
   const parsed = z.object({
     afterMinutes: z.coerce.number().int().min(0).max(24 * 60),
     breakMinutes: z.coerce.number().int().min(0).max(240),
@@ -239,7 +239,7 @@ export async function updateBreakPolicyAction(input: { afterMinutes: number; bre
 
 /** Time clock on/off and whether payroll defaults to rostered or clocked hours. */
 export async function updateTimeclockSettingsAction(input: { timeclockEnabled: boolean; paySource: string }): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "settings.edit" });
   const parsed = z.object({ timeclockEnabled: z.boolean(), paySource: z.enum(["roster", "clock"]) }).safeParse(input);
   if (!parsed.success) return { ok: false, error: "Please check the values" };
   // Paying on the clock makes no sense with the clock off.
@@ -257,7 +257,7 @@ export async function updateTimeclockSettingsAction(input: { timeclockEnabled: b
 
 /** Issue a new company code for the instructor app (the old one stops working). */
 export async function regenerateJoinCodeAction(): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "settings.edit" });
   const before = await repos.control.ensureJoinCode(ctx.organisationId);
   const after = await repos.control.regenerateJoinCode(ctx.organisationId);
   await writeAudit(repos, ctx, { action: "regenerate_join_code", entity: "org_settings", before: { code: before }, after: { code: after } });
@@ -267,7 +267,7 @@ export async function regenerateJoinCodeAction(): Promise<ActionState> {
 
 /** Save how the roster PDF is laid out (onboarding step and Settings → Roster PDF). */
 export async function setRotaTemplateAction(input: unknown): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "settings.edit" });
   const parsed = rotaTemplateSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Please check the roster layout choices" };
   const value = { ...parsed.data, fields: { ...parsed.data.fields, roles: parsed.data.fields.roles && parsed.data.fields.instructors } };
@@ -283,7 +283,7 @@ export async function setRotaTemplateAction(input: unknown): Promise<ActionState
 
 /** Months to keep each kind of record (Settings → Data retention). Floors keep the statutory minimums. */
 export async function setRetentionAction(input: Record<string, number>): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "settings.edit" });
   const policy = parseRetention(JSON.stringify({ ...RETENTION_DEFAULTS, ...input }));
   const existing = (await repos.tenant.orgSettings.list(ctx))[0];
   const retention = JSON.stringify(policy);

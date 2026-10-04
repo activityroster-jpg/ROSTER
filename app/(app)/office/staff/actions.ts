@@ -38,7 +38,7 @@ const ISO = /^\d{4}-\d{2}-\d{2}$/;
  * records to upload against), and email them an invite to set up their account.
  */
 export async function setupInstructorAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { ctx, repos, organisation } = await requireTenant({ role: "admin" });
+  const { ctx, repos, organisation } = await requireTenant({ permission: "staff.edit" });
   const name = String(formData.get("name") ?? "").trim();
   if (!name) return { ok: false, error: "Enter the instructor's name" };
 
@@ -99,7 +99,7 @@ export async function setupInstructorAction(_prev: ActionState, formData: FormDa
 
 /** Update a licence/check's expiry, reference or verified flag (admin). */
 export async function setDocMetaAction(kind: string, itemId: string, patch: { expiryDate?: string | null; reference?: string | null; verified?: boolean }): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "staff.edit" });
   const expiry = patch.expiryDate === undefined ? undefined : patch.expiryDate && ISO.test(patch.expiryDate) ? patch.expiryDate : null;
 
   let updated;
@@ -125,7 +125,7 @@ export async function setDocMetaAction(kind: string, itemId: string, patch: { ex
 
 /** Tick/untick an onboarding step for a staff member. Admin only. */
 export async function toggleOnboardingAction(itemId: string, done: boolean): Promise<{ ok: boolean; error?: string }> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "staff.edit" });
   const res = await toggleOnboarding(repos, ctx, itemId, done);
   if (!res) return { ok: false, error: "Not found" };
   return { ok: true };
@@ -133,7 +133,7 @@ export async function toggleOnboardingAction(itemId: string, done: boolean): Pro
 
 /** Add an instructor. Authed (admin), Zod-validated, audited. */
 export async function createInstructorAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { ctx, repos, organisation } = await requireTenant({ role: "admin" });
+  const { ctx, repos, organisation } = await requireTenant({ permission: "staff.edit" });
   const parsed = instructorSchema.safeParse({
     name: formData.get("name"),
     email: formData.get("email") || undefined,
@@ -183,7 +183,7 @@ export async function createInstructorAction(_prev: ActionState, formData: FormD
 
 /** Record a compliance check for an instructor. */
 export async function addComplianceItemAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "staff.edit" });
   const parsed = complianceItemSchema.safeParse({
     instructorId: formData.get("instructorId"),
     complianceTypeId: formData.get("complianceTypeId"),
@@ -208,7 +208,7 @@ export async function addComplianceItemAction(_prev: ActionState, formData: Form
 /** Invite an instructor to the portal: link their user + membership, email a
  *  magic sign-in link. */
 export async function inviteInstructorAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { ctx, repos, organisation } = await requireTenant({ role: "admin" });
+  const { ctx, repos, organisation } = await requireTenant({ permission: "staff.edit" });
   const instructorId = String(formData.get("instructorId") ?? "");
   if (!instructorId) return { ok: false, error: "Missing instructor" };
 
@@ -232,7 +232,7 @@ export async function inviteInstructorAction(_prev: ActionState, formData: FormD
 
 /** Record a grade/qualification for an instructor. */
 export async function addQualificationAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "staff.edit" });
   const parsed = qualificationSchema.safeParse({
     instructorId: formData.get("instructorId"),
     qualificationTypeId: formData.get("qualificationTypeId"),
@@ -256,7 +256,7 @@ export async function addQualificationAction(_prev: ActionState, formData: FormD
 
 /** Approve someone who joined via the app's company code: they become active staff with portal access. */
 export async function approveJoinRequestAction(instructorId: string): Promise<ActionState> {
-  const { ctx, repos, organisation } = await requireTenant({ role: "admin" });
+  const { ctx, repos, organisation } = await requireTenant({ permission: "staff.edit" });
   const inst = await repos.tenant.instructor.findById(ctx, instructorId);
   if (!inst || inst.status !== "pending") return { ok: false, error: "Request not found" };
   if ((await instructorCapState(repos, ctx, organisation)).full) return { ok: false, error: capUpgradeMessage(organisation) };
@@ -270,7 +270,7 @@ export async function approveJoinRequestAction(instructorId: string): Promise<Ac
 
 /** Decline a join request: removes the pending record and tells them. */
 export async function declineJoinRequestAction(instructorId: string): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "staff.edit" });
   const inst = await repos.tenant.instructor.findById(ctx, instructorId);
   if (!inst || inst.status !== "pending") return { ok: false, error: "Request not found" };
   if (inst.email) {
@@ -294,7 +294,7 @@ const editSchema = z.object({
 
 /** Edit an instructor's name, email, phone or employment type. Audited. */
 export async function updateInstructorAction(instructorId: string, input: { name: string; email: string; phone: string; employmentType: string; dateOfBirth?: string }): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "staff.edit" });
   const parsed = editSchema.safeParse({ ...input, dateOfBirth: input.dateOfBirth ?? "" });
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Please check the details" };
   if (parsed.data.dateOfBirth && !plausibleStaffDob(parsed.data.dateOfBirth)) return { ok: false, error: "That date of birth doesn't look right (staff must be between 13 and 90)." };
@@ -314,7 +314,7 @@ export async function updateInstructorAction(instructorId: string, input: { name
  * membership is suspended, never deleted).
  */
 export async function setInstructorStatusAction(instructorId: string, status: "active" | "inactive"): Promise<ActionState> {
-  const { ctx, repos, organisation } = await requireTenant({ role: "admin" });
+  const { ctx, repos, organisation } = await requireTenant({ permission: "staff.edit" });
   if (status !== "active" && status !== "inactive") return { ok: false, error: "Invalid status" };
   const inst = await repos.tenant.instructor.findById(ctx, instructorId);
   if (!inst || inst.status === "pending") return { ok: false, error: "Instructor not found" };
@@ -338,7 +338,7 @@ const rateSchema = z.object({
 
 /** Set how an instructor is paid (default, or for one role). Refreshes unpriced payroll lines. */
 export async function setPayRateAction(instructorId: string, input: { roleTypeId: string | null; unit: string; rate: number }): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "finance.view" });
   const parsed = rateSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Enter an amount and how it's paid" };
   if (!(await repos.tenant.instructor.findById(ctx, instructorId))) return { ok: false, error: "Instructor not found" };
@@ -352,7 +352,7 @@ export async function setPayRateAction(instructorId: string, input: { roleTypeId
 }
 
 export async function deletePayRateAction(id: string): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "finance.view" });
   const ok = await deletePayRate(repos, ctx, id);
   if (!ok) return { ok: false, error: "Rate not found" };
   revalidatePath("/office/staff");
@@ -367,7 +367,7 @@ export async function deletePayRateAction(id: string): Promise<ActionState> {
  * fields changed, never their values.
  */
 export async function updateProtectedContactsAction(instructorId: string, input: unknown): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "protected.view" });
   const parsed = protectedContactsSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Please check the details" };
   const before = await repos.tenant.instructor.findById(ctx, instructorId);
@@ -395,7 +395,7 @@ export async function updateProtectedContactsAction(instructorId: string, input:
  * PARENTAL_PERMISSION, created for the centre if it doesn't have one yet.
  */
 export async function addParentalPermissionAction(instructorId: string): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "protected.view" });
   const inst = await repos.tenant.instructor.findById(ctx, instructorId);
   if (!inst) return { ok: false, error: "Instructor not found" };
   const types = await repos.tenant.complianceType.list(ctx);
@@ -417,7 +417,7 @@ import { anonymisePerson, setRestriction } from "@/lib/services/person-data";
 
 /** Restrict processing (kept but not rostered or contacted) or lift it. Reason is recorded. */
 export async function setRestrictionAction(instructorId: string, restricted: boolean, reason: string): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "data.export" });
   const r = (reason ?? "").trim().slice(0, 300);
   if (restricted && r.length < 3) return { ok: false, error: "Give a short reason (it goes in the change log)" };
   const row = await setRestriction(repos, ctx, instructorId, restricted, restricted ? r : null);
@@ -429,7 +429,7 @@ export async function setRestrictionAction(instructorId: string, restricted: boo
 
 /** Anonymise a person: typed-name confirmation; irreversible. */
 export async function anonymiseInstructorAction(instructorId: string, typedName: string): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "data.export" });
   const i = await repos.tenant.instructor.findById(ctx, instructorId);
   if (!i) return { ok: false, error: "Not found" };
   if (typedName.trim().toLowerCase() !== i.name.trim().toLowerCase()) return { ok: false, error: "Type their name exactly as shown to confirm" };
@@ -442,7 +442,7 @@ export async function anonymiseInstructorAction(instructorId: string, typedName:
 
 /** "Keep for another N months": restarts the retention clock on a former staff member's profile. */
 export async function keepFormerStaffAction(instructorId: string): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "data.export" });
   const i = await repos.tenant.instructor.findById(ctx, instructorId);
   if (!i || i.status !== "inactive" || i.anonymisedAt) return { ok: false, error: "Only a former staff member's profile can be kept" };
   await repos.tenant.instructor.update(ctx, instructorId, { leftAt: new Date() });
@@ -464,27 +464,12 @@ async function sealIfVetting(repos: Repositories, ctx: AnyTenantContext, itemId:
 }
 
 // --- Roles and guardian access (P1-F) ---------------------------------------
-import { GRANTABLE_ROLES } from "@/lib/auth/rbac";
 import { inviteGuardian, revokeGuardian } from "@/lib/services/guardians";
 
-/** Grant a team member a role: instructor (portal only), senior instructor (rotas) or welfare officer (contacts and the under-18 register). */
-export async function setMemberRoleAction(instructorId: string, role: string): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
-  if (!(GRANTABLE_ROLES as readonly string[]).includes(role)) return { ok: false, error: "Unknown role" };
-  const i = await repos.tenant.instructor.findById(ctx, instructorId);
-  if (!i?.userId) return { ok: false, error: "Invite them to sign in first; the role attaches to their account" };
-  if (i.userId === ctx.userId) return { ok: false, error: "You cannot change your own role" };
-  const m = await repos.control.membershipFor(i.userId, ctx.organisationId);
-  if (!m || m.role === "admin") return { ok: false, error: "Admins are managed by ActivityRoster; contact support to change an admin" };
-  await repos.control.setMembershipRole(i.userId, ctx.organisationId, role as "instructor" | "senior_instructor" | "welfare_officer");
-  await writeAudit(repos, ctx, { action: "set_member_role", entity: "instructor", entityId: instructorId, after: { role } });
-  revalidatePath(`/office/staff/${instructorId}`);
-  return { ok: true, message: "Role updated" };
-}
 
 /** Give an under-18's parent or guardian read-only access to their roster, recording the consent. */
 export async function inviteGuardianAction(instructorId: string, consentNote: string): Promise<ActionState> {
-  const { ctx, repos, organisation } = await requireTenant({ role: "admin" });
+  const { ctx, repos, organisation } = await requireTenant({ permission: "protected.view" });
   const r = await inviteGuardian(repos, ctx, instructorId, (consentNote ?? "").trim().slice(0, 300));
   if (!r.ok) return { ok: false, error: r.error };
   try {
@@ -496,7 +481,7 @@ export async function inviteGuardianAction(instructorId: string, consentNote: st
 }
 
 export async function revokeGuardianAction(instructorId: string, linkId: string): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "protected.view" });
   const ok = await revokeGuardian(repos, ctx, linkId);
   revalidatePath(`/office/staff/${instructorId}`);
   return ok ? { ok: true, message: "Guardian access removed" } : { ok: false, error: "Not found" };

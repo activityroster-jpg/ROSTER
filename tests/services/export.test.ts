@@ -20,7 +20,7 @@ describe("data export & erasure", () => {
     repos = a.repos;
     orgAId = a.organisationId;
     orgBId = b.organisationId;
-    ctxA = { organisationId: orgAId, slug: "alpha", userId: "u", role: "admin" };
+    ctxA = { organisationId: orgAId, slug: "alpha", userId: "u", role: "owner" };
   });
 
   it("exports only the caller's org data", async () => {
@@ -51,7 +51,7 @@ describe("data export & erasure", () => {
 
     // Org B is untouched.
     expect(await repos.control.organisationById(orgBId)).not.toBeNull();
-    const ctxB: TenantContext = { organisationId: orgBId, slug: "bravo", userId: "u2", role: "admin" };
+    const ctxB: TenantContext = { organisationId: orgBId, slug: "bravo", userId: "u2", role: "owner" };
     expect((await repos.tenant.instructor.list(ctxB)).length).toBeGreaterThan(0);
   });
 });

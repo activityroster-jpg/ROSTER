@@ -22,6 +22,7 @@ import { createPromotionCode, type CouponSpec } from "@/lib/billing/coupons";
 import { TIERS } from "@/lib/tiers";
 import { trialEndsAt } from "@/lib/billing/trial";
 import { ORG_STATUSES, SUBSCRIPTION_STATUSES, PLANS, ORG_TIERS, ERROR_REPORT_STATUSES, type OrgStatus, type SubscriptionStatus, type Plan, type OrgTier, type ErrorReportStatus } from "@/lib/db/schema";
+import { writeAudit } from "@/lib/services/audit";
 
 type Result = { ok: boolean; error?: string };
 
@@ -155,6 +156,36 @@ export async function eraseCentreAction(id: string, confirmSlug: string): Promis
   }
   revalidatePath("/admin");
   return res.erased ? { ok: true } : { ok: false, error: "Nothing to erase" };
+}
+
+/**
+ * Hand a centre's superadmin role to another office user (Conor's decision: a
+ * transfer is done by ActivityRoster, never self-service). The previous owner
+ * becomes an office admin with every feature; both are emailed; logged in the
+ * centre's change log and as a security event.
+ */
+export async function transferOwnerAction(id: string, toEmail: string): Promise<Result> {
+  const { email: by } = await requirePlatformAdmin();
+  if (!idSchema.safeParse(id).success) return { ok: false, error: "Not found" };
+  const repos = await getRepositories();
+  const org = await repos.control.organisationById(id);
+  if (!org) return { ok: false, error: "Not found" };
+  const target = await repos.control.userByEmail(toEmail.trim().toLowerCase());
+  if (!target) return { ok: false, error: "No account with that email. They must sign up or be invited as an office admin first." };
+  const members = await repos.control.officeMembersForOrg(id);
+  const current = members.find((m) => m.role === "owner");
+  const to = members.find((m) => m.userId === target.id);
+  if (!to) return { ok: false, error: "That person is not an office user of this centre yet. Have the current superadmin invite them as an office admin first." };
+  if (to.role === "owner") return { ok: false, error: "They are already the superadmin" };
+  if (!current) return { ok: false, error: "This centre has no superadmin on record" };
+  await repos.control.transferOwnership(id, current.userId, target.id);
+  const sys = { organisationId: org.id, slug: org.slug, system: true as const, reason: `superadmin transfer by ${by}` };
+  await writeAudit(repos, sys, { action: "transfer_owner", entity: "membership", entityId: target.id, before: { email: current.email }, after: { email: to.email, by } });
+  await recordSecurityEvent("owner_transferred", { userId: target.id, organisationId: org.id, meta: { from: current.email, by } }).catch(() => {});
+  const html = `<p>Hello,</p><p>ActivityRoster has made <strong>${escapeHtml(to.name || to.email)}</strong> the superadmin of <strong>${escapeHtml(org.name)}</strong>, at the centre's request. ${escapeHtml(current.name || current.email)} is now an office admin with full access.</p><p>If you did not expect this, reply to this email straight away.</p>`;
+  await Promise.all([current.email, to.email].map((addr) => sendEmail({ to: addr, subject: `${org.name}: superadmin changed`, html }).catch(() => {})));
+  revalidatePath(`/admin/centres/${id}`);
+  return { ok: true };
 }
 
 export async function setSubscriptionStatusAction(id: string, sub: string): Promise<Result> {

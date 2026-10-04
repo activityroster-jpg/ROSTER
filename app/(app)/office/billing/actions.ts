@@ -10,7 +10,7 @@ export type CheckoutResult = { ok: boolean; url?: string; error?: string };
 
 /** Start a Stripe Checkout session to convert this centre's trial to a paid plan. */
 export async function startCheckoutAction(interval: string): Promise<CheckoutResult> {
-  const { ctx, organisation, repos } = await requireTenant({ role: "admin", allowReadOnly: true });
+  const { ctx, organisation, repos } = await requireTenant({ permission: "billing.manage", allowReadOnly: true });
   if (!(BILLING_INTERVALS as readonly string[]).includes(interval)) return { ok: false, error: "Invalid plan" };
 
   const user = await repos.control.userById(ctx.userId);
@@ -33,7 +33,7 @@ export async function startCheckoutAction(interval: string): Promise<CheckoutRes
 
 /** Start a Stripe Checkout session for the one-off setup & customisation service. */
 export async function startSetupCheckoutAction(onsite = false): Promise<CheckoutResult> {
-  const { ctx, organisation, repos } = await requireTenant({ role: "admin", allowReadOnly: true });
+  const { ctx, organisation, repos } = await requireTenant({ permission: "billing.manage", allowReadOnly: true });
   const user = await repos.control.userById(ctx.userId);
   try {
     const { url } = await createSetupCheckout(getEnv(), {

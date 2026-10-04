@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 const fmt = (d: Date) => d.toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" });
 
 export default async function ChangeLogPage() {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "settings.edit" });
   const SECURITY: Record<string, string> = {
     new_device: "signed in from a new device", reauth_passed: "confirmed their identity on a new device", reauth_failed: "failed an identity check",
     pin_failed: "entered a wrong PIN", pin_locked: "was locked out after wrong PINs", pin_set: "set a PIN", pin_reset: "reset their PIN",

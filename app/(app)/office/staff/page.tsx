@@ -7,6 +7,8 @@ import { JoinRequests, type JoinRequestRow } from "@/components/office/JoinReque
 import { AddInstructorForm } from "@/components/office/AddInstructorForm";
 import { StaffTable, type StaffRow } from "@/components/office/StaffTable";
 import { GuideLink } from "@/components/GuideLink";
+import { OfficeAccess } from "@/components/office/OfficeAccess";
+import { listOfficeMembers } from "@/lib/services/office-access";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +33,7 @@ export default async function StaffPage() {
     .map((c) => ({ id: c.id, name: c.name, mandatory: Boolean(c.mandatory) }));
 
   const membershipStatus = await repos.control.membershipStatusByUser(ctx.organisationId);
+  const officeMembers = await listOfficeMembers(repos, ctx);
   const inviteStatusFor = (userId: string | null): StaffRow["inviteStatus"] => {
     if (!userId) return "none";
     return membershipStatus.get(userId) === "active" ? "accepted" : "pending";
@@ -83,6 +86,12 @@ export default async function StaffPage() {
       </div>
 
       <JoinRequests rows={pendingRequests} />
+
+      <Card className="mb-5">
+        <div className="mb-1 flex items-center justify-between"><h2 className="font-semibold text-navy">Office access</h2><GuideLink topic="roles" className="text-xs" /></div>
+        <p className="mb-2 text-xs text-slate-500">Who can open the office, and which parts. {ctx.role === "owner" ? "Tick what each office admin can reach; a new office admin starts with nothing ticked." : "Only the superadmin can change this."}</p>
+        <OfficeAccess members={officeMembers.map((m) => ({ userId: m.userId, name: m.name, email: m.email, role: m.role, status: m.status, features: m.features }))} isOwner={ctx.role === "owner"} meId={ctx.userId} />
+      </Card>
 
       <Card className="mb-5">
         <h2 className="mb-1 font-semibold text-navy">Add an instructor</h2>

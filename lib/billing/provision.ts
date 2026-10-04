@@ -85,7 +85,7 @@ export async function provisionCentre(
     ? { id: params.ownerUserId }
     : (await control.userByEmail(params.ownerEmail)) ??
       (await control.createUser({ name: params.centreName, email: params.ownerEmail }));
-  await control.createMembership({ userId: owner.id, organisationId: org.id, role: "admin" });
+  await control.createMembership({ userId: owner.id, organisationId: org.id, role: "owner" });
 
   const ctx: SystemTenantContext = {
     organisationId: org.id,

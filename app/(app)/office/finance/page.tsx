@@ -14,7 +14,7 @@ const hrs = (m: number) => (m / 60).toFixed(2);
 const fmtDate = (iso: string | null) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }) : "—");
 
 export default async function FinancePage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const { ctx, repos, organisation } = await requireTenant({ role: "admin" });
+  const { ctx, repos, organisation } = await requireTenant({ permission: "finance.view" });
   const raw = await searchParams;
   const q = payrollQuerySchema.parse(Object.fromEntries(Object.entries(raw).filter(([, v]) => typeof v === "string")));
   const period = q.period ?? (q.from || q.to ? "custom" : "month");

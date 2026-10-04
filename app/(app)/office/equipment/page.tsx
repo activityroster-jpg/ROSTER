@@ -9,7 +9,7 @@ import { GuideLink } from "@/components/GuideLink";
 export const dynamic = "force-dynamic";
 
 export default async function EquipmentPage() {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const [equipment, types, settings] = await Promise.all([
     repos.tenant.equipment.list(ctx),
     repos.tenant.equipmentType.list(ctx),

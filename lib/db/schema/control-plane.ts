@@ -224,13 +224,13 @@ export const platformPricing = sqliteTable("platform_pricing", {
 });
 
 /**
- * admin             runs the centre: everything.
- * senior_instructor rosters, publishes, handles leave and cover; no billing, settings, pay or exports.
- * welfare_officer   sees staff, guardian and emergency contacts and the young-worker register; nothing operational or financial.
- * instructor        their own portal.
- * parent            read-only view of their under-18 child's roster (/parent).
+ * owner       the superadmin: set the centre up and pays; everything. One per centre.
+ * admin       an office admin; what they can reach is the `features` list the owner sets (lib/auth/rbac).
+ * instructor  the instructor app (senior instructors and volunteers included).
+ * parent      read-only view of their under-18 child's roster and the parental permission answer.
+ * senior_instructor / welfare_officer: legacy, migrated to instructor in 0059; never granted now.
  */
-export const MEMBERSHIP_ROLES = ["admin", "instructor", "senior_instructor", "welfare_officer", "parent"] as const;
+export const MEMBERSHIP_ROLES = ["owner", "admin", "instructor", "parent", "senior_instructor", "welfare_officer"] as const;
 export type MembershipRole = (typeof MEMBERSHIP_ROLES)[number];
 
 // invited = admin invited, not yet accepted · requested = joined via the app's
@@ -252,6 +252,8 @@ export const membership = sqliteTable("membership", {
     .references(() => organisation.id, { onDelete: "cascade" }),
   role: text("role", { enum: MEMBERSHIP_ROLES }).notNull(),
   status: text("status", { enum: MEMBERSHIP_STATUSES }).notNull().default("active"),
+  /** Office admins only: JSON array of OFFICE_FEATURES the owner ticked. Empty = can open the office and nothing else. */
+  features: text("features").notNull().default("[]"),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 }, (t) => [
@@ -710,7 +712,7 @@ export const SECURITY_EVENT_KINDS = [
   "recovery_email_set", "password_changed", "new_device", "reauth_passed", "reauth_failed", "invite_accepted",
   "ghost_start", "ghost_end", "join_requested", "join_code_failed",
   "two_factor_enabled", "two_factor_disabled", "sessions_revoked",
-  "subprocessor_notice",
+  "subprocessor_notice", "owner_transferred", "office_access_changed",
 ] as const;
 export type SecurityEventKind = (typeof SECURITY_EVENT_KINDS)[number];
 

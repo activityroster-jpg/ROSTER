@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
  * filtered by period and/or instructor. Admin only, tenant scoped.
  */
 export async function GET(req: Request) {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "data.export" });
   const q = payrollQuerySchema.parse(Object.fromEntries(new URL(req.url).searchParams));
   const filter = resolvePayrollFilter(q);
   const { lines } = await getPayrollLines(repos, ctx, filter);

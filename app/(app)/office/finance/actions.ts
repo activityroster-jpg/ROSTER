@@ -26,7 +26,7 @@ function revalidate() {
 
 /** Edit one payroll line during review: which minutes to pay on, overrides, note, approval. */
 export async function updatePayrollLineAction(recordId: string, patch: PayrollLinePatch): Promise<PayrollResult> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "finance.view" });
   const parsed = linePatch.safeParse(patch);
   if (!parsed.success) return { ok: false, error: "Please check the values" };
   const clean = Object.fromEntries(Object.entries(parsed.data).filter(([, v]) => v !== undefined));
@@ -40,7 +40,7 @@ export async function updatePayrollLineAction(recordId: string, patch: PayrollLi
 
 /** Approve (or un-approve) a set of lines, e.g. everything shown for the period. */
 export async function approvePayrollLinesAction(recordIds: string[], approved: boolean): Promise<PayrollResult> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "finance.view" });
   const ids = [...new Set((recordIds ?? []).filter((id) => typeof id === "string" && id.length <= 64))].slice(0, 2000);
   let n = 0;
   for (const id of ids) if (await repos.tenant.hoursRecord.update(ctx, id, { approved })) n++;
@@ -54,7 +54,7 @@ export async function approvePayrollLinesAction(recordIds: string[], approved: b
  * applies it to every unapproved line in a period too.
  */
 export async function setPaySourceAction(source: string, apply?: { from?: string; to?: string }): Promise<PayrollResult> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "finance.view" });
   if (!(PAY_SOURCES as readonly string[]).includes(source)) return { ok: false, error: "Pick roster or clock" };
   const src = source as PaySource;
   const existing = (await repos.tenant.orgSettings.list(ctx))[0];
@@ -76,7 +76,7 @@ export async function setPaySourceAction(source: string, apply?: { from?: string
 
 /** Recreate missing hours lines from the roster (safe: never touches approved or edited lines). */
 export async function rebuildHoursAction(): Promise<PayrollResult> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "finance.view" });
   const r = await rebuildHoursFromRoster(repos, ctx);
   await writeAudit(repos, ctx, { action: "payroll_rebuild", entity: "hours_record", after: r });
   revalidate();

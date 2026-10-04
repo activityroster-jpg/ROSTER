@@ -18,6 +18,8 @@ export interface TenantContext {
   readonly slug: string;
   readonly userId: string;
   readonly role: MembershipRole;
+  /** Office admins: the features the owner ticked (lib/auth/rbac). Owners have all; others none. */
+  readonly features?: readonly string[];
   /**
    * Ghost Mode: the platform owner viewing this centre read-only and invisibly
    * (see lib/auth/ghost). The repository layer refuses every write for a ghost

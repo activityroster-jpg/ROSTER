@@ -4,6 +4,7 @@ import { requireTenant } from "@/lib/tenant/require";
 import { getDocument } from "@/lib/r2";
 import { instructor as instructorTable } from "@/lib/db/schema";
 import { ALLOWED_DOCUMENT_TYPES } from "@/lib/security/file-type";
+import { can } from "@/lib/auth/rbac";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,7 @@ export async function GET(req: Request) {
   const key = new URL(req.url).searchParams.get("key");
   if (!key) return NextResponse.json({ error: "Missing key" }, { status: 400 });
 
-  if (ctx.role !== "admin") {
+  if (!can(ctx, "staff.view")) {
     const me = (await repos.tenant.instructor.list(ctx, eq(instructorTable.userId, ctx.userId)))[0];
     // Instructors may only read keys under their own org+instructor prefix.
     if (!me || !key.startsWith(`org_${ctx.organisationId}/instructor_${me.id}/`)) {

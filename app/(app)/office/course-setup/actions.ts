@@ -35,7 +35,7 @@ function revalidate() {
 
 /** Edit a course type's fields in place. */
 export async function updateCourseTypeAction(id: string, input: CourseTypeInput): Promise<CourseTypeResult> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const parsed = fields.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Please check the values" };
   const updated = await repos.tenant.courseType.update(ctx, id, parsed.data);
@@ -47,7 +47,7 @@ export async function updateCourseTypeAction(id: string, input: CourseTypeInput)
 
 /** Add a new course type to the catalogue. */
 export async function addCourseTypeAction(input: CourseTypeInput): Promise<CourseTypeResult> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const parsed = fields.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Please check the values" };
   const created = await repos.tenant.courseType.insert(ctx, { ...parsed.data, active: true });
@@ -61,7 +61,7 @@ export async function addCourseTypeAction(input: CourseTypeInput): Promise<Cours
  * it's retired instead (deactivate-never-delete) so history keeps rendering.
  */
 export async function deleteCourseTypeAction(id: string): Promise<CourseTypeResult> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const res = await deleteOrRetireCourseType(repos, ctx, id);
   if (res.outcome === "not_found") return { ok: false, error: "Course type not found" };
 
@@ -77,7 +77,7 @@ export async function deleteCourseTypeAction(id: string): Promise<CourseTypeResu
 
 /** Bring a retired course type back. */
 export async function reactivateCourseTypeAction(id: string): Promise<CourseTypeResult> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const updated = await repos.tenant.courseType.update(ctx, id, { active: true });
   if (!updated) return { ok: false, error: "Course type not found" };
   await writeAudit(repos, ctx, { action: "reactivate", entity: "course_type", entityId: id });
@@ -91,7 +91,7 @@ export async function reactivateCourseTypeAction(id: string): Promise<CourseType
  * every existing type and re-adds any RYA default that is missing entirely.
  */
 export async function restoreCourseTypesAction(): Promise<CourseTypeResult> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const existing = await repos.tenant.courseType.list(ctx);
   let restored = 0;
   for (const t of existing) {
@@ -114,7 +114,7 @@ export async function restoreCourseTypesAction(): Promise<CourseTypeResult> {
 
 /** Put a one-off course type on the regular list (or take one off it). */
 export async function setCourseTypeListedAction(id: string, listed: boolean): Promise<CourseTypeResult> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const updated = await repos.tenant.courseType.update(ctx, id, { listed: listed === true, active: true });
   if (!updated) return { ok: false, error: "Course type not found" };
   await writeAudit(repos, ctx, { action: listed ? "list" : "unlist", entity: "course_type", entityId: id });
@@ -124,7 +124,7 @@ export async function setCourseTypeListedAction(id: string, listed: boolean): Pr
 
 /** Move all courses of one type under another (fixing imported near-duplicates). */
 export async function moveCoursesToTypeAction(fromId: string, toId: string): Promise<CourseTypeResult> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   if (typeof fromId !== "string" || typeof toId !== "string" || !fromId || !toId) return { ok: false, error: "Pick a course type" };
   const res = await moveCoursesToType(repos, ctx, fromId, toId);
   if (!res) return { ok: false, error: "Course type not found" };
@@ -135,7 +135,7 @@ export async function moveCoursesToTypeAction(fromId: string, toId: string): Pro
 
 /** Set (or clear, with an empty list) a course type's default schedule. */
 export async function setCourseTypeScheduleAction(id: string, sessions: unknown): Promise<CourseTypeResult> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const clean = normaliseDefaultSchedule(sessions);
   if (Array.isArray(sessions) && sessions.length > 0 && clean.length !== sessions.length) {
     return { ok: false, error: "Each session needs a day and an end time after its start" };

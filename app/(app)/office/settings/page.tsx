@@ -18,7 +18,7 @@ import { retentionPlan } from "@/lib/services/retention";
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
-  const { ctx, repos, organisation } = await requireTenant({ role: "admin" });
+  const { ctx, repos, organisation } = await requireTenant({ permission: "settings.edit" });
   const t = repos.tenant;
   const [settings, slots, roles, grades, compliance, courseTypes] = await Promise.all([
     t.orgSettings.list(ctx),

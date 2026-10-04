@@ -7,7 +7,7 @@ import { course as courseTable } from "@/lib/db/schema";
 export const dynamic = "force-dynamic";
 
 export default async function CourseSetupPage() {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const courseTypes = await repos.tenant.courseType.list(ctx);
 
   const rows: CourseTypeRow[] = courseTypes

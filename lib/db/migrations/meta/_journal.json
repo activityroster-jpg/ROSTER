@@ -414,6 +414,13 @@
       "when": 1791135292631,
       "tag": "0058_cancel_sessions",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "6",
+      "when": 1791136021189,
+      "tag": "0059_roles_owner_features",
+      "breakpoints": true
     }
   ]
 }

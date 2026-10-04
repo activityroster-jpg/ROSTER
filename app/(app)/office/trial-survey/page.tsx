@@ -14,7 +14,7 @@ const fmtDate = (d: Date | number) => new Date(d).toLocaleDateString("en-GB", { 
 
 export default async function TrialSurveyPage() {
   // Reachable while the centre is read-only or locked: answering is how it unlocks.
-  const { ctx, organisation, trial, repos } = await requireTenant({ role: "admin", allowReadOnly: true });
+  const { ctx, organisation, trial, repos } = await requireTenant({ permission: "billing.manage", allowReadOnly: true });
   const answered = await new PlatformRepository(await getDb()).trialFeedbackForOrg(organisation.id).catch(() => null);
   const status = surveyStatus(trial, Boolean(answered));
   const me = ctx.ghost ? null : await repos.control.userById(ctx.userId);

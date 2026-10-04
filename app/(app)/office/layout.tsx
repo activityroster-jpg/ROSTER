@@ -13,6 +13,7 @@ import { eq } from "drizzle-orm";
 import { instructor as instructorTable } from "@/lib/db/schema";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { surveyStatus } from "@/lib/services/trial-survey";
+import { can } from "@/lib/auth/rbac";
 
 export default async function OfficeLayout({ children }: { children: React.ReactNode }) {
   const { ctx, organisation, trial, repos } = await requireTenant({ permission: "office.view", allowReadOnly: true });
@@ -54,7 +55,7 @@ export default async function OfficeLayout({ children }: { children: React.React
 
   // Trial over and not yet surveyed: admins can earn another free month (lib/services/trial-survey).
   let surveyOpen = false;
-  if (ctx.role === "admin" && !ctx.ghost && (trial.kind === "read_only" || trial.kind === "locked")) {
+  if (can(ctx, "billing.manage") && !ctx.ghost && (trial.kind === "read_only" || trial.kind === "locked")) {
     try {
       const answered = await new PlatformRepository(repos.db).trialFeedbackForOrg(organisation.id);
       surveyOpen = surveyStatus(trial, Boolean(answered)) === "open";
@@ -63,7 +64,7 @@ export default async function OfficeLayout({ children }: { children: React.React
 
   return (
     <div className="flex min-h-screen bg-canvas">
-      <OfficeSidebar orgName={organisation.name} clockOn={clockOn} hasInstructorRecord={hasInstructorRecord} role={ctx.role} />
+      <OfficeSidebar orgName={organisation.name} clockOn={clockOn} hasInstructorRecord={hasInstructorRecord} role={ctx.role} features={ctx.features ?? []} />
       <div className="flex-1 overflow-x-hidden pt-14 lg:pt-0">
         <IncidentBanner />
         {ctx.ghost ? <GhostBanner centreName={organisation.name} /> : null}

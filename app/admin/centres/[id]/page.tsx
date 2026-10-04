@@ -14,6 +14,7 @@ import { GhostModeCard, type GhostSessionRow } from "@/components/admin/GhostMod
 import { TrialControls } from "@/components/admin/TrialControls";
 import { trialEndsAt, trialState } from "@/lib/billing/trial";
 import { getRepositories } from "@/lib/cf/bindings";
+import { TransferOwner } from "@/components/admin/TransferOwner";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +36,7 @@ export default async function CentreDetailPage({ params }: { params: Promise<{ i
 
   const [usage, members, pricing] = await Promise.all([platform.usageByOrg(), platform.membersFor(id), platform.getPricing()]);
   const { control } = await getRepositories();
+  const officeMembers = await control.officeMembersForOrg(id);
   const ghostRows = await control.listGhostVisits(id, 10);
   const ghostSessions: GhostSessionRow[] = await Promise.all(ghostRows.map(async (r) => ({
     id: r.id,
@@ -101,6 +103,11 @@ export default async function CentreDetailPage({ params }: { params: Promise<{ i
         <h2 className="mb-3 font-semibold text-navy">Manage</h2>
         <CentreControls id={org.id} status={org.status} subscriptionStatus={org.subscriptionStatus} plan={org.plan} tier={org.tier} />
         <EraseCentre id={org.id} slug={org.slug} status={org.status} deadline={leavingDeadline(org)?.toISOString() ?? null} />
+      </Card>
+
+      <Card className="mt-6">
+        <h2 className="mb-1 font-semibold text-navy">Superadmin</h2>
+        <TransferOwner id={org.id} members={officeMembers.map((m) => ({ userId: m.userId, name: m.name, email: m.email, role: m.role as string, status: m.status }))} />
       </Card>
 
       <Card className="mt-6">

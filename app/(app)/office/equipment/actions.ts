@@ -16,7 +16,7 @@ const schema = z.object({
 
 /** Add a piece of equipment (tracked unit or bulk item). */
 export async function createEquipmentAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const parsed = schema.safeParse({
     equipmentTypeId: formData.get("equipmentTypeId"),
     name: formData.get("name"),
@@ -46,7 +46,7 @@ export interface EquipmentTypeInput { name: string; quantity: number | string | 
 
 /** Add (id = null) or edit an equipment type — name, quantity and tracked/bulk. */
 export async function saveEquipmentTypeAction(id: string | null, input: EquipmentTypeInput): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const parsed = typeSchema.safeParse({ ...input, quantity: input.quantity ?? "" });
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Please check the values" };
   const t = repos.tenant.equipmentType;
@@ -65,7 +65,7 @@ export async function saveEquipmentTypeAction(id: string | null, input: Equipmen
 
 /** Retire / bring back an equipment type (deactivate-never-delete). */
 export async function setEquipmentTypeActiveAction(id: string, active: boolean): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const updated = await repos.tenant.equipmentType.update(ctx, id, { active });
   if (!updated) return { ok: false, error: "Not found" };
   await writeAudit(repos, ctx, { action: active ? "reactivate" : "deactivate", entity: "equipment_type", entityId: id });
@@ -75,7 +75,7 @@ export async function setEquipmentTypeActiveAction(id: string, active: boolean):
 
 /** Change an equipment item's status (available / maintenance / retired). */
 export async function setEquipmentStatusAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const id = String(formData.get("id") ?? "");
   const status = String(formData.get("status") ?? "");
   if (!id || !(EQUIPMENT_STATUSES as readonly string[]).includes(status)) {

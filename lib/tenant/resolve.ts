@@ -1,3 +1,4 @@
+import { parseFeatures } from "@/lib/auth/rbac";
 import { getAuth } from "@/lib/auth";
 import { getEnv, getRepositories } from "@/lib/cf/bindings";
 import type { Organisation } from "@/lib/db/schema";
@@ -102,7 +103,7 @@ export async function resolveTenant(headers: Headers): Promise<TenantResolution>
     ghostClaims.adminUserId === authSession.user.id &&
     (await isPlatformAdminEmail(authSession.user.email))
   ) {
-    const ctx: TenantContext = { organisationId: organisation.id, slug: organisation.slug, userId: authSession.user.id, role: "admin", ghost: true };
+    const ctx: TenantContext = { organisationId: organisation.id, slug: organisation.slug, userId: authSession.user.id, role: "owner", ghost: true };
     return { ok: true, ctx, organisation, sessionId: authSession.session?.id, trial: await trialFor(db, organisation) };
   }
 
@@ -119,7 +120,7 @@ export async function resolveTenant(headers: Headers): Promise<TenantResolution>
         userAgent: headers.get("user-agent")?.slice(0, 300) ?? null,
         country: headers.get("cf-ipcountry"),
       }).catch(() => {});
-      membership = { role: membership.role, status: "active" };
+      membership = { role: membership.role, status: "active", features: membership.features };
     }
   }
   if (!membership || membership.status !== "active") {
@@ -132,6 +133,7 @@ export async function resolveTenant(headers: Headers): Promise<TenantResolution>
     slug: organisation.slug,
     userId: authSession.user.id,
     role: membership.role,
+    features: parseFeatures(membership.features),
   }, trial, organisation);
   return { ok: true, ctx, organisation, sessionId: authSession.session?.id, trial };
 }

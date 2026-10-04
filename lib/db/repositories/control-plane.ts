@@ -119,16 +119,37 @@ export class ControlPlaneRepository {
   }
 
   async createMembership(
-    values: { userId: string; organisationId: string; role: MembershipRole },
+    values: { userId: string; organisationId: string; role: MembershipRole; features?: readonly string[] },
     status: MembershipStatus = "active",
   ): Promise<void> {
-    await this.db.insert(membership).values({ ...values, status });
+    const { features, ...rest } = values;
+    await this.db.insert(membership).values({ ...rest, status, features: JSON.stringify(features ?? []) });
+  }
+  /** The owner's choice of office features for an office admin. */
+  async setMembershipFeatures(userId: string, organisationId: string, features: readonly string[]): Promise<boolean> {
+    const rows = await this.db.update(membership).set({ features: JSON.stringify(features), updatedAt: new Date() })
+      .where(and(eq(membership.userId, userId), eq(membership.organisationId, organisationId), eq(membership.role, "admin"))).returning({ id: membership.id });
+    return rows.length > 0;
+  }
+  /** Everyone who can open a centre's office (owner and office admins), with their account details. */
+  async officeMembersForOrg(organisationId: string): Promise<{ userId: string; name: string; email: string; role: MembershipRole; status: MembershipStatus; features: string; createdAt: Date }[]> {
+    return this.db
+      .select({ userId: membership.userId, name: user.name, email: user.email, role: membership.role, status: membership.status, features: membership.features, createdAt: membership.createdAt })
+      .from(membership)
+      .innerJoin(user, eq(user.id, membership.userId))
+      .where(and(eq(membership.organisationId, organisationId), inArray(membership.role, ["owner", "admin"])));
+  }
+  /** Hand the superadmin role to another office user; the previous owner becomes an office admin with every feature. Dev Center only. */
+  async transferOwnership(organisationId: string, fromUserId: string, toUserId: string): Promise<void> {
+    const all = JSON.stringify(["roster", "staff", "protected", "payroll", "settings", "billing", "exports"]);
+    await this.db.update(membership).set({ role: "admin", features: all, updatedAt: new Date() }).where(and(eq(membership.userId, fromUserId), eq(membership.organisationId, organisationId), eq(membership.role, "owner")));
+    await this.db.update(membership).set({ role: "owner", features: all, status: "active", updatedAt: new Date() }).where(and(eq(membership.userId, toUserId), eq(membership.organisationId, organisationId)));
   }
 
   /** The membership row (any status) linking a user to an org, or null. */
-  async membershipFor(userId: string, organisationId: string): Promise<{ role: MembershipRole; status: MembershipStatus } | null> {
+  async membershipFor(userId: string, organisationId: string): Promise<{ role: MembershipRole; status: MembershipStatus; features: string } | null> {
     const rows = await this.db
-      .select({ role: membership.role, status: membership.status })
+      .select({ role: membership.role, status: membership.status, features: membership.features })
       .from(membership)
       .where(and(eq(membership.userId, userId), eq(membership.organisationId, organisationId)))
       .limit(1);
@@ -545,7 +566,7 @@ export class ControlPlaneRepository {
       .select({ email: user.email })
       .from(membership)
       .innerJoin(user, eq(user.id, membership.userId))
-      .where(and(eq(membership.organisationId, organisationId), eq(membership.role, "admin"), eq(membership.status, "active")));
+      .where(and(eq(membership.organisationId, organisationId), inArray(membership.role, ["owner", "admin"]), eq(membership.status, "active")));
     return rows.map((r) => r.email);
   }
 

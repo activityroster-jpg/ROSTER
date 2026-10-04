@@ -6,7 +6,7 @@ import { BookingIntegrations } from "@/components/office/BookingIntegrations";
 export const dynamic = "force-dynamic";
 
 export default async function IntegrationsPage() {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const rows = await repos.tenant.integration.list(ctx);
 
   const connected = rows.map((r) => ({

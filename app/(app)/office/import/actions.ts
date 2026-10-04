@@ -40,7 +40,7 @@ const ISO = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_IMPORT_ROWS = 500;
 
 export async function importCoursesAction(rows: ConfirmedRow[]): Promise<ImportResult> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   if (!Array.isArray(rows) || rows.length === 0) return { ok: false, created: 0, skipped: 0, error: "Nothing to import" };
   if (rows.length > MAX_IMPORT_ROWS) return { ok: false, created: 0, skipped: 0, error: `Import up to ${MAX_IMPORT_ROWS} rows at a time — split a bigger spreadsheet into parts.` };
 

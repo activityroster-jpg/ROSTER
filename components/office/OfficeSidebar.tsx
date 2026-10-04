@@ -8,13 +8,13 @@ import {
  LogOut } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { signOut } from "@/lib/auth/client";
-import { can, type Permission } from "@/lib/auth/rbac";
+import { can, type OfficeFeature, type Permission } from "@/lib/auth/rbac";
 import type { MembershipRole } from "@/lib/db/schema";
 
 const NEEDS: Record<string, Permission> = {
   "/office": "office.view", "/office/courses": "roster.edit", "/office/rota": "rota.view", "/office/availability": "roster.edit", "/office/timeclock": "finance.view", "/office/leave": "roster.edit",
-  "/office/staff": "staff.view", "/office/equipment": "settings.edit", "/office/locations": "settings.edit", "/office/finance": "finance.view",
-  "/office/settings": "settings.edit", "/office/billing": "settings.edit", "/office/course-setup": "settings.edit", "/office/change-log": "settings.edit",
+  "/office/staff": "staff.view", "/office/equipment": "roster.edit", "/office/locations": "roster.edit", "/office/finance": "finance.view",
+  "/office/settings": "settings.edit", "/office/billing": "billing.manage", "/office/course-setup": "roster.edit", "/office/change-log": "settings.edit",
 };
 
 const NAV = [
@@ -54,12 +54,12 @@ const NAV = [
  * a menu button that slides the same list in, so the office works at the
  * slipway as well as at the desk.
  */
-export function OfficeSidebar({ orgName, clockOn, hasInstructorRecord, role = "admin" }: { orgName: string; clockOn: boolean; hasInstructorRecord: boolean; role?: MembershipRole }) {
+export function OfficeSidebar({ orgName, clockOn, hasInstructorRecord, role = "owner", features = [] }: { orgName: string; clockOn: boolean; hasInstructorRecord: boolean; role?: MembershipRole; features?: readonly OfficeFeature[] | readonly string[] }) {
   const doSignOut = async () => { try { await signOut(); } finally { window.location.href = "/sign-in"; } };
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   useEffect(() => { setOpen(false); }, [pathname]);
-  const nav = NAV.map((g) => ({ ...g, items: g.items.filter((i) => (clockOn || i.href !== "/office/timeclock") && can(role, NEEDS[i.href] ?? "settings.edit")) })).filter((g) => g.items.length > 0);
+  const nav = NAV.map((g) => ({ ...g, items: g.items.filter((i) => (clockOn || i.href !== "/office/timeclock") && can({ role, features }, NEEDS[i.href] ?? "settings.edit")) })).filter((g) => g.items.length > 0);
   const active = (href: string) => (href === "/office" ? pathname === "/office" : pathname.startsWith(href));
 
   const list = (

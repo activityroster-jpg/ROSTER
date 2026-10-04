@@ -17,7 +17,7 @@ export type IntegrationResult = { ok: boolean; error?: string; message?: string 
 const validFeedUrl = isSafeFeedUrl;
 /** Connect (or update) a booking system via its calendar feed URL, or API key. One row per provider. */
 export async function connectIntegrationAction(input: { provider: string; kind?: string; feedUrl?: string; token?: string }): Promise<IntegrationResult> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const provider = providerById(input.provider);
   if (!provider) return { ok: false, error: "Unknown provider" };
   const kind: IntegrationKind = (INTEGRATION_KINDS as readonly string[]).includes(String(input.kind)) ? (input.kind as IntegrationKind) : "ics";
@@ -64,7 +64,7 @@ export async function connectIntegrationAction(input: { provider: string; kind?:
 }
 
 export async function removeIntegrationAction(id: string): Promise<IntegrationResult> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const removed = await repos.tenant.integration.delete(ctx, id);
   if (removed === 0) return { ok: false, error: "Not found" };
   await writeAudit(repos, ctx, { action: "integration_remove", entity: "integration", entityId: id });
@@ -81,7 +81,7 @@ export type PreviewResult = { ok: true; diff: FeedDiff; types: { id: string; nam
  * is created or deleted here.
  */
 export async function previewIntegrationChangesAction(id: string): Promise<PreviewResult> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const row = (await repos.tenant.integration.list(ctx, eq(integrationTable.id, id)))[0];
   if (!row) return { ok: false, error: "Not found" };
   try {
@@ -102,7 +102,7 @@ export async function previewIntegrationChangesAction(id: string): Promise<Previ
 
 /** Apply the admin's chosen additions/removals. Never changes anything not selected. */
 export async function applyIntegrationChangesAction(id: string, addKeys: string[], removeCourseIds: string[], typeChoices?: Record<string, string>): Promise<IntegrationResult> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const row = (await repos.tenant.integration.list(ctx, eq(integrationTable.id, id)))[0];
   if (!row) return { ok: false, error: "Not found" };
   if ((addKeys?.length ?? 0) === 0 && (removeCourseIds?.length ?? 0) === 0) return { ok: false, error: "Nothing selected" };

@@ -5,7 +5,7 @@ import { parseFeatures } from "@/lib/features";
 export const dynamic = "force-dynamic";
 
 export default async function OnboardingPage() {
-  const { ctx, repos, organisation } = await requireTenant({ role: "admin" });
+  const { ctx, repos, organisation } = await requireTenant({ permission: "settings.edit" });
   const [courseTypes, quals, instructors, settings] = await Promise.all([
     repos.tenant.courseType.list(ctx),
     repos.tenant.qualificationType.list(ctx),

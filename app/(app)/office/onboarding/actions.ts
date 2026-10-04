@@ -33,7 +33,7 @@ export async function setSetupPreferencesAction(input: {
   slotStyle: string;
   availabilityWeeksAhead?: number;
 }): Promise<Result> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "settings.edit" });
   const features = serializeFeatures(input.features as OptionalFeature[]);
   const slotStyle: SlotStyle = (SLOT_STYLES as readonly string[]).includes(input.slotStyle)
     ? (input.slotStyle as SlotStyle)
@@ -58,7 +58,7 @@ export async function addCustomCourseAction(input: {
   audience: string;
   category?: string;
 }): Promise<{ ok: boolean; error?: string; id?: string }> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "settings.edit" });
   const name = (input.name ?? "").trim();
   if (!name) return { ok: false, error: "Give the course a name" };
   const audience: CourseAudience = (COURSE_AUDIENCES as readonly string[]).includes(input.audience)
@@ -84,7 +84,7 @@ export async function addCustomCourseAction(input: {
 
 /** Set which RYA course types this centre runs (activate selected, retire the rest). */
 export async function setCoursesRunAction(activeIds: string[]): Promise<Result> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "settings.edit" });
   const all = await repos.tenant.courseType.list(ctx);
   const want = new Set(activeIds);
   for (const c of all) {
@@ -110,7 +110,7 @@ export async function addTeamMemberAction(input: {
   qualificationTypeIds: string[];
   courseTypeIds?: string[];
 }): Promise<{ ok: boolean; error?: string; invited?: boolean; message?: string }> {
-  const { ctx, repos, organisation } = await requireTenant({ role: "admin" });
+  const { ctx, repos, organisation } = await requireTenant({ permission: "settings.edit" });
   const name = (input.name ?? "").trim();
   if (!name) return { ok: false, error: "Name is required" };
   // Same hard tier cap as the Staff tab.
@@ -189,7 +189,7 @@ export async function addQualificationTypeAction(input: {
   name: string;
   discipline?: string;
 }): Promise<{ ok: boolean; error?: string; id?: string; name?: string; discipline?: string | null }> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "settings.edit" });
   const name = (input.name ?? "").trim();
   if (!name) return { ok: false, error: "Give the type a name" };
 
@@ -220,7 +220,7 @@ export async function addQualificationTypeAction(input: {
 
 /** Add any RYA default instructor types this centre is missing (by name). */
 export async function addDefaultGradesAction(): Promise<{ ok: boolean; created: { id: string; name: string; discipline: string | null }[] }> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "settings.edit" });
   const existing = await repos.tenant.qualificationType.list(ctx);
   const haveNames = new Set(existing.map((q) => q.name.trim().toLowerCase()));
   const haveCodes = new Set(existing.map((q) => q.code));
@@ -244,7 +244,7 @@ export async function addDefaultGradesAction(): Promise<{ ok: boolean; created: 
 
 /** Add any RYA default course types this centre is missing (by name), activated. */
 export async function addDefaultCoursesAction(): Promise<{ ok: boolean; created: { id: string; name: string; scheme: string | null; audience: string; category: string | null }[] }> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "settings.edit" });
   const existing = await repos.tenant.courseType.list(ctx);
   const haveNames = new Set(existing.map((c) => c.name.trim().toLowerCase()));
   const created: { id: string; name: string; scheme: string | null; audience: string; category: string | null }[] = [];

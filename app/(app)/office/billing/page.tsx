@@ -16,7 +16,7 @@ const STATUS_WORDS: Record<string, string> = { trialing: "Free trial", active: "
 const fmtDate = (ms: number) => new Date(ms).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
 export default async function BillingPage({ searchParams }: { searchParams: Promise<{ status?: string; locked?: string }> }) {
-  const { ctx, organisation, trial } = await requireTenant({ role: "admin", allowReadOnly: true });
+  const { ctx, organisation, trial } = await requireTenant({ permission: "billing.manage", allowReadOnly: true });
   const sp = await searchParams;
   const platform = new PlatformRepository(await getDb());
   const pricing = await platform.getPricing();

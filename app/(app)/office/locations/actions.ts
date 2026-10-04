@@ -14,7 +14,7 @@ const schema = z.object({
 
 /** Add a location under an (optional) category. */
 export async function createLocationAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const parsed = schema.safeParse({
     name: formData.get("name"),
     locationTypeId: (formData.get("locationTypeId") as string) || undefined,
@@ -34,7 +34,7 @@ export async function createLocationAction(_prev: ActionState, formData: FormDat
 
 /** Add a location category (a location type) the centre can then file locations under. */
 export async function createLocationCategoryAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const name = String(formData.get("name") ?? "").trim();
   if (!name) return { ok: false, error: "Give the category a name" };
   const created = await repos.tenant.locationType.insert(ctx, { name, active: true });
@@ -45,7 +45,7 @@ export async function createLocationCategoryAction(_prev: ActionState, formData:
 
 /** Rename a location category (moved here from Settings). */
 export async function renameLocationCategoryAction(id: string, name: string): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const clean = (name ?? "").trim();
   if (!clean) return { ok: false, error: "Give the category a name" };
   const updated = await repos.tenant.locationType.update(ctx, id, { name: clean.slice(0, 120) });
@@ -57,7 +57,7 @@ export async function renameLocationCategoryAction(id: string, name: string): Pr
 
 /** Retire / bring back a location category (deactivate-never-delete). */
 export async function setLocationCategoryActiveAction(id: string, active: boolean): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const updated = await repos.tenant.locationType.update(ctx, id, { active });
   if (!updated) return { ok: false, error: "Not found" };
   await writeAudit(repos, ctx, { action: active ? "reactivate" : "deactivate", entity: "location_type", entityId: id });
@@ -67,7 +67,7 @@ export async function setLocationCategoryActiveAction(id: string, active: boolea
 
 /** Deactivate/reactivate a location (deactivate-never-delete). */
 export async function setLocationActiveAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const id = String(formData.get("id") ?? "");
   const active = formData.get("active") === "true";
   if (!id) return { ok: false, error: "Missing location" };

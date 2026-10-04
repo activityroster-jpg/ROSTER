@@ -11,7 +11,7 @@ export type SurveyState = { ok: boolean; error?: string; fieldErrors?: Record<st
 
 /** Store a centre's trial-end survey answers and unlock it for another free month. Admins only; works while read-only or locked. */
 export async function submitTrialSurveyAction(_prev: SurveyState, formData: FormData): Promise<SurveyState> {
-  const { ctx, organisation, repos } = await requireTenant({ role: "admin", allowReadOnly: true });
+  const { ctx, organisation, repos } = await requireTenant({ permission: "billing.manage", allowReadOnly: true });
   if (ctx.ghost) return { ok: false, error: "Ghost Mode is read-only." };
   const parsed = trialSurveySchema.safeParse(Object.fromEntries(["mostUseful", "leastUseful", "wouldChange", "missing", "featureRequest", "userCount", "otherFeedback", "contactOk", "contactEmail"].map((k) => [k, formData.get(k) ?? undefined])));
   if (!parsed.success) {

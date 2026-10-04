@@ -4,6 +4,7 @@ import { requireTenant } from "@/lib/tenant/require";
 import { attachDocument, type DocumentKind } from "@/lib/services/documents";
 import { instructor as instructorTable } from "@/lib/db/schema";
 import { sniffDocumentType } from "@/lib/security/file-type";
+import { can } from "@/lib/auth/rbac";
 
 export const dynamic = "force-dynamic";
 
@@ -45,7 +46,7 @@ export async function POST(req: Request) {
 
   // Instructors may only upload against their own records.
   let restrictTo: string | undefined;
-  if (ctx.role !== "admin") {
+  if (!can(ctx, "staff.edit")) {
     const me = (await repos.tenant.instructor.list(ctx, eq(instructorTable.userId, ctx.userId)))[0];
     if (!me) return NextResponse.json({ error: "No linked instructor profile" }, { status: 403 });
     restrictTo = me.id;

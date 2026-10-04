@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export default async function ImportPage() {
   // Admin-only; ensures a tenant context exists before rendering the client wizard.
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const types = (await repos.tenant.courseType.list(ctx))
     .filter((c) => c.active && c.listed)
     .map((c) => ({ id: c.id, name: c.name }))

@@ -13,7 +13,7 @@ const ISO = /^\d{4}-\d{2}-\d{2}$/;
 const fmtDay = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
 
 export default async function TimeClockPage({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "finance.view" });
   const sp = await searchParams;
   const today = todayIso();
   const day = typeof sp.date === "string" && ISO.test(sp.date) ? sp.date : today;

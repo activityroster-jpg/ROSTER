@@ -27,7 +27,7 @@ describe("provisionCentre", () => {
     ({ db, raw } = createTestDb());
   });
 
-  it("creates org, owner, admin membership and seeds RYA defaults", async () => {
+  it("creates org, owner, superadmin membership and seeds RYA defaults", async () => {
     const repos = createRepositories(db);
     const result = await provisionCentre(repos, fakeEnv, params);
     expect(result.created).toBe(true);
@@ -40,7 +40,7 @@ describe("provisionCentre", () => {
     const owner = await repos.control.userByEmail("owner@alpha.test");
     expect(owner).not.toBeNull();
     const membership = await repos.control.activeMembership(owner!.id, org!.id);
-    expect(membership?.role).toBe("admin");
+    expect(membership?.role).toBe("owner");
 
     // Scotland → PVG vetting seeded (jurisdiction-driven config).
     const ctx = { organisationId: org!.id, slug: "alpha", system: true as const, reason: "test" };

@@ -5,7 +5,7 @@ import { StaffImportWizard } from "@/components/office/StaffImportWizard";
 export const dynamic = "force-dynamic";
 
 export default async function StaffImportPage() {
-  await requireTenant({ role: "admin" });
+  await requireTenant({ permission: "staff.edit" });
   return (
     <div className="mx-auto max-w-3xl">
       <div className="mb-1 flex items-center justify-between">

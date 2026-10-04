@@ -27,7 +27,12 @@ export interface RequiredTenant {
 /** Paths an admin may still use once the trial has locked: billing, so they can pay. */
 const LOCKED_ALLOWED = ["/office/billing", "/api/billing"];
 
-export async function requireTenant(opts?: { role?: "admin"; permission?: Permission; skipMfaGate?: boolean; allowReadOnly?: boolean }): Promise<RequiredTenant> {
+/**
+ * `role: "admin"` = anyone who can open the office (the owner or an office admin);
+ * `owner: true` = the superadmin only; `permission` consults the matrix and the
+ * member's features (lib/auth/rbac).
+ */
+export async function requireTenant(opts?: { role?: "admin"; owner?: boolean; permission?: Permission; skipMfaGate?: boolean; allowReadOnly?: boolean }): Promise<RequiredTenant> {
   const h = new Headers(await headers());
   const res = await resolveTenant(h);
 
@@ -48,8 +53,9 @@ export async function requireTenant(opts?: { role?: "admin"; permission?: Permis
   }
 
   // Authorisation: "admin" means admin only; a permission consults the matrix (lib/auth/rbac).
-  if (opts?.role === "admin" && res.ctx.role !== "admin") redirect(landingFor(res.ctx.role));
-  if (opts?.permission && !can(res.ctx.role, opts.permission)) redirect(landingFor(res.ctx.role));
+  if (opts?.role === "admin" && !isOfficeRole(res.ctx.role)) redirect(landingFor(res.ctx.role));
+  if (opts?.owner && res.ctx.role !== "owner") redirect(landingFor(res.ctx.role));
+  if (opts?.permission && !can(res.ctx, opts.permission)) redirect(can(res.ctx, "office.view") ? "/office?denied=1" : landingFor(res.ctx.role));
   const landing = landingFor(res.ctx.role);
 
   // Ghost Mode is read-only: server actions (every mutation goes through one)
@@ -60,7 +66,7 @@ export async function requireTenant(opts?: { role?: "admin"; permission?: Permis
   // (admins) or a "trial ended" page (instructors). Billing itself stays usable.
   const path = h.get(PATH_HEADER) ?? "";
   const billing = LOCKED_ALLOWED.some((p) => path.startsWith(p)) || opts?.allowReadOnly === true;
-  if (res.ctx.locked && !billing) redirect(res.ctx.role === "admin" ? "/office/billing?locked=1" : isOfficeRole(res.ctx.role) ? "/trial-ended" : "/trial-ended");
+  if (res.ctx.locked && !billing) redirect(can(res.ctx, "billing.manage") ? "/office/billing?locked=1" : "/trial-ended");
   if (res.ctx.readOnly && !billing && h.has("next-action")) throw new TrialReadOnlyError();
 
   // Centre admins: every office sign-in is email + password, then an emailed
