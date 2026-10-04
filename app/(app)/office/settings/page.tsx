@@ -12,6 +12,8 @@ import { loadPack } from "@/lib/rules/working-time/load";
 import { termRangesOf } from "@/lib/services/working-time";
 import { RotaTemplateForm } from "@/components/office/RotaTemplateForm";
 import { parseRotaTemplate } from "@/lib/rota/template";
+import { RetentionForm } from "@/components/office/RetentionForm";
+import { retentionPlan } from "@/lib/services/retention";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +34,7 @@ export default async function SettingsPage() {
     .sort((a, b) => a.name.localeCompare(b.name));
   const s = settings[0];
   const joinCode = await repos.control.ensureJoinCode(ctx.organisationId);
+  const retention = await retentionPlan(repos, ctx, s, new Date());
   const packKey = packKeyFor(organisation.jurisdiction);
   const loaded = packKey ? await loadPack(repos.db, packKey) : null;
   const packStatus = loaded
@@ -78,6 +81,17 @@ export default async function SettingsPage() {
           enforceAvailabilityChecks={s?.enforceAvailabilityChecks ?? true}
         />
       </Card>
+
+      <div id="retention" className="mb-6">
+      <Card>
+        <div className="mb-1 flex items-center justify-between">
+          <h2 className="font-semibold text-navy">Data retention</h2>
+          <a href="/learn?topic=retention" target="_blank" rel="noreferrer" className="text-xs font-medium text-teal hover:underline">📖 Read the guide</a>
+        </div>
+        <p className="mb-3 text-xs text-slate-500">How long each kind of record is kept. The defaults follow the published retention schedule; statutory minimums cannot be shortened.</p>
+        <RetentionForm initial={retention.policy} pending={retention.pending} />
+      </Card>
+      </div>
 
       <div id="rota-pdf" className="mb-6">
       <Card>

@@ -1,3 +1,5 @@
+import { RetentionBanner } from "@/components/office/RetentionBanner";
+import { retentionPlan } from "@/lib/services/retention";
 import Link from "next/link";
 import { requireTenant } from "@/lib/tenant/require";
 import { ensureOnboarding, getStaffProfile } from "@/lib/services/hr";
@@ -43,6 +45,8 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
   const under18 = isUnder18(instructor.dateOfBirth);
   const age = ageOn(instructor.dateOfBirth);
   const contacts = await readProtectedContacts(repos, ctx, instructor);
+  const retention = left && !instructor.anonymisedAt ? await retentionPlan(repos, ctx, settings[0], new Date()) : null;
+  const scheduled = retention?.staffDue.find((x) => x.id === instructor.id) ?? null;
   const hasPermissionSlot = documents.some((d) => /parental permission/i.test(d.name));
   const docItems: DocItem[] = documents.map((d) => ({
     kind: d.kind, itemId: d.itemId, name: d.name, expiryDate: d.expiryDate, mandatory: d.mandatory, hasFile: d.hasFile, docKey: d.docKey, verified: d.verified,
@@ -61,6 +65,7 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
           {left ? null : fit.fit ? <StatusPill tone="covered">Fit to roster</StatusPill> : <StatusPill tone="conflict">{fitReason(fit) || "Not cleared"}</StatusPill>}
         </div>
       </div>
+      {scheduled ? <RetentionBanner instructorId={instructor.id} deleteOn={scheduled.deleteOn.toISOString()} months={retention!.policy.staffMonths} /> : null}
       <div className="mb-6"><EditInstructorForm instructor={{ id: instructor.id, name: instructor.name, email: instructor.email, phone: instructor.phone, employmentType: instructor.employmentType, status: instructor.status, dateOfBirth: instructor.dateOfBirth }} /></div>
 
       <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">

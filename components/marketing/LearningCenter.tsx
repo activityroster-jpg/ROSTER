@@ -521,6 +521,24 @@ const SECTIONS: Section[] = [
     ],
   },
   {
+    id: "retention",
+    icon: "🗓️",
+    label: "Data retention",
+    blurb: "How long records are kept, and the 14-day notice before anything goes.",
+    blocks: [
+      { kind: "p", text: "Office → Settings → Data retention sets how many months each kind of record is kept: former staff profiles, leave requests, availability, notifications, clock and payroll records, and the change log. The defaults follow our published retention schedule; statutory minimums (6 years for payroll, 3 for the change log) cannot be shortened." },
+      { kind: "sub", text: "What happens" },
+      { kind: "steps", items: [
+        "Once a day the system looks for records past their period.",
+        "Every admin is emailed a list of what will go, with 14 days' notice. Nothing has gone yet at that point.",
+        "A former staff member's profile shows the date and a “Keep for another N months” button, which restarts their clock.",
+        "When the 14 days are up, the records are removed. People are anonymised rather than deleted: roster and payroll history stays as “Former staff member”, everything identifying goes.",
+        "Each run is written to your change log, and re-applied automatically if the database is ever restored from a backup.",
+      ] },
+      { kind: "tip", text: "Need something kept longer for a legal reason, such as an incident report? Lengthen the period here and note why in your own records." },
+    ],
+  },
+  {
     id: "data",
     icon: "🛡️",
     label: "Data, privacy & export",

@@ -126,7 +126,7 @@ counts only, no content.
 | --- | --- | --- | --- |
 | Per-person search, export (JSON/CSV), correct, freeze, delete/anonymise | P0 | Done | Staff profile → Data & privacy (P1-A, 3 October): JSON/CSV export of everything held about one person, restrict processing (blocks rostering and notifications), anonymise with linked records removed and files deleted, `deletion_log` with replay after restores (`lib/services/person-data.ts`). Correction is the ordinary profile edit, audited. |
 | Deleted data ages out of backups; deletion log replayed after restore | P1 | Missing | No backups beyond Time Travel, no deletion log. |
-| Per-school retention settings and scheduled deletion | P1 | Missing | `eraseOrganisation` exists for whole-centre deletion only. |
+| Per-school retention settings and scheduled deletion | P1 | Done | Settings → Data retention per record type; daily sweep from the hourly tick; 14-day notice email; “Keep for another N months” on former staff; anonymisation for people; every run in the change log and deletion log, replayed after a restore (`lib/services/retention.ts`, P1-D). |
 | Consent records | P1 | Missing | |
 | Data minimisation review | P1 | Partial | Fields are already lean; `booking` table (customer name/email) is unused and should go. |
 | Privacy notices: in-app links, under-18 version, templates | P0 | Partial | Centres set their own notice URL in Settings; office and portal link it beside ours. Templates in `docs/templates/` (staff notice, under-18 version). A public page for the under-18 notice is Phase 2. |

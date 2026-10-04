@@ -456,6 +456,13 @@ export class ControlPlaneRepository {
   }
 
   /** Ghost Mode visits to one centre (owner-side log), newest first. */
+  /** Platform retention (docs/retention.md): old security events and trusted devices go after 12 months. */
+  async purgeSecurityData(cutoff: Date): Promise<{ events: number; devices: number }> {
+    const ev = await this.db.delete(securityEvent).where(lt(securityEvent.createdAt, cutoff)).returning({ id: securityEvent.id });
+    const dv = await this.db.delete(trustedDevice).where(lt(trustedDevice.lastSeenAt, cutoff)).returning({ id: trustedDevice.id });
+    return { events: ev.length, devices: dv.length };
+  }
+
   /** Sign-in and account events for a centre's members, for the centre's own change log. */
   async listSecurityEventsForOrg(organisationId: string, limit = 200) {
     return this.db

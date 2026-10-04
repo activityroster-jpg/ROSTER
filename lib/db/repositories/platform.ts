@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lt, lte, sql } from "drizzle-orm";
 import type { Database } from "@/lib/db/client";
 import {
   organisation,
@@ -21,6 +21,7 @@ import {
   outreachSuppression,
   aiUsage,
   privacyRequest,
+  errorReport,
   rulePack,
   emailOutbox,
   callAvailability,
@@ -601,6 +602,14 @@ export class PlatformRepository {
       ...(notes !== undefined ? { notes } : {}),
     }).where(eq(privacyRequest.id, id));
   }
+  // --- Platform retention (docs/retention.md) -----------------------------------
+  async purgeErrorReports(cutoff: Date): Promise<number> {
+    return (await this.db.delete(errorReport).where(lt(errorReport.createdAt, cutoff)).returning({ id: errorReport.id })).length;
+  }
+  async purgeClosedPrivacyRequests(cutoff: Date): Promise<number> {
+    return (await this.db.delete(privacyRequest).where(and(eq(privacyRequest.status, "closed"), lt(privacyRequest.closedAt, cutoff))).returning({ id: privacyRequest.id })).length;
+  }
+
   // --- Email outbox -----------------------------------------------------------
 
   async enqueueEmail(values: Omit<NewEmailOutbox, "id" | "createdAt" | "updatedAt">): Promise<EmailOutbox> {

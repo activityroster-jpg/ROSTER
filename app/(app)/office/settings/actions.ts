@@ -13,6 +13,7 @@ import {
 } from "@/lib/validation/entities";
 import type { TenantRepositories } from "@/lib/db/repositories";
 import { rotaTemplateSchema } from "@/lib/rota/template";
+import { parseRetention, RETENTION_DEFAULTS } from "@/lib/services/retention";
 
 export type ActionState = { ok: boolean; error?: string; message?: string };
 
@@ -278,4 +279,17 @@ export async function setRotaTemplateAction(input: unknown): Promise<ActionState
   revalidatePath("/office/settings");
   revalidatePath("/office/rota");
   return { ok: true, message: "Saved" };
+}
+
+/** Months to keep each kind of record (Settings → Data retention). Floors keep the statutory minimums. */
+export async function setRetentionAction(input: Record<string, number>): Promise<ActionState> {
+  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const policy = parseRetention(JSON.stringify({ ...RETENTION_DEFAULTS, ...input }));
+  const existing = (await repos.tenant.orgSettings.list(ctx))[0];
+  const retention = JSON.stringify(policy);
+  if (existing) await repos.tenant.orgSettings.update(ctx, existing.id, { retention });
+  else await repos.tenant.orgSettings.insert(ctx, { retention });
+  await writeAudit(repos, ctx, { action: "update_retention", entity: "org_settings", after: policy });
+  revalidatePath("/office/settings");
+  return { ok: true, message: "Retention periods saved" };
 }

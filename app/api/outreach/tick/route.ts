@@ -5,6 +5,7 @@ import { researchBatch, runDueSends } from "@/lib/outreach/engine";
 import { sendDailyDigests } from "@/lib/services/digest";
 import { sweepLeaving } from "@/lib/services/leaving";
 import { drainEmailQueue } from "@/lib/mail/queue";
+import { sweepRetention } from "@/lib/services/retention";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/security/rate-limit";
 import { checkCronSecret } from "@/lib/security/cron-secret";
 
@@ -33,7 +34,9 @@ async function tick(req: Request) {
   const leaving = await sweepLeaving(db, env).catch((e: Error) => ({ checked: 0, reminded: 0, due: 0, error: e.message }));
   // Email retries: anything that failed for a passing reason goes again with backoff.
   const mail = await drainEmailQueue(db, env).catch((e: Error) => ({ due: 0, sent: 0, failed: 0, purged: 0, error: e.message }));
-  return NextResponse.json({ ok: true, campaigns: running.length, research, sends, digests, leaving, mail });
+  // Data retention: one sweep per centre per day, with the 14-day notice first.
+  const retention = await sweepRetention(db, env).catch((e: Error) => ({ centres: 0, ran: 0, reminded: 0, platform: {}, error: e.message }));
+  return NextResponse.json({ ok: true, campaigns: running.length, research, sends, digests, leaving, mail, retention });
 }
 
 export async function POST(req: Request) { return tick(req); }

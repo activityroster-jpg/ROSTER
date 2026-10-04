@@ -198,7 +198,12 @@ export async function replayDeletions(repos: Repositories, ctx: AnyTenantContext
     const res = await anonymisePerson(repos, ctx, entry.subjectId, { replay: true });
     if (res.ok) reapplied++;
   }
-  if (reapplied) await writeAudit(repos, ctx, { action: "replay_deletions", entity: "instructor", after: { checked: log.length, reapplied } });
+  // Retention deletions are re-applied by running the sweep again with the same policy; it is idempotent.
+  const settings = (await repos.tenant.orgSettings.list(ctx))[0];
+  const { runRetention } = await import("./retention");
+  const removed = await runRetention(repos, ctx, settings, new Date());
+  const retentionRows = Object.values(removed).reduce((a, b) => a + b, 0);
+  if (reapplied || retentionRows) await writeAudit(repos, ctx, { action: "replay_deletions", entity: "instructor", after: { checked: log.length, reapplied, retentionRows } });
   return { checked: log.length, reapplied };
 }
 

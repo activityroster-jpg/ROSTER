@@ -144,6 +144,12 @@ export const orgSettings = sqliteTable("org_settings", {
   rotaTemplate: text("rota_template").notNull().default("{}"),
   /** Minutes of inactivity before an admin is asked for their PIN again (5–240). Applied from the next PIN entry. */
   idleTimeoutMinutes: integer("idle_timeout_minutes").notNull().default(30),
+  /** JSON RetentionPolicy (lib/services/retention): months to keep each kind of record. Empty = defaults. */
+  retention: text("retention").notNull().default("{}"),
+  /** When admins were last emailed the 14-day retention notice. */
+  retentionReminderAt: integer("retention_reminder_at", { mode: "timestamp_ms" }),
+  /** When the retention sweep last ran for this centre. */
+  retentionRanAt: integer("retention_ran_at", { mode: "timestamp_ms" }),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 }, (t) => [uniqueIndex("org_settings_org_uq").on(t.organisationId)]);
@@ -321,6 +327,8 @@ export const instructor = sqliteTable("instructor", {
   /** Restriction of processing (GDPR art. 18): kept but not rostered or contacted while set. */
   restrictedAt: integer("restricted_at", { mode: "timestamp_ms" }),
   restrictedReason: text("restricted_reason"),
+  /** When they were marked as having left. Starts the retention clock for their profile (Settings → Data retention). */
+  leftAt: integer("left_at", { mode: "timestamp_ms" }),
   /** Set when the person was anonymised; identifying fields are blank from then on and the record is kept only for roster and payroll history. */
   anonymisedAt: integer("anonymised_at", { mode: "timestamp_ms" }),
   createdAt: createdAt(),
@@ -734,7 +742,7 @@ export const onboardingItem = sqliteTable("onboarding_item", {
  * followed by a replay that removes the same people again. Holds no personal
  * data: a one-way hash of the identity and a summary of what went.
  */
-export const DELETION_SUBJECTS = ["instructor"] as const;
+export const DELETION_SUBJECTS = ["instructor", "retention"] as const;
 export const deletionLog = sqliteTable("deletion_log", {
   id: id(),
   organisationId: orgFk(),

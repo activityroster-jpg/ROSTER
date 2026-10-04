@@ -319,7 +319,7 @@ export async function setInstructorStatusAction(instructorId: string, status: "a
   if (status === "active" && inst.status !== "active" && (await instructorCapState(repos, ctx, organisation)).full) {
     return { ok: false, error: capUpgradeMessage(organisation) };
   }
-  await repos.tenant.instructor.update(ctx, instructorId, { status });
+  await repos.tenant.instructor.update(ctx, instructorId, { status, leftAt: status === "inactive" ? new Date() : null });
   if (inst.userId) await repos.control.setMembershipStatus(inst.userId, ctx.organisationId, status === "active" ? "active" : "suspended");
   await writeAudit(repos, ctx, { action: status === "inactive" ? "instructor_left" : "instructor_returned", entity: "instructor", entityId: instructorId });
   revalidatePath("/office/staff");
@@ -436,4 +436,15 @@ export async function anonymiseInstructorAction(instructorId: string, typedName:
   revalidatePath(`/office/staff/${instructorId}`);
   revalidatePath("/office/staff");
   return { ok: true, message: "Anonymised. Roster and payroll history stays, attached to “Former staff member”." };
+}
+
+/** "Keep for another N months": restarts the retention clock on a former staff member's profile. */
+export async function keepFormerStaffAction(instructorId: string): Promise<ActionState> {
+  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const i = await repos.tenant.instructor.findById(ctx, instructorId);
+  if (!i || i.status !== "inactive" || i.anonymisedAt) return { ok: false, error: "Only a former staff member's profile can be kept" };
+  await repos.tenant.instructor.update(ctx, instructorId, { leftAt: new Date() });
+  await writeAudit(repos, ctx, { action: "retention_keep", entity: "instructor", entityId: instructorId });
+  revalidatePath(`/office/staff/${instructorId}`);
+  return { ok: true, message: "Kept; the retention clock starts again from today" };
 }

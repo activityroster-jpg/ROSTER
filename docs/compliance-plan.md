@@ -169,9 +169,15 @@ Effort is a rough guide: S = under half a day, M = one to two days, L = a week o
   and a sole-trader flag (CSV columns "Sole trader" and "Basis"; toggles in the table). The
   outreach agent never emails a sole trader without consent (PECR). Migration 0051.
 
-### P1-D Retention
-- Retention settings per data type with scheduled deletion and 14-day reminders; the
-  deletion log replayed after restores (done in P1-A) extends to retention deletions.
+### P1-D Retention — built 4 October
+- Settings → Data retention: months per record type (former staff, leave, availability,
+  notifications, clock/payroll with a 6-year floor, change log with a 3-year floor). Daily
+  sweep per centre from the hourly tick; 14-day notice email to admins; "Keep for another N
+  months" on a former staff profile; anonymisation rather than deletion for people; every
+  run in the change log and deletion log; replay after a restore re-runs the sweep.
+- Platform side: security events and trusted devices after 12 months, error reports after
+  12 months, closed privacy requests after 3 years. Append-only triggers now allow deletion
+  only past those ages (migration 0053). Migration 0052 adds the columns and `left_at`.
 
 ### P1-E Vetting and reminders
 - App-level encryption of vetting status; remove certificate uploads for vetting types
