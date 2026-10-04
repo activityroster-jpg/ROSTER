@@ -263,7 +263,7 @@ export async function approveJoinRequestAction(instructorId: string): Promise<Ac
   await repos.tenant.instructor.update(ctx, inst.id, { status: "active" });
   if (inst.userId) await repos.control.setMembershipStatus(inst.userId, ctx.organisationId, "active");
   await writeAudit(repos, ctx, { action: "approve_join_request", entity: "instructor", entityId: inst.id, after: { email: inst.email } });
-  await notifyInstructor(repos, ctx, inst.id, { title: "You're in — your centre approved your request", body: "Open the ActivityRoster app to see your rota, set your availability and upload your certs.", email: true });
+  await notifyInstructor(repos, ctx, inst.id, { title: "You're in — your centre approved your request", body: "Open the ActivityRoster app to see your roster, set your availability and upload your certs.", email: true });
   revalidatePath("/office/staff");
   return { ok: true, message: `${inst.name} approved` };
 }
@@ -437,7 +437,7 @@ export async function anonymiseInstructorAction(instructorId: string, typedName:
   if (!res.ok) return { ok: false, error: res.reason };
   revalidatePath(`/office/staff/${instructorId}`);
   revalidatePath("/office/staff");
-  return { ok: true, message: "Anonymised. Rota and payroll history stays, attached to “Former staff member”." };
+  return { ok: true, message: "Anonymised. Roster and payroll history stays, attached to “Former staff member”." };
 }
 
 /** "Keep for another N months": restarts the retention clock on a former staff member's profile. */
@@ -482,7 +482,7 @@ export async function setMemberRoleAction(instructorId: string, role: string): P
   return { ok: true, message: "Role updated" };
 }
 
-/** Give an under-18's parent or guardian read-only access to their rota, recording the consent. */
+/** Give an under-18's parent or guardian read-only access to their roster, recording the consent. */
 export async function inviteGuardianAction(instructorId: string, consentNote: string): Promise<ActionState> {
   const { ctx, repos, organisation } = await requireTenant({ role: "admin" });
   const r = await inviteGuardian(repos, ctx, instructorId, (consentNote ?? "").trim().slice(0, 300));

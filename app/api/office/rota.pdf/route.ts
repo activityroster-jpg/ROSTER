@@ -12,7 +12,7 @@ function londonToday(): string {
 }
 
 /**
- * The rota as a real PDF. Uses the centre's saved template (Settings → Rota
+ * The roster as a real PDF. Uses the centre's saved template (Settings → Roster
  * PDF); `range` (day|week|month), `from` (YYYY-MM-DD) and `orientation` may
  * override it for one download. Admin only; each download is audited.
  */

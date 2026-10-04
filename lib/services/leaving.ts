@@ -48,7 +48,7 @@ export async function onOrganisationStatusChanged(db: Database, env: CloudflareE
     <p>Hello,</p>
     <p>This confirms that <strong>${escapeHtml(org.name)}</strong> on ActivityRoster is now <strong>${org.status}</strong>.</p>
     <p><strong>Your data stays available to export until ${fmt(deadline)}.</strong> Sign in and go to Settings → Export your data to download everything as a file: <a href="${exportUrl}">${exportUrl}</a>. The centre is read-only in the meantime.</p>
-    <p>After that date the centre and all its records (staff, courses, rotas, documents and the change log) are permanently deleted, and we will confirm by email when it is done. If you would like it deleted sooner, or you change your mind, reply to this email.</p>
+    <p>After that date the centre and all its records (staff, courses, rosters, documents and the change log) are permanently deleted, and we will confirm by email when it is done. If you would like it deleted sooner, or you change your mind, reply to this email.</p>
     <p>Thank you for using ActivityRoster.</p>`;
   const to = [...new Set([...admins, ...platformAdmins(env)])];
   await Promise.all(to.map((email) => sendEmail({ to: email, subject: `${org.name}: your data is available until ${fmt(deadline)}`, html }).catch(() => {})));

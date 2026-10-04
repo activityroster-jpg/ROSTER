@@ -189,7 +189,7 @@ Fifty metrics produce paralysis; six produce decisions. Choose a small set that 
 
 **Staff retention.** The proportion of last season's instructors who returned. Falling retention is an early warning of a culture, pay or workload problem, and recruitment costs make it a financial measure as well.
 
-**Compliance currency.** The number of instructors on the rota with any required document expiring within ninety days, and the number of sessions where ratios or safety cover were tight or short. These should be near zero; any rise is urgent.
+**Compliance currency.** The number of instructors on the roster with any required document expiring within ninety days, and the number of sessions where ratios or safety cover were tight or short. These should be near zero; any rise is urgent.
 
 **Incidents and near misses.** The count and the themes, with the proportion of near misses to incidents. Near-miss reports should rise as the culture improves; incidents should fall. Themes drive the risk assessment review.
 
@@ -359,7 +359,7 @@ Before growing, be precise about what customers value. It is rarely the fleet or
 
 ## Grow the systems before the numbers
 
-A centre that runs on the Principal's memory can handle thirty learners a week. At sixty, the memory fails and the quality with it. Before adding capacity, put the systems in place that let the quality survive without heroics: written standards for each course, a proper induction for every new instructor, a register that tracks qualifications, a rota that checks ratios and cover automatically, a booking system that cannot overbook, an incident log that is reviewed, a follow-up process that runs itself. Systems feel bureaucratic to a small centre and essential to a growing one. Build them a season before you need them.
+A centre that runs on the Principal's memory can handle thirty learners a week. At sixty, the memory fails and the quality with it. Before adding capacity, put the systems in place that let the quality survive without heroics: written standards for each course, a proper induction for every new instructor, a register that tracks qualifications, a roster that checks ratios and cover automatically, a booking system that cannot overbook, an incident log that is reviewed, a follow-up process that runs itself. Systems feel bureaucratic to a small centre and essential to a growing one. Build them a season before you need them.
 
 ## Grow people deliberately
 
@@ -487,7 +487,7 @@ Junior feedback is gold and rarely gathered. A quick, playful end-of-session que
 
 ## Ask the team
 
-Instructors see every session and every learner. A short weekly conversation about what went well and what did not, an honest mid-season review, and a proper exit conversation at the end of the season produce insight no customer survey can. Ask what customers said to them, what frustrated them, what equipment or procedure needs fixing, what they would change about the rota. Make it safe to say the uncomfortable thing.
+Instructors see every session and every learner. A short weekly conversation about what went well and what did not, an honest mid-season review, and a proper exit conversation at the end of the season produce insight no customer survey can. Ask what customers said to them, what frustrated them, what equipment or procedure needs fixing, what they would change about the roster. Make it safe to say the uncomfortable thing.
 
 ## Read the reviews as feedback
 
@@ -657,7 +657,7 @@ The instinct is to explain or defend. Resist it. Let the person tell the whole s
 
 ## Find out what actually happened
 
-Speak to the staff involved and anyone who witnessed it. Check the records: the booking, the rota, the session notes, the incident log, the weather. Form a fair view. Sometimes the complaint is entirely justified, sometimes partly, and sometimes it rests on a misunderstanding or an unreasonable expectation. The response depends on which, but in all cases the investigation should be prompt and even-handed, and the staff involved should be treated fairly.
+Speak to the staff involved and anyone who witnessed it. Check the records: the booking, the roster, the session notes, the incident log, the weather. Form a fair view. Sometimes the complaint is entirely justified, sometimes partly, and sometimes it rests on a misunderstanding or an unreasonable expectation. The response depends on which, but in all cases the investigation should be prompt and even-handed, and the staff involved should be treated fairly.
 
 ## Apologise properly where it is due
 

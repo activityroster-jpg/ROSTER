@@ -105,7 +105,7 @@ Most tools let you write a post or an email now and set it to go out later. Use 
 
 ## Assign owners
 
-Each slot needs a person. The office owns the newsletter; the Chief Instructor owns the fortnightly article; instructors on a rota own the week's photographs; the Principal owns the season launch. Written on the calendar, these are commitments; unwritten, they are hopes.
+Each slot needs a person. The office owns the newsletter; the Chief Instructor owns the fortnightly article; instructors on a roster own the week's photographs; the Principal owns the season launch. Written on the calendar, these are commitments; unwritten, they are hopes.
 
 ## Leave room for the real moments
 
@@ -263,7 +263,7 @@ A stranger should be able to find the right course, see the dates and price, boo
     tags: ["data", "decisions", "management"],
     coverEmoji: "📊",
     imageQuery: "manager reviewing charts on tablet by harbour",
-    body: `Every booking, cancellation, session, rota change, hour worked, incident, review and payment at a centre is a piece of data. Most of it is recorded somewhere and almost none of it is used to make decisions. Programmes are set by habit, prices by guess, staffing by instinct and marketing by whoever shouts loudest at the committee meeting. Yet the data to make those decisions well already exists in most centres' systems; it only needs to be looked at. This article covers how to turn the data a centre already has into decisions that grow it.
+    body: `Every booking, cancellation, session, roster change, hour worked, incident, review and payment at a centre is a piece of data. Most of it is recorded somewhere and almost none of it is used to make decisions. Programmes are set by habit, prices by guess, staffing by instinct and marketing by whoever shouts loudest at the committee meeting. Yet the data to make those decisions well already exists in most centres' systems; it only needs to be looked at. This article covers how to turn the data a centre already has into decisions that grow it.
 
 ## Start with the decisions, not the data
 
@@ -279,7 +279,7 @@ The data: fill rate and speed of filling by course at the current price, margin 
 
 ## How many staff, and when
 
-The data: bookings by week against instructors rostered, hours worked against hours needed by the ratios, the sessions that ran tight or short, the sickness pattern, the proportion of staff who returned. The decisions: how many to recruit, which weeks need more, which qualifications are short, whether the standby arrangement is adequate, whether the pay and conditions are keeping people. A rota and time system that records the actual against the plan produces most of this without extra work.
+The data: bookings by week against instructors rostered, hours worked against hours needed by the ratios, the sessions that ran tight or short, the sickness pattern, the proportion of staff who returned. The decisions: how many to recruit, which weeks need more, which qualifications are short, whether the standby arrangement is adequate, whether the pay and conditions are keeping people. A roster and time system that records the actual against the plan produces most of this without extra work.
 
 ## Where to market
 
@@ -391,7 +391,7 @@ A site that is maintained on a short routine shows this season's dates, prices, 
     tags: ["automation", "efficiency", "operations"],
     coverEmoji: "🤖",
     imageQuery: "automation gears robot arm abstract technology office",
-    body: `Every Principal has a list of jobs they dread: the reminder emails, the certificate chasing, the balance payments, the follow-ups after each course, the rota notifications, the weather messages to forty parents, the hours reconciliation, the end-of-month report. They are not difficult. They are repetitive, time-consuming and easy to forget, which is exactly what makes them candidates for automation. A centre that automates the routine frees hours a week for the work that needs a person. This article covers where to start and how to do it without creating new problems.
+    body: `Every Principal has a list of jobs they dread: the reminder emails, the certificate chasing, the balance payments, the follow-ups after each course, the roster notifications, the weather messages to forty parents, the hours reconciliation, the end-of-month report. They are not difficult. They are repetitive, time-consuming and easy to forget, which is exactly what makes them candidates for automation. A centre that automates the routine frees hours a week for the work that needs a person. This article covers where to start and how to do it without creating new problems.
 
 ## Find the repetitive
 
@@ -406,15 +406,15 @@ The largest and easiest win is communication that follows a rule:
 - A request for the balance a set number of days before the course, and a reminder if it is not paid.
 - A follow-up the evening a course ends, with the photographs, the next step and the review link.
 - A nudge a few weeks later to those who have not booked the next step.
-- A notification to an instructor when their rota changes.
+- A notification to an instructor when their roster changes.
 - A warning to an instructor and the Chief Instructor when a certificate is ninety days from expiry.
 - A message to the parents of a specific group when the weather decision is made.
 
-Each is written once, triggered automatically by the booking, rota or staff system, and sent to the right people at the right moment, every time, without anyone remembering. The office then deals with replies rather than sending.
+Each is written once, triggered automatically by the booking, roster or staff system, and sent to the right people at the right moment, every time, without anyone remembering. The office then deals with replies rather than sending.
 
 ## Then the copying
 
-Information typed from one system into another is pure waste. The booking that is entered into the register, the register copied into the rota, the hours typed into payroll, the payments reconciled by hand. Connect the systems so that the information flows: a booking creates the place on the session, the rota records the hours, the hours export to payroll, the payments import to the accounts. Where systems cannot connect, an import replaces the retyping.
+Information typed from one system into another is pure waste. The booking that is entered into the register, the register copied into the roster, the hours typed into payroll, the payments reconciled by hand. Connect the systems so that the information flows: a booking creates the place on the session, the roster records the hours, the hours export to payroll, the payments import to the accounts. Where systems cannot connect, an import replaces the retyping.
 
 ## Then the checks
 
@@ -438,7 +438,7 @@ Automated does not mean robotic. Write each message in the centre's voice, from 
 
 ## Test before trusting
 
-Set each automation up, then book a test course, change a test rota, let a test certificate approach expiry, and check that the right message goes to the right person at the right time with the right content. Then watch the first real week. Automations that fire wrongly, twice, or not at all are worse than none; a half hour of testing prevents most of it.
+Set each automation up, then book a test course, change a test roster, let a test certificate approach expiry, and check that the right message goes to the right person at the right time with the right content. Then watch the first real week. Automations that fire wrongly, twice, or not at all are worse than none; a half hour of testing prevents most of it.
 
 ## Keep a map
 
@@ -460,27 +460,27 @@ After a season, compare the office hours spent on the automated tasks with the f
     tags: ["systems", "efficiency", "operations"],
     coverEmoji: "🧷",
     imageQuery: "tangled cables versus single clean cable minimalism",
-    body: `Most centres run on a collection of tools that arrived one at a time: a booking system chosen years ago, a rota app someone recommended, a spreadsheet for certificates, a messaging group, a separate newsletter tool, a payroll service, a shared drive, a card machine and a paper accident book. Each does its job. Together they produce the same name typed six times, information that disagrees, gaps between them where things fall, and an office that spends its week as the human glue. The case for consolidating into one system, or a very small number that genuinely connect, is not about tidiness. It is about the mistakes the gaps cause and the hours the glue costs. This article makes it.
+    body: `Most centres run on a collection of tools that arrived one at a time: a booking system chosen years ago, a roster app someone recommended, a spreadsheet for certificates, a messaging group, a separate newsletter tool, a payroll service, a shared drive, a card machine and a paper accident book. Each does its job. Together they produce the same name typed six times, information that disagrees, gaps between them where things fall, and an office that spends its week as the human glue. The case for consolidating into one system, or a very small number that genuinely connect, is not about tidiness. It is about the mistakes the gaps cause and the hours the glue costs. This article makes it.
 
 ## The gaps are where the problems live
 
-Trace the serious operational failures at a centre and they are almost always at a boundary between tools. The booking that went up to seven learners in the booking system while the rota, in another tool, still staffed for five. The instructor whose certificate lapsed in the spreadsheet while the rota app happily assigned them. The hours confirmed in a message that never made it to payroll. The medical note in the booking system that the instructor, looking at the rota app, never saw. Each tool was correct; the failure was between them, and nobody owned the between.
+Trace the serious operational failures at a centre and they are almost always at a boundary between tools. The booking that went up to seven learners in the booking system while the roster, in another tool, still staffed for five. The instructor whose certificate lapsed in the spreadsheet while the roster app happily assigned them. The hours confirmed in a message that never made it to payroll. The medical note in the booking system that the instructor, looking at the roster app, never saw. Each tool was correct; the failure was between them, and nobody owned the between.
 
 ## The glue is expensive
 
-Every boundary needs a person to carry information across it. The office retypes bookings into the register, updates the certificate spreadsheet from emails, reconciles messages into hours, copies hours into payroll, matches payments to bookings, and tells instructors what the rota says. That is most of the office's week, and it is work that produces nothing except the information that already existed somewhere else. The Principal doing it in the evening is the hidden cost of ten tools.
+Every boundary needs a person to carry information across it. The office retypes bookings into the register, updates the certificate spreadsheet from emails, reconciles messages into hours, copies hours into payroll, matches payments to bookings, and tells instructors what the roster says. That is most of the office's week, and it is work that produces nothing except the information that already existed somewhere else. The Principal doing it in the evening is the hidden cost of ten tools.
 
 ## Truth lives in one place, or nowhere
 
-When the same fact is held in several tools, it will differ. Which is the instructor's real first aid date: the spreadsheet, the rota app's profile, or the scan in the drive? Which is the real session time: the booking page, the rota, or the message? Confusion about the truth is the daily condition of a fragmented setup, and the people who suffer it most are the instructors on the slipway and the parents at the gate.
+When the same fact is held in several tools, it will differ. Which is the instructor's real first aid date: the spreadsheet, the roster app's profile, or the scan in the drive? Which is the real session time: the booking page, the roster, or the message? Confusion about the truth is the daily condition of a fragmented setup, and the people who suffer it most are the instructors on the slipway and the parents at the gate.
 
 ## What a connected system does
 
-In a system where the booking, the session, the rota, the staff record, the qualifications, the hours, the communications and the records are one thing, the connections happen by themselves. A booking changes the session's numbers, which changes the staffing the rota expects. A certificate near expiry prevents the assignment. The rota records the hours. The hours become the pay. The session shows the instructor the group's needs. The weather message goes to the right parents. The compliance record exists because the day happened. Nobody carries anything across a boundary, because there is no boundary.
+In a system where the booking, the session, the roster, the staff record, the qualifications, the hours, the communications and the records are one thing, the connections happen by themselves. A booking changes the session's numbers, which changes the staffing the roster expects. A certificate near expiry prevents the assignment. The roster records the hours. The hours become the pay. The session shows the instructor the group's needs. The weather message goes to the right parents. The compliance record exists because the day happened. Nobody carries anything across a boundary, because there is no boundary.
 
 ## The objections
 
-"We like our booking system." Fair, and the question is whether it connects properly to the rota and the records, or whether it is an island. Genuine integration, where a booking appears in the rota without anyone touching it, can be enough. An export that someone imports weekly is not.
+"We like our booking system." Fair, and the question is whether it connects properly to the roster and the records, or whether it is an island. Genuine integration, where a booking appears in the roster without anyone touching it, can be enough. An export that someone imports weekly is not.
 
 "One system means one point of failure." True, and ten systems mean ten points of failure plus the gaps between them. Choose a system with good reliability, backups and support, and the single point is a stronger one.
 
@@ -490,7 +490,7 @@ In a system where the booking, the session, the rota, the staff record, the qual
 
 ## How to consolidate
 
-Do not attempt it in June. In the quiet season, list the tools, what each does and where they touch. Decide the core: for most centres, the sessions, the rota, the staff and their qualifications, the hours and the records belong together; bookings and payments should either be part of the same system or integrate with it seamlessly. Choose a system built for watersports centres that holds that core and works on a phone. Import the season, run in parallel for a fortnight, switch, and retire the old tools so that nobody drifts back.
+Do not attempt it in June. In the quiet season, list the tools, what each does and where they touch. Decide the core: for most centres, the sessions, the roster, the staff and their qualifications, the hours and the records belong together; bookings and payments should either be part of the same system or integrate with it seamlessly. Choose a system built for watersports centres that holds that core and works on a phone. Import the season, run in parallel for a fortnight, switch, and retire the old tools so that nobody drifts back.
 
 ## Retire properly
 
@@ -502,7 +502,7 @@ Consolidation does not mean one tool for everything. The accounting package, the
 
 ## The result
 
-A centre on one connected system has an office that deals with people rather than with copying, a rota that cannot assign an unqualified instructor or over-book a course, instructors who see everything they need in one place on their phone, compliance records that exist by default, and a Principal who knows that the booking, the rota and the hours agree because they are the same thing. That is the case, and the centres that have made the move describe it less as a technology change than as the day the operation became calm.`,
+A centre on one connected system has an office that deals with people rather than with copying, a roster that cannot assign an unqualified instructor or over-book a course, instructors who see everything they need in one place on their phone, compliance records that exist by default, and a Principal who knows that the booking, the roster and the hours agree because they are the same thing. That is the case, and the centres that have made the move describe it less as a technology change than as the day the operation became calm.`,
   },
   {
     slug: "mobile-first-why-your-instructors-need-an-app",
@@ -512,7 +512,7 @@ A centre on one connected system has an office that deals with people rather tha
     tags: ["mobile", "instructors", "digital"],
     coverEmoji: "📲",
     imageQuery: "instructor using smartphone on rib boat at sea",
-    body: `Instructors do not sit at desks. They are on the slipway at eight, in a safety boat at ten, on the pontoon at lunch and derigging at five. The office computer is somewhere they visit to hand in a form. Yet most of the information an instructor needs during the day, their rota, their group, the medical notes, the briefing cards, the emergency numbers, the way to report a near miss or confirm their hours, lives on that computer or in the office's head. Putting it in their pocket changes how a centre runs. This article is about why mobile access matters and what it should do.
+    body: `Instructors do not sit at desks. They are on the slipway at eight, in a safety boat at ten, on the pontoon at lunch and derigging at five. The office computer is somewhere they visit to hand in a form. Yet most of the information an instructor needs during the day, their roster, their group, the medical notes, the briefing cards, the emergency numbers, the way to report a near miss or confirm their hours, lives on that computer or in the office's head. Putting it in their pocket changes how a centre runs. This article is about why mobile access matters and what it should do.
 
 ## The day happens outdoors
 
@@ -520,7 +520,7 @@ An instructor at the water needs to know, now, which group they have next, where
 
 ## What good mobile access does
 
-- **Shows each person their own rota**, up to date, with changes notified: today, this week, the sessions, the times, the places, the co-workers, the boats.
+- **Shows each person their own roster**, up to date, with changes notified: today, this week, the sessions, the times, the places, the co-workers, the boats.
 - **Shows the group**: who is in it, their level and history, the medical and additional needs, consent for photographs.
 - **Lets them confirm attendance and progress** at the end of the session, so the logbook and the records are filled in while it is fresh.
 - **Lets them confirm their hours** daily with a tap, so pay is right and the arguments stop.
@@ -532,7 +532,7 @@ An instructor at the water needs to know, now, which group they have next, where
 
 ## What it does for the centre
 
-A team with this on their phones produces, as a by-product of their day, the records the centre needs: who worked, for how long, with which group, what was taught, what went wrong. The office stops being the human interface between the computer and the slipway. The Chief Instructor can see from the water where every group is up to. Near-miss reports multiply because reporting takes thirty seconds. Certificates do not lapse because the person is reminded. Rota changes reach the people they affect within a minute. The compliance file writes itself.
+A team with this on their phones produces, as a by-product of their day, the records the centre needs: who worked, for how long, with which group, what was taught, what went wrong. The office stops being the human interface between the computer and the slipway. The Chief Instructor can see from the water where every group is up to. Near-miss reports multiply because reporting takes thirty seconds. Certificates do not lapse because the person is reminded. Roster changes reach the people they affect within a minute. The compliance file writes itself.
 
 ## Why a web app is usually enough
 
@@ -548,23 +548,23 @@ Instructors' phones holding children's medical information is a data protection 
 
 ## Communication without the chaos
 
-A mobile system that delivers each message to the people it concerns, keeps the record, and separates work from personal messaging replaces the group chats that mix the rota, the banter and the occasional sensitive detail. It also gives the centre a proper channel for communications about young people that complies with the safeguarding policy, instead of instructors' personal accounts.
+A mobile system that delivers each message to the people it concerns, keeps the record, and separates work from personal messaging replaces the group chats that mix the roster, the banter and the occasional sensitive detail. It also gives the centre a proper channel for communications about young people that complies with the safeguarding policy, instead of instructors' personal accounts.
 
 ## Bring the volunteers in
 
-Volunteer safety boat drivers, assistants and helpers need the same access as paid staff: their rota, the briefing, the emergency plan, the way to report. Mobile access that includes them makes them part of the team's information rather than its afterthought.
+Volunteer safety boat drivers, assistants and helpers need the same access as paid staff: their roster, the briefing, the emergency plan, the way to report. Mobile access that includes them makes them part of the team's information rather than its afterthought.
 
 ## Introduce it properly
 
-Show the system on a phone at induction, with each person logging in and finding their rota, their group and the near-miss form. Explain what it does for them: accurate pay, early notice of the rota, no more guessing about the group. Ask for feedback after a fortnight and fix what is awkward. Make sure the senior team uses it visibly; a Chief Instructor who still runs on paper tells everyone the app is optional.
+Show the system on a phone at induction, with each person logging in and finding their roster, their group and the near-miss form. Explain what it does for them: accurate pay, early notice of the roster, no more guessing about the group. Ask for feedback after a fortnight and fix what is awkward. Make sure the senior team uses it visibly; a Chief Instructor who still runs on paper tells everyone the app is optional.
 
 ## Measure the difference
 
-Compare, after a season: rota questions to the office, pay queries, near-miss reports, certificate lapses, time to notify a change, hours spent on admin by the office. Centres that have moved their teams onto a phone-first system report large falls in the first four and a large rise in near-miss reporting, which is the sign that information is finally flowing in both directions.
+Compare, after a season: roster questions to the office, pay queries, near-miss reports, certificate lapses, time to notify a change, hours spent on admin by the office. Centres that have moved their teams onto a phone-first system report large falls in the first four and a large rise in near-miss reporting, which is the sign that information is finally flowing in both directions.
 
 ## The point
 
-A centre's most important information is needed by people who are outdoors, busy and wet. Putting it in their pocket, in a form built for that, is not a technology luxury. It is how the rota, the records, the safety system and the pay become accurate, and how the office gets its week back.`,
+A centre's most important information is needed by people who are outdoors, busy and wet. Putting it in their pocket, in a form built for that, is not a technology luxury. It is how the roster, the records, the safety system and the pay become accurate, and how the office gets its week back.`,
   },
   {
     slug: "building-trust-with-nervous-first-timers-online",
@@ -780,7 +780,7 @@ Walk the site with the operating procedures, the risk assessments and the emerge
 
 ## Day two: meet the people
 
-Meet every member of staff and as many volunteers as you can, individually where possible. Ask three questions: what is working, what is not, and what would you change. Listen more than you talk. Ask the office how bookings, payments, the rota and the records are done, and watch them do it. Ask the Chief Instructor and the Senior Instructors how the teaching is standardised and how the launch decision is made. Ask the Welfare Officer how safeguarding works. Ask the bosun about the fleet. Meet the committee or owners and agree how you will report to them. Write down what you hear; the themes will repeat and they are your priorities.
+Meet every member of staff and as many volunteers as you can, individually where possible. Ask three questions: what is working, what is not, and what would you change. Listen more than you talk. Ask the office how bookings, payments, the roster and the records are done, and watch them do it. Ask the Chief Instructor and the Senior Instructors how the teaching is standardised and how the launch decision is made. Ask the Welfare Officer how safeguarding works. Ask the bosun about the fleet. Meet the committee or owners and agree how you will report to them. Write down what you hear; the themes will repeat and they are your priorities.
 
 ## Day two: find the money
 
@@ -788,7 +788,7 @@ Find out the cash position today, what is due in and out over the next three mon
 
 ## Day three: look at the data and the records
 
-Open the booking system, the rota, the staff records, the fleet register, the incident log and the course records. Assess honestly: are they complete, current, in one place and usable? Where are the gaps? What personal data is held, where and how securely? You are now responsible for all of it under data protection law; find out what you have inherited. Read the last inspection report and the last year's incident log; they tell you what the centre's real risks and habits are.
+Open the booking system, the roster, the staff records, the fleet register, the incident log and the course records. Assess honestly: are they complete, current, in one place and usable? Where are the gaps? What personal data is held, where and how securely? You are now responsible for all of it under data protection law; find out what you have inherited. Read the last inspection report and the last year's incident log; they tell you what the centre's real risks and habits are.
 
 ## Day three: check the compliance calendar
 
@@ -800,7 +800,7 @@ Book a course on the website as a stranger, on a phone. Ring the office. Read th
 
 ## Day four: decide what you will not change yet
 
-New managers damage centres by changing things they do not yet understand. Resist it. Procedures that seem odd may exist for a local reason; a rota pattern that looks unfair may be the result of a negotiation you do not know about. Note what you want to change, ask why it is as it is, and change only the things that are unsafe, illegal or losing money now. The rest can wait a month while you learn.
+New managers damage centres by changing things they do not yet understand. Resist it. Procedures that seem odd may exist for a local reason; a roster pattern that looks unfair may be the result of a negotiation you do not know about. Note what you want to change, ask why it is as it is, and change only the things that are unsafe, illegal or losing money now. The rest can wait a month while you learn.
 
 ## Day five: set the rhythm
 
@@ -888,7 +888,7 @@ A list that is easy to join, clearly explained, fairly ordered, offered automati
     tags: ["journey", "retention", "strategy"],
     coverEmoji: "⛵",
     imageQuery: "sailor at sunset on dinghy looking to horizon lifelong",
-    body: `Everything a centre does, the recognition, the procedures, the fleet, the rota, the marketing, the website, the follow-up email, exists for one outcome: a person who was curious becomes a person who sails, and keeps sailing, for years. Each article in this series has looked at a piece. This one looks at the whole: the journey from a first taster to a lifelong sailor, the moments where it is won or lost, and how the pieces fit together into a centre that produces sailors rather than sells courses.
+    body: `Everything a centre does, the recognition, the procedures, the fleet, the roster, the marketing, the website, the follow-up email, exists for one outcome: a person who was curious becomes a person who sails, and keeps sailing, for years. Each article in this series has looked at a piece. This one looks at the whole: the journey from a first taster to a lifelong sailor, the moments where it is won or lost, and how the pieces fit together into a centre that produces sailors rather than sells courses.
 
 ## The journey has stages
 
@@ -928,7 +928,7 @@ The lifelong sailor brings others: their children to the junior programme, their
 
 ## How the pieces fit
 
-Seen this way, the parts of a centre are not separate functions. Marketing creates curiosity and converts enquiry. The website and the booking path remove friction. The taster converts. The teaching standard, the procedures and the safety culture make the courses excellent and consistent. The follow-up and the progression carry people across the gaps. The club and the events create belonging. The rota, the qualifications register and the systems make all of this reliable season after season, whoever is on the team. The Principal's job is to keep the whole journey in view and to find the stage where people are being lost this year.
+Seen this way, the parts of a centre are not separate functions. Marketing creates curiosity and converts enquiry. The website and the booking path remove friction. The taster converts. The teaching standard, the procedures and the safety culture make the courses excellent and consistent. The follow-up and the progression carry people across the gaps. The club and the events create belonging. The roster, the qualifications register and the systems make all of this reliable season after season, whoever is on the team. The Principal's job is to keep the whole journey in view and to find the stage where people are being lost this year.
 
 ## Measure the journey
 

@@ -22,7 +22,7 @@ const ACTION: Record<string, string> = {
   setup_instructor: "Added", invite_instructor: "Invited", instructor_left: "Marked as left", instructor_returned: "Brought back",
   approve_join_request: "Approved a join request from", decline_join_request: "Declined a join request from", app_join: "Joined via the app:", app_join_requested: "Asked to join via the app:",
   set_pay_rate: "Set a pay rate", update_pay_rate: "Changed a pay rate", delete_pay_rate: "Removed a pay rate",
-  payroll_line_edit: "Edited", payroll_approve: "Approved payroll lines", payroll_unapprove: "Re-opened payroll lines", payroll_rebuild: "Refreshed payroll from the rota", set_pay_source: "Changed what payroll pays on",
+  payroll_line_edit: "Edited", payroll_approve: "Approved payroll lines", payroll_unapprove: "Re-opened payroll lines", payroll_rebuild: "Refreshed payroll from the roster", set_pay_source: "Changed what payroll pays on",
   update_breaks: "Changed the lunch-break rule", update_timeclock: "Changed the time clock settings", regenerate_join_code: "Issued a new company code", enable_feature: "Switched on a feature",
   onboarding_set_preferences: "Chose how the centre runs", onboarding_set_courses: "Chose the courses the centre runs", onboarding_toggle: "Ticked an onboarding step for",
   add_default_grades: "Added the RYA cert types", add_default_courses: "Added the RYA courses", update_schedule: "Set the default schedule for", list: "Added to the course list:", unlist: "Removed from the course list:", merge: "Merged",
@@ -30,11 +30,11 @@ const ACTION: Record<string, string> = {
   open_shift_create: "Broadcast an open shift", open_shift_claim: "Offered to cover an open shift", open_shift_confirm: "Confirmed cover for an open shift", open_shift_cancel: "Cancelled an open shift",
   data_export: "Downloaded a full export of", update_protected_contacts: "Updated the emergency or guardian contacts of", view_emergency_sheet: "Opened the emergency sheet for", view_protected_contacts: "Viewed the emergency or guardian contacts of", clock_in: "Clocked in", clock_out: "Clocked out", set_availability: "Changed availability", attach_document: "Uploaded a document for", update_document_meta: "Updated the details of",
   self_add_licence: "Added a cert to their own record", self_add_licence_type: "Added a new cert type", integration_connect: "Connected", integration_remove: "Disconnected", integration_sync: "Checked", integration_apply_changes: "Applied changes from",
-  booking_create: "Added a booking", booking_status: "Changed a booking", publish_week: "Published the rota for", republish_week: "Re-published the rota for", confirm_assignment: "Confirmed their place on", decline_assignment: "Declined their place on",
+  booking_create: "Added a booking", booking_status: "Changed a booking", publish_week: "Published the roster for", republish_week: "Re-published the roster for", confirm_assignment: "Confirmed their place on", decline_assignment: "Declined their place on",
   export_person: "Downloaded a copy of the data held about", restrict_instructor: "Restricted processing for", unrestrict_instructor: "Lifted the processing restriction on", anonymise_instructor: "Anonymised", replay_deletions: "Re-applied past anonymisations after a restore to",
-  export_audit_log: "Downloaded the change log for", export_rota_pdf: "Downloaded a rota PDF for", view_young_worker_register: "Downloaded the young-worker time register for",
+  export_audit_log: "Downloaded the change log for", export_rota_pdf: "Downloaded a roster PDF for", view_young_worker_register: "Downloaded the young-worker time register for",
   retention_run: "Removed records past their retention period from", retention_keep: "Kept the profile of", update_retention: "Changed the retention periods of", vetting_files_removed: "Removed stored vetting certificates (status-only policy) for",
-  set_member_role: "Changed the role of", invite_guardian: "Invited a parent or guardian to view the rota of", revoke_guardian: "Removed a parent or guardian's access to the rota of", set_share_contact: "Changed whether colleagues can see the contact details of",
+  set_member_role: "Changed the role of", invite_guardian: "Invited a parent or guardian to view the roster of", revoke_guardian: "Removed a parent or guardian's access to the roster of", set_share_contact: "Changed whether colleagues can see the contact details of",
   set_students: "Set the number of students on", restore_defaults: "Restored the RYA course list", set_notify_email: "Changed email notifications for", update_profile: "Updated the details of",
 };
 

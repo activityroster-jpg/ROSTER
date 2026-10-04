@@ -7,7 +7,7 @@ import { publishWeekAction } from "@/app/(app)/office/rota/actions";
 const fmt = (iso: string) => new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" });
 
 /**
- * Publish state for one week of the rota. Draft weeks are invisible to
+ * Publish state for one week of the roster. Draft weeks are invisible to
  * instructors; publishing shows them the week and asks them to confirm.
  */
 export function PublishWeek({ weekStart, publishedAt, sessions, assigned, confirmed, declined }: {

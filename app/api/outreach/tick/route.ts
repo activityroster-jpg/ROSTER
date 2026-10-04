@@ -28,7 +28,7 @@ async function tick(req: Request) {
   const research: Record<string, { researched: number; queued: number; noEmail: number }> = {};
   for (const c of running) research[c.id] = await researchBatch(db, env, c.id, 10);
   const sends = await runDueSends(db, env, { limit: 25 });
-  // Centre-side jobs ride the same heartbeat: the opt-in morning rota digest.
+  // Centre-side jobs ride the same heartbeat: the opt-in morning roster digest.
   const digests = await sendDailyDigests(db, env).catch((e: Error) => ({ checked: 0, sent: 0, skipped: 0, error: e.message }));
   // Leaving centres: 14-day reminder and the "ready to erase" note to the owner.
   const leaving = await sweepLeaving(db, env).catch((e: Error) => ({ checked: 0, reminded: 0, due: 0, error: e.message }));

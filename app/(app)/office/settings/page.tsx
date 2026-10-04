@@ -96,10 +96,10 @@ export default async function SettingsPage() {
       <div id="rota-pdf" className="mb-6">
       <Card>
         <div className="mb-1 flex items-center justify-between">
-          <h2 className="font-semibold text-navy">Rota PDF</h2>
-          <a href="/learn?topic=rota" target="_blank" rel="noreferrer" className="text-xs font-medium text-teal hover:underline">📖 Read the guide</a>
+          <h2 className="font-semibold text-navy">Roster PDF</h2>
+          <a href="/learn?topic=roster" target="_blank" rel="noreferrer" className="text-xs font-medium text-teal hover:underline">📖 Read the guide</a>
         </div>
-        <p className="mb-3 text-xs text-slate-500">What the downloaded rota shows and how it is laid out. You chose this when you set up; change it here any time.</p>
+        <p className="mb-3 text-xs text-slate-500">What the downloaded roster shows and how it is laid out. You chose this when you set up; change it here any time.</p>
         <RotaTemplateForm initial={parseRotaTemplate(s?.rotaTemplate)} />
       </Card>
       </div>
@@ -115,7 +115,7 @@ export default async function SettingsPage() {
         </Card>
         <Card>
           <h2 className="mb-1 font-semibold text-navy">Time clock &amp; pay</h2>
-          <p className="mb-3 text-xs text-slate-500">Hours always come from the rota. Turn the clock on if you also want instructors to clock in and out from the app.</p>
+          <p className="mb-3 text-xs text-slate-500">Hours always come from the roster. Turn the clock on if you also want instructors to clock in and out from the app.</p>
           <TimeclockSettingsForm timeclockEnabled={Boolean(s?.timeclockEnabled)} paySource={(s?.paySource ?? "roster") as "roster" | "clock"} />
         </Card>
         <Card>

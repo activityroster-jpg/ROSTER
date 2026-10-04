@@ -68,12 +68,12 @@ export function LetterSheet({ p }: { p: MarketingProspect }) {
           youth and adult courses while automatically checking RYA ratios, safety-boat cover and each
           instructor&apos;s qualifications and tickets; tracking DBS, first aid and safeguarding expiry; letting
           staff submit availability, log hours and request leave from their phone; and producing a clean weekly
-          rota you can print or share in seconds.
+          roster you can print or share in seconds.
         </p>
         <p style={{ marginTop: "4mm" }}>
           No two centres are run quite the same way, so ActivityRoster is built to be shaped around you — we&apos;re
           happy to tailor it to how {p.name} actually works, from your own course types and qualification rules to
-          the way your rota and reports look. If there&apos;s something specific you need, just ask.
+          the way your roster and reports look. If there&apos;s something specific you need, just ask.
         </p>
         <p style={{ marginTop: "4mm" }}>
           Centres are up and running in a weekend — you can even import your existing courses straight from a

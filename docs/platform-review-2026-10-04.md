@@ -155,7 +155,7 @@ lead to the next step.
   are slow with a screen reader. A list view for assistive technology is the one
   accessibility item of substance left; listed on the statement.
 - *Roster download* now defaults to one day; centres that liked the week as default can
-  change it under Settings → Rota PDF (their saved choice is respected; only brand-new
+  change it under Settings → Roster PDF (their saved choice is respected; only brand-new
   centres get the day).
 
 ## 6. Decisions for Conor
@@ -169,9 +169,11 @@ then goes straight to production; from the 13th Conor tests on staging first.
    and `postcss` advisories are gone; what remains in `npm audit` is build-time tooling
    (drizzle-kit/esbuild, tailwind's glob chain). The middleware-to-proxy rename Next 16
    recommends is left for a quiet moment.
-2. **One word for the schedule.** "Rota" chosen. The noun is now "rota" everywhere a
-   person reads it (sidebar, page titles, PDF, emails, guides, marketing); "roster" stays
-   as the verb ("fit to roster", "as you roster") and in code identifiers.
+2. **One word for the schedule.** "Rota" was chosen first; later on 4 October Conor
+   switched it to **"roster"** to match the ActivityRoster brand. The noun is now
+   "roster" everywhere a person reads it (sidebar, page titles, PDF, emails, guides,
+   marketing, blog). URLs (`/office/rota`), file names and code identifiers keep "rota"
+   so no links or saved settings break.
 3. **Enforce the nonce CSP.** A reminder is set for 11 October; Claude Code checks the
    report-only log that day and asks before enforcing.
 4. **Production deploy.** Done at 02:44 UTC on 4 October (run 37171883925): bookmark

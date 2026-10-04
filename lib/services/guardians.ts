@@ -9,9 +9,9 @@ import { writeAudit } from "./audit";
 
 /**
  * Parent / guardian accounts (compliance P1-F): a read-only view of an
- * under-18 instructor's rota. The guardian becomes a `parent` member of the
+ * under-18 instructor's roster. The guardian becomes a `parent` member of the
  * centre (invited, active on first sign-in) and a guardian_link says whose
- * rota they may see, with the consent record the centre holds.
+ * roster they may see, with the consent record the centre holds.
  */
 export type InviteGuardianResult = { ok: true; email: string; userId: string; linkId: string } | { ok: false; error: string };
 

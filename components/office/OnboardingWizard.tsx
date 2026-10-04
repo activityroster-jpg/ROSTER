@@ -34,7 +34,7 @@ const AUDIENCE_ORDER: { key: CourseAudience; label: string; hint: string }[] = [
   { key: "all", label: "All ages", hint: "Runs for any age group" },
 ];
 
-const STEP_LABELS = ["How you run", "Courses", "Team", "Rota PDF", "Finish"];
+const STEP_LABELS = ["How you run", "Courses", "Team", "Roster PDF", "Finish"];
 
 export function OnboardingWizard({
   centreName,
@@ -435,11 +435,11 @@ export function OnboardingWizard({
         </div>
       ) : null}
 
-      {/* STEP 4 — rota PDF layout */}
+      {/* STEP 4 — roster PDF layout */}
       {step === 4 ? (
         <div className="rounded-card border border-slate-200 bg-white p-6">
-          <h2 className="font-semibold text-navy">Your rota PDF</h2>
-          <p className="mb-4 mt-1 text-sm text-slate-500">The rota you download and pin up or email. Choose what goes on it and how it is laid out; you can change this later under Settings → Rota PDF.</p>
+          <h2 className="font-semibold text-navy">Your roster PDF</h2>
+          <p className="mb-4 mt-1 text-sm text-slate-500">The roster you download and pin up or email. Choose what goes on it and how it is laid out; you can change this later under Settings → Roster PDF.</p>
           <RotaTemplateForm initial={DEFAULT_ROTA_TEMPLATE} compact onSaved={() => setStep(5)} />
           <div className="mt-6 flex justify-between">
             <button onClick={() => setStep(3)} className="text-sm font-semibold text-slate-500 hover:text-navy">← Back</button>

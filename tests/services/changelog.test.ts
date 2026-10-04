@@ -4,7 +4,7 @@ import { describeAudit } from "@/lib/services/changelog";
 describe("change-log sentences", () => {
   it("turns action + entity into plain English with the name when known", () => {
     expect(describeAudit("assign_staff", "course_staff", JSON.stringify({ name: "Sam" }))).toBe("Rostered an instructor on a course “Sam”");
-    expect(describeAudit("publish_week", "roster_week", JSON.stringify({ weekStart: "2026-01-05" }))).toBe("Published the rota for the week “week of 2026-01-05”");
+    expect(describeAudit("publish_week", "roster_week", JSON.stringify({ weekStart: "2026-01-05" }))).toBe("Published the roster for the week “week of 2026-01-05”");
     expect(describeAudit("update_status", "course", JSON.stringify({ status: "confirmed" }))).toBe("Changed the status of a course to confirmed");
   });
 

@@ -40,7 +40,7 @@ const RYA_ROWS = (them: Partial<Record<string, Cell>>): CompareRow[] => {
     ["Bulk assign one instructor to many courses", "partial"],
     ["Instructor availability collection", "yes"],
     ["Clock in/out & payroll-ready hours", "yes"],
-    ["Printable weekly rota (PDF)", "partial"],
+    ["Printable weekly roster (PDF)", "partial"],
     ["Equipment & boat conflict tracking", "no"],
     ["Per-centre data isolation", "partial"],
     ["Built for RYA centres out of the box", "no"],
@@ -89,20 +89,20 @@ export const COMPETITORS: Competitor[] = [
   {
     slug: "rotacloud",
     name: "RotaCloud",
-    category: "General rota & leave software",
-    tagline: "Rotas, leave and time tracking for UK businesses — no watersports domain model.",
+    category: "General roster & leave software",
+    tagline: "Rosters, leave and time tracking for UK businesses — no watersports domain model.",
     goodFor: [
-      "UK SMEs wanting rotas, leave and attendance in one place",
+      "UK SMEs wanting rosters, leave and attendance in one place",
       "Leave management and approvals",
       "Cost/hours reporting",
     ],
     weWin: [
-      "Strong on generic rotas and leave, but there's no ticket tracking, safety-cover logic or course structure.",
+      "Strong on generic rosters and leave, but there's no ticket tracking, safety-cover logic or course structure.",
       "ActivityRoster gives you leave and open-shift cover too — plus the compliance moat RotaCloud doesn't attempt.",
-      "The rota is course- and audience-aware (youth/adult), and prints cleanly for the wall or the inbox.",
+      "The roster is course- and audience-aware (youth/adult), and prints cleanly for the wall or the inbox.",
     ],
     migration: "Import your schedule and staff; your leave workflow works the same way, with availability layered on top.",
-    rows: RYA_ROWS({ "Clock in/out & payroll-ready hours": "yes", "Printable weekly rota (PDF)": "yes" }),
+    rows: RYA_ROWS({ "Clock in/out & payroll-ready hours": "yes", "Printable weekly roster (PDF)": "yes" }),
   },
   {
     slug: "planday",
@@ -117,7 +117,7 @@ export const COMPETITORS: Competitor[] = [
     weWin: [
       "Planday scales scheduling well, but qualifications, ratios and safety cover for watersports aren't part of the model.",
       "ActivityRoster is ready for an RYA centre on day one — schemes, grades, ratios and defaults are seeded.",
-      "Every rota, override and change is written to an audit trail scoped to your centre.",
+      "Every roster, override and change is written to an audit trail scoped to your centre.",
     ],
     migration: "Move staff and schedule via import; keep your pay/hours export for payroll.",
     rows: RYA_ROWS({ "Clock in/out & payroll-ready hours": "yes", "Per-centre data isolation": "yes" }),
@@ -135,7 +135,7 @@ export const COMPETITORS: Competitor[] = [
     weWin: [
       "These systems focus on members and bookings; instructor rostering, qualifications and safety cover are thin or absent.",
       "ActivityRoster is the staff-side counterpart — who's qualified, who's available, who's on which session, and whether it's safe.",
-      "It complements a booking system rather than replacing it: you run the rota, they take the money.",
+      "It complements a booking system rather than replacing it: you run the roster, they take the money.",
     ],
     migration: "Keep your booking system for members and payments; import your course schedule into ActivityRoster for rostering.",
     rows: RYA_ROWS({ "Instructor availability collection": "no", "Clock in/out & payroll-ready hours": "no", "Visual week calendar & planner": "no", "Licence & ticket tracking with expiry alerts": "partial", "DBS / safeguarding vetting enforced at assignment": "partial", "Per-centre data isolation": "partial" }),
@@ -156,7 +156,7 @@ export const COMPETITORS: Competitor[] = [
       "Data is isolated per centre, hosted on Cloudflare in the EU and exportable — not scattered across tabs and inboxes.",
     ],
     migration: "This is the easiest move of all — paste your spreadsheet straight into the importer and we build your courses and sessions.",
-    rows: RYA_ROWS({ "Printable weekly rota (PDF)": "yes", "Instructor availability collection": "no", "Clock in/out & payroll-ready hours": "no", "Visual week calendar & planner": "no", "Bulk assign one instructor to many courses": "partial", "Course-based multi-session scheduling": "partial", "Per-centre data isolation": "no", "Licence & ticket tracking with expiry alerts": "partial" }),
+    rows: RYA_ROWS({ "Printable weekly roster (PDF)": "yes", "Instructor availability collection": "no", "Clock in/out & payroll-ready hours": "no", "Visual week calendar & planner": "no", "Bulk assign one instructor to many courses": "partial", "Course-based multi-session scheduling": "partial", "Per-centre data isolation": "no", "Licence & ticket tracking with expiry alerts": "partial" }),
   },
 ];
 

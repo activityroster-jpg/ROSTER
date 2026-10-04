@@ -69,7 +69,7 @@ export function fmtMoney(n: number, currency = "GBP"): string {
 // --- Competitor comparison (marketing) -------------------------------------
 //
 // Competitors price per user per month. We price flat per centre, so the more
-// people a centre rotas, the bigger the gap. RYA centres rota everyone who
+// people a centre rosters, the bigger the gap. RYA centres roster everyone who
 // runs sessions — senior and assistant instructors, powerboat cover, shore crew
 // and volunteers — so the real headcount is well above the paid core, and a
 // per-seat tool bills every one of them. These pure helpers drive the

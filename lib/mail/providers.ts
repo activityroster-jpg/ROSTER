@@ -4,7 +4,7 @@ import type { CloudflareEnv } from "@/lib/cf/bindings";
  * Email delivery providers behind `sendEmail` / `sendRawEmail` (compliance
  * block G). Two streams keep system mail and outreach apart:
  *
- *   system — sign-in codes, invites, rota notices. Resend key RESEND_API_KEY,
+ *   system — sign-in codes, invites, roster notices. Resend key RESEND_API_KEY,
  *            from-address MAIL_FROM_SYSTEM (e.g. no-reply@notify.activityroster.com).
  *   news   — the outreach agent. Resend key RESEND_API_KEY_NEWS when set, and
  *            the from-address must be on OUTREACH_FROM_DOMAIN (e.g.

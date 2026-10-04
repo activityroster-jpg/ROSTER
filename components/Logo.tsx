@@ -1,5 +1,5 @@
 /**
- * ActivityRoster logo: a 3×3 rota grid mark + wordmark. Recreated as inline
+ * ActivityRoster logo: a 3×3 roster grid mark + wordmark. Recreated as inline
  * SVG so it stays crisp at any size. `variant` picks colours for the background
  * it sits on (onDark = white/navy text on a dark bg; onLight = navy text on a
  * light bg). The accent blue square is constant in both.

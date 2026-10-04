@@ -14,7 +14,7 @@ export interface Subprocessor {
 
 export const SUBPROCESSORS: Subprocessor[] = [
   { name: "Cloudflare, Inc.", purpose: "Hosting, database, file storage, cache, DNS and TLS", data: "All platform data", location: "EU (database in western Europe, files in the EU jurisdiction); worldwide edge network for serving requests", status: "live" },
-  { name: "Resend, Inc.", purpose: "Transactional and outreach email", data: "Recipient email addresses and the content of the emails we send (sign-in codes, invitations, rota notices)", location: "EU region", status: "live" },
+  { name: "Resend, Inc.", purpose: "Transactional and outreach email", data: "Recipient email addresses and the content of the emails we send (sign-in codes, invitations, roster notices)", location: "EU region", status: "live" },
   { name: "ActiveCampaign, LLC (Postmark)", purpose: "Backup email provider, used only if Resend fails", data: "The same as Resend", location: "United States, under EU standard contractual clauses", status: "standby" },
   { name: "Stripe Payments Europe, Ltd.", purpose: "Subscription billing", data: "Billing contact name and email, invoices; card details never reach us", location: "EU / United States", status: "live" },
   { name: "Functional Software, Inc. (Sentry)", purpose: "Error monitoring", data: "Error traces with emails and tokens removed before they are sent", location: "EU", status: "live" },

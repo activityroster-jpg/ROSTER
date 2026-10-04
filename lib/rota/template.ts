@@ -1,8 +1,8 @@
 import { z } from "zod";
 
 /**
- * How a centre wants its rota PDF laid out. Chosen during onboarding and
- * changeable under Office → Settings → Rota PDF. Stored as JSON on
+ * How a centre wants its roster PDF laid out. Chosen during onboarding and
+ * changeable under Office → Settings → Roster PDF. Stored as JSON on
  * org_settings.rotaTemplate; anything missing falls back to the defaults.
  */
 export const ROTA_RANGES = ["day", "week", "month"] as const;

@@ -97,7 +97,7 @@ export function RotaTemplateForm({ initial, onSaved, compact = false }: { initia
         <p className="mt-1 text-xs text-slate-400">This is the default; you can pick a different period each time you download. A week or month is the same day-by-day breakdown, one day after another.</p>
       </div>
       <div className="flex items-center gap-3">
-        <button onClick={save} disabled={pending} className="rounded-lg bg-teal px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{pending ? "Saving…" : compact ? "Save and continue →" : "Save rota layout"}</button>
+        <button onClick={save} disabled={pending} className="rounded-lg bg-teal px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{pending ? "Saving…" : compact ? "Save and continue →" : "Save roster layout"}</button>
         {!compact ? <a href="/api/office/rota.pdf" target="_blank" rel="noreferrer" className="text-sm font-medium text-teal hover:underline">Preview today&rsquo;s PDF</a> : null}
         {msg ? <span className={`text-sm ${msg.ok ? "text-starboard" : "text-port"}`}>{msg.text}</span> : null}
       </div>

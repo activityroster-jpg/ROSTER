@@ -59,7 +59,7 @@ const ROWS: Row[] = [
   },
   {
     feature: "Parent / guardian view for under-18 staff",
-    detail: "A read-only rota for a young instructor's parent, with the consent recorded.",
+    detail: "A read-only roster for a young instructor's parent, with the consent recorded.",
     us: "yes", general: "no", club: "partial", sheets: "no",
   },
   {
@@ -93,7 +93,7 @@ const ROWS: Row[] = [
     us: "yes", general: "yes", club: "no", sheets: "no",
   },
   {
-    feature: "Printable rota (PDF)",
+    feature: "Printable roster (PDF)",
     detail: "A day-by-day breakdown of courses, times and staff, in the layout and style you choose.",
     us: "yes", general: "partial", club: "no", sheets: "yes",
   },

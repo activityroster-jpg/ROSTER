@@ -18,13 +18,13 @@ export default function AccessibilityPage() {
       <P>This statement covers the ActivityRoster website (activityroster.com), the centre office and instructor portal (yourcentre.activityroster.com) and the instructor mobile app. We want everyone who runs or teaches at a centre to be able to use them, including people who rely on a keyboard, a screen reader, magnification or a high-contrast setting.</P>
 
       <H2>What we aim for</H2>
-      <P>We work to the Web Content Accessibility Guidelines (WCAG) 2.2 at level AA. Every page uses real headings and landmarks, has a &ldquo;Skip to main content&rdquo; link, shows a visible focus ring on every control, respects the operating system&rsquo;s reduced-motion setting, keeps text resizable to 200 percent without loss, and labels every form field. Colour is never the only way information is given: rota warnings carry text as well as a colour, and the rota PDF has a black-and-white style.</P>
+      <P>We work to the Web Content Accessibility Guidelines (WCAG) 2.2 at level AA. Every page uses real headings and landmarks, has a &ldquo;Skip to main content&rdquo; link, shows a visible focus ring on every control, respects the operating system&rsquo;s reduced-motion setting, keeps text resizable to 200 percent without loss, and labels every form field. Colour is never the only way information is given: roster warnings carry text as well as a colour, and the roster PDF has a black-and-white style.</P>
 
       <H2>How accessible it is now</H2>
       <P>The service is <strong>partially conformant</strong> with WCAG 2.2 AA. The parts listed below do not yet fully meet it.</P>
       <UL items={[
         "A few owner-only pages in the platform&rsquo;s Dev Center have form labels that are next to, rather than attached to, their fields. These pages are used by one person and are being tidied.",
-        "The availability grid and the weekly rota are dense tables; they work with a keyboard but are slow with a screen reader. A list view for assistive technology is planned.",
+        "The availability grid and the weekly roster are dense tables; they work with a keyboard but are slow with a screen reader. A list view for assistive technology is planned.",
         "Some icons in the mobile app rely on colour contrast that is just under the AA threshold on the brightest screens.",
         "Emails we send are plain, single-column HTML, but have not been tested against every email client&rsquo;s screen-reader behaviour.",
         "Charts in the Finance area are drawn as images with a text summary rather than a full data table.",

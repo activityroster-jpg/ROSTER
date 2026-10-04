@@ -10,16 +10,16 @@ import { apexDomain } from "@/lib/config";
 // The full platform, one line each, in the order a centre manager cares about.
 // Keep this in step with what is built (and with INCLUDED on the pricing page).
 const PLATFORM = [
-  { icon: CalendarCheck, title: "Rota builder", body: "Build the week; every assignment is checked for tickets, ratios and clashes." },
+  { icon: CalendarCheck, title: "Roster builder", body: "Build the week; every assignment is checked for tickets, ratios and clashes." },
   { icon: Smartphone, title: "Instructor app", body: "Shifts, availability, swaps, hours and documents on their phone, with notifications." },
   { icon: FileCheck, title: "Certs & vetting", body: "Every RYA ticket, first aid and DBS/PVG/AccessNI/Garda check, with expiry reminders." },
   { icon: Baby, title: "Young workers' hours", body: "Under-18s checked against the legal hours for their age; adults warned over 48 a week." },
-  { icon: Users, title: "Parent & guardian view", body: "A read-only rota for the parents of under-18 staff. Nothing else, nobody else's details." },
+  { icon: Users, title: "Parent & guardian view", body: "A read-only roster for the parents of under-18 staff. Nothing else, nobody else's details." },
   { icon: KeyRound, title: "Roles for your team", body: "Admin, senior instructor and welfare officer, each seeing only what they need." },
-  { icon: FileText, title: "Printable rota", body: "A day-by-day PDF in the layout you choose, ready for the noticeboard." },
+  { icon: FileText, title: "Printable roster", body: "A day-by-day PDF in the layout you choose, ready for the noticeboard." },
   { icon: LifeBuoy, title: "Emergency sheet", body: "Today's staff and emergency contacts on one page for the duty officer." },
   { icon: CalendarOff, title: "Leave & cover", body: "Staff ask in the app; you approve in a tap and open the gap to the team." },
-  { icon: Clock, title: "Hours & payroll", body: "Hours from the rota (or the optional clock), times pay rates, exported monthly." },
+  { icon: Clock, title: "Hours & payroll", body: "Hours from the roster (or the optional clock), times pay rates, exported monthly." },
   { icon: Upload, title: "Import in minutes", body: "Bring your courses and staff across from a spreadsheet or calendar." },
   { icon: ClipboardCheck, title: "Audit trail & GDPR tools", body: "Every change logged; export, restrict or anonymise a person's data in a click." },
 ];
@@ -34,9 +34,9 @@ const SAFETY = [
 ];
 
 const AUDIENCES = [
-  { icon: Anchor, title: "Yacht clubs", body: "Volunteer rotas and racing safety cover, without the committee spreadsheet." },
+  { icon: Anchor, title: "Yacht clubs", body: "Volunteer rosters and racing safety cover, without the committee spreadsheet." },
   { icon: Ship, title: "Sailing schools", body: "Back-to-back RYA courses, a big freelance pool, every ticket tracked." },
-  { icon: Waves, title: "Activity centres", body: "Dinghy, windsurf, powerboat and kayak — one rota, one compliance picture." },
+  { icon: Waves, title: "Activity centres", body: "Dinghy, windsurf, powerboat and kayak — one roster, one compliance picture." },
 ];
 
 const PHOTOS = {
@@ -67,7 +67,7 @@ const DISCIPLINES = [
   { src: PHOTOS.keelboat, label: "Keelboat & yacht", sub: "Cruising to Yachtmaster" },
   { src: PHOTOS.catamarans, label: "Dinghies & catamarans", sub: "National & Youth schemes" },
   { src: PHOTOS.kayaks, label: "Kayaking & SUP", sub: "Paddlesports" },
-  { src: PHOTOS.instructors, label: "Instructors & coaching", sub: "Your whole team, one rota" },
+  { src: PHOTOS.instructors, label: "Instructors & coaching", sub: "Your whole team, one roster" },
 ];
 
 function DisciplineGallery() {
@@ -154,7 +154,7 @@ export default function MarketingHome() {
               Staff rostering that knows the RYA rules.
             </h1>
             <p className="mt-4 max-w-xl text-lg text-white/80">
-              Rota, certificates, hours and leave in one place, with an app for your instructors. It won&apos;t let an
+              Roster, certificates, hours and leave in one place, with an app for your instructors. It won&apos;t let an
               under-qualified instructor, an over-ratio course or a boat without safety cover slip through.
             </p>
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
@@ -322,7 +322,7 @@ export default function MarketingHome() {
           <p className="font-display text-2xl font-semibold leading-snug text-navy" style={{ textWrap: "balance" }}>
             No more Saturday-morning scramble to check who&apos;s ticketed and who&apos;s on safety boat.
           </p>
-          <p className="mx-auto mt-3 max-w-xl text-slate-600">The checks happen when you build the rota, so the morning is about the water, not the paperwork.</p>
+          <p className="mx-auto mt-3 max-w-xl text-slate-600">The checks happen when you build the roster, so the morning is about the water, not the paperwork.</p>
         </div>
       </section>
 
@@ -381,7 +381,7 @@ export default function MarketingHome() {
               ["Which jurisdictions are supported?", "England, Wales, Scotland, Northern Ireland and Ireland — DBS, PVG, AccessNI or Garda vetting set up automatically."],
               ["Can we tailor it to how we run?", "Yes. Grades, roles, checks, session times and course types are all yours to edit."],
               ["Do our instructors need to install anything?", "They get the instructor app on their phone for shifts, availability, swaps, hours and documents. It also works in any phone browser, so nobody is left out."],
-              ["We have under-18 assistants. Is that covered?", "Yes. Their hours are checked against the legal limits for their age, their contact details stay private, and a parent or guardian can be given a read-only view of their rota."],
+              ["We have under-18 assistants. Is that covered?", "Yes. Their hours are checked against the legal limits for their age, their contact details stay private, and a parent or guardian can be given a read-only view of their roster."],
               ["Can we bring our existing schedule across?", "Yes. Import courses and staff from a spreadsheet or calendar, check what was read, then save. Most centres are set up in an afternoon."],
               ["What does it cost after the free month?", "£35 a month for up to 10 people or £65 a month for unlimited instructors and volunteers. No per-user fees, and annual billing gives you months free."],
             ].map(([q, a]) => (

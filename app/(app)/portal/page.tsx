@@ -90,8 +90,8 @@ export default async function PortalSchedulePage() {
           <Card>
             <p className="text-sm text-slate-500">
               {pencilled > 0
-                ? "Your centre has pencilled you in but hasn't published the rota yet — you'll get a notification as soon as it's out."
-                : "No sessions on your rota yet. Set your availability so your centre knows when you're free."}
+                ? "Your centre has pencilled you in but hasn't published the roster yet — you'll get a notification as soon as it's out."
+                : "No sessions on your roster yet. Set your availability so your centre knows when you're free."}
             </p>
           </Card>
         ) : (

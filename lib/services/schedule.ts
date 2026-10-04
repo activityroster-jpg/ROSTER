@@ -264,7 +264,7 @@ export interface RotaDay {
 }
 
 /**
- * A print-ready rota for one week: every session, who is on it (name + role),
+ * A print-ready roster for one week: every session, who is on it (name + role),
  * where (locations / classrooms) and when. All reads tenant scoped; this is the
  * assembled view the office and instructors work from and export as PDF.
  */
@@ -276,7 +276,7 @@ export async function getWeekRota(
   return getRotaDays(repos, ctx, mondayIso, 7);
 }
 
-/** The same assembled rota for any run of consecutive days (a day, a week, a month). */
+/** The same assembled roster for any run of consecutive days (a day, a week, a month). */
 export async function getRotaDays(
   repos: Repositories,
   ctx: AnyTenantContext,

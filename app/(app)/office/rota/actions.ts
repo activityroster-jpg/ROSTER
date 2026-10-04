@@ -7,7 +7,7 @@ import { isoDateSchema } from "@/lib/validation/actions";
 
 type Result = { ok: boolean; error?: string; message?: string };
 
-/** Publish (or re-publish) one week's rota and tell everyone on it. */
+/** Publish (or re-publish) one week's roster and tell everyone on it. */
 export async function publishWeekAction(weekStart: string): Promise<Result> {
   const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   if (!isoDateSchema.safeParse(weekStart).success) return { ok: false, error: "Invalid week" };

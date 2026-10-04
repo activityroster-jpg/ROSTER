@@ -55,7 +55,7 @@ export async function approvePayrollLinesAction(recordIds: string[], approved: b
  */
 export async function setPaySourceAction(source: string, apply?: { from?: string; to?: string }): Promise<PayrollResult> {
   const { ctx, repos } = await requireTenant({ role: "admin" });
-  if (!(PAY_SOURCES as readonly string[]).includes(source)) return { ok: false, error: "Pick rota or clock" };
+  if (!(PAY_SOURCES as readonly string[]).includes(source)) return { ok: false, error: "Pick roster or clock" };
   const src = source as PaySource;
   const existing = (await repos.tenant.orgSettings.list(ctx))[0];
   if (existing) await repos.tenant.orgSettings.update(ctx, existing.id, { paySource: src });
@@ -74,11 +74,11 @@ export async function setPaySourceAction(source: string, apply?: { from?: string
   return { ok: true, message: apply ? `Default set to ${src}; ${changed} line${changed === 1 ? "" : "s"} switched` : `Default set to ${src}` };
 }
 
-/** Recreate missing hours lines from the rota (safe: never touches approved or edited lines). */
+/** Recreate missing hours lines from the roster (safe: never touches approved or edited lines). */
 export async function rebuildHoursAction(): Promise<PayrollResult> {
   const { ctx, repos } = await requireTenant({ role: "admin" });
   const r = await rebuildHoursFromRoster(repos, ctx);
   await writeAudit(repos, ctx, { action: "payroll_rebuild", entity: "hours_record", after: r });
   revalidate();
-  return { ok: true, message: `Rota hours refreshed — ${r.created} added, ${r.updated} updated, ${r.removed} removed` };
+  return { ok: true, message: `Roster hours refreshed — ${r.created} added, ${r.updated} updated, ${r.removed} removed` };
 }

@@ -49,7 +49,7 @@ const FEATURES: [string, string][] = [
   ["Payroll export", "Start, finish, lunch and pay per shift — spreadsheet or PDF, per person or period."],
   ["Instructor app", "Schedule, availability, hours and documents in every instructor's pocket."],
   ["Course import & booking systems", "Bring your schedule in from a spreadsheet or your booking system, matched to your course types."],
-  ["Printable rota", "By week, by day or compact grid — choose which fields show."],
+  ["Printable roster", "By week, by day or compact grid — choose which fields show."],
   ["HR & onboarding", "Records, invites and a new-starter checklist."],
   ["Audit trail & security", "Every change logged; PIN second factor; new-device password check."],
 ];
@@ -106,7 +106,7 @@ export default async function ProspectMockupPage({ params }: { params: Promise<{
       <div className="no-print mx-auto mb-4 flex max-w-[210mm] items-center justify-between gap-3 px-2">
         <div>
           <p className="text-sm font-semibold text-navy">Mock-up for {p.name}</p>
-          <p className="text-xs text-slate-500">Nine A4 pages: cover, setup summary, five screens of their admin & instructor app with sample data, a week rota, the feature list, and pricing &amp; next steps. Use “Save as PDF” to send it.</p>
+          <p className="text-xs text-slate-500">Nine A4 pages: cover, setup summary, five screens of their admin & instructor app with sample data, a week roster, the feature list, and pricing &amp; next steps. Use “Save as PDF” to send it.</p>
         </div>
         <PrintButton label="Print / save as PDF" downloadName={fileName(p.name, id)} />
       </div>
@@ -196,9 +196,9 @@ export default async function ProspectMockupPage({ params }: { params: Promise<{
           </div>
         </Sheet>
 
-        {/* 7 · Week rota */}
-        <Sheet n={7} title={`Sample week rota · ${d.weekLabel}`}>
-          <p className="mb-3 text-[9.5pt] text-slate-600">Printed straight from the Rota page (“By week” template). Switch fields on or off — times, names, roles, locations, equipment, safety-cover status — and print by day or as a compact grid instead.</p>
+        {/* 7 · Week roster */}
+        <Sheet n={7} title={`Sample week roster · ${d.weekLabel}`}>
+          <p className="mb-3 text-[9.5pt] text-slate-600">Printed straight from the Roster page (“By week” template). Switch fields on or off — times, names, roles, locations, equipment, safety-cover status — and print by day or as a compact grid instead.</p>
           <WeekRota d={d} />
         </Sheet>
 

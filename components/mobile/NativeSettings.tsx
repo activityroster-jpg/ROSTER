@@ -48,7 +48,7 @@ export function NativeSettings() {
     <div className="rounded-card border border-slate-200 bg-white p-4">
       <h2 className="mb-1 font-semibold text-navy">App</h2>
       <div className="divide-y divide-slate-100">
-        {row("Phone notifications", "Rota changes, open shifts, leave decisions, expiring certs", push, togglePush)}
+        {row("Phone notifications", "Roster changes, open shifts, leave decisions, expiring certs", push, togglePush)}
         {row("Face ID / fingerprint unlock", bioOk ? (bio ? "Instead of typing your PIN" : "Tap to set up — you'll confirm your PIN once") : "Not available on this device", bio, toggleBio, !bioOk)}
       </div>
       {msg ? <p className="mt-2 text-xs text-slate-500">{msg}</p> : null}

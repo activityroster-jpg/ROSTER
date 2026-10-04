@@ -42,7 +42,7 @@ export default async function LocationsPage() {
       <FeatureNotice feature="locations" enabled={locationsEnabled} />
       <p className="mb-6 text-sm text-slate-500">
         Everywhere activity happens — launch areas, classrooms, pontoons, operating areas. Group them into categories
-        so they&apos;re easy to pick when you build a rota.
+        so they&apos;re easy to pick when you build a roster.
       </p>
 
       <div className="mb-6 grid gap-4 lg:grid-cols-2">

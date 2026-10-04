@@ -10,7 +10,7 @@ const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London"
 
 /**
  * A parent or guardian's read-only view: the next four weeks of their
- * under-18 child's rota. Dates, courses, times and places only; no
+ * under-18 child's roster. Dates, courses, times and places only; no
  * colleagues' details, no contact details, nothing to edit.
  */
 export default async function ParentPage() {

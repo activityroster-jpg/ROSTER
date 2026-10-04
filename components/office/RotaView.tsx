@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import type { RotaDay, RotaSession } from "@/lib/services/schedule";
 import { AUDIENCE_META } from "@/lib/features";
 
-/** The three rota templates. */
+/** The three roster templates. */
 export type RotaTemplate = "week" | "day" | "grid";
 
 /** Fields a centre can show or hide on every template. */
@@ -214,7 +214,7 @@ function CompactGrid({ rota, f }: { rota: RotaDay[]; f: Fields }) {
 }
 
 /**
- * The printable rota in three templates (by week, by day, compact grid), with
+ * The printable roster in three templates (by week, by day, compact grid), with
  * each field switchable. Choices are remembered in this browser.
  */
 export function RotaView({ rota }: { rota: RotaDay[] }) {
@@ -234,7 +234,7 @@ export function RotaView({ rota }: { rota: RotaDay[] }) {
   }, [template, fields, ready]);
 
   const tabs: { id: RotaTemplate; label: string; hint: string }[] = [
-    { id: "week", label: "By week", hint: "A table per day — the classic wall rota" },
+    { id: "week", label: "By week", hint: "A table per day — the classic wall roster" },
     { id: "day", label: "By day", hint: "Big cards, one day per page" },
     { id: "grid", label: "Compact grid", hint: "Whole week on one page" },
   ];

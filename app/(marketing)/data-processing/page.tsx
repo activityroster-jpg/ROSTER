@@ -17,7 +17,7 @@ export default function DataProcessingPage() {
       <UL items={[
         "Storing and displaying instructor records, certs (qualifications), vetting/DBS status, availability, hours and leave.",
         "Sending service notifications (e.g. shift offers, leave decisions) on the centre's behalf.",
-        "Generating rotas, timesheets and payroll-ready exports.",
+        "Generating rosters, timesheets and payroll-ready exports.",
       ]} />
 
       <H2>Types of data &amp; data subjects</H2>

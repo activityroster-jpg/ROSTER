@@ -129,7 +129,7 @@ A risk assessment that lives in a folder protects nobody. Put the key controls i
 ## Common weaknesses
 
 - Copied from another centre with hazards that do not exist here and none of the ones that do.
-- Controls that depend on equipment the centre does not have or staff who are not on the rota.
+- Controls that depend on equipment the centre does not have or staff who are not on the roster.
 - No account of children, disabled people or non-swimmers as distinct groups.
 - Cold water shock, hypothermia and sun exposure missing or treated as minor.
 - No link between the assessment and the actual wind limits and ratios in the procedures.
@@ -180,11 +180,11 @@ The commonest ratio breaches come from counting the wrong things. Points to be c
 - A boat that is ashore being repaired is not safety cover.
 - A learner who turns up with a sibling or friend who "will just sit in the boat" has changed the ratio.
 
-## Plan it into the rota
+## Plan it into the roster
 
-The place to get ratios right is when the rota is built, not on the slipway. For each session, the rota should show the number of learners booked, the instructors assigned, the safety craft and their crews, and the person in charge. Rostering software that knows each instructor's qualifications and each session's requirements, and flags a session that is short, takes most of the risk out of this. If you are doing it on a spreadsheet, build in the check explicitly: a column for required instructors, a column for assigned, and a red cell when they do not match.
+The place to get ratios right is when the roster is built, not on the slipway. For each session, the roster should show the number of learners booked, the instructors assigned, the safety craft and their crews, and the person in charge. Rostering software that knows each instructor's qualifications and each session's requirements, and flags a session that is short, takes most of the risk out of this. If you are doing it on a spreadsheet, build in the check explicitly: a column for required instructors, a column for assigned, and a red cell when they do not match.
 
-Build in margin. A rota that meets the ratio exactly fails the moment someone is ill. Decide what happens when it does: a named standby, a Senior Instructor who steps in, a group that is merged or cancelled.
+Build in margin. A roster that meets the ratio exactly fails the moment someone is ill. Decide what happens when it does: a named standby, a Senior Instructor who steps in, a group that is merged or cancelled.
 
 ## Brief it every day
 
@@ -242,9 +242,9 @@ Verify documents, do not just record them. Seeing the certificate, checking the 
 
 ## Make expiry visible before it bites
 
-The register should show, at a glance, what expires in the next ninety days. A monthly email to each instructor listing their own documents and the dates puts the responsibility where it belongs and avoids surprises. Rostering systems that know each session's requirements and each instructor's dates can refuse to roster an instructor whose first aid lapses mid-week, which is the ideal: the problem is caught when the rota is built rather than on the slipway.
+The register should show, at a glance, what expires in the next ninety days. A monthly email to each instructor listing their own documents and the dates puts the responsibility where it belongs and avoids surprises. Rostering systems that know each session's requirements and each instructor's dates can refuse to roster an instructor whose first aid lapses mid-week, which is the ideal: the problem is caught when the roster is built rather than on the slipway.
 
-Set your own internal expiry a month or two before the real one for critical items. Treating a first aid certificate as expired six weeks early gives time to book a course without losing the instructor from the rota.
+Set your own internal expiry a month or two before the real one for critical items. Treating a first aid certificate as expired six weeks early gives time to book a course without losing the instructor from the roster.
 
 ## Plan renewals as a season task
 
@@ -256,7 +256,7 @@ Returners are the most common source of lapsed documents, because everyone assum
 
 ## Under-18 instructors and assistants
 
-Young instructors and assistants bring extra tracking: parental permission, the restrictions on hours and times they can work, and sometimes limits on what they may supervise. Hold these alongside their qualifications so the rota reflects them automatically.
+Young instructors and assistants bring extra tracking: parental permission, the restrictions on hours and times they can work, and sometimes limits on what they may supervise. Hold these alongside their qualifications so the roster reflects them automatically.
 
 ## What to keep and for how long
 
@@ -268,7 +268,7 @@ Qualification records are personal data, and criminal records information is esp
 
 ## The inspection view
 
-An inspector will ask to see evidence that your instructors are qualified and current. Being able to open a register, filter to the instructors on this season's rota and show every document in date, with verification dates, answers the question in a minute and tells the inspector a great deal about how the rest of the centre runs.
+An inspector will ask to see evidence that your instructors are qualified and current. Being able to open a register, filter to the instructors on this season's roster and show every document in date, with verification dates, answers the question in a minute and tells the inspector a great deal about how the rest of the centre runs.
 
 ## Signs the system is working
 
@@ -278,7 +278,7 @@ An inspector will ask to see evidence that your instructors are qualified and cu
 - The register is accurate on any day you open it.
 - New and returning staff are checked identically.
 
-None of this requires sophistication. It requires one register, one owner, a few fixed review points and the discipline to verify rather than assume. That discipline is what keeps the rota full and the centre defensible.`,
+None of this requires sophistication. It requires one register, one owner, a few fixed review points and the discipline to verify rather than assume. That discipline is what keeps the roster full and the centre defensible.`,
   },
   {
     slug: "incident-and-near-miss-reporting-done-well",
@@ -495,7 +495,7 @@ Choose a course that teaches these things rather than one that treats a sailing 
 
 Write a first aid needs assessment, even a short one. Consider how many people are on site at peak, how many are children, how far you are from an ambulance and a hospital, how long it would take to bring a casualty from the far side of your water, what activities you run and what injuries they produce. Decide how many first aiders you need on duty at any time and where. Many centres settle on at least one qualified first aider on the shore, with every instructor on the water also qualified, so that treatment can start wherever the casualty is.
 
-Put the first aid cover on the rota like any other role. The person in charge on the day should know who the first aiders are and where they are.
+Put the first aid cover on the roster like any other role. The person in charge on the day should know who the first aiders are and where they are.
 
 ## Kits and equipment
 
@@ -557,7 +557,7 @@ A volunteer safety boat driver with a Powerboat Level 2 and a Safety Boat course
 
 ## Manage them as part of the team
 
-Volunteers should appear on the rota alongside paid staff, with their qualifications tracked in the same register and their roles clear on the day. Brief them in the morning briefing. Include them in the debrief. Give them a named person to go to with problems. Where a volunteer and a paid instructor are doing the same job, make sure the paid person is not quietly treating the volunteer as a dogsbody; the resentment that causes ends volunteering.
+Volunteers should appear on the roster alongside paid staff, with their qualifications tracked in the same register and their roles clear on the day. Brief them in the morning briefing. Include them in the debrief. Give them a named person to go to with problems. Where a volunteer and a paid instructor are doing the same job, make sure the paid person is not quietly treating the volunteer as a dogsbody; the resentment that causes ends volunteering.
 
 Hold volunteers to the same safety standards as everyone else. A volunteer who ignores the kill cord or the ratio is as dangerous as an employee who does, and has to be addressed as kindly and as firmly. Most volunteers want to do the job well and welcome being treated as professionals.
 
@@ -575,7 +575,7 @@ Every volunteer in contact with young people needs safeguarding training, needs 
 
 ## Keep them
 
-The reasons volunteers leave are predictable: they feel used, they are not thanked, the role grows beyond what they agreed, they are criticised in front of others, nobody notices they have stopped coming, or they simply burn out. The remedies are equally predictable: bounded roles, rota them like staff so the load is shared, check in with them, say thank you, make the social side real, and give them a route to step back without guilt. A volunteer who takes a season off and is welcomed back is a volunteer for life.
+The reasons volunteers leave are predictable: they feel used, they are not thanked, the role grows beyond what they agreed, they are criticised in front of others, nobody notices they have stopped coming, or they simply burn out. The remedies are equally predictable: bounded roles, roster them like staff so the load is shared, check in with them, say thank you, make the social side real, and give them a route to step back without guilt. A volunteer who takes a season off and is welcomed back is a volunteer for life.
 
 ## Succession
 
@@ -697,7 +697,7 @@ If those six are kept up to date as part of the normal week, the inspection prep
 
 ## The month before
 
-When the inspection is booked, do a calm internal walk-through rather than a frantic clean-up. Open each register and check it against reality: is every instructor on this season's rota in date? Is every boat on the list actually in the state described? Walk the site with the risk assessment and the emergency plan in hand and check that the controls described are present: the kill cords, the signage, the first aid kits, the emergency numbers on the wall. Pull a few recent course records and check they are complete. Fix what you find, honestly. Do not stage anything; inspectors have seen every version of a centre pretending.
+When the inspection is booked, do a calm internal walk-through rather than a frantic clean-up. Open each register and check it against reality: is every instructor on this season's roster in date? Is every boat on the list actually in the state described? Walk the site with the risk assessment and the emergency plan in hand and check that the controls described are present: the kill cords, the signage, the first aid kits, the emergency numbers on the wall. Pull a few recent course records and check they are complete. Fix what you find, honestly. Do not stage anything; inspectors have seen every version of a centre pretending.
 
 Tell the staff the inspection is coming, explain what it is for, and ask them to be themselves. An instructor who cannot answer a question about where the emergency plan is kept tells the inspector more than any document.
 
@@ -775,7 +775,7 @@ Sailors receive sun from above and reflected from the water, often for hours, in
 
 ## Protecting staff
 
-Instructors are exposed to both risks far more than any learner, day after day for a season. Treat their protection as a health and safety duty. Provide appropriate clothing or an allowance, sunscreen, shade and water. Build rotation into the rota so nobody spends every day in the most exposed role. Make it normal to say "I'm cold" or "I need to get out of the sun" without being seen as weak. Include cold and sun in the staff induction and the pre-season briefing.
+Instructors are exposed to both risks far more than any learner, day after day for a season. Treat their protection as a health and safety duty. Provide appropriate clothing or an allowance, sunscreen, shade and water. Build rotation into the roster so nobody spends every day in the most exposed role. Make it normal to say "I'm cold" or "I need to get out of the sun" without being seen as weak. Include cold and sun in the staff induction and the pre-season briefing.
 
 ## Put it in the paperwork
 

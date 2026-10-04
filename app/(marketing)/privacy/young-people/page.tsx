@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 export default function YoungPeoplePrivacyPage() {
   return (
     <LegalPage title="Your information if you are under 18" updated="4 October 2026">
-      <P>If you help out or teach at a sailing or watersports centre that uses ActivityRoster, the centre keeps some information about you on it: your rota, your certificates and how to reach you. This page says, as plainly as we can, what that is, who can see it and what you and your parents can ask for. You do not need to read anything else to understand it.</P>
+      <P>If you help out or teach at a sailing or watersports centre that uses ActivityRoster, the centre keeps some information about you on it: your roster, your certificates and how to reach you. This page says, as plainly as we can, what that is, who can see it and what you and your parents can ask for. You do not need to read anything else to understand it.</P>
 
       <H2>Who is responsible for your information</H2>
       <P>Your centre is. ActivityRoster is the tool they use, the way a school might use a register app. We keep the information safe and only do with it what the centre asks. If you have a question about what your centre holds, ask whoever runs it or your centre&rsquo;s welfare officer first. If you have a question about ActivityRoster itself, email <a className="text-teal hover:underline" href={`mailto:${PRIVACY_CONTACT}`}>{PRIVACY_CONTACT}</a>.</P>
@@ -25,7 +25,7 @@ export default function YoungPeoplePrivacyPage() {
       <H2>What is kept about you</H2>
       <UL items={[
         "Your name, date of birth and, if you have given them, your email address and mobile number.",
-        "Which sessions you are on the rota for, your availability, hours worked and any leave.",
+        "Which sessions you are on the roster for, your availability, hours worked and any leave.",
         "Your certificates (for example Assistant Instructor, first aid) and when they run out.",
         "An emergency contact and a parent or guardian contact, which only the centre's admin and welfare officer can open.",
         "Any messages you send through the app, such as a reason for not being able to do a shift.",
@@ -44,10 +44,10 @@ export default function YoungPeoplePrivacyPage() {
       <H2>Things we do differently because you are under 18</H2>
       <UL items={[
         "Your contact details are hidden from colleagues by default.",
-        "Your centre can only rota you within the legal hours for your age. The app checks every shift against those rules and stops a breach.",
+        "Your centre can only roster you within the legal hours for your age. The app checks every shift against those rules and stops a breach.",
         "We never send you marketing, newsletters or offers, and we never build anything that profiles young people.",
         "Vetting checks are recorded by status and reference only; no certificate about you is stored as a file.",
-        "When you leave the centre, your personal details are removed after the period your centre has set (12 months unless they chose otherwise); the rota history keeps only that someone did the shift.",
+        "When you leave the centre, your personal details are removed after the period your centre has set (12 months unless they chose otherwise); the roster history keeps only that someone did the shift.",
       ]} />
 
       <H2>What you can ask for</H2>

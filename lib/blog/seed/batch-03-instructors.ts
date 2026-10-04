@@ -150,7 +150,7 @@ For centres that provide accommodation, its quality decides more retention than 
 
 ## Manage the workload
 
-A season of six-day weeks with no breaks burns people out by August and guarantees they will not return. Rota fairly: spread the early starts, the long days, the junior groups and the quiet days across the team. Make sure everyone gets their days off and that they are real days off. Watch for the person who is always covering gaps because they are reliable; they are the one you will lose. Give instructors some say in their rota, and tell them well ahead what it is.
+A season of six-day weeks with no breaks burns people out by August and guarantees they will not return. Roster fairly: spread the early starts, the long days, the junior groups and the quiet days across the team. Make sure everyone gets their days off and that they are real days off. Watch for the person who is always covering gaps because they are reliable; they are the one you will lose. Give instructors some say in their roster, and tell them well ahead what it is.
 
 ## Lead decently
 
@@ -166,7 +166,7 @@ Much of what people remember about a season is the people. Make time for the soc
 
 ## Listen, and act
 
-Hold an honest exit conversation with everyone at the end of the season: what was good, what was not, what would bring them back. Do it in a way that invites candour. Then act on what you hear and tell people what changed. Instructors who see their feedback produce a better rota, better kit or a better induction next year know they are heard, and that is a powerful reason to return.
+Hold an honest exit conversation with everyone at the end of the season: what was good, what was not, what would bring them back. Do it in a way that invites candour. Then act on what you hear and tell people what changed. Instructors who see their feedback produce a better roster, better kit or a better induction next year know they are heard, and that is a powerful reason to return.
 
 ## Keep in touch through the winter
 
@@ -242,17 +242,17 @@ The RYA reviews its schemes regularly and the details above will change: course 
   },
   {
     slug: "building-a-fair-and-transparent-rota",
-    title: "Building a Fair and Transparent Rota",
+    title: "Building a Fair and Transparent Roster",
     category: CAT,
-    excerpt: "Rostering is where staff goodwill is won or lost every week. Principles for a rota your team actually trusts.",
+    excerpt: "Rostering is where staff goodwill is won or lost every week. Principles for a roster your team actually trusts.",
     tags: ["rostering", "staff", "operations"],
     coverEmoji: "🗒️",
     imageQuery: "weekly staff schedule rota printed noticeboard",
-    body: `Nothing shapes how instructors feel about a centre more than the rota. It decides who gets the early starts, the long days, the tasters in the rain and the regatta on the sunny Saturday. It decides whether people get their days off and whether they can plan their lives. A rota that feels fair, is published in good time and is explained when it cannot be perfect buys more goodwill than any pay rise. One that feels arbitrary quietly empties the staff room by August. This article sets out the principles behind a rota your team will trust.
+    body: `Nothing shapes how instructors feel about a centre more than the roster. It decides who gets the early starts, the long days, the tasters in the rain and the regatta on the sunny Saturday. It decides whether people get their days off and whether they can plan their lives. A roster that feels fair, is published in good time and is explained when it cannot be perfect buys more goodwill than any pay rise. One that feels arbitrary quietly empties the staff room by August. This article sets out the principles behind a roster your team will trust.
 
 ## Start from what the sessions need
 
-A fair rota is first a safe and legal one. Each session needs the right number of instructors with the right qualifications, the safety cover your procedures require, and a person in charge. Instructors under eighteen have legal limits on their hours and times. Everyone needs breaks and rest between shifts. Build the rota from these requirements outward, and fairness operates within them. If the requirements cannot be met with the staff available, the answer is fewer sessions or more staff, never a rota that quietly stretches people.
+A fair roster is first a safe and legal one. Each session needs the right number of instructors with the right qualifications, the safety cover your procedures require, and a person in charge. Instructors under eighteen have legal limits on their hours and times. Everyone needs breaks and rest between shifts. Build the roster from these requirements outward, and fairness operates within them. If the requirements cannot be met with the staff available, the answer is fewer sessions or more staff, never a roster that quietly stretches people.
 
 ## Share the burden visibly
 
@@ -266,7 +266,7 @@ Fairness does not mean identical. A newly qualified instructor should not be giv
 
 ## Publish early and change rarely
 
-Instructors have lives, families, second jobs and plans. A rota published two or three weeks ahead lets them organise around it. One published on Friday for Monday does not. Set a publication rhythm and keep to it. When changes are unavoidable, as they always will be with weather and bookings, make them as early as possible, tell the people affected directly rather than letting them find out from the board, and explain why. Track how often you change the rota after publication; if it is most weeks, the booking or staffing model needs attention, not the rota.
+Instructors have lives, families, second jobs and plans. A roster published two or three weeks ahead lets them organise around it. One published on Friday for Monday does not. Set a publication rhythm and keep to it. When changes are unavoidable, as they always will be with weather and bookings, make them as early as possible, tell the people affected directly rather than letting them find out from the board, and explain why. Track how often you change the roster after publication; if it is most weeks, the booking or staffing model needs attention, not the roster.
 
 ## Protect days off
 
@@ -274,29 +274,29 @@ A day off that is routinely interrupted by a call to cover is not a day off. Pro
 
 ## Let people have a say
 
-A rota built with the team is trusted more than one handed down. Collect availability and preferences before building it, through a simple weekly form rather than a pile of messages. Allow swaps between instructors, subject to the session requirements still being met and the person in charge agreeing. Explain the constraints you are working within so that requests are realistic. A team that understands why the rota looks the way it does will defend it to each other.
+A roster built with the team is trusted more than one handed down. Collect availability and preferences before building it, through a simple weekly form rather than a pile of messages. Allow swaps between instructors, subject to the session requirements still being met and the person in charge agreeing. Explain the constraints you are working within so that requests are realistic. A team that understands why the roster looks the way it does will defend it to each other.
 
 ## Be transparent about hours and pay
 
-The rota should make clear what counts as work: setup, briefing, teaching, recovery, debrief, maintenance, meetings. Everyone should be able to see their expected hours for the week and the pay they will receive. Disputes about hours are corrosive and almost always come from vagueness. A system that records hours against the rota and shows them to the instructor removes most of them.
+The roster should make clear what counts as work: setup, briefing, teaching, recovery, debrief, maintenance, meetings. Everyone should be able to see their expected hours for the week and the pay they will receive. Disputes about hours are corrosive and almost always come from vagueness. A system that records hours against the roster and shows them to the instructor removes most of them.
 
 ## Watch for fatigue
 
-A fair rota is also a safe one. Look at the pattern over weeks, not just days. Six long days in a row, a late finish followed by an early start, or three weeks without a proper break produce tired instructors, and tired instructors make the mistakes that become incidents. Set your own limits, above the legal minimums, and build them into the rota rules.
+A fair roster is also a safe one. Look at the pattern over weeks, not just days. Six long days in a row, a late finish followed by an early start, or three weeks without a proper break produce tired instructors, and tired instructors make the mistakes that become incidents. Set your own limits, above the legal minimums, and build them into the roster rules.
 
 ## Handle the hard conversations
 
-Sometimes fairness means telling a popular instructor that they cannot have every weekend off, or that a swap is not possible because the ratio would fail. Have the conversation directly and kindly, explain the reason, and apply the same answer to everyone. Favouritism is spotted instantly in a small team and destroys trust in the whole rota.
+Sometimes fairness means telling a popular instructor that they cannot have every weekend off, or that a swap is not possible because the ratio would fail. Have the conversation directly and kindly, explain the reason, and apply the same answer to everyone. Favouritism is spotted instantly in a small team and destroys trust in the whole roster.
 
 ## Use tools that help
 
-A rota held in one person's head or a spreadsheet nobody else can edit is hard to make fair because nobody can see it. A shared system that shows the sessions, the requirements, who is assigned, each person's hours and availability, and that flags gaps and clashes, makes fairness visible and swaps safe. It also lets instructors see their own rota on their phone, which ends the "nobody told me" conversations.
+A roster held in one person's head or a spreadsheet nobody else can edit is hard to make fair because nobody can see it. A shared system that shows the sessions, the requirements, who is assigned, each person's hours and availability, and that flags gaps and clashes, makes fairness visible and swaps safe. It also lets instructors see their own roster on their phone, which ends the "nobody told me" conversations.
 
 ## Review it
 
-At the end of the season, look at the rota as a whole: who worked the most hours, who had the most early starts, who taught the widest range of courses, who got the development opportunities. If the distribution is uneven, ask why and fix it in next year's rules. Ask the team in their exit conversations how the rota felt. The answers will tell you more about the health of the centre than almost any other question.
+At the end of the season, look at the roster as a whole: who worked the most hours, who had the most early starts, who taught the widest range of courses, who got the development opportunities. If the distribution is uneven, ask why and fix it in next year's rules. Ask the team in their exit conversations how the roster felt. The answers will tell you more about the health of the centre than almost any other question.
 
-A fair rota is not a soft issue. It is the weekly, visible evidence of whether a centre values its people, and the instructors read it that way whether or not the Principal intends it.`,
+A fair roster is not a soft issue. It is the weekly, visible evidence of whether a centre values its people, and the instructors read it that way whether or not the Principal intends it.`,
   },
   {
     slug: "onboarding-new-instructors-quickly",
@@ -310,7 +310,7 @@ A fair rota is not a soft issue. It is the weekly, visible evidence of whether a
 
 ## Before they arrive
 
-Induction starts when the offer is accepted. Send a welcome pack: the staff handbook, the operating procedures and emergency plan, the safeguarding policy and code of conduct, a map of the site, the first week's rota, what to bring, where to stay and who to ask. Ask them to read the key documents before arrival and to bring their certificates. Collect the administrative essentials in advance: right to work, bank details, emergency contact, medical information, qualification copies for verification, and the paperwork for criminal records checks so that these are back before they work with children. A person who arrives with the admin done can spend the first day learning the centre instead of filling in forms.
+Induction starts when the offer is accepted. Send a welcome pack: the staff handbook, the operating procedures and emergency plan, the safeguarding policy and code of conduct, a map of the site, the first week's roster, what to bring, where to stay and who to ask. Ask them to read the key documents before arrival and to bring their certificates. Collect the administrative essentials in advance: right to work, bank details, emergency contact, medical information, qualification copies for verification, and the paperwork for criminal records checks so that these are back before they work with children. A person who arrives with the admin done can spend the first day learning the centre instead of filling in forms.
 
 ## Day one: belonging and bearings
 
@@ -393,7 +393,7 @@ Know what an instructor hour costs you fully: rate, employer contributions, holi
 
 ## Pay accurately and on time
 
-Few things damage trust faster than late or wrong pay. Record hours against the rota as they happen, have instructors confirm them weekly, process payroll on a fixed cycle, and give everyone a clear statement of hours and pay. Deal with queries quickly and courteously. A system that records time against sessions and produces the payroll figures removes most errors and most of the arguments.
+Few things damage trust faster than late or wrong pay. Record hours against the roster as they happen, have instructors confirm them weekly, process payroll on a fixed cycle, and give everyone a clear statement of hours and pay. Deal with queries quickly and courteously. A system that records time against sessions and produces the payroll figures removes most errors and most of the arguments.
 
 ## Volunteers and expenses
 
@@ -401,7 +401,7 @@ Clubs often mix paid staff with volunteers. Keep the line clear: volunteers are 
 
 ## Under-18 staff
 
-Young instructors and assistants may be paid at the appropriate youth rate, but the hours they can work and when are legally restricted, and their rest requirements are stricter. Build those rules into the rota and the payroll so that a sixteen-year-old is never rostered or paid for a shift they should not have worked.
+Young instructors and assistants may be paid at the appropriate youth rate, but the hours they can work and when are legally restricted, and their rest requirements are stricter. Build those rules into the roster and the payroll so that a sixteen-year-old is never rostered or paid for a shift they should not have worked.
 
 ## Review annually
 
@@ -437,7 +437,7 @@ Make explicit who is in charge of each session and each day, and that their deci
 
 ## Roster them together
 
-A rota that shows staff and volunteers side by side, with their roles, makes the team visible as one team. It also stops the quiet assumption that volunteers can be called on at no notice because they are not paid. Volunteers have jobs and families; ask for their availability, publish the rota early and treat a volunteer's day off as seriously as a staff member's. Where you have a standby arrangement, include volunteers who want to be included and not those who do not.
+A roster that shows staff and volunteers side by side, with their roles, makes the team visible as one team. It also stops the quiet assumption that volunteers can be called on at no notice because they are not paid. Volunteers have jobs and families; ask for their availability, publish the roster early and treat a volunteer's day off as seriously as a staff member's. Where you have a standby arrangement, include volunteers who want to be included and not those who do not.
 
 ## Communicate the same way with everyone
 
@@ -465,7 +465,7 @@ Plan the pipeline of paid roles and volunteer roles together. Who will be Chief 
 
 ## The club that gets it right
 
-In a well-led mixed team, a visitor cannot tell who is paid. Everyone wears the same kit, follows the same procedures, attends the same briefing, is on the same rota and is thanked in the same breath. The paid staff provide continuity and professional standards; the volunteers provide depth, experience and the sense that this is a community rather than a business. Both are essential, and the Principal's job is to make sure both know it.`,
+In a well-led mixed team, a visitor cannot tell who is paid. Everyone wears the same kit, follows the same procedures, attends the same briefing, is on the same roster and is thanked in the same breath. The paid staff provide continuity and professional standards; the volunteers provide depth, experience and the sense that this is a community rather than a business. Both are essential, and the Principal's job is to make sure both know it.`,
   },
   {
     slug: "standardisation-keeping-teaching-consistent",
@@ -592,9 +592,9 @@ These conversations are hard on the person having them too. Prepare, have them, 
 
 Instructors work outdoors, in a hurry, often with no desk and sometimes with no signal. Any tool meant for them has to work on a phone, quickly, with cold fingers, and should do something useful even with patchy connectivity. If it requires a laptop, a login they cannot remember or six taps to do a simple thing, it will not be used and the admin will flow back to the office. Judge every tool by that test before anything else.
 
-## The rota, on their phone
+## The roster, on their phone
 
-The single most valued piece of technology for instructors is being able to see their own rota, up to date, on their phone: which sessions, when, where, with whom, and what they need. Changes appear immediately rather than being discovered on arrival. Swap requests can be made and approved within the rules. Availability can be submitted in a minute. A rota that lives in a shared system instead of a photo of the office whiteboard ends most of the "nobody told me" problems and most of the messages to the Principal at nine in the evening.
+The single most valued piece of technology for instructors is being able to see their own roster, up to date, on their phone: which sessions, when, where, with whom, and what they need. Changes appear immediately rather than being discovered on arrival. Swap requests can be made and approved within the rules. Availability can be submitted in a minute. A roster that lives in a shared system instead of a photo of the office whiteboard ends most of the "nobody told me" problems and most of the messages to the Principal at nine in the evening.
 
 ## Group and session information
 
@@ -614,7 +614,7 @@ A short form on their phone, available in the moment, produces far more near-mis
 
 ## Communication without noise
 
-Instructors are drowned in group chats. A system that sends the right message to the right person, a rota change to those affected, a weather decision to today's team, a policy update to everyone, and keeps a record, is better than a channel where everything goes to everyone and important things get lost. Keep the number of channels small and be clear about which is used for what. Personal messaging apps are a poor place for anything involving young people or sensitive information.
+Instructors are drowned in group chats. A system that sends the right message to the right person, a roster change to those affected, a weather decision to today's team, a policy update to everyone, and keeps a record, is better than a channel where everything goes to everyone and important things get lost. Keep the number of channels small and be clear about which is used for what. Personal messaging apps are a poor place for anything involving young people or sensitive information.
 
 ## Procedures and briefing material to hand
 
@@ -628,7 +628,7 @@ Tools fail with instructors when they duplicate work, when they are slow, when t
 
 - Does it work well on a phone, outdoors, with poor signal?
 - Does it reduce the instructor's admin, not just move it?
-- Does it connect the rota, qualifications, hours, groups and incidents, or will the team be retyping between systems?
+- Does it connect the roster, qualifications, hours, groups and incidents, or will the team be retyping between systems?
 - Is it quick to learn for a seasonal team that changes each year?
 - Does it handle personal data, especially about children, properly and in the right jurisdiction?
 - Does it give the Chief Instructor and Principal the oversight they need as a by-product of what instructors do anyway?
@@ -636,7 +636,7 @@ Tools fail with instructors when they duplicate work, when they are slow, when t
 
 ## Introduce it as a benefit
 
-Present new tools to the team as what they are: a way to spend less time on admin and more on teaching, to get paid accurately, to know their rota early, to be reminded before a ticket lapses. Show it working on a phone in the induction. Ask for feedback in the first fortnight and fix what is awkward. Instructors who feel a tool was chosen for them will use it, and the office will notice the difference within a month.`,
+Present new tools to the team as what they are: a way to spend less time on admin and more on teaching, to get paid accurately, to know their roster early, to be reminded before a ticket lapses. Show it working on a phone in the induction. Ask for feedback in the first fortnight and fix what is awkward. Instructors who feel a tool was chosen for them will use it, and the office will notice the difference within a month.`,
   },
   {
     slug: "creating-a-team-culture-people-want-to-join",
@@ -650,7 +650,7 @@ Present new tools to the team as what they are: a way to spend less time on admi
 
 ## Culture is built from small, repeated signals
 
-Nobody decides a culture in a meeting. It accumulates from hundreds of small moments: whether the Principal knows everyone's name in week one, whether the Chief Instructor takes the worst group when the rota is short, whether a mistake is met with curiosity or blame, whether the end-of-day beer includes the assistants, whether the person who raised a safety concern was thanked or sighed at. Senior people set culture by what they do far more than by what they say, and the team notices everything.
+Nobody decides a culture in a meeting. It accumulates from hundreds of small moments: whether the Principal knows everyone's name in week one, whether the Chief Instructor takes the worst group when the roster is short, whether a mistake is met with curiosity or blame, whether the end-of-day beer includes the assistants, whether the person who raised a safety concern was thanked or sighed at. Senior people set culture by what they do far more than by what they say, and the team notices everything.
 
 ## Decide what you stand for, then live it
 
@@ -666,7 +666,7 @@ People want to work where they are expected to be good and helped to get better.
 
 ## Be fair, visibly
 
-Culture dies on perceived unfairness: in the rota, in pay, in who gets the good courses, in whose mistakes are overlooked. Make the rules clear, apply them to everyone including the Principal's favourites and the committee's children, and explain decisions when asked. Fairness does not require identical treatment, but it requires that differences can be explained by something other than who you are.
+Culture dies on perceived unfairness: in the roster, in pay, in who gets the good courses, in whose mistakes are overlooked. Make the rules clear, apply them to everyone including the Principal's favourites and the committee's children, and explain decisions when asked. Fairness does not require identical treatment, but it requires that differences can be explained by something other than who you are.
 
 ## Look after people
 
@@ -682,7 +682,7 @@ A few behaviours wreck team culture quickly: bullying, cliques, sexist or discri
 
 ## Listen and respond
 
-Ask the team regularly how it is going: in weekly meetings, in mid-season conversations, in exit interviews, and informally on the slipway. Then act on what you hear, visibly, and say what you changed and why. A team that sees its feedback produce a better rota, a fixed drying room or a changed procedure believes it is heard, and that belief is the foundation of loyalty.
+Ask the team regularly how it is going: in weekly meetings, in mid-season conversations, in exit interviews, and informally on the slipway. Then act on what you hear, visibly, and say what you changed and why. A team that sees its feedback produce a better roster, a fixed drying room or a changed procedure believes it is heard, and that belief is the foundation of loyalty.
 
 ## Tell the story
 

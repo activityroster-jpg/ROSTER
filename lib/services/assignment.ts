@@ -277,7 +277,7 @@ export async function bulkAssignStaff(
 
 
 /**
- * In-app + push (and email, if they allow it) about a rota change, for the
+ * In-app + push (and email, if they allow it) about a roster change, for the
  * dates whose week has been published. Unpublished weeks stay quiet: the
  * instructor hears about those when the week is published.
  */

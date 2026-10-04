@@ -56,7 +56,7 @@ export function draftProspectEmail(p: { name: string; contactName?: string | nul
     "",
     `I'm getting in touch about ActivityRoster — a staff-rostering and compliance tool built specifically for RYA training centres and clubs like ${p.name}.`,
     "",
-    "It rotas instructors across your courses while automatically checking RYA ratios, safety-boat cover and each instructor's qualifications and tickets; tracks DBS, first aid and safeguarding expiry; and lets staff submit availability, log hours and request leave from their phone.",
+    "It rosters instructors across your courses while automatically checking RYA ratios, safety-boat cover and each instructor's qualifications and tickets; tracks DBS, first aid and safeguarding expiry; and lets staff submit availability, log hours and request leave from their phone.",
     "",
     `No two centres run quite the same way, so we're happy to tailor it to how ${p.name} works. The first month is completely free, with no card required, so you can set it up and run a real week before deciding.`,
     "",

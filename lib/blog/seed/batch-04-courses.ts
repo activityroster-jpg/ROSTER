@@ -241,7 +241,7 @@ The RYA Powerboat Scheme runs from Level 1 for complete beginners through Level 
 
 ## Recognition, instructors and boats
 
-Powerboat recognition is separate from dinghy recognition. You need a Powerboat Instructor, and for the higher courses one with the relevant endorsements, suitable boats, a sailing area with the features the syllabus needs, and the usual procedures and risk assessments. Boats should be representative of what learners will drive: a RIB or rigid boat with a tiller or wheel, a reliable engine, a kill cord, and the safety kit the course requires. Many centres use their safety boats, which works if the rota accounts for the fact that a boat on a course is not providing cover for the sailing fleet.
+Powerboat recognition is separate from dinghy recognition. You need a Powerboat Instructor, and for the higher courses one with the relevant endorsements, suitable boats, a sailing area with the features the syllabus needs, and the usual procedures and risk assessments. Boats should be representative of what learners will drive: a RIB or rigid boat with a tiller or wheel, a reliable engine, a kill cord, and the safety kit the course requires. Many centres use their safety boats, which works if the roster accounts for the fact that a boat on a course is not providing cover for the sailing fleet.
 
 Keep a second boat available for the instructor to demonstrate and to run exercises such as towing and man overboard. Learners should drive most of the time; a course where the instructor helms is not teaching.
 
@@ -322,9 +322,9 @@ The real value of adding board sports is the crossover. Design the links deliber
 
 Without these links, you have two or three small businesses sharing a slipway. With them, you have a watersports centre.
 
-## Staffing and the rota
+## Staffing and the roster
 
-Board sports change the rota. Paddleboarding sessions are short and frequent and need instructors who can run several a day. Windsurfing needs the right wind and benefits from being scheduled flexibly. Instructors with multiple qualifications let you move people to the activity the weather favours. Safety cover must still be in place for every group on the water, whatever it is riding.
+Board sports change the roster. Paddleboarding sessions are short and frequent and need instructors who can run several a day. Windsurfing needs the right wind and benefits from being scheduled flexibly. Instructors with multiple qualifications let you move people to the activity the weather favours. Safety cover must still be in place for every group on the water, whatever it is riding.
 
 ## Market to new people
 
@@ -476,7 +476,7 @@ A two-day course loses a day to weather and runs a makeup day. A six-evening ser
 
 ## Staff it sensibly
 
-Flexible formats are harder to staff than blocks. An evening series needs the same instructor each week for continuity, which means that instructor's rota is fixed on that evening for six weeks. Half-day blocks mean instructors changing groups at lunchtime. Term-time junior sessions need staff available during school terms, which rules out most students. Plan the staffing format alongside the course format, and make sure the rota reflects the whole series when the course is created, not week by week.
+Flexible formats are harder to staff than blocks. An evening series needs the same instructor each week for continuity, which means that instructor's roster is fixed on that evening for six weeks. Half-day blocks mean instructors changing groups at lunchtime. Term-time junior sessions need staff available during school terms, which rules out most students. Plan the staffing format alongside the course format, and make sure the roster reflects the whole series when the course is created, not week by week.
 
 ## Boats, locations and clashes
 
@@ -651,7 +651,7 @@ For a week or two, keep the old schedule available for reference while the team 
 
 ## Train the team on the result
 
-The import is the start, not the end. Walk the office staff and senior instructors through the imported season in the new system: how to find a session, how to see who is working, how to add a booking, how to change a time. Show instructors how to see their own rota. Ask them to check their own sessions for the first month; many small errors are caught by the person who knows the session best.
+The import is the start, not the end. Walk the office staff and senior instructors through the imported season in the new system: how to find a session, how to see who is working, how to add a booking, how to change a time. Show instructors how to see their own roster. Ask them to check their own sessions for the first month; many small errors are caught by the person who knows the session best.
 
 ## Keep the habits that made the import easy
 
@@ -659,6 +659,6 @@ Consistent names, one row per session, real dates and times, instructors and loc
 
 ## The result
 
-Done this way, moving the schedule is an afternoon's work that leaves the centre with a cleaner, more consistent programme than it had before, a set of clashes fixed before they bit, staff who can see their rota, and a system that can finally do the things the spreadsheet never could: warn about gaps, check qualifications, track hours and produce the rota without a weekend of cut and paste.`,
+Done this way, moving the schedule is an afternoon's work that leaves the centre with a cleaner, more consistent programme than it had before, a set of clashes fixed before they bit, staff who can see their roster, and a system that can finally do the things the spreadsheet never could: warn about gaps, check qualifications, track hours and produce the roster without a weekend of cut and paste.`,
   },
 ];

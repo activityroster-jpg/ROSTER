@@ -42,7 +42,7 @@ export interface ResearchResult {
 export const DEFAULT_TARGET_ROLES = "Principal, Chief Instructor, Centre Manager, Commodore, Sailing Secretary, Owner";
 
 export const DEFAULT_PITCH =
-  "ActivityRoster is staff rostering built for RYA training centres and clubs. It rotas instructors across courses while checking RYA ratios, safety-boat cover and each instructor's certs; tracks DBS, first aid and safeguarding expiry; and gives instructors an app for availability, confirming shifts, clocking in and leave. Flat price per centre (£35 Small Club, £65 Standard), first month free, no card.";
+  "ActivityRoster is staff rostering built for RYA training centres and clubs. It rosters instructors across courses while checking RYA ratios, safety-boat cover and each instructor's certs; tracks DBS, first aid and safeguarding expiry; and gives instructors an app for availability, confirming shifts, clocking in and leave. Flat price per centre (£35 Small Club, £65 Standard), first month free, no card.";
 
 export const DEFAULT_STEPS: SequenceStep[] = [
   {
@@ -55,7 +55,7 @@ export const DEFAULT_STEPS: SequenceStep[] = [
     gapDays: 4,
     purpose: "Short follow-up: add one concrete benefit (e.g. cert expiry tracking or the free month), keep it to four lines.",
     subject: "Re: Rostering at {{centre}}",
-    body: "Hi {{first_name}},\n\nQuick follow-up in case the last note sank. Centres mostly start with us because the rota, cert expiry dates and payroll hours stop living in three different spreadsheets.\n\nThe first month is free with no card, so you can run a real week before deciding. Shall I send the link?\n\n{{sender}}",
+    body: "Hi {{first_name}},\n\nQuick follow-up in case the last note sank. Centres mostly start with us because the roster, cert expiry dates and payroll hours stop living in three different spreadsheets.\n\nThe first month is free with no card, so you can run a real week before deciding. Shall I send the link?\n\n{{sender}}",
   },
   {
     gapDays: 7,

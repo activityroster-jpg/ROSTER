@@ -7,14 +7,14 @@ import type { MembershipRole } from "@/lib/db/schema";
  */
 export const PERMISSIONS = [
   "office.view",        // open the office at all (dashboard, change log is admin-only)
-  "rota.view",          // rota, emergency sheet, rota PDF
+  "rota.view",          // roster, emergency sheet, roster PDF
   "roster.edit",        // courses, assignments, availability grid, leave and cover, publishing
   "staff.view",         // instructors list and profiles (no pay, no data tools)
   "staff.edit",         // edit profiles, certs, invites
   "protected.view",     // guardian and emergency contacts, young-worker register
   "finance.view",       // payroll, pay rates
   "settings.edit",      // settings, billing, course setup, exports, data tools
-  "parent.view",        // the /parent read-only rota
+  "parent.view",        // the /parent read-only roster
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 

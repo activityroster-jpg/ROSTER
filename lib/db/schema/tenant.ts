@@ -74,7 +74,7 @@ export type PayUnit = (typeof PAY_UNITS)[number];
 export const NOTIFICATION_CHANNELS = ["email", "sms", "in_app"] as const;
 export const TIME_ENTRY_SOURCES = ["clock", "manual"] as const;
 export type TimeEntrySource = (typeof TIME_ENTRY_SOURCES)[number];
-/** Where a payroll line's hours come from: the rota (scheduled), the clock (actual) or typed in. */
+/** Where a payroll line's hours come from: the roster (scheduled), the clock (actual) or typed in. */
 export const HOURS_SOURCES = ["roster", "clock", "manual"] as const;
 export type HoursSource = (typeof HOURS_SOURCES)[number];
 /** A centre's default for payroll: pay what was rostered, or what was clocked. */
@@ -118,7 +118,7 @@ export const orgSettings = sqliteTable("org_settings", {
   enforceAvailabilityChecks: boolCol("enforce_availability_checks").default(true),
   // --- Time clock & pay source -----------------------------------------------
   // The clock is optional: off, instructors don't see the Clock tab and payroll
-  // runs purely on the rota. paySource is the default for new payroll lines.
+  // runs purely on the roster. paySource is the default for new payroll lines.
   timeclockEnabled: boolCol("timeclock_enabled").default(false),
   paySource: text("pay_source", { enum: PAY_SOURCES }).notNull().default("roster"),
   currency: text("currency").notNull().default("GBP"),
@@ -130,7 +130,7 @@ export const orgSettings = sqliteTable("org_settings", {
   breakPaid: boolCol("break_paid").default(false),
   /** The centre's own privacy notice for its staff; linked beside ActivityRoster's notice in the office and portal. */
   privacyNoticeUrl: text("privacy_notice_url"),
-  /** Opt-in morning email of the day's rota to every admin (offline fallback). Hour is London time, 0–23. */
+  /** Opt-in morning email of the day's roster to every admin (offline fallback). Hour is London time, 0–23. */
   dailyDigestEnabled: boolCol("daily_digest_enabled").default(false),
   dailyDigestHour: integer("daily_digest_hour").notNull().default(6),
   // --- Young workers' hours (compliance block F) ----------------------------
@@ -140,7 +140,7 @@ export const orgSettings = sqliteTable("org_settings", {
   workingTimeMode: text("working_time_mode", { enum: WORKING_TIME_MODES }).notNull().default("block_override"),
   /** JSON array of {from,to,label?} ISO date ranges that count as school term time. Empty = treat every week as term time (the stricter caps). */
   termDates: text("term_dates").notNull().default("[]"),
-  /** JSON RotaTemplateSettings (lib/rota/template): range, orientation and fields for the rota PDF. */
+  /** JSON RotaTemplateSettings (lib/rota/template): range, orientation and fields for the roster PDF. */
   rotaTemplate: text("rota_template").notNull().default("{}"),
   /** Minutes of inactivity before an admin is asked for their PIN again (5–240). Applied from the next PIN entry. */
   idleTimeoutMinutes: integer("idle_timeout_minutes").notNull().default(30),
@@ -333,7 +333,7 @@ export const instructor = sqliteTable("instructor", {
   shareContact: boolCol("share_contact").default(false),
   /** When they were marked as having left. Starts the retention clock for their profile (Settings → Data retention). */
   leftAt: integer("left_at", { mode: "timestamp_ms" }),
-  /** Set when the person was anonymised; identifying fields are blank from then on and the record is kept only for rota and payroll history. */
+  /** Set when the person was anonymised; identifying fields are blank from then on and the record is kept only for roster and payroll history. */
   anonymisedAt: integer("anonymised_at", { mode: "timestamp_ms" }),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
@@ -499,7 +499,7 @@ export const courseStaff = sqliteTable("course_staff", {
   isOverride: boolCol("is_override").default(false),
   overrideNote: text("override_note"),
   overriddenBy: text("overridden_by"), // user id
-  // The instructor's own answer once the rota is published.
+  // The instructor's own answer once the roster is published.
   confirmedAt: integer("confirmed_at", { mode: "timestamp_ms" }),
   declinedAt: integer("declined_at", { mode: "timestamp_ms" }),
   declineNote: text("decline_note"),
@@ -609,7 +609,7 @@ export const hoursRecord = sqliteTable("hours_record", {
   rate: real("rate"),
   // How the rate applies: per hour, per session or per day (from the pay rate).
   payUnit: text("pay_unit", { enum: PAY_UNITS }).notNull().default("hour"),
-  // Which minutes this line pays on: rota (scheduled), clock (actual) or manual.
+  // Which minutes this line pays on: roster (scheduled), clock (actual) or manual.
   source: text("source", { enum: HOURS_SOURCES }).notNull().default("roster"),
   // Office corrections during payroll review — win over everything else.
   overrideMinutes: integer("override_minutes"),
@@ -626,7 +626,7 @@ export const hoursRecord = sqliteTable("hours_record", {
 export type HoursRecord = typeof hoursRecord.$inferSelect;
 
 /**
- * A published rota week. Until a week is published, instructors see nothing
+ * A published roster week. Until a week is published, instructors see nothing
  * for it and aren't asked to confirm; publishing notifies everyone rostered.
  */
 export const rosterWeek = sqliteTable("roster_week", {
@@ -760,9 +760,9 @@ export const deletionLog = sqliteTable("deletion_log", {
 export type DeletionLog = typeof deletionLog.$inferSelect;
 
 /**
- * A parent or guardian's read-only access to an under-18 instructor's rota,
+ * A parent or guardian's read-only access to an under-18 instructor's roster,
  * with the consent record behind it. The guardian is a `parent` member of
- * the centre; this row says whose rota they may see.
+ * the centre; this row says whose roster they may see.
  */
 export const GUARDIAN_LINK_STATUSES = ["active", "revoked"] as const;
 export const guardianLink = sqliteTable("guardian_link", {
@@ -794,7 +794,7 @@ export const notification = sqliteTable("notification", {
   createdAt: createdAt(),
 }, (t) => [index("notification_org_idx").on(t.organisationId)]);
 
-/** Append-only audit trail for rota/resource/settings/billing changes. */
+/** Append-only audit trail for roster/resource/settings/billing changes. */
 export const auditLog = sqliteTable("audit_log", {
   id: id(),
   organisationId: orgFk(),

@@ -11,7 +11,7 @@ export interface AuditEntry {
 }
 
 /**
- * Write an audit-log row for a rota/resource/settings/billing change. Every
+ * Write an audit-log row for a roster/resource/settings/billing change. Every
  * mutation goes through here (CLAUDE.md convention). Tenant scoped like all
  * other writes; the actor is the signed-in user, or null for system actions.
  */

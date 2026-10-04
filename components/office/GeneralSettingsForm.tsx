@@ -72,13 +72,13 @@ export function GeneralSettingsForm({
         <legend className="px-1 text-xs font-semibold text-slate-500">If the platform is ever down</legend>
         <label className="flex items-start gap-2 text-sm text-slate-600">
           <input type="checkbox" name="dailyDigestEnabled" defaultChecked={dailyDigestEnabled} className="mt-0.5 h-4 w-4 rounded border-slate-300" />
-          <span>Email every admin the day&rsquo;s rota each morning at
+          <span>Email every admin the day&rsquo;s roster each morning at
             <select name="dailyDigestHour" defaultValue={String(dailyDigestHour)} className="mx-1 rounded border border-slate-300 px-1 py-0.5 text-sm">
               {Array.from({ length: 24 }, (_, h) => <option key={h} value={h}>{String(h).padStart(2, "0")}:00</option>)}
             </select>
             UK time, so you always have today&rsquo;s plan in your inbox. <span className="text-slate-400">Recommended in season.</span></span>
         </label>
-        <p className="mt-2 text-xs text-slate-400">The <a href="/office/rota/emergency" className="text-teal hover:underline">emergency sheet</a> (today&rsquo;s staff with emergency contacts) is always one click away from the rota and prints to PDF.</p>
+        <p className="mt-2 text-xs text-slate-400">The <a href="/office/rota/emergency" className="text-teal hover:underline">emergency sheet</a> (today&rsquo;s staff with emergency contacts) is always one click away from the roster and prints to PDF.</p>
       </fieldset>
       <fieldset className="sm:col-span-4 rounded-lg border border-slate-200 p-3">
         <div className="flex items-center justify-between">
@@ -154,7 +154,7 @@ export function GeneralSettingsForm({
           </label>
           <label className="flex items-start gap-2 text-sm text-slate-600">
             <input type="checkbox" name="enforceAvailabilityChecks" defaultChecked={enforceAvailabilityChecks} className="mt-0.5 h-4 w-4 rounded border-slate-300" />
-            <span>Don&apos;t rota someone who marked that slot <strong>Busy</strong> <span className="text-slate-400">(on by default; override allowed)</span></span>
+            <span>Don&apos;t roster someone who marked that slot <strong>Busy</strong> <span className="text-slate-400">(on by default; override allowed)</span></span>
           </label>
         </div>
       </fieldset>

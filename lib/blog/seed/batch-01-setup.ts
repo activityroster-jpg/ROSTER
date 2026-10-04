@@ -314,11 +314,11 @@ Winter is when the operation is made ready. The list is long and best handled as
 
 ## Early spring: pre-season
 
-Four to six weeks before opening, move from planning to readiness. Get boats rigged and on the water for a shakedown, run safety boat drills, hold the staff induction, walk the site with the emergency plan, test radios and phones, and run at least one full dress rehearsal session with staff as learners. Finish the rota for the first month so instructors know when they are needed. Check that every certificate the season depends on is in date and that any vetting checks have come back.
+Four to six weeks before opening, move from planning to readiness. Get boats rigged and on the water for a shakedown, run safety boat drills, hold the staff induction, walk the site with the emergency plan, test radios and phones, and run at least one full dress rehearsal session with staff as learners. Finish the roster for the first month so instructors know when they are needed. Check that every certificate the season depends on is in date and that any vetting checks have come back.
 
 ## The season: run it, do not re-plan it
 
-Once the season starts, the Principal's job is to keep the plan on track rather than redesign it. A weekly rhythm helps: a short staff meeting at the start of the week to walk through the rota, the weather outlook and any issues; a mid-week check of bookings and staffing for the next fortnight; a Friday review of incidents, feedback and maintenance jobs that arose. Keep a running list of things to change next year rather than trying to fix structural problems in July.
+Once the season starts, the Principal's job is to keep the plan on track rather than redesign it. A weekly rhythm helps: a short staff meeting at the start of the week to walk through the roster, the weather outlook and any issues; a mid-week check of bookings and staffing for the next fortnight; a Friday review of incidents, feedback and maintenance jobs that arose. Keep a running list of things to change next year rather than trying to fix structural problems in July.
 
 Build slack in deliberately. Instructors need days off, boats need a day for repair, and the weather will cost you sessions. A plan that assumes every day runs full with everyone fit is a plan that fails in week three.
 
@@ -717,13 +717,13 @@ Choose three things to do this season: perhaps an access statement on the websit
     tags: ["staffing", "ratios", "operations"],
     coverEmoji: "👥",
     imageQuery: "group of sailing instructors team on beach",
-    body: `Staffing is the biggest controllable cost in a sailing centre and the biggest single factor in whether a session is safe. Too few instructors and you breach your ratios, overload your safety cover and exhaust your team. Too many and the margin on the course disappears. Most centres land somewhere in the middle by instinct. This article sets out a method for working it out properly, session by session and season by season, so that the numbers on your rota are the right ones for defensible reasons.
+    body: `Staffing is the biggest controllable cost in a sailing centre and the biggest single factor in whether a session is safe. Too few instructors and you breach your ratios, overload your safety cover and exhaust your team. Too many and the margin on the course disappears. Most centres land somewhere in the middle by instinct. This article sets out a method for working it out properly, session by session and season by season, so that the numbers on your roster are the right ones for defensible reasons.
 
 ## Start from the ratio, not the headcount
 
 The RYA's guidance for each scheme sets out the maximum number of learners per instructor and the safety cover required, varying by activity, level, boat type and the nature of your water. Your operating procedures should state the figures you have adopted, which may be more conservative than the guidance. Those figures, not habit, are the starting point for every staffing decision.
 
-For each session type, write down: learners per instructor, number of instructors required at your maximum group size, powered safety craft required and who drives them, and any additional roles such as a shore contact or a senior instructor in overall charge. The total is the minimum staffing for that session at full capacity. Nothing on the rota should go below it.
+For each session type, write down: learners per instructor, number of instructors required at your maximum group size, powered safety craft required and who drives them, and any additional roles such as a shore contact or a senior instructor in overall charge. The total is the minimum staffing for that session at full capacity. Nothing on the roster should go below it.
 
 ## Add the roles that are not teaching
 
@@ -745,7 +745,7 @@ Running lean looks efficient on the payroll report and expensive everywhere else
 
 ## And the costs of over-staffing
 
-Instructors standing on the slipway with nothing to do cost money and morale. An over-staffed centre also tends to have blurred responsibilities, because nobody is sure who is in charge of what. If you consistently have more people than the sessions need, convert the surplus into value: run a second group, offer private lessons, send the spare instructor to shadow a senior for development, or shorten the rota.
+Instructors standing on the slipway with nothing to do cost money and morale. An over-staffed centre also tends to have blurred responsibilities, because nobody is sure who is in charge of what. If you consistently have more people than the sessions need, convert the surplus into value: run a second group, offer private lessons, send the spare instructor to shadow a senior for development, or shorten the roster.
 
 ## Match skills, not just numbers
 
@@ -761,7 +761,7 @@ At the end of the season, look at the actual staffing against the bookings for e
 
 ## A worked habit, not a formula
 
-There is no single right number of instructors for a centre. There is a right number for each session, found by starting from the ratio, adding the roles the ratio ignores, adjusting for your water and boats, staffing to real bookings with a margin, and matching qualifications to needs. Build that habit into how the rota is made and the staffing question answers itself most weeks, leaving your attention for the weeks when it does not.`,
+There is no single right number of instructors for a centre. There is a right number for each session, found by starting from the ratio, adding the roles the ratio ignores, adjusting for your water and boats, staffing to real bookings with a margin, and matching qualifications to needs. Build that habit into how the roster is made and the staffing question answers itself most weeks, leaving your attention for the weeks when it does not.`,
   },
   {
     slug: "turning-a-summer-school-into-a-year-round-business",

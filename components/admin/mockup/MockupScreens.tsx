@@ -132,7 +132,7 @@ export function DashboardScreen({ d }: { d: SampleData }) {
       <h1 className="font-display text-[12px] font-semibold text-navy">Good morning — {d.days[0]!.label} {d.days[0]!.date}</h1>
       <p className="mb-2 text-[7px] text-slate-500">{d.centre} · week of {d.weekLabel}</p>
       <div className="mb-2 grid grid-cols-4 gap-1.5">
-        {[["Sessions this week", String(d.sessions.length), "View / print rota"], ["Staff fit to roster", "4 of 6", "1 expiring · 1 blocked"], ["Needs cover", "2", "1 under-staffed · 1 no safety boat"], ["Hours this week", "68.5", "£1,712 est. pay"]].map(([l, v, s]) => (
+        {[["Sessions this week", String(d.sessions.length), "View / print roster"], ["Staff fit to roster", "4 of 6", "1 expiring · 1 blocked"], ["Needs cover", "2", "1 under-staffed · 1 no safety boat"], ["Hours this week", "68.5", "£1,712 est. pay"]].map(([l, v, s]) => (
           <Card key={l}><p className="text-[6.5px] font-semibold text-navy">{l}</p><p className="text-[13px] font-semibold text-navy">{v}</p><p className="text-[6px] text-slate-400">{s}</p></Card>
         ))}
       </div>
@@ -273,7 +273,7 @@ export function InstructorAppScreen({ d }: { d: SampleData }) {
   );
 }
 
-/** The printable "By week" rota, as the Rota page prints it. */
+/** The printable "By week" roster, as the Roster page prints it. */
 export function WeekRota({ d }: { d: SampleData }) {
   return (
     <div className="space-y-2 text-[8px]">

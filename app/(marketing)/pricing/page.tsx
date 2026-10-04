@@ -15,12 +15,12 @@ export const metadata = {
 };
 
 const INCLUDED = [
-  "Rota builder with RYA ratio, ticket and safety-cover checks on every assignment",
+  "Roster builder with RYA ratio, ticket and safety-cover checks on every assignment",
   "Instructor app: shifts, availability, swaps, leave, hours and documents",
   "Certificate and vetting tracking (DBS, PVG, AccessNI, Garda) with expiry reminders",
   "Young workers' hours checked by age; parent and guardian read-only view",
   "Roles for admins, senior instructors and a welfare officer",
-  "Printable day-by-day rota PDF in your choice of layout",
+  "Printable day-by-day roster PDF in your choice of layout",
   "Emergency sheet and young-worker register for the duty officer",
   "Leave, cover and open shifts; hours and payroll export",
   "Import your courses and staff from a spreadsheet or calendar",
@@ -32,7 +32,7 @@ const SETUP_INCLUDED = [
   "We tailor the platform to your way of working — your courses, grades, roles, ratios, checks and session times, set up your way",
   "Custom features and tweaks built around what you actually need — tell us how you want it and we'll make it work like that",
   "We import your existing schedule, staff and tickets from your spreadsheets",
-  "We invite your instructors and set up availability & the weekly rota",
+  "We invite your instructors and set up availability & the weekly roster",
   "A walk-through so you and your team are confident from day one",
 ];
 

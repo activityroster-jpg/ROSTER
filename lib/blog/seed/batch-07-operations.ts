@@ -11,11 +11,11 @@ export const BATCH_07_OPERATIONS: SeedArticle[] = [
     tags: ["admin", "efficiency", "operations"],
     coverEmoji: "🗂️",
     imageQuery: "tidy office desk filing folders organised paperwork",
-    body: `Ask a Principal where the week went and the answer is rarely "teaching". It went on emails about bookings, chasing a first aid certificate, rebuilding the rota after a sick call, finding the insurance document for a school, reconciling the card machine, answering the same question about what to wear for the fortieth time, and looking for the form that was definitely in this folder. Admin sprawl is the quiet thief of a centre's time, and it grows a little every season unless someone decides to tame it. This article covers how to get on top of it, and stay there.
+    body: `Ask a Principal where the week went and the answer is rarely "teaching". It went on emails about bookings, chasing a first aid certificate, rebuilding the roster after a sick call, finding the insurance document for a school, reconciling the card machine, answering the same question about what to wear for the fortieth time, and looking for the form that was definitely in this folder. Admin sprawl is the quiet thief of a centre's time, and it grows a little every season unless someone decides to tame it. This article covers how to get on top of it, and stay there.
 
 ## Find out where the time goes
 
-For two weeks, keep a rough note of what admin tasks take the office's and the Principal's time, in half-hour blocks. The results are usually surprising and always useful: a handful of tasks consume most of the hours, and many of them are repetitive and avoidable. Chasing documents, answering routine questions, re-entering information from one system to another, fixing rota clashes and reconciling payments typically top the list. Those are the targets.
+For two weeks, keep a rough note of what admin tasks take the office's and the Principal's time, in half-hour blocks. The results are usually surprising and always useful: a handful of tasks consume most of the hours, and many of them are repetitive and avoidable. Chasing documents, answering routine questions, re-entering information from one system to another, fixing roster clashes and reconciling payments typically top the list. Those are the targets.
 
 ## Answer the routine questions once
 
@@ -23,15 +23,15 @@ A large share of email and phone traffic is the same twenty questions: what to w
 
 ## Put information in one place
 
-Admin sprawl is largely a symptom of information scattered across spreadsheets, email threads, paper forms, personal phones and three different apps. Each piece of information should live in exactly one place that the people who need it can reach: bookings in the booking system, the rota and staff records in the rostering system, documents in a shared, organised drive, incident reports in the log. When something has to be looked up, there is one place to look. When something changes, it changes once. Choose systems that talk to each other so that the same name is never typed twice.
+Admin sprawl is largely a symptom of information scattered across spreadsheets, email threads, paper forms, personal phones and three different apps. Each piece of information should live in exactly one place that the people who need it can reach: bookings in the booking system, the roster and staff records in the rostering system, documents in a shared, organised drive, incident reports in the log. When something has to be looked up, there is one place to look. When something changes, it changes once. Choose systems that talk to each other so that the same name is never typed twice.
 
 ## Let the systems do the chasing
 
-Reminders, confirmations, certificate expiry warnings, payment reminders, follow-up emails and rota notifications can all be sent automatically from the systems that hold the information. Setting them up once removes hours of manual chasing every month and makes the chasing more reliable than any person. The office's job becomes dealing with the exceptions rather than the routine.
+Reminders, confirmations, certificate expiry warnings, payment reminders, follow-up emails and roster notifications can all be sent automatically from the systems that hold the information. Setting them up once removes hours of manual chasing every month and makes the chasing more reliable than any person. The office's job becomes dealing with the exceptions rather than the routine.
 
 ## Stop re-typing
 
-Every time information is copied from one place to another, time is spent and errors are introduced: the booking typed into the register, the register typed into the rota, the hours typed into the payroll. Look for every such transfer and either connect the systems, import rather than retype, or eliminate the intermediate step. A booking system that feeds the session register, a rota that records hours, and hours that feed the payroll remove three transfers at once.
+Every time information is copied from one place to another, time is spent and errors are introduced: the booking typed into the register, the register typed into the roster, the hours typed into the payroll. Look for every such transfer and either connect the systems, import rather than retype, or eliminate the intermediate step. A booking system that feeds the session register, a roster that records hours, and hours that feed the payroll remove three transfers at once.
 
 ## Standardise the documents
 
@@ -43,11 +43,11 @@ Much admin is predictable: insurance renewal, recognition renewal, first aid cou
 
 ## Give the office authority
 
-Admin slows when every decision goes through the Principal. Decide what the office can handle without asking: refunds within the policy, rebookings, routine supplier orders, the reply to a standard complaint, a swap on the rota within the rules. Write the rules down, trust the people, and review the exceptions weekly. The Principal's time is then spent on the things only they can do.
+Admin slows when every decision goes through the Principal. Decide what the office can handle without asking: refunds within the policy, rebookings, routine supplier orders, the reply to a standard complaint, a swap on the roster within the rules. Write the rules down, trust the people, and review the exceptions weekly. The Principal's time is then spent on the things only they can do.
 
 ## Keep a weekly rhythm
 
-A short weekly admin routine prevents the pile: Monday, the week's bookings and rota confirmed; mid-week, the next fortnight's staffing and any document expiries; Friday, incidents reviewed, hours confirmed, payments reconciled, the inbox cleared. A fixed rhythm turns admin from a constant background anxiety into a set of bounded tasks.
+A short weekly admin routine prevents the pile: Monday, the week's bookings and roster confirmed; mid-week, the next fortnight's staffing and any document expiries; Friday, incidents reviewed, hours confirmed, payments reconciled, the inbox cleared. A fixed rhythm turns admin from a constant background anxiety into a set of bounded tasks.
 
 ## Protect the data as you tidy
 
@@ -55,7 +55,7 @@ Tidying admin usually uncovers personal data in places it should not be: old for
 
 ## Measure the win
 
-After the changes, repeat the two-week note. Most centres find the admin hours fall by a third or more, the inbox shrinks, the rota takes a fraction of the time, and the Principal has afternoons back. Spend them on the water, on the team, or on the growth that the admin was crowding out.
+After the changes, repeat the two-week note. Most centres find the admin hours fall by a third or more, the inbox shrinks, the roster takes a fraction of the time, and the Principal has afternoons back. Spend them on the water, on the team, or on the growth that the admin was crowding out.
 
 ## Keep it tamed
 
@@ -65,19 +65,19 @@ Admin sprawl returns whenever a new spreadsheet is started, a new app is adopted
     slug: "rostering-without-the-headache",
     title: "Rostering Without the Headache",
     category: CAT,
-    excerpt: "Building the weekly rota is many managers' least favourite job. How to make it fast and painless.",
+    excerpt: "Building the weekly roster is many managers' least favourite job. How to make it fast and painless.",
     tags: ["rostering", "operations", "staff"],
     coverEmoji: "📅",
     imageQuery: "staff rota schedule planning board sticky notes",
-    body: `For many centre managers the rota is the worst hour of the week, and it is rarely an hour. Twenty instructors with different qualifications and availability, forty sessions with different requirements, two safety boats, three locations, a Senior Instructor who can only do mornings, a sixteen-year-old who cannot work after a certain hour, a course that has just gone from four learners to seven, and a text from someone who has remembered a wedding. The result is a spreadsheet that is wrong by Tuesday and a manager who dreads Sunday evening. It does not have to be like this. This article covers how to make rostering fast, reliable and nearly painless.
+    body: `For many centre managers the roster is the worst hour of the week, and it is rarely an hour. Twenty instructors with different qualifications and availability, forty sessions with different requirements, two safety boats, three locations, a Senior Instructor who can only do mornings, a sixteen-year-old who cannot work after a certain hour, a course that has just gone from four learners to seven, and a text from someone who has remembered a wedding. The result is a spreadsheet that is wrong by Tuesday and a manager who dreads Sunday evening. It does not have to be like this. This article covers how to make rostering fast, reliable and nearly painless.
 
 ## Separate the fixed from the weekly
 
-Most of the rota is the same every week: the sessions that run, their times, their requirements for instructors, safety cover, boats and locations, and the staff who normally work them. Build this once as a template for the season, with the requirements attached to each session type, and the weekly job becomes adjusting the template to this week's bookings and availability rather than starting from blank. A template that knows a Level 1 course needs an instructor per so many learners, a safety boat with a qualified driver and a particular set of boats removes most of the thinking from each week.
+Most of the roster is the same every week: the sessions that run, their times, their requirements for instructors, safety cover, boats and locations, and the staff who normally work them. Build this once as a template for the season, with the requirements attached to each session type, and the weekly job becomes adjusting the template to this week's bookings and availability rather than starting from blank. A template that knows a Level 1 course needs an instructor per so many learners, a safety boat with a qualified driver and a particular set of boats removes most of the thinking from each week.
 
 ## Collect availability before you build
 
-Half the rota pain comes from building it and then discovering who cannot do it. Collect availability in advance, through a simple weekly form or a shared system where each instructor marks the sessions they can and cannot do, with a deadline a week or more ahead. Build the rota only from people who have said they are available. Chase the people who have not responded before the deadline, not after the rota is published.
+Half the roster pain comes from building it and then discovering who cannot do it. Collect availability in advance, through a simple weekly form or a shared system where each instructor marks the sessions they can and cannot do, with a deadline a week or more ahead. Build the roster only from people who have said they are available. Chase the people who have not responded before the deadline, not after the roster is published.
 
 ## Let the requirements drive the assignment
 
@@ -85,11 +85,11 @@ For each session, the question is who, among the available staff, holds the qual
 
 ## Assign the hard sessions first
 
-Fill the constrained slots before the easy ones: the sessions needing a Senior Instructor, a specific endorsement, a Powerboat Instructor or a safety boat driver, the sites with few qualified people, the early starts and late finishes. Once those are covered, the general instructor sessions fall into place. Starting with the easy ones and discovering the Senior Instructor has already been used is how a rota gets rebuilt three times.
+Fill the constrained slots before the easy ones: the sessions needing a Senior Instructor, a specific endorsement, a Powerboat Instructor or a safety boat driver, the sites with few qualified people, the early starts and late finishes. Once those are covered, the general instructor sessions fall into place. Starting with the easy ones and discovering the Senior Instructor has already been used is how a roster gets rebuilt three times.
 
 ## Build in the margin
 
-A rota that works only if everyone is well is a rota that will fail. Identify a standby for each day, rostered as such, and keep one or two sessions' worth of flexibility in the staffing. Decide in advance what happens when someone drops out: who is called, who steps in, which groups merge or cancel. Having the plan removes the panic.
+A roster that works only if everyone is well is a roster that will fail. Identify a standby for each day, rostered as such, and keep one or two sessions' worth of flexibility in the staffing. Decide in advance what happens when someone drops out: who is called, who steps in, which groups merge or cancel. Having the plan removes the panic.
 
 ## Balance fairness as you go
 
@@ -97,23 +97,23 @@ Keep an eye on the running distribution of early starts, late finishes, weekend 
 
 ## Publish early, in one place
 
-Publish the rota at the same time each week, at least a week ahead, in one place where every instructor can see their own sessions on their phone: time, location, group, co-workers, boats, notes. Avoid the photo of the whiteboard on the group chat; it is out of date within hours. Changes should update the same place and notify only the people affected.
+Publish the roster at the same time each week, at least a week ahead, in one place where every instructor can see their own sessions on their phone: time, location, group, co-workers, boats, notes. Avoid the photo of the whiteboard on the group chat; it is out of date within hours. Changes should update the same place and notify only the people affected.
 
 ## Handle swaps within the rules
 
 Allow instructors to swap sessions between themselves, provided the swap keeps the session compliant and the person in charge approves. A system that checks the swap against the requirements and records it saves the manager from being the switchboard for every change. Swaps that would break a ratio or a qualification rule should be impossible, not merely discouraged.
 
-## Keep the rota and the day connected
+## Keep the roster and the day connected
 
-The rota is a plan; the day is what happened. Record the actual: who worked, for how long, which sessions ran, which were changed and why. This feeds the hours for pay, the compliance record for the inspector, the fairness tally, and next week's plan. When the rota and the time record are the same system, this happens automatically.
+The roster is a plan; the day is what happened. Record the actual: who worked, for how long, which sessions ran, which were changed and why. This feeds the hours for pay, the compliance record for the inspector, the fairness tally, and next week's plan. When the roster and the time record are the same system, this happens automatically.
 
 ## Review the pattern monthly
 
-Once a month, look at the rota as a whole: which sessions were consistently hard to staff, which instructors carried the most, where the ratios ran tight, how many changes were made after publication. The answers point to the structural fixes: recruit another Senior Instructor, change a session time, adjust the booking limits, train a second safety boat driver. Rostering pain that recurs weekly is almost always a structural problem wearing a weekly disguise.
+Once a month, look at the roster as a whole: which sessions were consistently hard to staff, which instructors carried the most, where the ratios ran tight, how many changes were made after publication. The answers point to the structural fixes: recruit another Senior Instructor, change a session time, adjust the booking limits, train a second safety boat driver. Rostering pain that recurs weekly is almost always a structural problem wearing a weekly disguise.
 
 ## What good looks like
 
-A season template built once. Availability collected by a deadline. Requirements that drive assignment and refuse the illegal. Hard sessions first, margin built in, fairness tracked. Published a week ahead in one place on everyone's phone. Swaps handled within rules. Hours recorded from the rota. A monthly review. The weekly rota then takes half an hour rather than an evening, the mistakes that cause incidents and complaints stop appearing, and Sunday evening becomes Sunday evening again.`,
+A season template built once. Availability collected by a deadline. Requirements that drive assignment and refuse the illegal. Hard sessions first, margin built in, fairness tracked. Published a week ahead in one place on everyone's phone. Swaps handled within rules. Hours recorded from the roster. A monthly review. The weekly roster then takes half an hour rather than an evening, the mistakes that cause incidents and complaints stop appearing, and Sunday evening becomes Sunday evening again.`,
   },
   {
     slug: "managing-your-fleet-and-equipment",
@@ -127,7 +127,7 @@ A season template built once. Availability collected by a deadline. Requirements
 
 ## Know what you have
 
-Start with a register: every boat, engine, trailer and trolley, every safety boat and its kit, and the equipment in bulk, buoyancy aids by size, wetsuits, radios, first aid kits, paddles, boards and rigs. For each item: an identifier, where it lives, when it was bought, its condition, the courses it is used for and its expected replacement date. A register that lives in one place, on paper in the workshop or in the system the rota uses, is the foundation. Many centres are surprised at what the first register reveals: boats nobody has sailed in two years, a safety kit missing from a RIB, forty buoyancy aids with no record of age.
+Start with a register: every boat, engine, trailer and trolley, every safety boat and its kit, and the equipment in bulk, buoyancy aids by size, wetsuits, radios, first aid kits, paddles, boards and rigs. For each item: an identifier, where it lives, when it was bought, its condition, the courses it is used for and its expected replacement date. A register that lives in one place, on paper in the workshop or in the system the roster uses, is the foundation. Many centres are surprised at what the first register reveals: boats nobody has sailed in two years, a safety kit missing from a RIB, forty buoyancy aids with no record of age.
 
 ## Check daily, record it
 
@@ -187,9 +187,9 @@ A fleet that is registered, checked daily, repaired promptly, maintained on a pl
 
 Before tracking time, agree what work is. Teaching sessions, obviously. Setup, rigging and launching. Briefings and debriefs. Recovery and putting away. Maintenance. Staff meetings and training. Standby when it restricts what the person can do. Travel between sites during the day. Write the definition down, apply it to everyone, and make sure it meets the law: in the UK and Ireland, time the employer requires a worker to be at work or available counts, and the minimum wage must be met across all of it, not just the teaching hours. Ambiguity here is where most disputes begin.
 
-## Track from the rota, not from memory
+## Track from the roster, not from memory
 
-The rota already says who was due to work which sessions and when. The simplest reliable method is to confirm the actual against the rota: at the end of each day or session, the instructor or the person in charge confirms that the planned hours happened, or adjusts them for the early finish, the extra hour or the swap. The record is then a correction of a plan rather than a reconstruction from scratch, which is faster and far more accurate. Systems that hold the rota and the time record together do this with a tap.
+The roster already says who was due to work which sessions and when. The simplest reliable method is to confirm the actual against the rota: at the end of each day or session, the instructor or the person in charge confirms that the planned hours happened, or adjusts them for the early finish, the extra hour or the swap. The record is then a correction of a plan rather than a reconstruction from scratch, which is faster and far more accurate. Systems that hold the roster and the time record together do this with a tap.
 
 ## Make it effortless and immediate
 
@@ -201,11 +201,11 @@ The person whose pay depends on the hours should see and confirm them, weekly, b
 
 ## Watch the legal limits as you go
 
-Working time rules set maximum hours and minimum rest, and for under-18s the limits on hours, times of day and breaks are stricter. These are not things to check at the end of the month; they need to be visible when the rota is built and when the hours are confirmed. A system that knows each person's age and the rules that apply, and warns when a week is approaching a limit or a shift breaks a rest requirement, keeps the centre legal without anyone doing arithmetic.
+Working time rules set maximum hours and minimum rest, and for under-18s the limits on hours, times of day and breaks are stricter. These are not things to check at the end of the month; they need to be visible when the roster is built and when the hours are confirmed. A system that knows each person's age and the rules that apply, and warns when a week is approaching a limit or a shift breaks a rest requirement, keeps the centre legal without anyone doing arithmetic.
 
 ## Keep the record for the people who need it
 
-Payroll needs hours by person by pay period. Compliance needs who was on duty for each session, with their role, for the inspector, the insurer and any investigation. Young workers' records may be requested by enforcement bodies. Fairness needs the pattern of early starts and weekends by person. One good record, kept from the rota and confirmed daily, serves all of them; the alternative is four spreadsheets that disagree.
+Payroll needs hours by person by pay period. Compliance needs who was on duty for each session, with their role, for the inspector, the insurer and any investigation. Young workers' records may be requested by enforcement bodies. Fairness needs the pattern of early starts and weekends by person. One good record, kept from the roster and confirmed daily, serves all of them; the alternative is four spreadsheets that disagree.
 
 ## Handle the edge cases in advance
 
@@ -225,11 +225,11 @@ Tell staff at induction how time is recorded, what counts, when they will see th
 
 ## Review the pattern
 
-Look monthly at hours by person against the rota, at overtime and at approaches to the legal limits. A person consistently working far beyond their rostered hours is a workload problem. A pattern of unpaid early starts is a culture problem. The time record is management information as well as a payroll input.
+Look monthly at hours by person against the roster, at overtime and at approaches to the legal limits. A person consistently working far beyond their rostered hours is a workload problem. A pattern of unpaid early starts is a culture problem. The time record is management information as well as a payroll input.
 
 ## What good looks like
 
-Work defined. Hours confirmed daily from the rota, in seconds, by the people doing them. Legal limits checked as the rota is built. Weekly confirmation by each instructor. One record feeding pay, compliance and fairness. Edge cases decided in advance. Payroll in minutes. No scribbled timesheets, no reconstruction, no weekend of reconciling, and a team that trusts it is being paid for every hour it works.`,
+Work defined. Hours confirmed daily from the roster, in seconds, by the people doing them. Legal limits checked as the roster is built. Weekly confirmation by each instructor. One record feeding pay, compliance and fairness. Edge cases decided in advance. Payroll in minutes. No scribbled timesheets, no reconstruction, no weekend of reconciling, and a team that trusts it is being paid for every hour it works.`,
   },
   {
     slug: "managing-leave-and-cover-fairly",
@@ -247,7 +247,7 @@ The time to decide leave policy is the winter, not the week someone asks. Agree 
 
 ## Ask early and plan around it
 
-Collect known leave requests, holidays, weddings, exams and festivals, when the season's rota is first built, and treat them as fixed. Most clashes are visible months ahead and can be designed around: a second Senior Instructor developed before the camp week, a returner booked for the dates a core member is away. The requests that cause chaos are the ones nobody asked about until the rota was published.
+Collect known leave requests, holidays, weddings, exams and festivals, when the season's roster is first built, and treat them as fixed. Most clashes are visible months ahead and can be designed around: a second Senior Instructor developed before the camp week, a returner booked for the dates a core member is away. The requests that cause chaos are the ones nobody asked about until the roster was published.
 
 ## Decide competing requests fairly
 
@@ -255,7 +255,7 @@ When two people want the same restricted dates, have a rule and apply it: first 
 
 ## Make sure people actually take leave
 
-In a busy season the conscientious do not ask for time off, and the Principal least of all. Build days off into the rota as protected, not as the days when nobody is rostered yet. Watch for people who have not had a proper break in weeks and make them take one. A tired instructor is a safety risk and a retention risk. A tired Principal makes poor decisions. Leave is part of running the centre well, not a concession to it.
+In a busy season the conscientious do not ask for time off, and the Principal least of all. Build days off into the roster as protected, not as the days when nobody is rostered yet. Watch for people who have not had a proper break in weeks and make them take one. A tired instructor is a safety risk and a retention risk. A tired Principal makes poor decisions. Leave is part of running the centre well, not a concession to it.
 
 ## Build the cover system
 
@@ -275,7 +275,7 @@ Maternity and paternity leave, a long illness, a bereavement or a sabbatical rem
 
 ## Use the systems
 
-Leave requests, approvals, balances, the restricted periods, standby rotas and cover records belong in the same system as the rota, so that a request can be checked against the plan, an approval updates the rota, and a cover assignment is recorded for pay and compliance. Spreadsheets and messages can do it for a small team; beyond a dozen people they cannot.
+Leave requests, approvals, balances, the restricted periods, standby rosters and cover records belong in the same system as the roster, so that a request can be checked against the plan, an approval updates the roster, and a cover assignment is recorded for pay and compliance. Spreadsheets and messages can do it for a small team; beyond a dozen people they cannot.
 
 ## Communicate clearly
 
@@ -287,7 +287,7 @@ In the autumn, look at how leave and cover went: which periods were short, which
 
 ## Fair is operational
 
-A leave and cover system that is clear, fair, planned early and supported by a working standby arrangement produces a team that rests, returns and trusts the rota. It is not generosity; it is how a seasonal centre keeps its people through a long summer and still has them in September.`,
+A leave and cover system that is clear, fair, planned early and supported by a working standby arrangement produces a team that rests, returns and trusts the roster. It is not generosity; it is how a seasonal centre keeps its people through a long summer and still has them in September.`,
   },
   {
     slug: "communicating-with-your-team-effectively",
@@ -301,19 +301,19 @@ A leave and cover system that is clear, fair, planned early and supported by a w
 
 ## Decide what goes where
 
-The first fix is to agree a small number of channels and what each is for. A typical, workable set: the morning briefing for today; the rota system for who is working when and any changes to it; one team message channel for operational notices during the day; email for things that need to be kept, such as policies and the weekly update; the noticeboard for the standing information; and a face-to-face conversation for anything personal or sensitive. Write the set down, tell the team, and resist adding channels. A new app for every purpose produces a team that does not know where to look.
+The first fix is to agree a small number of channels and what each is for. A typical, workable set: the morning briefing for today; the roster system for who is working when and any changes to it; one team message channel for operational notices during the day; email for things that need to be kept, such as policies and the weekly update; the noticeboard for the standing information; and a face-to-face conversation for anything personal or sensitive. Write the set down, tell the team, and resist adding channels. A new app for every purpose produces a team that does not know where to look.
 
 ## Hold the morning briefing, every day
 
 The ten minutes before the first session, with everyone present, are the most valuable communication of the day. The plan, the groups, the weather and the limits, who is on safety boat, who is in charge, anything unusual, and a moment for questions. Keep it short, keep it standing, keep it to the same time and place. A team that has been briefed makes fewer mistakes and feels like a team.
 
-## Make the rota the single truth for who, when and where
+## Make the roster the single truth for who, when and where
 
-Rota changes are the commonest source of confusion. If the rota lives in one place that everyone can see on their phone and changes there update immediately and notify the people affected, the question "did you know the session moved?" disappears. If the rota is a photograph on a group chat, every change produces a chain of messages and someone who missed it.
+Roster changes are the commonest source of confusion. If the roster lives in one place that everyone can see on their phone and changes there update immediately and notify the people affected, the question "did you know the session moved?" disappears. If the roster is a photograph on a group chat, every change produces a chain of messages and someone who missed it.
 
 ## Send the right message to the right people
 
-Noise is mostly messages sent to everyone that concern a few. A weather decision goes to today's team and today's learners' parents. A rota change goes to the people whose sessions changed. A policy update goes to everyone, once, by a channel that keeps it. A system that lets you address the people a message concerns, rather than broadcasting to the whole team, cuts the noise dramatically and makes the messages that do arrive worth reading.
+Noise is mostly messages sent to everyone that concern a few. A weather decision goes to today's team and today's learners' parents. A roster change goes to the people whose sessions changed. A policy update goes to everyone, once, by a channel that keeps it. A system that lets you address the people a message concerns, rather than broadcasting to the whole team, cuts the noise dramatically and makes the messages that do arrive worth reading.
 
 ## Keep a weekly written update
 
@@ -325,7 +325,7 @@ The procedures, the emergency plan, the briefing cards, the kit lists, the polic
 
 ## Close the loop
 
-Communication is complete when the recipient has understood, not when the message was sent. For anything important, a rota change, a new limit, a safeguarding instruction, confirm it reached the people it concerns: a reply, an acknowledgement in the system, a word at the briefing. Do not assume that a message in a busy channel was read.
+Communication is complete when the recipient has understood, not when the message was sent. For anything important, a roster change, a new limit, a safeguarding instruction, confirm it reached the people it concerns: a reply, an acknowledgement in the system, a word at the briefing. Do not assume that a message in a busy channel was read.
 
 ## Be careful with personal messaging
 
@@ -337,7 +337,7 @@ Communication runs both ways. The weekly staff meeting should have time for the 
 
 ## Communicate decisions, not just facts
 
-People need to know not only what has changed but why and who decided. A new wind limit announced without reason is resented; one explained in two sentences is accepted. A rota decision explained is trusted. The reason costs a line and buys compliance.
+People need to know not only what has changed but why and who decided. A new wind limit announced without reason is resented; one explained in two sentences is accepted. A roster decision explained is trusted. The reason costs a line and buys compliance.
 
 ## Reach the whole team
 
@@ -349,65 +349,65 @@ Once a season, ask the team which channels work, which are ignored, what they mi
 
 ## What good feels like
 
-Everyone knows where to look for the rota and knows it is right. The day starts with a briefing. The messages that arrive concern the recipient. The week has a written update. The standing information is a tap away. Important things are confirmed. Problems come up through the team as easily as instructions go down. And the number of operational surprises falls to the few that nobody could have foreseen.`,
+Everyone knows where to look for the roster and knows it is right. The day starts with a briefing. The messages that arrive concern the recipient. The week has a written update. The standing information is a tap away. Important things are confirmed. Problems come up through the team as easily as instructions go down. And the number of operational surprises falls to the few that nobody could have foreseen.`,
   },
   {
     slug: "producing-a-clear-weekly-rota-for-everyone",
-    title: "Producing a Clear Weekly Rota for Everyone",
+    title: "Producing a Clear Weekly Roster for Everyone",
     category: CAT,
-    excerpt: "A rota only works if everyone can read and trust it. How to produce one that just works.",
+    excerpt: "A roster only works if everyone can read and trust it. How to produce one that just works.",
     tags: ["rota", "communication", "operations"],
     coverEmoji: "🖨️",
     imageQuery: "printed weekly rota pinned on noticeboard clubhouse",
-    body: `A rota can be correct and still fail. If instructors cannot find their own sessions on it, if it does not say where to be or with whom, if the version on the wall differs from the one on the phone, if it is published too late to plan around or changes without anyone noticing, then the correct rota produces the same missed sessions and confusion as a wrong one. A clear rota is one that each person can read in seconds, trust completely and act on without asking. This article covers how to produce one.
+    body: `A roster can be correct and still fail. If instructors cannot find their own sessions on it, if it does not say where to be or with whom, if the version on the wall differs from the one on the phone, if it is published too late to plan around or changes without anyone noticing, then the correct roster produces the same missed sessions and confusion as a wrong one. A clear roster is one that each person can read in seconds, trust completely and act on without asking. This article covers how to produce one.
 
 ## Design it for the reader, not the author
 
-The manager builds the rota by session: who is covering the Level 2 course on Saturday. The instructor reads it by person: what am I doing this week, when, where, with whom. A clear rota serves both views. The master view by session for the office and the person in charge, and a personal view for each instructor that shows only their own sessions, in order, with everything they need. A system that produces both from the same data is ideal; on paper, publish the master and send each person their own list.
+The manager builds the roster by session: who is covering the Level 2 course on Saturday. The instructor reads it by person: what am I doing this week, when, where, with whom. A clear roster serves both views. The master view by session for the office and the person in charge, and a personal view for each instructor that shows only their own sessions, in order, with everything they need. A system that produces both from the same data is ideal; on paper, publish the master and send each person their own list.
 
 ## Put everything the person needs on it
 
-For each session a person works, the rota should say: the date and the start and finish times, including setup and debrief; the location, down to the pontoon or classroom if you have several; the course and group; their role, instructor, Senior Instructor, safety boat driver or crew; who else is working the session; the boats and equipment allocated if that matters; and any notes, a learner with a particular need, a changed plan, a reminder. A rota that forces people to ask for half of this is not finished.
+For each session a person works, the roster should say: the date and the start and finish times, including setup and debrief; the location, down to the pontoon or classroom if you have several; the course and group; their role, instructor, Senior Instructor, safety boat driver or crew; who else is working the session; the boats and equipment allocated if that matters; and any notes, a learner with a particular need, a changed plan, a reminder. A roster that forces people to ask for half of this is not finished.
 
 ## Use consistent names and formats
 
-Course names, locations and roles should be the same everywhere: on the rota, on the booking system, on the briefing board and in conversation. "L2", "Level 2" and "Sat improvers" for the same course cause mistakes. Times in one format. Dates with the day of the week. A consistent layout week after week so that people know where to look.
+Course names, locations and roles should be the same everywhere: on the roster, on the booking system, on the briefing board and in conversation. "L2", "Level 2" and "Sat improvers" for the same course cause mistakes. Times in one format. Dates with the day of the week. A consistent layout week after week so that people know where to look.
 
 ## Publish on the same day each week, well ahead
 
-Pick a day and time to publish and keep to it: Wednesday afternoon for the week starting the following Monday, for example, giving everyone a long weekend's notice at minimum, and a fortnight where you can. People build their lives around a rota that is reliable about when it appears. Publish the following week's draft even if it may change; a draft a fortnight ahead beats a final version three days ahead.
+Pick a day and time to publish and keep to it: Wednesday afternoon for the week starting the following Monday, for example, giving everyone a long weekend's notice at minimum, and a fortnight where you can. People build their lives around a roster that is reliable about when it appears. Publish the following week's draft even if it may change; a draft a fortnight ahead beats a final version three days ahead.
 
 ## One version, in one place
 
-The failure that causes most confusion is multiple versions: a photo on the group chat, a printout on the wall, a spreadsheet on the office computer, each updated at different times. Decide the single place where the live rota lives, make it accessible on a phone, and make every other copy clearly a snapshot with a date and time. Changes are made in the live version and notified from it. If the wall copy is needed for the morning briefing, print it that morning and bin it that evening.
+The failure that causes most confusion is multiple versions: a photo on the group chat, a printout on the wall, a spreadsheet on the office computer, each updated at different times. Decide the single place where the live roster lives, make it accessible on a phone, and make every other copy clearly a snapshot with a date and time. Changes are made in the live version and notified from it. If the wall copy is needed for the morning briefing, print it that morning and bin it that evening.
 
 ## Make changes visible
 
-When the rota changes after publication, the people affected must know and the change must be obvious. Notify them directly, by the channel they will see, with what changed and why. In the live rota, mark changed sessions so that anyone looking can see what moved. Keep a short log of changes after publication; it is useful for fairness, for pay and for spotting a rota that is being rebuilt too often.
+When the roster changes after publication, the people affected must know and the change must be obvious. Notify them directly, by the channel they will see, with what changed and why. In the live roster, mark changed sessions so that anyone looking can see what moved. Keep a short log of changes after publication; it is useful for fairness, for pay and for spotting a roster that is being rebuilt too often.
 
 ## Show the whole day, not just the sessions
 
-Instructors need to see the shape of their day: the early start for rigging, the gap between sessions, the late finish for the evening course, the standby afternoon. A rota that shows only teaching sessions hides the long days and the awkward splits, which is where resentment grows. Showing the full shape also lets people plan breaks, lifts and childcare.
+Instructors need to see the shape of their day: the early start for rigging, the gap between sessions, the late finish for the evening course, the standby afternoon. A roster that shows only teaching sessions hides the long days and the awkward splits, which is where resentment grows. Showing the full shape also lets people plan breaks, lifts and childcare.
 
 ## Include everyone
 
-Volunteers, assistants, the office, the bosun and the person in charge for the day belong on the rota alongside the instructors. A rota that shows only the paid teaching staff leaves half the team guessing and hides the roles that make the day work. Everyone who is relied upon should be able to see that they are.
+Volunteers, assistants, the office, the bosun and the person in charge for the day belong on the roster alongside the instructors. A roster that shows only the paid teaching staff leaves half the team guessing and hides the roles that make the day work. Everyone who is relied upon should be able to see that they are.
 
 ## Print it well when you print it
 
-For the noticeboard, the briefing area and the safety boats, a printed rota still matters. Produce it as a proper document rather than a screenshot: readable from a metre away, the day's sessions in time order, each with its course, times, staff and location, in a layout that is the same every week. A tool that produces a clean PDF of the rota for a day, a week or a month in a layout you have chosen once saves the weekly wrestling with a spreadsheet's print settings.
+For the noticeboard, the briefing area and the safety boats, a printed roster still matters. Produce it as a proper document rather than a screenshot: readable from a metre away, the day's sessions in time order, each with its course, times, staff and location, in a layout that is the same every week. A tool that produces a clean PDF of the roster for a day, a week or a month in a layout you have chosen once saves the weekly wrestling with a spreadsheet's print settings.
 
 ## Make it easy to check and query
 
-Each person should be able to confirm their own sessions and raise a problem quickly: a wrong time, a clash with a known commitment, a missing session. Give them a way to do it that reaches the right person and is logged, rather than a message that gets lost. A short window after publication for queries, before the rota is treated as final, catches most errors cheaply.
+Each person should be able to confirm their own sessions and raise a problem quickly: a wrong time, a clash with a known commitment, a missing session. Give them a way to do it that reaches the right person and is logged, rather than a message that gets lost. A short window after publication for queries, before the roster is treated as final, catches most errors cheaply.
 
 ## Test it on a new person
 
-The clearest test of a rota is to hand it to someone who started this week and ask them to tell you what they are doing on Saturday, where, with whom and what time they should arrive. If they can answer in under a minute from the rota alone, it is clear. If they have to ask, the rota needs work, not the person.
+The clearest test of a roster is to hand it to someone who started this week and ask them to tell you what they are doing on Saturday, where, with whom and what time they should arrive. If they can answer in under a minute from the roster alone, it is clear. If they have to ask, the roster needs work, not the person.
 
 ## Review how it reads
 
-Once a season, ask the team how the rota works for them: can they find what they need, is it published early enough, do they trust it, what is missing. Adjust the format accordingly. A rota that is designed around how people actually read it becomes something they trust and use without thinking, which is the whole aim.`,
+Once a season, ask the team how the roster works for them: can they find what they need, is it published early enough, do they trust it, what is missing. Adjust the format accordingly. A roster that is designed around how people actually read it becomes something they trust and use without thinking, which is the whole aim.`,
   },
   {
     slug: "handling-payments-and-invoicing-cleanly",
@@ -475,7 +475,7 @@ Each winter, walk through how money moves from the customer to the bank account 
     tags: ["planning", "seasonality", "operations"],
     coverEmoji: "🌤️",
     imageQuery: "spring fitting out boats being launched sailing club",
-    body: `The season is won or lost in the six weeks before it starts. A centre that opens with every boat checked, every certificate verified, every instructor inducted, the procedures reviewed, the drills run and the first month's rota published has a calm April and a strong summer. One that opens by finding out what is broken has a season of catching up. This article is a practical pre-season checklist, organised by the areas that matter, for Principals and committees to work through from late winter.
+    body: `The season is won or lost in the six weeks before it starts. A centre that opens with every boat checked, every certificate verified, every instructor inducted, the procedures reviewed, the drills run and the first month's roster published has a calm April and a strong summer. One that opens by finding out what is broken has a season of catching up. This article is a practical pre-season checklist, organised by the areas that matter, for Principals and committees to work through from late winter.
 
 ## People
 
@@ -484,7 +484,7 @@ Each winter, walk through how money moves from the customer to the bank account 
 - Complete the administrative essentials for new and returning staff: contracts, right to work, bank details, emergency contacts, medical information.
 - Plan and run the pre-season induction: site walk, procedures, emergency plan, safeguarding, model sessions, safety boat practice, drills.
 - Brief the Welfare Officer role and introduce the person to the whole team.
-- Publish the first month's rota and the season's standby arrangements.
+- Publish the first month's roster and the season's standby arrangements.
 - Hold the development conversations: who is working towards what this season.
 
 ## Boats and equipment
@@ -566,7 +566,7 @@ Save this checklist with the dates each item was done and who did it. Next year,
     tags: ["spreadsheets", "systems", "operations"],
     coverEmoji: "📄",
     imageQuery: "messy spreadsheet on laptop screen frustrated person",
-    body: `Almost every sailing centre starts on spreadsheets, and rightly so. They are free, flexible and familiar, and for a small operation with one person in the office they do the job. The trouble is that they keep doing the job, apparently, long after they have stopped doing it well. The signs are gradual: the rota that takes an evening, the booking that was double-entered, the certificate that lapsed because the date was in the wrong column, the version on the laptop that differs from the one on the shared drive. This article sets out why spreadsheets eventually let a centre down, the warning signs that the moment has arrived, and what to do about it.
+    body: `Almost every sailing centre starts on spreadsheets, and rightly so. They are free, flexible and familiar, and for a small operation with one person in the office they do the job. The trouble is that they keep doing the job, apparently, long after they have stopped doing it well. The signs are gradual: the roster that takes an evening, the booking that was double-entered, the certificate that lapsed because the date was in the wrong column, the version on the laptop that differs from the one on the shared drive. This article sets out why spreadsheets eventually let a centre down, the warning signs that the moment has arrived, and what to do about it.
 
 ## They hold data, not rules
 
@@ -582,11 +582,11 @@ The moment a spreadsheet is emailed, copied to a laptop or photographed for the 
 
 ## They are only as good as the person who built them
 
-The rota spreadsheet with its clever formulas was built by someone who understood it. When that person leaves, falls ill or simply forgets how the lookup works, nobody dares touch it. The spreadsheet becomes a single point of failure disguised as a tool. The same is true of the booking tracker, the certificate list and the hours sheet.
+The roster spreadsheet with its clever formulas was built by someone who understood it. When that person leaves, falls ill or simply forgets how the lookup works, nobody dares touch it. The spreadsheet becomes a single point of failure disguised as a tool. The same is true of the booking tracker, the certificate list and the hours sheet.
 
 ## They cannot talk to the people
 
-Instructors cannot see their own rota on their phone from a spreadsheet, confirm their hours, submit availability, swap a shift within rules or upload a new certificate. Parents cannot receive an automatic reminder. The office becomes the human interface between the spreadsheet and everyone else, which is where the hours go.
+Instructors cannot see their own roster on their phone from a spreadsheet, confirm their hours, submit availability, swap a shift within rules or upload a new certificate. Parents cannot receive an automatic reminder. The office becomes the human interface between the spreadsheet and everyone else, which is where the hours go.
 
 ## They keep personal data badly
 
@@ -594,7 +594,7 @@ Spreadsheets of learners, children, medical information and staff records end up
 
 ## The warning signs
 
-- The weekly rota takes more than an hour, or is rebuilt more than once most weeks.
+- The weekly roster takes more than an hour, or is rebuilt more than once most weeks.
 - Something was double-booked, over-booked or under-staffed in the last season because two files disagreed.
 - A certificate expired without anyone noticing until it mattered.
 - The same information is typed into more than one place.
@@ -609,11 +609,11 @@ Two or three of these is the moment. Five is overdue.
 
 ## What a proper system does differently
 
-A system built for the job holds the rules and enforces them: ratios, qualifications, hours limits, boat and location clashes, booking caps. It connects the pieces so that information is entered once and flows: booking to session to rota to hours to pay. It has one live version that each person sees from their own angle, on their own phone, with changes notified. It talks to people automatically: reminders, confirmations, expiry warnings. It keeps the records that compliance needs as a by-product of running the day. It controls access and keeps an audit. And it does not depend on the person who set it up.
+A system built for the job holds the rules and enforces them: ratios, qualifications, hours limits, boat and location clashes, booking caps. It connects the pieces so that information is entered once and flows: booking to session to roster to hours to pay. It has one live version that each person sees from their own angle, on their own phone, with changes notified. It talks to people automatically: reminders, confirmations, expiry warnings. It keeps the records that compliance needs as a by-product of running the day. It controls access and keeps an audit. And it does not depend on the person who set it up.
 
 ## Making the move without pain
 
-Moving off spreadsheets feels daunting and is usually an afternoon. Clean the spreadsheets first, import the season's courses and the staff with their qualifications, run the two side by side for a fortnight, then switch. Choose a system designed for centres like yours, that handles the rota, the qualifications, the hours and the sessions together, that works on a phone on the slipway, that keeps data in the right place and lets you leave cleanly if it does not suit. Involve the office and a couple of instructors in the choice; they will use it most.
+Moving off spreadsheets feels daunting and is usually an afternoon. Clean the spreadsheets first, import the season's courses and the staff with their qualifications, run the two side by side for a fortnight, then switch. Choose a system designed for centres like yours, that handles the roster, the qualifications, the hours and the sessions together, that works on a phone on the slipway, that keeps data in the right place and lets you leave cleanly if it does not suit. Involve the office and a couple of instructors in the choice; they will use it most.
 
 ## Keep the spreadsheets for what they are good at
 
@@ -627,27 +627,27 @@ Spreadsheets remain excellent for one-off analysis, the budget model, the fleet 
     tags: ["software", "systems", "operations"],
     coverEmoji: "🧮",
     imageQuery: "comparing software options laptop tablet checklist",
-    body: `Choosing software for a sailing centre is a decision most Principals make once or twice in their time, with little experience and under pressure from a spreadsheet that has finally broken. Get it right and the office gains hours a week, the rota stops producing mistakes, compliance becomes a by-product of the day and the team has what it needs on their phones. Get it wrong and the centre pays monthly for something half the team ignores. This article sets out what to look for, the questions to ask and the traps to avoid.
+    body: `Choosing software for a sailing centre is a decision most Principals make once or twice in their time, with little experience and under pressure from a spreadsheet that has finally broken. Get it right and the office gains hours a week, the roster stops producing mistakes, compliance becomes a by-product of the day and the team has what it needs on their phones. Get it wrong and the centre pays monthly for something half the team ignores. This article sets out what to look for, the questions to ask and the traps to avoid.
 
 ## Start with the jobs, not the features
 
-Before looking at any product, write down the jobs you need done, in order of pain: build and publish the rota; track qualifications and expiry; take bookings and payments; record hours and feed payroll; manage sessions, boats and locations without clashes; keep course records and certificates; send reminders and communications; hold staff and learner records securely. Then note the specific needs of a watersports centre: ratios and safety cover, instructor qualifications by course, under-18 staff rules, weather cancellations, multi-session courses, RYA course structures, and the fact that users are outdoors on phones. A product that does the top four jobs brilliantly is better than one that does fifteen adequately.
+Before looking at any product, write down the jobs you need done, in order of pain: build and publish the roster; track qualifications and expiry; take bookings and payments; record hours and feed payroll; manage sessions, boats and locations without clashes; keep course records and certificates; send reminders and communications; hold staff and learner records securely. Then note the specific needs of a watersports centre: ratios and safety cover, instructor qualifications by course, under-18 staff rules, weather cancellations, multi-session courses, RYA course structures, and the fact that users are outdoors on phones. A product that does the top four jobs brilliantly is better than one that does fifteen adequately.
 
 ## Prefer one system over several
 
-A centre with a booking tool, a rota app, a spreadsheet for certificates, a messaging app and a payroll export has five systems that do not talk, five logins, five bills and the same name typed five times. The connections between the jobs are where the value and the mistakes are: a booking changes staffing, a certificate changes who can be rostered, hours become pay. Look for a system that holds the connected jobs together, or at least for ones that genuinely integrate rather than merely export.
+A centre with a booking tool, a roster app, a spreadsheet for certificates, a messaging app and a payroll export has five systems that do not talk, five logins, five bills and the same name typed five times. The connections between the jobs are where the value and the mistakes are: a booking changes staffing, a certificate changes who can be rostered, hours become pay. Look for a system that holds the connected jobs together, or at least for ones that genuinely integrate rather than merely export.
 
 ## Check it is built for centres like yours
 
-Generic rota and booking tools are built for shops, restaurants and gyms, where a shift is a shift. A sailing centre needs the rota to know that a Level 2 course requires an instructor per so many learners plus a safety boat with a qualified driver, that this instructor's Powerboat ticket expires in March, that this session is at the lake not the harbour, and that these two boats cannot be in two places. Ask the supplier to show you, with your own course types, how the system handles ratios, qualifications, safety cover and clashes. If the answer is a workaround, keep looking.
+Generic roster and booking tools are built for shops, restaurants and gyms, where a shift is a shift. A sailing centre needs the roster to know that a Level 2 course requires an instructor per so many learners plus a safety boat with a qualified driver, that this instructor's Powerboat ticket expires in March, that this session is at the lake not the harbour, and that these two boats cannot be in two places. Ask the supplier to show you, with your own course types, how the system handles ratios, qualifications, safety cover and clashes. If the answer is a workaround, keep looking.
 
 ## Insist on the phone test
 
-Your instructors will use the system on a wet phone on a pontoon with poor signal. Get a trial login and try it there: see your rota, confirm hours, report a near miss, check who is in your group, upload a certificate. If it is slow, fiddly or needs a laptop, the team will not use it and the office will do everything twice.
+Your instructors will use the system on a wet phone on a pontoon with poor signal. Get a trial login and try it there: see your roster, confirm hours, report a near miss, check who is in your group, upload a certificate. If it is slow, fiddly or needs a laptop, the team will not use it and the office will do everything twice.
 
 ## Ask how it handles the people
 
-Each instructor should have their own login that shows their own rota, hours and documents; the office should see everything; the Principal should see the whole picture; parents, where relevant, should see only their child's information. Role-based access is a data protection necessity and a usability one. Ask how under-18 staff are handled, how leavers are removed, and how access is audited.
+Each instructor should have their own login that shows their own roster, hours and documents; the office should see everything; the Principal should see the whole picture; parents, where relevant, should see only their child's information. Role-based access is a data protection necessity and a usability one. Ask how under-18 staff are handled, how leavers are removed, and how access is audited.
 
 ## Take data protection seriously
 
@@ -675,7 +675,7 @@ Buying for features you will never use. Choosing a system because the Commodore'
 
 ## The decision
 
-The right system for a sailing centre handles the rota, the qualifications, the sessions and the hours together, knows the rules of your schemes, works on a phone outdoors, keeps data properly, produces the compliance records as it goes, is priced fairly and lets you leave. Find that, move in the quiet season, and the next summer the office will wonder how it ever managed without it.`,
+The right system for a sailing centre handles the roster, the qualifications, the sessions and the hours together, knows the rules of your schemes, works on a phone outdoors, keeps data properly, produces the compliance records as it goes, is priced fairly and lets you leave. Find that, move in the quiet season, and the next summer the office will wonder how it ever managed without it.`,
   },
   {
     slug: "reducing-double-bookings-and-clashes",
@@ -685,7 +685,7 @@ The right system for a sailing centre handles the rota, the qualifications, the 
     tags: ["scheduling", "operations", "efficiency"],
     coverEmoji: "⚡",
     imageQuery: "two dinghies colliding tangled close call water",
-    body: `Two courses that both need the safety RIB at nine. An instructor rostered at the lake and the harbour on the same morning. A classroom booked for the VHF course and the junior wet-weather session. Seven learners on a course with six boats. A Senior Instructor on leave on the day the rota assumes they are in charge. Each is a clash, each is discovered on the morning it bites, and each produces a scramble that costs a session, a customer or a near miss. Clashes are not bad luck; they are the predictable result of planning several things separately that depend on the same resources. This article covers how to design them out.
+    body: `Two courses that both need the safety RIB at nine. An instructor rostered at the lake and the harbour on the same morning. A classroom booked for the VHF course and the junior wet-weather session. Seven learners on a course with six boats. A Senior Instructor on leave on the day the roster assumes they are in charge. Each is a clash, each is discovered on the morning it bites, and each produces a scramble that costs a session, a customer or a near miss. Clashes are not bad luck; they are the predictable result of planning several things separately that depend on the same resources. This article covers how to design them out.
 
 ## Understand what is being shared
 
@@ -717,11 +717,11 @@ Clashes hide in the gaps between sessions: the boat that needs to be back, derig
 
 ## Plan the people's absence
 
-Leave, training, sickness and the Senior Instructor's day off are resource reductions. A rota built against availability that was collected before building, with leave and training already entered, does not discover on Monday that the person in charge is away. Treat a planned absence as a claim on the person, exactly as a session is.
+Leave, training, sickness and the Senior Instructor's day off are resource reductions. A roster built against availability that was collected before building, with leave and training already entered, does not discover on Monday that the person in charge is away. Treat a planned absence as a claim on the person, exactly as a session is.
 
 ## Check at three points
 
-Clashes are cheapest to find early and still worth finding late. Check when the season is planned: every course and event on one calendar against the resources. Check when the weekly rota is built: every assignment against availability, qualifications and other assignments. Check at the morning briefing: today's sessions, staff, boats and locations against each other and against what actually turned up. A clash caught at the briefing is still a problem; a clash caught at the first session is a crisis.
+Clashes are cheapest to find early and still worth finding late. Check when the season is planned: every course and event on one calendar against the resources. Check when the weekly roster is built: every assignment against availability, qualifications and other assignments. Check at the morning briefing: today's sessions, staff, boats and locations against each other and against what actually turned up. A clash caught at the briefing is still a problem; a clash caught at the first session is a crisis.
 
 ## Learn from each one
 

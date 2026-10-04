@@ -266,11 +266,11 @@ export async function regenerateJoinCodeAction(): Promise<ActionState> {
   return { ok: true, message: "New company code issued" };
 }
 
-/** Save how the rota PDF is laid out (onboarding step and Settings → Rota PDF). */
+/** Save how the roster PDF is laid out (onboarding step and Settings → Roster PDF). */
 export async function setRotaTemplateAction(input: unknown): Promise<ActionState> {
   const { ctx, repos } = await requireTenant({ role: "admin" });
   const parsed = rotaTemplateSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: "Please check the rota layout choices" };
+  if (!parsed.success) return { ok: false, error: "Please check the roster layout choices" };
   const value = { ...parsed.data, fields: { ...parsed.data.fields, roles: parsed.data.fields.roles && parsed.data.fields.instructors } };
   const existing = (await repos.tenant.orgSettings.list(ctx))[0];
   const rotaTemplate = JSON.stringify(value);

@@ -6,7 +6,7 @@ import { inviteGuardianAction, revokeGuardianAction, setMemberRoleAction } from 
 
 export interface GuardianRow { id: string; email: string; status: string; consentGivenAt: string | null; consentNote: string | null; createdAt: string }
 
-/** Staff profile: what this person can do in the centre, and (under-18s) who may see their rota. */
+/** Staff profile: what this person can do in the centre, and (under-18s) who may see their roster. */
 export function AccessCard({ instructorId, linked, role, canChangeRole, under18, guardianEmailOnFile, guardians }: {
   instructorId: string; linked: boolean; role: string | null; canChangeRole: boolean; under18: boolean; guardianEmailOnFile: boolean; guardians: GuardianRow[];
 }) {
@@ -34,7 +34,7 @@ export function AccessCard({ instructorId, linked, role, canChangeRole, under18,
       {under18 ? (
         <div className="border-t border-slate-100 pt-3">
           <p className="font-medium text-navy">Parent / guardian access</p>
-          <p className="text-xs text-slate-500">A parent or guardian can be given a read-only view of this young person&rsquo;s rota (dates, courses, times, places; nothing else and nobody else&rsquo;s details). The invitation goes to the guardian email on this profile, and the consent you record here is kept with it. The plain-English page you can send them is <a href="/privacy/young-people" target="_blank" rel="noreferrer" className="font-medium text-teal hover:underline">activityroster.com/privacy/young-people</a>.</p>
+          <p className="text-xs text-slate-500">A parent or guardian can be given a read-only view of this young person&rsquo;s roster (dates, courses, times, places; nothing else and nobody else&rsquo;s details). The invitation goes to the guardian email on this profile, and the consent you record here is kept with it. The plain-English page you can send them is <a href="/privacy/young-people" target="_blank" rel="noreferrer" className="font-medium text-teal hover:underline">activityroster.com/privacy/young-people</a>.</p>
           {guardians.length ? (
             <ul className="mt-2 divide-y divide-slate-100">
               {guardians.map((g) => (

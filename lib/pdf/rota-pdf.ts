@@ -3,7 +3,7 @@ import type { RotaDay, RotaSession } from "@/lib/services/schedule";
 import { shortNames, type RotaStyle, type RotaTemplateSettings } from "@/lib/rota/template";
 
 /**
- * The rota as a real PDF, drawn with pdf-lib (pure JavaScript, runs on
+ * The roster as a real PDF, drawn with pdf-lib (pure JavaScript, runs on
  * Workers): no browser print, no screenshot.
  *
  * It is a full breakdown of each day: one table per day, a row per course
@@ -95,7 +95,7 @@ function newPage(c: Ctx): void {
   c.page.drawText(right, { x: c.w - M - c.font.widthOfTextAtSize(right, 8), y: c.h - M - 4, size: 8, font: c.font, color: L.muted });
   c.page.drawLine({ start: { x: M, y: c.h - M - 30 }, end: { x: c.w - M, y: c.h - M - 30 }, thickness: 1, color: L.rule });
   c.y = c.h - M - 44;
-  const foot = safe("Produced by ActivityRoster · planning aid, not legal advice · check the live rota for late changes");
+  const foot = safe("Produced by ActivityRoster · planning aid, not legal advice · check the live roster for late changes");
   c.page.drawText(foot, { x: M, y: M - 14, size: 7, font: c.font, color: L.muted });
 }
 
@@ -133,7 +133,7 @@ function cell(key: Col["key"], s: RotaSession, t: RotaTemplateSettings, names: M
 export async function renderRotaPdf(input: RotaPdfInput): Promise<Uint8Array> {
   const tz = input.timeZone ?? "Europe/London";
   const doc = await PDFDocument.create();
-  doc.setTitle(`${input.centreName} rota – ${input.title}`);
+  doc.setTitle(`${input.centreName} roster – ${input.title}`);
   doc.setProducer("ActivityRoster");
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
