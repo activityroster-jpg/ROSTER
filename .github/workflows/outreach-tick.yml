@@ -1,6 +1,8 @@
-name: Hourly tick
+name: Hourly tick (backup)
 
-# The platform's heartbeat, once an hour, every day. It wakes the outreach
+# BACKUP pinger. The primary heartbeat is the Cloudflare cron in workers/tick
+# (GitHub's scheduler skips hours). This stays as a second caller; the tick is
+# idempotent, so a double call does nothing twice. Once an hour, every day. It wakes the outreach
 # agent (which keeps to each campaign's own hours and daily cap) and sends the
 # opt-in morning rota digest to centres whose chosen hour it is.
 # Needs one repository secret: OUTREACH_CRON_SECRET, identical to the
@@ -8,7 +10,7 @@ name: Hourly tick
 
 on:
   schedule:
-    - cron: "15 * * * *"
+    - cron: "40 * * * *"
   workflow_dispatch:
 
 jobs:

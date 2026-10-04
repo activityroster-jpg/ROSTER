@@ -6,13 +6,15 @@ import { createCourseWithSessions, type NewCourseSession } from "@/lib/services/
 import { addDays } from "@/lib/services/schedule";
 import { assignStaff, bulkAssignStaff } from "@/lib/services/assignment";
 import { writeAudit } from "@/lib/services/audit";
-import { COURSE_STATUSES, SLOT_CODES, type CourseStatus, type SlotCode } from "@/lib/db/schema";
+import { CANCEL_PAY_RULES, COURSE_STATUSES, SLOT_CODES, type CourseStatus, type SlotCode } from "@/lib/db/schema";
+import { z } from "zod";
+import { canDeleteCourse, canRemoveSession, cancelSessions, dropHoursForSessions, restoreSessions } from "@/lib/services/cancel";
 import { normaliseTime, timeToSlot } from "@/lib/import/parse";
 import { getCourseEditorData, type CourseEditorData } from "@/lib/services/course-editor";
 import { createCourseTypeResolver, TYPE_NEW, TYPE_ONEOFF } from "@/lib/services/course-type-resolve";
 import { syncHoursForCourse } from "@/lib/services/hours";
 import { assignBlockMessage, notifyRosterChange } from "@/lib/services/assignment";
-import { firstIssue, studentsSchema } from "@/lib/validation/actions";
+import { firstIssue, idSchema, studentsSchema } from "@/lib/validation/actions";
 import { eq } from "drizzle-orm";
 import { courseSession as courseSessionTable, courseStaff as courseStaffTable } from "@/lib/db/schema";
 
@@ -144,6 +146,8 @@ export async function createCourseFlexibleAction(input: {
 export async function setCourseStatusAction(courseId: string, status: string): Promise<ActionState> {
   const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   if (!(COURSE_STATUSES as readonly string[]).includes(status)) return { ok: false, error: "Invalid status" };
+  // Cancelling is its own flow (people told, pay rule chosen); the status alone would leave everything running.
+  if (status === "cancelled") return { ok: false, error: "Use “Cancel course” so the people on it are told and payroll follows." };
   const updated = await repos.tenant.course.update(ctx, courseId, { status: status as CourseStatus });
   if (!updated) return { ok: false, error: "Course not found" };
   await writeAudit(repos, ctx, { action: "update_status", entity: "course", entityId: courseId, after: { status } });
@@ -165,9 +169,56 @@ export async function renameCourseAction(courseId: string, name: string): Promis
   return { ok: true, message: "Renamed" };
 }
 
-/** Delete a course (cascades to its sessions, staff, equipment & locations). */
+const cancelSchema = z.object({
+  reason: z.string().trim().max(500, "Keep the reason under 500 characters").default(""),
+  rule: z.enum(CANCEL_PAY_RULES),
+  fee: z.coerce.number().min(0).max(10_000).optional(),
+});
+
+/** Cancel every remaining session of a course: off the roster, app, PDF and sheet; staff told; pay per the rule. */
+export async function cancelCourseAction(courseId: string, input: { reason?: string; rule: string; fee?: number | string }): Promise<ActionState & { cancelled?: number; notified?: number }> {
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
+  const parsed = cancelSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Check the cancellation details" };
+  if (parsed.data.rule === "fee" && !(Number(parsed.data.fee) >= 0)) return { ok: false, error: "Enter the cancellation fee" };
+  try {
+    const r = await cancelSessions(repos, ctx, { courseId, reason: parsed.data.reason, pay: { rule: parsed.data.rule, fee: parsed.data.fee ?? null } });
+    revalidatePath("/office/courses"); revalidatePath(`/office/courses/${courseId}`); revalidatePath("/office"); revalidatePath("/office/rota"); revalidatePath("/office/finance");
+    return { ok: true, message: r.cancelled ? `Course cancelled: ${r.notified} ${r.notified === 1 ? "person" : "people"} told` : "Nothing left to cancel", cancelled: r.cancelled, notified: r.notified };
+  } catch (e) { return { ok: false, error: (e as Error).message }; }
+}
+
+/** Cancel one day of a course (weather, no bookings). */
+export async function cancelSessionAction(courseId: string, sessionId: string, input: { reason?: string; rule: string; fee?: number | string }): Promise<ActionState & { notified?: number }> {
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
+  if (!idSchema.safeParse(sessionId).success) return { ok: false, error: "Session not found" };
+  const parsed = cancelSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Check the cancellation details" };
+  try {
+    const r = await cancelSessions(repos, ctx, { courseId, sessionIds: [sessionId], reason: parsed.data.reason, pay: { rule: parsed.data.rule, fee: parsed.data.fee ?? null } });
+    revalidatePath("/office/courses"); revalidatePath(`/office/courses/${courseId}`); revalidatePath("/office"); revalidatePath("/office/rota"); revalidatePath("/office/finance");
+    return { ok: true, message: r.courseCancelled ? "That was the last day: the course is now cancelled" : `Day cancelled: ${r.notified} ${r.notified === 1 ? "person" : "people"} told`, notified: r.notified };
+  } catch (e) { return { ok: false, error: (e as Error).message }; }
+}
+
+/** Bring a cancelled day (or, with no session id, the whole course) back. */
+export async function restoreSessionAction(courseId: string, sessionId?: string | null): Promise<ActionState> {
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
+  if (sessionId && !idSchema.safeParse(sessionId).success) return { ok: false, error: "Session not found" };
+  try {
+    const r = await restoreSessions(repos, ctx, courseId, sessionId ? [sessionId] : undefined);
+    revalidatePath("/office/courses"); revalidatePath(`/office/courses/${courseId}`); revalidatePath("/office"); revalidatePath("/office/rota"); revalidatePath("/office/finance");
+    return { ok: true, message: r.restored ? `Restored ${r.restored} session${r.restored === 1 ? "" : "s"}` : "Nothing to restore" };
+  } catch (e) { return { ok: false, error: (e as Error).message }; }
+}
+
+/** Delete a draft course nobody was rostered on (cascades to its sessions, equipment & locations). Anything else must be cancelled. */
 export async function deleteCourseAction(courseId: string): Promise<ActionState> {
   const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
+  const verdict = await canDeleteCourse(repos, ctx, courseId);
+  if (!verdict.ok) return { ok: false, error: verdict.reason };
+  const sessions = await repos.tenant.courseSession.list(ctx, eq(courseSessionTable.courseId, courseId));
+  await dropHoursForSessions(repos, ctx, sessions.map((s) => s.id));
   const removed = await repos.tenant.course.delete(ctx, courseId);
   if (removed === 0) return { ok: false, error: "Course not found" };
   await writeAudit(repos, ctx, { action: "delete", entity: "course", entityId: courseId });
@@ -268,6 +319,11 @@ export async function addSessionAction(courseId: string, formData: FormData): Pr
 /** Remove one session from a course (scoped to the tenant). */
 export async function removeSessionAction(courseId: string, sessionId: string): Promise<ActionState> {
   const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
+  const session = await repos.tenant.courseSession.findById(ctx, sessionId);
+  if (!session || session.courseId !== courseId) return { ok: false, error: "Session not found" };
+  const verdict = await canRemoveSession(repos, ctx, session);
+  if (!verdict.ok) return { ok: false, error: verdict.reason };
+  await dropHoursForSessions(repos, ctx, [sessionId]);
   const removed = await repos.tenant.courseSession.delete(ctx, sessionId);
   if (removed === 0) return { ok: false, error: "Session not found" };
   await writeAudit(repos, ctx, { action: "remove_session", entity: "course", entityId: courseId, after: { sessionId } });

@@ -79,12 +79,13 @@ export interface WorkingTimeInput {
 const H = 3_600_000;
 const DAY = 86_400_000;
 
-function isoOf(ms: number, tz = "Europe/London"): string {
+// Session times are wall-clock values encoded as UTC (lib/domain/time), so they are read back as UTC.
+function isoOf(ms: number, tz = "UTC"): string {
   const parts = new Intl.DateTimeFormat("en-GB", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date(ms));
   const g = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
   return `${g("year")}-${g("month")}-${g("day")}`;
 }
-function hmOf(ms: number, tz = "Europe/London"): string {
+function hmOf(ms: number, tz = "UTC"): string {
   const parts = new Intl.DateTimeFormat("en-GB", { timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(new Date(ms));
   const g = (t: string) => parts.find((p) => p.type === t)?.value ?? "00";
   return `${g("hour") === "24" ? "00" : g("hour")}:${g("minute")}`;

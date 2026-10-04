@@ -15,6 +15,7 @@ import { syncHoursForCourse } from "./hours";
 import { notifyInstructor } from "./notifications";
 import { publishedWeeks, weekOf } from "./roster";
 import { checkWorkingTime, describeFindings } from "./working-time";
+import { liveSessions } from "@/lib/domain/sessions";
 
 export interface AssignInput {
   courseId: string;
@@ -64,10 +65,11 @@ export async function assignStaff(
 ): Promise<AssignResult> {
   const t = repos.tenant;
 
-  const [course, thisCourseSessions] = await Promise.all([
+  const [course, everySession] = await Promise.all([
     t.course.findById(ctx, input.courseId),
     t.courseSession.list(ctx),
   ]);
+  const thisCourseSessions = liveSessions(everySession);
   if (!course) return { ok: false, reason: "invalid", detail: "Course not found" };
   // Both ids must belong to this centre (findById is tenant scoped).
   const [instructorRow, roleRow] = await Promise.all([t.instructor.findById(ctx, input.instructorId), t.roleType.findById(ctx, input.roleTypeId)]);

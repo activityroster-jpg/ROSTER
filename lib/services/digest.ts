@@ -6,13 +6,10 @@ import { PlatformRepository } from "@/lib/db/repositories/platform";
 import type { SystemTenantContext } from "@/lib/tenant/context";
 import { escapeHtml, sendEmail } from "@/lib/mail";
 import { getWeekRota, weekStart } from "./schedule";
-import { londonToday } from "./emergency";
+import { fmtWallTime, hourIn, isoDateInTz } from "@/lib/domain";
 
 const SLOT: Record<string, string> = { AM: "Morning", PM: "Afternoon", EV: "Evening" };
 
-function londonHour(now: Date): number {
-  return Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", hour: "numeric", hour12: false }).format(now)) % 24;
-}
 
 /**
  * Opt-in morning roster email for every admin of a centre: the offline fallback
@@ -22,8 +19,6 @@ function londonHour(now: Date): number {
  * times and places, plus a link to the printable roster.
  */
 export async function sendDailyDigests(db: Database, env: CloudflareEnv, now = new Date()): Promise<{ checked: number; sent: number; skipped: number }> {
-  const hour = londonHour(now);
-  const today = londonToday(now);
   const platform = new PlatformRepository(db);
   const control = new ControlPlaneRepository(db);
   const repos: Repositories = { db, control, tenant: createTenantRepositories(db) } as Repositories;
@@ -32,6 +27,10 @@ export async function sendDailyDigests(db: Database, env: CloudflareEnv, now = n
     if (org.status !== "active") continue;
     const ctx: SystemTenantContext = { organisationId: org.id, slug: org.slug, system: true, reason: "daily-digest" };
     const settings = (await repos.tenant.orgSettings.list(ctx))[0];
+    // "6am" means 6am where the centre is: its zone was detected at sign-up and is used only here.
+    const tz = settings?.timezone || undefined;
+    const hour = hourIn(tz, now.getTime());
+    const today = isoDateInTz(now, tz);
     if (!settings?.dailyDigestEnabled || settings.dailyDigestHour !== hour) continue;
     checked++;
     const marker = `digest:${org.id}:${today}`;
@@ -41,7 +40,7 @@ export async function sendDailyDigests(db: Database, env: CloudflareEnv, now = n
     const rota = await getWeekRota(repos, ctx, weekStart(new Date(`${today}T00:00:00Z`)));
     const day = rota.find((d) => d.date === today);
     const sessions = day?.sessions ?? [];
-    const time = (ms: number) => new Date(ms).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" });
+    const time = (ms: number) => fmtWallTime(ms);
     const nice = new Date(`${today}T12:00:00Z`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
     const rows = sessions.map((s) => `<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0"><strong>${escapeHtml(s.courseName)}</strong><br><span style="color:#64748b">${SLOT[s.slot] ?? s.slot} ${time(s.startAt)}–${time(s.endAt)}${s.locations.length ? ` · ${escapeHtml(s.locations.join(", "))}` : ""}</span></td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">${s.staff.length ? s.staff.map((m) => `${escapeHtml(m.name)} <span style="color:#64748b">(${escapeHtml(m.role)}${m.status === "confirmed" ? "" : m.status === "declined" ? ", declined" : ", unconfirmed"})</span>`).join("<br>") : '<span style="color:#b91c1c">nobody rostered</span>'}${s.understaffed || s.missingSafetyCover ? '<br><span style="color:#b91c1c">⚠ short-staffed or no safety cover</span>' : ""}</td></tr>`).join("");
     const url = `https://${org.slug}.${env.APP_APEX_DOMAIN}/office/rota`;

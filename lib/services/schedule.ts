@@ -9,6 +9,7 @@ import {
   type ResourceBooking,
 } from "@/lib/domain";
 import { and, gte, lt, courseSessionTable, type CourseAudience, type SlotCode } from "@/lib/db/schema-helpers";
+import { liveSessions } from "@/lib/domain/sessions";
 
 export interface CourseCoverage {
   courseId: string;
@@ -66,11 +67,12 @@ export async function getScheduleConflicts(
   ctx: AnyTenantContext,
 ): Promise<ScheduleConflicts> {
   const t = repos.tenant;
-  const [sessions, staff, courseEquip] = await Promise.all([
+  const [allSessions, staff, courseEquip] = await Promise.all([
     t.courseSession.list(ctx),
     t.courseStaff.list(ctx),
     t.courseEquipment.list(ctx),
   ]);
+  const sessions = liveSessions(allSessions);
 
   const sessionsByCourse = new Map<string, typeof sessions>();
   for (const s of sessions) {
@@ -126,13 +128,14 @@ export async function getWeekSchedule(
 ): Promise<{ sessions: WeekSession[]; coverageByCourse: Map<string, CourseCoverage> }> {
   const t = repos.tenant;
   const weekEnd = addDays(mondayIso, 7);
-  const [courses, courseTypes, sessions, staffAssignments, roleTypes] = await Promise.all([
+  const [courses, courseTypes, allSessions, staffAssignments, roleTypes] = await Promise.all([
     t.course.list(ctx),
     t.courseType.list(ctx),
     t.courseSession.list(ctx, and(gte(courseSessionTable.date, mondayIso), lt(courseSessionTable.date, weekEnd))),
     t.courseStaff.list(ctx),
     t.roleType.list(ctx),
   ]);
+  const sessions = liveSessions(allSessions);
 
   const courseTypeById = new Map(courseTypes.map((c) => [c.id, c]));
   const roleById = new Map(roleTypes.map((r) => [r.id, r]));
@@ -212,11 +215,12 @@ export async function getSessionEvents(
   toIso: string,
 ): Promise<SessionEvent[]> {
   const t = repos.tenant;
-  const [sessions, courses, courseTypes] = await Promise.all([
+  const [allSessions, courses, courseTypes] = await Promise.all([
     t.courseSession.list(ctx, and(gte(courseSessionTable.date, fromIso), lt(courseSessionTable.date, toIso))),
     t.course.list(ctx),
     t.courseType.list(ctx),
   ]);
+  const sessions = liveSessions(allSessions);
   const courseById = new Map(courses.map((c) => [c.id, c]));
   const ctById = new Map(courseTypes.map((c) => [c.id, c]));
   return sessions
@@ -285,7 +289,7 @@ export async function getRotaDays(
 ): Promise<RotaDay[]> {
   const mondayIso = fromIso;
   const t = repos.tenant;
-  const [courses, courseTypes, sessions, staffAssignments, roleTypes, instructors, courseLocations, locations, courseEquipment, equipment] =
+  const [courses, courseTypes, allSessions, staffAssignments, roleTypes, instructors, courseLocations, locations, courseEquipment, equipment] =
     await Promise.all([
       t.course.list(ctx),
       t.courseType.list(ctx),
@@ -298,6 +302,7 @@ export async function getRotaDays(
       t.courseEquipment.list(ctx),
       t.equipment.list(ctx),
     ]);
+  const sessions = liveSessions(allSessions);
 
   // Coverage is computed per week; merge the weeks the range touches.
   const coverageByCourse = new Map<string, { ratio: { ok: boolean; understaffed: boolean; missingSafetyCover: boolean } }>();

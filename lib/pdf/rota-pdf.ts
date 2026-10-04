@@ -119,7 +119,7 @@ export function rotaColumns(t: RotaTemplateSettings): { key: Col["key"]; label: 
 function cell(key: Col["key"], s: RotaSession, t: RotaTemplateSettings, names: Map<string, string>, tz: string): string[] {
   switch (key) {
     case "course": return [s.courseName];
-    case "times": return [`${clock(s.startAt, tz)} – ${clock(s.endAt, tz)}`];
+    case "times": return [`${clock(s.startAt, "UTC")} – ${clock(s.endAt, "UTC")}`]; // session times are wall-clock values stored as UTC
     case "staff": {
       const who = s.staff.filter((x) => x.status !== "declined").map((x) => (t.fields.roles ? `${names.get(x.name) ?? x.name} (${x.role})` : names.get(x.name) ?? x.name));
       return who.length ? who : ["Unassigned"];

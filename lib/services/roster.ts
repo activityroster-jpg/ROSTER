@@ -7,6 +7,7 @@ import { notifyInstructor } from "./notifications";
 import { emailAdmins } from "./admin-mail";
 import { writeAudit } from "./audit";
 import { syncHoursForCourse } from "./hours";
+import { liveSessions } from "@/lib/domain/sessions";
 
 /** Monday (YYYY-MM-DD) of the week a date falls in. */
 export const weekOf = (dateIso: string) => weekStart(new Date(`${dateIso}T00:00:00Z`));
@@ -59,7 +60,7 @@ export async function publishWeek(
   if (existing) await t.rosterWeek.update(ctx, existing.id, { publishedAt: now, publishedByUserId: by });
   else await t.rosterWeek.insert(ctx, { weekStart: monday, publishedAt: now, publishedByUserId: by });
 
-  const sessions = (await t.courseSession.list(ctx)).filter((s) => s.date >= monday && s.date < sunday);
+  const sessions = liveSessions(await t.courseSession.list(ctx)).filter((s) => s.date >= monday && s.date < sunday);
   const courseIds = new Set(sessions.map((s) => s.courseId));
   let instructorsNotified = 0;
   if (opts.notify !== false && courseIds.size > 0) {
@@ -168,7 +169,7 @@ export interface ConfirmationSummary {
 export async function confirmationSummary(repos: Repositories, ctx: AnyTenantContext, fromIso: string): Promise<ConfirmationSummary> {
   const published = await publishedWeeks(repos, ctx);
   if (published.size === 0) return { awaiting: 0, declined: 0, confirmed: 0 };
-  const sessions = (await repos.tenant.courseSession.list(ctx)).filter((s) => s.date >= fromIso && published.has(weekOf(s.date)));
+  const sessions = liveSessions(await repos.tenant.courseSession.list(ctx)).filter((s) => s.date >= fromIso && published.has(weekOf(s.date)));
   const courseIds = new Set(sessions.map((s) => s.courseId));
   if (courseIds.size === 0) return { awaiting: 0, declined: 0, confirmed: 0 };
   const staff = (await repos.tenant.courseStaff.list(ctx)).filter((r) => courseIds.has(r.courseId));

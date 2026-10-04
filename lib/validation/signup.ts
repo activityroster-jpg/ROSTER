@@ -39,6 +39,8 @@ export const trialSignupSchema = z.object({
   jurisdiction: z.enum(JURISDICTIONS),
   /** Legacy: the home-page form no longer offers a choice; onboarding in the office covers it. */
   setupMode: z.enum(SETUP_MODES).default("basic"),
+  /** Detected by the browser (Intl); validated server-side; optional. */
+  timeZone: z.string().max(64).optional(),
   acceptedTerms: z.literal(true, {
     errorMap: () => ({ message: "Please agree to the Terms and Privacy Policy to continue." }),
   }),

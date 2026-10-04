@@ -1,3 +1,4 @@
+import { fmtWallTime } from "@/lib/domain";
 import { and, gte, lt } from "drizzle-orm";
 import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
@@ -6,6 +7,7 @@ import { openToken } from "@/lib/security/token-crypto";
 import { isUnder18 } from "@/lib/domain/age";
 import { writeAudit } from "./audit";
 import { addDays } from "./schedule";
+import { liveSessions } from "@/lib/domain/sessions";
 
 export interface SheetPerson {
   instructorId: string;
@@ -32,7 +34,7 @@ export interface DaySheet { date: string; sessions: SheetSession[]; onDuty: Shee
 export async function getDaySheet(repos: Repositories, ctx: AnyTenantContext, dateIso: string): Promise<DaySheet> {
   const t = repos.tenant;
   const [sessions, assignments, instructors, roles, courses, courseLocations, locations] = await Promise.all([
-    t.courseSession.list(ctx, and(gte(courseSessionTable.date, dateIso), lt(courseSessionTable.date, addDays(dateIso, 1)))),
+    t.courseSession.list(ctx, and(gte(courseSessionTable.date, dateIso), lt(courseSessionTable.date, addDays(dateIso, 1)))).then(liveSessions),
     t.courseStaff.list(ctx),
     t.instructor.list(ctx),
     t.roleType.list(ctx),
@@ -78,7 +80,7 @@ export async function getDaySheet(repos: Repositories, ctx: AnyTenantContext, da
 export function sheetToCsv(sheet: DaySheet): string {
   const esc = (v: string | null | undefined) => `"${String(v ?? "").replace(/"/g, '""')}"`;
   const rows = [["Date", "Course", "Slot", "Start", "End", "Locations", "Name", "Role", "Status", "Phone", "Under 18", "Emergency contact", "Emergency phone", "Relationship", "Guardian", "Guardian phone"]];
-  const time = (ms: number) => new Date(ms).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" });
+  const time = (ms: number) => fmtWallTime(ms);
   for (const s of sheet.sessions) for (const p of s.staff) {
     rows.push([sheet.date, s.courseName, s.slot, time(s.startAt), time(s.endAt), s.locations.join("; "), p.name, p.role, p.status, p.phone ?? "", p.under18 ? "yes" : "", p.emergencyName ?? "", p.emergencyPhone ?? "", p.emergencyRelationship ?? "", p.guardianName ?? "", p.guardianPhone ?? ""]);
   }

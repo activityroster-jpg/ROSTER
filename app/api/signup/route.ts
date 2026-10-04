@@ -34,7 +34,7 @@ export async function POST(req: Request) {
     const first = parsed.error.issues[0]?.message ?? "Please check your details";
     return NextResponse.json({ error: first }, { status: 400 });
   }
-  const { centreName, slug, ownerEmail, password, jurisdiction, setupMode } = parsed.data;
+  const { centreName, slug, ownerEmail, password, jurisdiction, setupMode, timeZone } = parsed.data;
 
   const env = getEnv();
   const repos = await getRepositories();
@@ -90,6 +90,7 @@ export async function POST(req: Request) {
       stripeSubscriptionId: null,
       subscriptionStatus: "trialing",
       setupMode,
+      timeZone,
       ownerUserId: owner.id,
     });
   } catch (err) {

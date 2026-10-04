@@ -68,6 +68,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
   const allSessions = await repos.tenant.courseSession.list(ctx);
   const sessionsFullByCourse = new Map<string, { id: string; date: string; startMs: number; endMs: number }[]>();
   for (const s of allSessions) {
+    if (s.cancelledAt) continue; // cancelled days are not planned work
     const arr = sessionsFullByCourse.get(s.courseId) ?? [];
     arr.push({ id: s.id, date: s.date, startMs: s.startAt instanceof Date ? s.startAt.getTime() : Number(s.startAt), endMs: s.endAt instanceof Date ? s.endAt.getTime() : Number(s.endAt) });
     sessionsFullByCourse.set(s.courseId, arr);

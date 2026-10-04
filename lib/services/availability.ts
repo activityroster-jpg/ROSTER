@@ -4,6 +4,7 @@ import type { AnyTenantContext } from "@/lib/tenant/context";
 import { availability as availabilityTable, SLOT_CODES, type SlotCode } from "@/lib/db/schema";
 import { addDays } from "./schedule";
 import { writeAudit } from "./audit";
+import { liveSessions } from "@/lib/domain/sessions";
 
 export type AvailabilityStatus = "available" | "tentative" | "unavailable";
 
@@ -109,7 +110,7 @@ export async function getWeekAvailabilityMatrix(
   const [instructors, rows, sessions, staff, courses, courseTypes] = await Promise.all([
     repos.tenant.instructor.list(ctx),
     repos.tenant.availability.list(ctx),
-    repos.tenant.courseSession.list(ctx),
+    repos.tenant.courseSession.list(ctx).then(liveSessions),
     repos.tenant.courseStaff.list(ctx),
     repos.tenant.course.list(ctx),
     repos.tenant.courseType.list(ctx),
@@ -168,7 +169,7 @@ export async function getCourseAvailabilityStates(
   ctx: AnyTenantContext,
 ): Promise<Map<string, Map<string, CourseAvailState>>> {
   const [sessions, availRows, instructors] = await Promise.all([
-    repos.tenant.courseSession.list(ctx),
+    repos.tenant.courseSession.list(ctx).then(liveSessions),
     repos.tenant.availability.list(ctx),
     repos.tenant.instructor.list(ctx),
   ]);

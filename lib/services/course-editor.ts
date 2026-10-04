@@ -3,6 +3,7 @@ import type { AnyTenantContext } from "@/lib/tenant/context";
 import { evaluateRatio, type AssignedRole } from "@/lib/domain";
 import { fitReason, listStaffWithFit } from "@/lib/services/staff";
 import { getCourseAvailabilityStates } from "@/lib/services/availability";
+import { liveSessions } from "@/lib/domain/sessions";
 
 /** Everything the editable CourseCard needs for one course (serialisable). */
 export interface CourseEditorData {
@@ -53,7 +54,7 @@ export async function getCourseEditorData(
 
   const [courseTypes, sessions, assignments, instructors, roles, settingsRows, staff, availStates, requirements] = await Promise.all([
     t.courseType.list(ctx),
-    t.courseSession.list(ctx),
+    t.courseSession.list(ctx).then(liveSessions),
     t.courseStaff.list(ctx),
     t.instructor.list(ctx),
     t.roleType.list(ctx),

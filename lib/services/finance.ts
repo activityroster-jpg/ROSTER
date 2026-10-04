@@ -181,6 +181,8 @@ export async function getPayrollLines(
   const partials: Partial1[] = [];
   for (const r of records) {
     const session = r.courseSessionId ? sessionById.get(r.courseSessionId) : undefined;
+    // A line whose session is gone and that nobody approved, edited or clocked is a leftover, not pay.
+    if (!session && !r.approved && r.actualMinutes == null && r.overrideMinutes == null && r.overridePay == null) continue;
     const date = session?.date ?? (toMs(r.createdAt) != null ? new Date(toMs(r.createdAt)!).toISOString().slice(0, 10) : null);
     if (filter.from && (!date || date < filter.from)) continue;
     if (filter.to && (!date || date > filter.to)) continue;

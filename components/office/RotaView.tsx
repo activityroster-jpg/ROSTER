@@ -242,7 +242,7 @@ export function RotaView({ rota }: { rota: RotaDay[] }) {
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-card border border-slate-200 bg-white px-3 py-2 print:hidden">
-        <div className="flex items-center gap-1" role="tablist" aria-label="Rota template">
+        <div className="flex items-center gap-1" role="tablist" aria-label="Roster template">
           {tabs.map((t) => (
             <button key={t.id} type="button" role="tab" aria-selected={template === t.id} title={t.hint} onClick={() => setTemplate(t.id)}
               className={`rounded-lg px-3 py-1.5 text-sm font-medium ${template === t.id ? "bg-navy text-white" : "text-navy hover:bg-slate-100"}`}>

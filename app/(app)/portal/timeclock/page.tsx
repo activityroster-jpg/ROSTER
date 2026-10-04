@@ -5,6 +5,7 @@ import { getOpenEntry } from "@/lib/services/timeclock";
 import { ClockPanel, type ClockSession } from "@/components/portal/ClockPanel";
 import { Card } from "@/components/ui";
 import { fmtClockTime, todayIso } from "@/lib/domain";
+import { liveSessions } from "@/lib/domain/sessions";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +33,7 @@ export default async function PortalTimeClockPage() {
   const myCourseIds = new Set(myStaff.map((s) => s.courseId));
   const courseName = new Map(courses.map((c) => [c.id, c.name ?? "Session"]));
 
-  const todaySessions = (await repos.tenant.courseSession.list(ctx, eq(courseSessionTable.date, today)))
+  const todaySessions = liveSessions(await repos.tenant.courseSession.list(ctx, eq(courseSessionTable.date, today)))
     .filter((s) => myCourseIds.has(s.courseId));
   const sessions: ClockSession[] = todaySessions.map((s) => ({
     id: s.id,

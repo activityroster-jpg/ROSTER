@@ -2,11 +2,18 @@ import { and, eq, gte, isNull, lt } from "drizzle-orm";
 import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
 import { courseSession as courseSessionTable, hoursRecord as hoursRecordTable, timeEntry as timeEntryTable, type TimeEntry } from "@/lib/db/schema";
-import { durationMinutes, isoDateInTz } from "@/lib/domain";
+import { durationMinutes, wallClockMs, wallDateIso } from "@/lib/domain";
 import { writeAudit } from "./audit";
 import { payRatesByInstructor, pickPayRate } from "./pay-rates";
 
-/** Minutes elapsed on an entry — to its clock-out, or to `now` if still open. */
+/**
+ * Clock stamps are WALL-CLOCK values encoded as UTC, like session times (see
+ * lib/domain/time): a clock-in at 09:02 on the beach is stored as 09:02Z and
+ * shown as 09:02 whatever the season or country. Every `now` passed in here must
+ * be a wall-clock value too (`wallClockMs`), never `Date.now()`.
+ */
+
+/** Minutes elapsed on an entry — to its clock-out, or to wall-clock `now` if still open. */
 export function entryMinutes(entry: Pick<TimeEntry, "clockInAt" | "clockOutAt">, now: number): number {
   const end = entry.clockOutAt ? entry.clockOutAt.getTime() : now;
   return durationMinutes({ startAt: entry.clockInAt.getTime(), endAt: end });
@@ -36,7 +43,7 @@ export async function clockIn(
   ctx: AnyTenantContext,
   instructorId: string,
   courseSessionId: string | null = null,
-  now: number = Date.now(),
+  now: number,
   fix: ClockFix | null = null,
   note: string | null = null,
 ): Promise<TimeEntry> {
@@ -72,7 +79,7 @@ export async function clockOut(
   repos: Repositories,
   ctx: AnyTenantContext,
   instructorId: string,
-  now: number = Date.now(),
+  now: number,
   fix: ClockFix | null = null,
 ): Promise<TimeEntry | null> {
   const open = await getOpenEntry(repos, ctx, instructorId);
@@ -170,9 +177,13 @@ export async function getAttendanceBoard(
   repos: Repositories,
   ctx: AnyTenantContext,
   dayIso: string,
-  now: number = Date.now(),
+  now?: number,
 ): Promise<AttendanceBoard> {
-  // A London calendar day sits inside this UTC window whatever the offset.
+  if (now == null) {
+    const tz = (await repos.tenant.orgSettings.list(ctx))[0]?.timezone;
+    now = wallClockMs(tz || undefined);
+  }
+  // Stamps are wall-clock, so the day is exactly this UTC window.
   const dayStart = new Date(`${dayIso}T00:00:00Z`).getTime();
   const DAY = 86_400_000;
   const dayBefore = new Date(dayStart - DAY).toISOString().slice(0, 10);
@@ -189,7 +200,7 @@ export async function getAttendanceBoard(
   const sessionCourse = new Map(sessions.map((s) => [s.id, courseNameById.get(s.courseId) ?? null]));
 
   const rows: AttendanceRow[] = entries
-    .filter((e) => isoDateInTz(e.clockInAt) === dayIso)
+    .filter((e) => wallDateIso(e.clockInAt) === dayIso)
     .sort((a, b) => a.clockInAt.getTime() - b.clockInAt.getTime())
     .map((e) => ({
       entryId: e.id,

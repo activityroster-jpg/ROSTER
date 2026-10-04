@@ -110,6 +110,17 @@ jobs:
       - name: Deploy production
         run: npx wrangler deploy
 
+      - name: Deploy the hourly tick (Cloudflare cron)
+        env:
+          OUTREACH_CRON_SECRET: ${{ secrets.OUTREACH_CRON_SECRET }}
+        run: |
+          npx wrangler deploy -c workers/tick/wrangler.toml
+          if [ -n "$OUTREACH_CRON_SECRET" ]; then
+            printf '%s' "$OUTREACH_CRON_SECRET" | npx wrangler secret put CRON_SECRET -c workers/tick/wrangler.toml
+          else
+            echo "::warning::OUTREACH_CRON_SECRET is not set; the tick worker cannot authenticate until it is."
+          fi
+
       - name: Smoke test
         id: smoke
         run: |

@@ -41,7 +41,9 @@ export function ClockPanel({
   const [noteOpen, setNoteOpen] = useState(sessions.length === 0);
   const [note, setNote] = useState("");
 
-  const nowHHMM = () => new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Europe/London" });
+  // The device's own clock: what the instructor sees on their phone is what is recorded.
+  const nowHHMM = () => new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false });
+  const localNow = () => { const d = new Date(); const p = (n: number) => String(n).padStart(2, "0"); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; };
 
   const doIn = (sessionId: string | null, sessionLabel: string | null) => {
     setError(null);
@@ -50,7 +52,7 @@ export function ClockPanel({
     setSince(nowHHMM());
     setLabel(sessionLabel ?? (note.trim() || null));
     startTransition(async () => {
-      const res = await clockInAction(sessionId, await currentFix(), sessionId ? null : note);
+      const res = await clockInAction(sessionId, await currentFix(), sessionId ? null : note, localNow());
       if (!res.ok) { setOpen(false); setSince(null); setLabel(null); setError(res.error ?? "Could not clock in"); }
       else { setNote(""); setNoteOpen(false); }
     });
@@ -59,7 +61,7 @@ export function ClockPanel({
     setError(null);
     setOpen(false);
     startTransition(async () => {
-      const res = await clockOutAction(await currentFix());
+      const res = await clockOutAction(await currentFix(), localNow());
       if (!res.ok) { setOpen(true); setError(res.error ?? "Could not clock out"); }
       else { setSince(null); setLabel(null); }
     });

@@ -1,3 +1,4 @@
+import { fmtWallTime } from "@/lib/domain";
 import { requireTenant } from "@/lib/tenant/require";
 import { childrenFor } from "@/lib/services/guardians";
 import { getRotaDays } from "@/lib/services/schedule";
@@ -41,7 +42,7 @@ export default async function ParentPage() {
             <ul className="divide-y divide-slate-100 text-sm">
               {sessions.map((s) => (
                 <li key={s.sessionId} className="flex flex-wrap items-baseline justify-between gap-2 py-2">
-                  <span><span className="font-medium text-navy">{s.day}</span> · {new Date(s.startAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" })}–{new Date(s.endAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" })}</span>
+                  <span><span className="font-medium text-navy">{s.day}</span> · {fmtWallTime(s.startAt)}–{new Date(s.endAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" })}</span>
                   <span className="text-slate-600">{s.courseName}{s.locations.length ? ` · ${s.locations.join(", ")}` : ""}</span>
                 </li>
               ))}

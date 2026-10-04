@@ -1,3 +1,4 @@
+import { isKnownTimeZone } from "@/lib/domain/time";
 import { TERMS_VERSION } from "@/lib/legal";
 import type { Repositories } from "@/lib/db/repositories";
 import type { CloudflareEnv } from "@/lib/cf/bindings";
@@ -21,6 +22,8 @@ export interface ProvisionParams {
   /** If the owner's auth user already exists (e.g. created via Better Auth at
    *  signup), link the admin membership to this id instead of creating a shell. */
   ownerUserId?: string;
+  /** IANA zone detected from the sign-up browser; kept internally (digest timing, device clock fallback), never shown. */
+  timeZone?: string;
 }
 
 function coerceSetupMode(v: string | undefined): SetupMode {
@@ -94,7 +97,7 @@ export async function provisionCentre(
 
   // Record how the centre chose to start (basic ready-to-use vs full config).
   const settings = (await tenant.orgSettings.list(ctx))[0];
-  if (settings) await tenant.orgSettings.update(ctx, settings.id, { setupMode });
+  if (settings) await tenant.orgSettings.update(ctx, settings.id, { setupMode, ...(isKnownTimeZone(params.timeZone) ? { timezone: params.timeZone } : {}) });
 
   await control.releaseSlug(slug);
 

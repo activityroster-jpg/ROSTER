@@ -67,7 +67,6 @@ export default async function SettingsPage() {
           schedulingMode={s?.schedulingMode ?? "session"}
           alertLeadDays={s?.alertLeadDays ?? 30}
           currency={s?.currency ?? "GBP"}
-          timezone={s?.timezone ?? "Europe/London"}
           privacyNoticeUrl={s?.privacyNoticeUrl ?? ""}
           dailyDigestEnabled={Boolean(s?.dailyDigestEnabled)}
           dailyDigestHour={s?.dailyDigestHour ?? 6}

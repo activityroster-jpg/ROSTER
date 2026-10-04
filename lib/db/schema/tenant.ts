@@ -68,6 +68,9 @@ export const COURSE_STATUSES = ["draft", "scheduled", "confirmed", "completed", 
 export type CourseStatus = (typeof COURSE_STATUSES)[number];
 
 export const COURSE_STAFF_STATUSES = ["assigned", "confirmed", "declined"] as const;
+/** What a cancelled session pays the people rostered on it: nothing, as rostered, or a flat fee. */
+export const CANCEL_PAY_RULES = ["none", "rostered", "fee"] as const;
+export type CancelPayRule = (typeof CANCEL_PAY_RULES)[number];
 export const AVAILABILITY_STATUSES = ["available", "unavailable", "tentative"] as const;
 export const PAY_UNITS = ["hour", "day", "session"] as const;
 export type PayUnit = (typeof PAY_UNITS)[number];
@@ -454,6 +457,9 @@ export const course = sqliteTable("course", {
   source: text("source"),
   /** Stable key from the source feed (name|date|slot) for change detection. */
   externalRef: text("external_ref"),
+  /** Set when the whole course was cancelled (every session cancelled). Kept, never deleted: history and payroll still point at it. */
+  cancelledAt: integer("cancelled_at", { mode: "timestamp_ms" }),
+  cancelReason: text("cancel_reason"),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 }, (t) => [
@@ -475,6 +481,11 @@ export const courseSession = sqliteTable("course_session", {
   slot: text("slot", { enum: SLOT_CODES }).notNull(),
   startAt: integer("start_at", { mode: "timestamp_ms" }).notNull(),
   endAt: integer("end_at", { mode: "timestamp_ms" }).notNull(),
+  /** A cancelled session (weather, no bookings) stays on record but leaves the roster, PDF, app and payroll (per cancelPay). */
+  cancelledAt: integer("cancelled_at", { mode: "timestamp_ms" }),
+  cancelReason: text("cancel_reason"),
+  cancelPay: text("cancel_pay", { enum: CANCEL_PAY_RULES }),
+  cancelFee: real("cancel_fee"),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 }, (t) => [

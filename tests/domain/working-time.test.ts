@@ -4,7 +4,8 @@ import { BUILTIN_PACKS, packKeyFor } from "@/lib/rules/working-time/packs";
 
 const gb = BUILTIN_PACKS.gb!, ie = BUILTIN_PACKS.ie!;
 // London summer time: 09:00 BST = 08:00Z
-const at = (date: string, hStart: number, hEnd: number): Shift => ({ date, startAt: Date.parse(`${date}T${String(hStart - 1).padStart(2, "0")}:00:00Z`), endAt: Date.parse(`${date}T${String(hEnd - 1).padStart(2, "0")}:00:00Z`), proposed: true });
+const at = (date: string, hStart: number, hEnd: number): Shift => ({ date, startAt: Date.parse(`${date}T${String(hStart).padStart(2, "0")}:00:00Z`), endAt: Date.parse(`${date}T${String(hEnd).padStart(2, "0")}:00:00Z`), proposed: true });
+// Times are wall-clock values stored as UTC (lib/domain/time): 17 means 17:00 as typed, in any season.
 const codes = (f: ReturnType<typeof evaluateWorkingTime>) => f.filter((x) => x.severity === "block").map((x) => x.code);
 
 describe("school-leaving and bands", () => {

@@ -23,7 +23,7 @@ export const orgSettingsSchema = z.object({
   schedulingMode: z.enum(SCHEDULING_MODES),
   alertLeadDays: z.number().int().min(0).max(365),
   currency: z.string().length(3),
-  timezone: z.string().min(1),
+  timezone: z.string().min(1).optional(),
   enforceLicenceChecks: z.boolean().optional(),
   enforceRatioChecks: z.boolean().optional(),
   enforceConflictChecks: z.boolean().optional(),

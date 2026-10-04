@@ -18,6 +18,7 @@ import { packKeyFor } from "@/lib/rules/working-time/packs";
 import { loadPack } from "@/lib/rules/working-time/load";
 import { writeAudit } from "./audit";
 import { publishedWeeks, weekOf } from "./roster";
+import { liveSessions } from "@/lib/domain/sessions";
 
 /**
  * Young workers' hours: glue between the pure engine in lib/domain/working-time
@@ -93,7 +94,7 @@ export async function checkWorkingTime(repos: Repositories, ctx: AnyTenantContex
 
   const instructor = await t.instructor.findById(ctx, input.instructorId);
   if (!instructor) return none(pack);
-  const allSessions = input.allSessions ?? (await t.courseSession.list(ctx));
+  const allSessions = liveSessions(input.allSessions ?? (await t.courseSession.list(ctx)));
   const proposed = allSessions.filter((s) => s.courseId === input.courseId).map((s) => toShift(s, true));
   if (proposed.length === 0) return none(pack);
 
@@ -155,7 +156,7 @@ export async function youngWorkerRegister(repos: Repositories, ctx: AnyTenantCon
   const t = repos.tenant;
   const [instructors, sessions, staff, courses, published] = await Promise.all([
     t.instructor.list(ctx),
-    t.courseSession.list(ctx),
+    t.courseSession.list(ctx).then(liveSessions),
     t.courseStaff.list(ctx),
     t.course.list(ctx),
     publishedWeeks(repos, ctx),

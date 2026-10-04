@@ -78,7 +78,7 @@ export function LeadCapture({
       const res = await fetch("/api/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ownerEmail: email, password, centreName, slug, jurisdiction, acceptedTerms, source, turnstileToken }),
+        body: JSON.stringify({ ownerEmail: email, password, centreName, slug, jurisdiction, acceptedTerms, source, turnstileToken, timeZone: (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { return undefined; } })() }),
       });
       const data = (await res.json()) as { ok?: boolean; error?: string; url?: string; emailSent?: boolean };
       if (!res.ok || !data.ok) {

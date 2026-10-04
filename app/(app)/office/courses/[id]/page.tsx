@@ -8,6 +8,7 @@ import { courseSession as courseSessionTable, courseStaff as courseStaffTable } 
 import { Card, StatusPill } from "@/components/ui";
 import { CourseManage } from "@/components/office/CourseManage";
 import { SessionManager, type SessionRow } from "@/components/office/SessionManager";
+import { canDeleteCourse } from "@/lib/services/cancel";
 import { AssignStaffForm } from "@/components/office/AssignStaffForm";
 import { RemoveStaffButton } from "@/components/office/RemoveStaffButton";
 
@@ -53,7 +54,10 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
 
   const sessionRows: SessionRow[] = [...sessions]
     .sort((a, b) => a.date.localeCompare(b.date))
-    .map((s) => ({ id: s.id, date: s.date, slot: s.slot, start: fmtTime(s.startAt), end: fmtTime(s.endAt) }));
+    .map((s) => ({ id: s.id, date: s.date, slot: s.slot, start: fmtTime(s.startAt), end: fmtTime(s.endAt), cancelled: Boolean(s.cancelledAt), cancelReason: s.cancelReason }));
+  const liveCount = sessions.filter((s) => !s.cancelledAt).length;
+  const staffCount = assignments.filter((a) => a.status !== "declined").length;
+  const deletable = await canDeleteCourse(repos, ctx, id);
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -65,12 +69,12 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
       </div>
       <p className="mb-6 -mt-4 text-sm text-slate-500">{ct?.name}{ct?.scheme ? ` · ${ct.scheme}` : ""}</p>
 
-      <Card className="mb-6"><h2 className="mb-3 font-semibold text-navy">Manage</h2><CourseManage id={course.id} name={course.name ?? ct?.name ?? ""} status={course.status} students={course.capacity} /></Card>
+      <Card className="mb-6"><h2 className="mb-3 font-semibold text-navy">Manage</h2><CourseManage id={course.id} name={course.name ?? ct?.name ?? ""} status={course.status} students={course.capacity} liveSessions={liveCount} staffCount={staffCount} canDelete={deletable.ok} deleteBlockedBecause={deletable.ok ? null : deletable.reason} cancelReason={course.cancelReason} /></Card>
 
       <Card className="mb-6">
         <h2 className="mb-1 font-semibold text-navy">Sessions</h2>
         <p className="mb-3 text-xs text-slate-500">Add every date this course runs — a 5-day camp has five sessions, a weekly club has one per week.</p>
-        <SessionManager courseId={course.id} slotStyle={slotStyle} sessions={sessionRows} />
+        <SessionManager courseId={course.id} slotStyle={slotStyle} sessions={sessionRows} staffCount={staffCount} />
       </Card>
 
       <Card>

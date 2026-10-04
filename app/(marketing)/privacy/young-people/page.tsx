@@ -37,7 +37,7 @@ export default function YoungPeoplePrivacyPage() {
         <>The <strong>people who run your centre</strong> (admins) can see everything above, because they roster you and have to look after you.</>,
         <>The <strong>welfare officer</strong> can see your profile and your emergency and guardian contacts, and nothing about pay or billing.</>,
         <>Your <strong>colleagues</strong> see your first name and which sessions you are on. They cannot see your phone number or email unless you switch on &ldquo;Let colleagues see my phone and email&rdquo; in your own settings. It is off until you choose otherwise.</>,
-        <>Your <strong>parent or guardian</strong> can be given a read-only view of your rota: the dates, courses, times and places. Nothing else, and nobody else&rsquo;s details. The centre records that you were told.</>,
+        <>Your <strong>parent or guardian</strong> can be given a read-only view of your roster: the dates, courses, times and places. Nothing else, and nobody else&rsquo;s details. The centre records that you were told.</>,
         <><strong>ActivityRoster staff</strong> do not browse centres&rsquo; data. A support view exists for fixing problems; every use of it is logged and visible to your centre.</>,
       ]} />
 

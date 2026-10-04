@@ -3,6 +3,7 @@
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { requireTenant } from "@/lib/tenant/require";
+import { wallClockFromDevice, wallClockMs } from "@/lib/domain";
 import { instructor as instructorTable } from "@/lib/db/schema";
 import { clockIn, clockOut } from "@/lib/services/timeclock";
 
@@ -30,7 +31,13 @@ function cleanFix(fix: GeoFix | null | undefined): { lat: number; lng: number; a
  * approximate location from the app) or, without a session, with a required
  * note saying what they're working on.
  */
-export async function clockInAction(courseSessionId?: string | null, fix?: GeoFix | null, note?: string | null): Promise<Result> {
+/** The device's local time ("YYYY-MM-DDTHH:MM"), checked against the centre's own clock; falls back to the centre's wall-clock. */
+async function wallNow(repos: Awaited<ReturnType<typeof requireTenant>>["repos"], ctx: Awaited<ReturnType<typeof requireTenant>>["ctx"], localNow?: string | null): Promise<number> {
+  const tz = (await repos.tenant.orgSettings.list(ctx))[0]?.timezone || undefined;
+  return wallClockFromDevice(localNow, tz) ?? wallClockMs(tz);
+}
+
+export async function clockInAction(courseSessionId?: string | null, fix?: GeoFix | null, note?: string | null, localNow?: string | null): Promise<Result> {
   const { ctx, repos, me } = await resolveMe();
   if (!me) return { ok: false, error: "No linked instructor profile" };
   const cleanNote = (note ?? "").trim().slice(0, 200);
@@ -44,16 +51,16 @@ export async function clockInAction(courseSessionId?: string | null, fix?: GeoFi
     sessionId = session.id;
   }
 
-  await clockIn(repos, ctx, me.id, sessionId, Date.now(), cleanFix(fix), cleanNote || null);
+  await clockIn(repos, ctx, me.id, sessionId, await wallNow(repos, ctx, localNow), cleanFix(fix), cleanNote || null);
   revalidatePath("/portal/timeclock");
   return { ok: true };
 }
 
 /** Clock the signed-in instructor out of their open entry. */
-export async function clockOutAction(fix?: GeoFix | null): Promise<Result> {
+export async function clockOutAction(fix?: GeoFix | null, localNow?: string | null): Promise<Result> {
   const { ctx, repos, me } = await resolveMe();
   if (!me) return { ok: false, error: "No linked instructor profile" };
-  await clockOut(repos, ctx, me.id, Date.now(), cleanFix(fix));
+  await clockOut(repos, ctx, me.id, await wallNow(repos, ctx, localNow), cleanFix(fix));
   revalidatePath("/portal/timeclock");
   return { ok: true };
 }

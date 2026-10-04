@@ -56,7 +56,6 @@ export async function updateSettingsAction(_prev: ActionState, formData: FormDat
     schedulingMode: formData.get("schedulingMode"),
     alertLeadDays: Number(formData.get("alertLeadDays")),
     currency: formData.get("currency"),
-    timezone: formData.get("timezone"),
     enforceLicenceChecks: formData.get("enforceLicenceChecks") === "on",
     enforceRatioChecks: formData.get("enforceRatioChecks") === "on",
     enforceConflictChecks: formData.get("enforceConflictChecks") === "on",

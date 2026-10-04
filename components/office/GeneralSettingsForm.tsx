@@ -13,7 +13,6 @@ export function GeneralSettingsForm({
   schedulingMode,
   alertLeadDays,
   currency,
-  timezone,
   enforceLicenceChecks,
   enforceRatioChecks,
   enforceConflictChecks,
@@ -29,7 +28,6 @@ export function GeneralSettingsForm({
   schedulingMode: string;
   alertLeadDays: number;
   currency: string;
-  timezone: string;
   enforceLicenceChecks: boolean;
   enforceRatioChecks: boolean;
   enforceConflictChecks: boolean;
@@ -50,7 +48,6 @@ export function GeneralSettingsForm({
     <form action={action} className="grid gap-3 sm:grid-cols-4 sm:items-end">
       {/* Kept for the saved record; neither changes anything a centre sees. */}
       <input type="hidden" name="schedulingMode" value={schedulingMode || "session"} />
-      <input type="hidden" name="timezone" value={timezone || "Europe/London"} />
       <div className="sm:col-span-2">
         <label className="mb-1 block text-xs font-medium text-slate-500">Warn me this many days before a cert or check expires</label>
         <input name="alertLeadDays" type="number" defaultValue={alertLeadDays} min={0} max={365} className="w-28 rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal" />

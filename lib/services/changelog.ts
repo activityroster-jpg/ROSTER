@@ -35,7 +35,7 @@ const ACTION: Record<string, string> = {
   export_audit_log: "Downloaded the change log for", export_rota_pdf: "Downloaded a roster PDF for", view_young_worker_register: "Downloaded the young-worker time register for",
   retention_run: "Removed records past their retention period from", retention_keep: "Kept the profile of", update_retention: "Changed the retention periods of", vetting_files_removed: "Removed stored vetting certificates (status-only policy) for",
   set_member_role: "Changed the role of", invite_guardian: "Invited a parent or guardian to view the roster of", revoke_guardian: "Removed a parent or guardian's access to the roster of", set_share_contact: "Changed whether colleagues can see the contact details of",
-  set_students: "Set the number of students on", trial_extended: "Answered the trial-end survey: free trial extended by a month", restore_defaults: "Restored the RYA course list", set_notify_email: "Changed email notifications for", update_profile: "Updated the details of",
+  set_students: "Set the number of students on", trial_extended: "Answered the trial-end survey: free trial extended by a month", cancel_session: "Cancelled a day of", cancel_course: "Cancelled", restore_session: "Restored a cancelled day of", restore_defaults: "Restored the RYA course list", set_notify_email: "Changed email notifications for", update_profile: "Updated the details of",
 };
 
 export function describeAudit(action: string, entity: string, after?: string | null): string {

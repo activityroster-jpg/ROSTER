@@ -82,7 +82,7 @@ export async function sendPush(env: CloudflareEnv, tokens: string[], msg: PushMe
         notification: { title: msg.title, ...(msg.body ? { body: msg.body } : {}) },
         data: { url: msg.url ?? "/portal/notifications" },
         apns: { payload: { aps: { sound: "default", ...(msg.badge != null ? { badge: msg.badge } : {}) } } },
-        android: { priority: "HIGH", notification: { sound: "default", channel_id: "rota" } },
+        android: { priority: "HIGH", notification: { sound: "default", channel_id: "roster" } },
       },
     };
     try {
