@@ -28,12 +28,12 @@ export function TrialSurveyForm({ defaultEmail }: { defaultEmail: string }) {
     );
   }
 
-  const textArea = (key: TextKey, n: number, label: string) => {
+  const textArea = (key: TextKey, n: number, label: string, optional = false) => {
     const count = wordCount(text[key]);
     const enough = count >= MIN_WORDS;
     return (
       <div key={key}>
-        <label htmlFor={key} className="block text-sm font-medium text-navy"><span className="text-slate-400">{n}.</span> {label}</label>
+        <label htmlFor={key} className="block text-sm font-medium text-navy"><span className="text-slate-400">{n}.</span> {label}{optional ? <span className="font-normal text-slate-400"> (optional)</span> : null}</label>
         <textarea
           id={key}
           name={key}
@@ -44,8 +44,8 @@ export function TrialSurveyForm({ defaultEmail }: { defaultEmail: string }) {
           aria-describedby={`${key}-count`}
           className={`mt-1.5 w-full rounded-lg border px-3 py-2 text-sm outline-none focus:border-teal ${err[key] ? "border-port" : "border-slate-300"}`}
         />
-        <p id={`${key}-count`} className={`mt-0.5 text-xs ${enough ? "text-starboard" : "text-slate-400"}`}>
-          {count} / {MIN_WORDS} words{enough ? " ✓" : ""}
+        <p id={`${key}-count`} className={`mt-0.5 text-xs ${optional ? "text-slate-400" : enough ? "text-starboard" : "text-slate-400"}`}>
+          {optional ? `${count} word${count === 1 ? "" : "s"}` : `${count} / ${MIN_WORDS} words${enough ? " ✓" : ""}`}
         </p>
         {err[key] ? <p className="text-xs text-port">{err[key]}</p> : null}
       </div>
@@ -67,7 +67,7 @@ export function TrialSurveyForm({ defaultEmail }: { defaultEmail: string }) {
         {err.userCount ? <p className="text-xs text-port">{err.userCount}</p> : null}
       </div>
 
-      {textArea("otherFeedback", 7, OTHER_LABEL)}
+      {textArea("otherFeedback", 7, OTHER_LABEL, true)}
 
       <fieldset>
         <legend className="text-sm font-medium text-navy"><span className="text-slate-400">8.</span> {CONTACT_LABEL}</legend>

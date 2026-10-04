@@ -13,7 +13,7 @@ export async function GET(req: Request) {
   const contact = new URL(req.url).searchParams.get("contact");
   const all = await new PlatformRepository(await getDb()).listTrialFeedback();
   const rows = contact === "yes" ? all.filter((r) => r.contactOk) : contact === "no" ? all.filter((r) => !r.contactOk) : all;
-  const head = ["Submitted", "Centre", "Subdomain", ...TEXT_QUESTIONS.map((q) => q.label), USER_COUNT_LABEL, OTHER_LABEL, `${CONTACT_LABEL} (happy to be contacted)`, "Contact email", "Contact answer recorded"];
+  const head = ["Submitted", "Centre", "Subdomain", ...TEXT_QUESTIONS.map((q) => q.label), USER_COUNT_LABEL, OTHER_LABEL, `${CONTACT_LABEL} (happy to be contacted)`, "Contact email", "Contact answer recorded", "Extra 30-day trial activated", "Extra trial ends"];
   const lines = [head.map(cell).join(",")];
   for (const r of rows) {
     lines.push([
@@ -21,6 +21,7 @@ export async function GET(req: Request) {
       r.mostUseful, r.leastUseful, r.wouldChange, r.missing, r.featureRequest,
       r.userCount, r.otherFeedback,
       r.contactOk ? "Yes" : "No", r.contactOk ? r.contactEmail : "", r.contactAnsweredAt.toISOString(),
+      r.extraTrialGrantedAt?.toISOString() ?? "", r.extraTrialEndsAt?.toISOString() ?? "",
     ].map(cell).join(","));
   }
   const suffix = contact === "yes" ? "-contactable" : contact === "no" ? "-not-contactable" : "";

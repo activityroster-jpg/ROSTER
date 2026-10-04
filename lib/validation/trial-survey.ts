@@ -3,7 +3,8 @@ import { z } from "zod";
 /**
  * The trial-end survey: eight questions a centre answers when its free trial
  * ends, in exchange for another free month (lib/services/trial-survey). The
- * text answers ask for at least MIN_WORDS words so the feedback is usable.
+ * text answers (except the optional question 7) ask for at least MIN_WORDS words
+ * so the feedback is usable.
  * Shared by the form (labels, live word counts) and the server (validation).
  */
 export const MIN_WORDS = 30;
@@ -17,6 +18,7 @@ export const TEXT_QUESTIONS = [
   { key: "featureRequest", label: "What one feature or function would you add, and how would you use it?" },
 ] as const;
 export const USER_COUNT_LABEL = "How many people would use ActivityRoster at your centre, including admins and instructors?";
+/** Question 7 is optional: no minimum, so nobody pads a catch-all to reach a word count. */
 export const OTHER_LABEL = "Any other feedback?";
 export const CONTACT_LABEL = "Can we contact you about your answers?";
 /** Every question in order, for the intro count and the Dev Center headings. */
@@ -37,7 +39,7 @@ export const trialSurveySchema = z.object({
   missing: words,
   featureRequest: words,
   userCount: z.coerce.number({ invalid_type_error: "Enter a number" }).int("Enter a whole number").min(1, "Enter at least 1").max(10_000, "Enter a number up to 10,000"),
-  otherFeedback: words,
+  otherFeedback: z.string().trim().max(4000, "Please keep this under 4,000 characters").optional().default(""),
   contactOk: z.enum(["yes", "no"], { required_error: "Choose yes or no", invalid_type_error: "Choose yes or no" }),
   contactEmail: z.string().trim().toLowerCase().max(200).optional().or(z.literal("")),
 }).superRefine((v, ctx) => {

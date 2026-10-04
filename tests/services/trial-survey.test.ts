@@ -8,7 +8,7 @@ vi.mock("@/lib/mail", () => ({
 
 import { createTestDb } from "@/tests/helpers/test-db";
 import { seedFullOrg } from "@/tests/helpers/seed-fixtures";
-import { submitTrialSurvey, surveyStatus, sweepTrialSurvey, SurveyNotOpenError } from "@/lib/services/trial-survey";
+import { ExtraTrialError, grantExtraTrial, submitTrialSurvey, surveyStatus, sweepTrialSurvey, SurveyNotOpenError } from "@/lib/services/trial-survey";
 import { MIN_WORDS, QUESTION_COUNT, SURVEY_REWARD_DAYS, trialSurveySchema, wordCount } from "@/lib/validation/trial-survey";
 import { trialState } from "@/lib/billing/trial";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
@@ -29,11 +29,18 @@ describe("trial-end survey: validation", () => {
     expect(wordCount("   ")).toBe(0);
   });
 
-  it("needs 30 words on every text answer, a whole number of users and a yes or no", () => {
+  it("needs 30 words on each required text answer, a whole number of users and a yes or no", () => {
     const r = trialSurveySchema.safeParse({ ...valid, missing: "too short", userCount: "2.5", contactOk: undefined });
     expect(r.success).toBe(false);
     const paths = r.success ? [] : r.error.issues.map((i) => i.path[0]);
     expect(paths).toEqual(expect.arrayContaining(["missing", "userCount", "contactOk"]));
+  });
+
+  it("lets question 7 be left blank", () => {
+    const r = trialSurveySchema.parse({ ...valid, otherFeedback: "" });
+    expect(r.otherFeedback).toBe("");
+    const missing = trialSurveySchema.parse({ ...valid, otherFeedback: undefined });
+    expect(missing.otherFeedback).toBe("");
   });
 
   it("keeps the email only when the answer is yes, and needs a valid one then", () => {
@@ -117,5 +124,41 @@ describe("trial-end survey: eligibility, reward and invitation", () => {
     sent.length = 0;
     expect(await sweepTrialSurvey(db2, env, now)).toEqual({ checked: 0, sent: 0 });
     expect(sent).toHaveLength(0);
+  });
+
+  it("activates one extra 30 days from the Dev Center, on top of any time left, logs it and emails the admins", async () => {
+    const { db } = createTestDb();
+    const { repos, organisationId } = await seedFullOrg(db, { name: "Alpha", slug: "alpha", jurisdiction: "england" });
+    const now = new Date("2026-10-04T12:00:00Z");
+    const org = (await repos.control.updateOrganisation(organisationId, { trialEndsAt: new Date(now.getTime() - 3 * DAY), subscriptionStatus: "trialing" }))!;
+    const { trialEndsAt: rewarded } = await submitTrialSurvey(repos, { organisation: org, userId: "u", trialDays: 30, answers: trialSurveySchema.parse(valid), now });
+    const fb = (await new PlatformRepository(db).trialFeedbackForOrg(organisationId))!;
+    sent.length = 0;
+
+    const later = new Date(now.getTime() + 2 * DAY);
+    const r = await grantExtraTrial(repos, env, { feedbackId: fb.id, grantedBy: "conor@platform.test", trialDays: 30, now: later });
+    // Still 28 days left from the survey month, so the extra 30 days go on the end of it.
+    expect(r.trialEndsAt.getTime()).toBe(rewarded.getTime() + 30 * DAY);
+    expect((await repos.control.organisationById(organisationId))!.trialEndsAt!.getTime()).toBe(r.trialEndsAt.getTime());
+    const after = (await new PlatformRepository(db).trialFeedbackById(fb.id))!;
+    expect(after.extraTrialGrantedBy).toBe("conor@platform.test");
+    expect(after.extraTrialGrantedAt!.toISOString()).toBe(later.toISOString());
+    expect(sent.map((m) => m.to)).toEqual(["owner@alpha.test"]);
+    const log = await repos.tenant.auditLog.list({ organisationId, slug: "alpha", system: true, reason: "test" });
+    expect(log.some((l) => l.action === "trial_extended_by_platform")).toBe(true);
+
+    await expect(grantExtraTrial(repos, env, { feedbackId: fb.id, grantedBy: "conor@platform.test", trialDays: 30, now: later })).rejects.toBeInstanceOf(ExtraTrialError);
+  });
+
+  it("won't extend a centre that is on a paid plan", async () => {
+    const { db } = createTestDb();
+    const { repos, organisationId } = await seedFullOrg(db, { name: "Alpha", slug: "alpha", jurisdiction: "england" });
+    const now = new Date("2026-10-04T12:00:00Z");
+    const org = (await repos.control.updateOrganisation(organisationId, { trialEndsAt: new Date(now.getTime() - DAY), subscriptionStatus: "trialing" }))!;
+    await submitTrialSurvey(repos, { organisation: org, userId: "u", trialDays: 30, answers: trialSurveySchema.parse(valid), now });
+    await repos.control.updateOrganisation(organisationId, { subscriptionStatus: "active" });
+    const fb = (await new PlatformRepository(db).trialFeedbackForOrg(organisationId))!;
+    await expect(grantExtraTrial(repos, env, { feedbackId: fb.id, grantedBy: "c", trialDays: 30, now })).rejects.toThrow(/paid plan/);
+    expect((await new PlatformRepository(db).trialFeedbackById(fb.id))!.extraTrialGrantedAt).toBeNull();
   });
 });

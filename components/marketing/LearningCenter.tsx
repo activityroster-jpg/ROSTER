@@ -492,13 +492,14 @@ const SECTIONS: Section[] = [
       { kind: "steps", items: [
         "Open the survey from the banner, the email, or Billing (Office → Billing → Take the survey).",
         "Answer the five questions about what's useful, what isn't, what you'd change, what's missing or frustrating, and the one feature you'd add. Each needs at least 30 words; the count under each box turns green when you have enough.",
-        "Say how many people would use ActivityRoster at your centre, including admins and instructors, and add any other feedback.",
+        "Say how many people would use ActivityRoster at your centre, including admins and instructors, and add any other feedback if you like (that one is optional).",
         "Choose whether we can contact you about your answers. If you choose Yes, check the email shown (it's yours, and you can change it). If you choose No, we won't contact you about them.",
         "Send. Your centre is editable again at once and the new trial end date is shown.",
       ] },
       { kind: "bullets", items: [
         "Only admins can answer, and it's one survey per centre, so the free month is given once.",
         "Your answers go to the ActivityRoster team only, never to your staff, and the extension appears in your change log.",
+        "After reading your answers we may add a further 30 days to your trial. If we do, your admins get an email with the new end date and it shows in your change log.",
         "Keep answers about the platform: no names, health details or anything about a child or anyone else.",
       ] },
     ],

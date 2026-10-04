@@ -614,6 +614,20 @@ export class PlatformRepository {
   async insertTrialFeedback(values: Omit<NewTrialFeedback, "id" | "createdAt">): Promise<TrialFeedback | null> {
     return (await this.db.insert(trialFeedback).values(values).onConflictDoNothing({ target: trialFeedback.organisationId }).returning())[0] ?? null;
   }
+  async trialFeedbackById(id: string): Promise<(TrialFeedback & { centreName: string; centreSlug: string }) | null> {
+    const r = (await this.db.select({ f: trialFeedback, centreName: organisation.name, centreSlug: organisation.slug })
+      .from(trialFeedback).innerJoin(organisation, eq(organisation.id, trialFeedback.organisationId))
+      .where(eq(trialFeedback.id, id)).limit(1))[0];
+    return r ? { ...r.f, centreName: r.centreName, centreSlug: r.centreSlug } : null;
+  }
+  /** Record the Dev Center's extra trial on the answers, once: returns false if it was already given. */
+  async markExtraTrialGranted(id: string, by: string, endsAt: Date, at: Date): Promise<boolean> {
+    const rows = await this.db.update(trialFeedback)
+      .set({ extraTrialGrantedAt: at, extraTrialGrantedBy: by, extraTrialEndsAt: endsAt })
+      .where(and(eq(trialFeedback.id, id), sql`${trialFeedback.extraTrialGrantedAt} IS NULL`))
+      .returning({ id: trialFeedback.id });
+    return rows.length > 0;
+  }
   /** Every centre's answers with the centre's name, newest first, for the Dev Center. */
   async listTrialFeedback(): Promise<(TrialFeedback & { centreName: string; centreSlug: string })[]> {
     const rows = await this.db.select({ f: trialFeedback, centreName: organisation.name, centreSlug: organisation.slug })
