@@ -48,7 +48,7 @@ export async function seedOrganisationDefaults(
     });
   }
   for (const c of defaultComplianceTypes(jurisdiction)) {
-    await repos.complianceType.insert(ctx, { ...c, active: true });
+    await repos.complianceType.insert(ctx, { ...c, isVetting: Boolean(c.isVetting), active: true });
   }
   for (const e of DEFAULT_EQUIPMENT_TYPES) {
     await repos.equipmentType.insert(ctx, { ...e, active: true });

@@ -1,3 +1,4 @@
+import { isSealed, openToken } from "@/lib/security/token-crypto";
 import { eq } from "drizzle-orm";
 import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
@@ -27,6 +28,8 @@ export interface DocumentRow {
   itemId: string;
   name: string;
   reference: string | null;
+  /** Status-and-reference only (vetting): no file can be attached. */
+  noFile?: boolean;
   issueDate: string | null;
   expiryDate: string | null;
   mandatory: boolean;
@@ -109,18 +112,19 @@ export async function getStaffProfile(
       docKey: q.docKey ?? null,
       verified: Boolean(q.verified),
     })),
-    ...items.map((it) => ({
+    ...(await Promise.all(items.map(async (it) => ({
       kind: "compliance" as const,
       itemId: it.id,
       name: compTypeById.get(it.complianceTypeId)?.name ?? "Compliance",
-      reference: it.reference,
+      noFile: Boolean(compTypeById.get(it.complianceTypeId)?.isVetting),
+      reference: isSealed(it.reference) ? await openToken(it.reference) : it.reference,
       issueDate: it.issueDate,
       expiryDate: it.expiryDate,
       mandatory: compTypeById.get(it.complianceTypeId)?.mandatory ?? false,
       hasFile: Boolean(it.docKey),
       docKey: it.docKey ?? null,
       verified: Boolean(it.verified),
-    })),
+    })))),
   ];
 
   const approvedCourses = approvals

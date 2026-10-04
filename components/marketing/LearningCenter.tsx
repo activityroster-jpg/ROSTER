@@ -258,13 +258,14 @@ const SECTIONS: Section[] = [
     blurb: "Track every cert and check, with expiry alerts.",
     blocks: [
       { kind: "p", text: "Every instructor has a document area for their qualifications (dinghy, keelboat, windsurf, SUP, powerboat, first aid…) and their checks (DBS, safeguarding, first aid)." },
+      { kind: "p", text: "Vetting checks (DBS, PVG, AccessNI, Garda) are different: the centre records the status, the certificate number and the dates, and marks the check verified once it has seen the certificate. The certificate itself is never uploaded or stored, and the number is encrypted. That keeps the most sensitive document out of the system entirely." },
       { kind: "sub", text: "Two ways to add documents" },
       { kind: "bullets", items: [
         "The instructor uploads their own: they pick the cert from a dropdown, add a photo/scan and the expiry date.",
         "The office uploads on their behalf and can edit the expiry, add a reference/certificate number, and mark it verified.",
       ] },
       { kind: "sub", text: "Expiry alerts" },
-      { kind: "p", text: "Anything expiring within your lead time is flagged on the dashboard and the staff list. Expired mandatory checks stop an instructor being rostered until they're renewed." },
+      { kind: "p", text: "Anything expiring within your lead time is flagged on the dashboard and the staff list. Instructors are reminded in the app and by email, and every Monday admins get one email listing what has expired or is about to. Expired mandatory checks stop an instructor being rostered until they're renewed." },
       { kind: "tip", text: "“Not cleared to roster” always shows the actual reason (e.g. “DBS missing”, “First Aid expired”) rather than a vague label." },
     ],
   },

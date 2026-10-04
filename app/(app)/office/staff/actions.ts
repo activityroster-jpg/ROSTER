@@ -1,4 +1,6 @@
 "use server";
+import type { Repositories } from "@/lib/db/repositories";
+import type { AnyTenantContext } from "@/lib/tenant/context";
 
 import { escapeHtml, sendEmail } from "@/lib/mail";
 
@@ -104,7 +106,7 @@ export async function setDocMetaAction(kind: string, itemId: string, patch: { ex
   if (kind === "compliance") {
     updated = await repos.tenant.complianceItem.update(ctx, itemId, {
       ...(expiry !== undefined ? { expiryDate: expiry } : {}),
-      ...(patch.reference !== undefined ? { reference: patch.reference || null } : {}),
+      ...(patch.reference !== undefined ? { reference: await sealIfVetting(repos, ctx, itemId, patch.reference || null) } : {}),
       ...(patch.verified !== undefined ? { verified: patch.verified } : {}),
     });
   } else {
@@ -194,7 +196,7 @@ export async function addComplianceItemAction(_prev: ActionState, formData: Form
   const created = await repos.tenant.complianceItem.insert(ctx, {
     instructorId: parsed.data.instructorId,
     complianceTypeId: parsed.data.complianceTypeId,
-    reference: parsed.data.reference ?? null,
+    reference: await sealForType(repos, ctx, parsed.data.complianceTypeId, parsed.data.reference ?? null),
     expiryDate: parsed.data.expiryDate ?? null,
     verified: parsed.data.verified,
   });
@@ -447,4 +449,16 @@ export async function keepFormerStaffAction(instructorId: string): Promise<Actio
   await writeAudit(repos, ctx, { action: "retention_keep", entity: "instructor", entityId: instructorId });
   revalidatePath(`/office/staff/${instructorId}`);
   return { ok: true, message: "Kept; the retention clock starts again from today" };
+}
+
+/** Vetting references (DBS and equivalent certificate numbers) are encrypted at rest. */
+async function sealForType(repos: Repositories, ctx: AnyTenantContext, complianceTypeId: string, reference: string | null): Promise<string | null> {
+  if (!reference) return null;
+  const type = await repos.tenant.complianceType.findById(ctx, complianceTypeId);
+  return type?.isVetting ? sealToken(reference) : reference;
+}
+async function sealIfVetting(repos: Repositories, ctx: AnyTenantContext, itemId: string, reference: string | null): Promise<string | null> {
+  if (!reference) return null;
+  const item = await repos.tenant.complianceItem.findById(ctx, itemId);
+  return item ? sealForType(repos, ctx, item.complianceTypeId, reference) : reference;
 }

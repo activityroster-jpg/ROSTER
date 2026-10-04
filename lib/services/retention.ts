@@ -15,6 +15,7 @@ import {
 } from "@/lib/db/schema";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { anonymisePerson } from "./person-data";
+import { deleteDocument } from "@/lib/r2";
 import { writeAudit } from "./audit";
 import { sendEmail, escapeHtml } from "@/lib/mail";
 
@@ -151,6 +152,55 @@ export async function sendRetentionReminder(repos: Repositories, ctx: AnyTenantC
   return true;
 }
 
+/** Decision C5: vetting checks keep no certificate. Any file still attached to one is removed. Idempotent. */
+export async function removeVettingFiles(repos: Repositories, ctx: AnyTenantContext): Promise<number> {
+  const t = repos.tenant;
+  const vetting = new Set((await t.complianceType.list(ctx)).filter((c) => c.isVetting).map((c) => c.id));
+  if (vetting.size === 0) return 0;
+  let removed = 0;
+  for (const item of await t.complianceItem.list(ctx)) {
+    if (!item.docKey || !vetting.has(item.complianceTypeId)) continue;
+    await deleteDocument(ctx, item.docKey).catch(() => {});
+    await t.complianceItem.update(ctx, item.id, { docKey: null });
+    removed++;
+  }
+  if (removed) await writeAudit(repos, ctx, { action: "vetting_files_removed", entity: "compliance_item", after: { removed } });
+  return removed;
+}
+
+/**
+ * Weekly (Monday) email to a centre's admins: certs and checks of active
+ * staff that have expired or expire within the centre's lead time.
+ */
+export async function sendExpiryDigest(repos: Repositories, ctx: AnyTenantContext, env: CloudflareEnv, now = new Date()): Promise<boolean> {
+  const t = repos.tenant;
+  const [instructors, quals, items, qualTypes, compTypes, settings, org] = await Promise.all([
+    t.instructor.list(ctx), t.qualification.list(ctx), t.complianceItem.list(ctx), t.qualificationType.list(ctx), t.complianceType.list(ctx), t.orgSettings.list(ctx), repos.control.organisationById(ctx.organisationId),
+  ]);
+  if (!org) return false;
+  const lead = (settings[0]?.alertLeadDays ?? 30) * DAY;
+  const active = new Map(instructors.filter((i) => i.status === "active" && !i.anonymisedAt).map((i) => [i.id, i.name]));
+  const qn = new Map(qualTypes.map((q) => [q.id, q.name])), cn = new Map(compTypes.map((c) => [c.id, c.name]));
+  const rows: { who: string; what: string; expiry: string; expired: boolean }[] = [];
+  const consider = (instructorId: string, what: string, expiry: string | null) => {
+    if (!expiry || !active.has(instructorId)) return;
+    const at = Date.parse(`${expiry}T23:59:59Z`);
+    if (Number.isNaN(at) || at > now.getTime() + lead) return;
+    rows.push({ who: active.get(instructorId)!, what, expiry, expired: at < now.getTime() });
+  };
+  for (const q of quals) consider(q.instructorId, qn.get(q.qualificationTypeId) ?? "Qualification", q.expiryDate);
+  for (const c of items) consider(c.instructorId, cn.get(c.complianceTypeId) ?? "Check", c.expiryDate);
+  if (rows.length === 0) return false;
+  rows.sort((a, b) => a.expiry.localeCompare(b.expiry));
+  const admins = await repos.control.adminEmailsForOrg(ctx.organisationId);
+  if (admins.length === 0) return false;
+  const apex = env.APP_APEX_DOMAIN || "activityroster.com";
+  const list = rows.slice(0, 60).map((r) => `<li>${escapeHtml(r.who)}: ${escapeHtml(r.what)} ${r.expired ? `<strong>expired ${r.expiry}</strong>` : `expires ${r.expiry}`}</li>`).join("");
+  const html = `<p>Hello,</p><p>${rows.filter((r) => r.expired).length} expired and ${rows.filter((r) => !r.expired).length} expiring within ${Math.round(lead / DAY)} days at ${escapeHtml(org.name)}:</p><ul>${list}${rows.length > 60 ? "<li>…</li>" : ""}</ul><p>Expired must-have checks stop a person being rostered. Instructors have been reminded in the app and by email. Details: <a href="https://${org.slug}.${apex}/office/staff">https://${org.slug}.${apex}/office/staff</a></p>`;
+  await Promise.all(admins.map((to) => sendEmail({ to, subject: `${org.name}: ${rows.length} cert${rows.length === 1 ? "" : "s"} or check${rows.length === 1 ? "" : "s"} expiring`, html }).catch(() => {})));
+  return true;
+}
+
 /** Hourly tick: for each active centre, once a day, send the reminder if needed and run the sweep. */
 export async function sweepRetention(db: Database, env: CloudflareEnv, now = new Date()): Promise<{ centres: number; ran: number; reminded: number; platform: Record<string, number> }> {
   const platform = new PlatformRepository(db);
@@ -165,6 +215,9 @@ export async function sweepRetention(db: Database, env: CloudflareEnv, now = new
     try {
       if (await sendRetentionReminder(repos, ctx, env, settings, now)) reminded++;
       await runRetention(repos, ctx, settings, now);
+      await removeVettingFiles(repos, ctx);
+      // Mondays: the weekly expiry digest for admins.
+      if (new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", weekday: "short" }).format(now) === "Mon") await sendExpiryDigest(repos, ctx, env, now).catch(() => false);
       await repos.tenant.orgSettings.update(ctx, settings.id, { retentionRanAt: now });
       ran++;
     } catch (err) {

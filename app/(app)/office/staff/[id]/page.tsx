@@ -49,7 +49,7 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
   const scheduled = retention?.staffDue.find((x) => x.id === instructor.id) ?? null;
   const hasPermissionSlot = documents.some((d) => /parental permission/i.test(d.name));
   const docItems: DocItem[] = documents.map((d) => ({
-    kind: d.kind, itemId: d.itemId, name: d.name, expiryDate: d.expiryDate, mandatory: d.mandatory, hasFile: d.hasFile, docKey: d.docKey, verified: d.verified,
+    kind: d.kind, itemId: d.itemId, name: d.name, expiryDate: d.expiryDate, mandatory: d.mandatory, hasFile: d.hasFile, docKey: d.docKey, verified: d.verified, noFile: d.noFile,
   }));
 
   return (

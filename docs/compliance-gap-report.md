@@ -41,7 +41,7 @@ The spec's draft data map needs these corrections (`lib/db/schema/tenant.ts`,
 | --- | --- |
 | Staff profiles include date of birth | **No date of birth field.** `instructor` holds name, email, phone, employment type, status. Under-18 status cannot be derived today. |
 | Parent and guardian accounts | **None.** Roles are `admin` and `instructor` only (`MEMBERSHIP_ROLES`). |
-| Vetting status: store status only | `compliance_item` holds type, reference number, dates, a `verified` flag **and an uploaded file (`docKey`)**. Centres can upload the DBS certificate itself. See Conflict C5. |
+| Vetting status: store status only | Since P1-E (4 October): vetting types (`compliance_type.is_vetting`) take no file, uploads are refused and any stored file is removed; the certificate number is encrypted at rest. Other checks (first aid, safeguarding) still carry an uploaded copy. |
 | Student and course records | Courses and sessions hold **headcounts, not names**. The retired `booking` table does hold `customerName` and `customerEmail` (feature removed from the UI, table kept). |
 | Emergency contacts | **Not stored anywhere.** The emergency sheet in the spec needs new fields first. |
 | Rota and time records | Done: `course_staff`, `roster_week.publishedAt`, `time_entry` (clock in/out), `hours_record`. |
@@ -146,7 +146,7 @@ counts only, no content.
 | No marketing or profiling of under-18s | P0 | Done | Marketing is B2B to centres only (`lib/outreach`); platform users are never emailed marketing. |
 | Under-18 photos off by default | P1 | Done (by absence) | No profile photos exist. |
 | Vetting tracker: status, date, expiry, reminders; store status only; warn or block | P1 | Conflict C5 | `compliance_item` tracks DBS/first aid/safeguarding with expiry and feeds the fit-to-roster check (warn or block via the licence setting). It also allows uploading the certificate file. The spec says never store certificate contents. |
-| Qualification tracker with expiry reminders; warn or block | P1 | Partial | `qualification` with cert number, dates, expiry; dashboard "not cleared to roster" tile; fit-to-roster blocks. Email reminders before expiry: not found. |
+| Qualification tracker with expiry reminders; warn or block | P1 | Done | `qualification` with cert number, dates, expiry; dashboard tile; fit-to-roster blocks. Instructors are reminded in-app and by email within the lead time; admins get a Monday digest (P1-E). |
 | Plain-English privacy explanation for 15-year-olds | P1 | Missing | |
 
 ## Working-time rules engine

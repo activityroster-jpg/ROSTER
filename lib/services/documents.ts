@@ -44,6 +44,11 @@ export async function attachDocument(
   if (restrictToInstructorId && item.instructorId !== restrictToInstructorId) {
     return { ok: false, error: "You can only upload against your own records" };
   }
+  if (input.kind === "compliance") {
+    // Decision C5: vetting checks are recorded by status and reference only; the certificate itself is never stored.
+    const type = await repos.tenant.complianceType.findById(ctx, (item as { complianceTypeId: string }).complianceTypeId);
+    if (type?.isVetting) return { ok: false, error: `${type.name} is recorded by status and certificate number only; the certificate itself is not stored. Enter the number and date instead.` };
+  }
 
   const relPath = `instructor_${item.instructorId}/${input.kind}/${input.itemId}/${safeName(input.filename)}`;
   const docKey = await putDocument(ctx, relPath, input.body, {

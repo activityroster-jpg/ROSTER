@@ -85,25 +85,26 @@ export interface ComplianceSeed {
   code: string;
   mandatory: boolean;
   expiryTracked: boolean;
+  isVetting?: boolean;
 }
 
 /** Jurisdiction-specific vetting check. */
 function vettingFor(jurisdiction: Jurisdiction): ComplianceSeed {
   switch (jurisdiction) {
     case "scotland":
-      return { name: "PVG Scheme Membership", code: "PVG", mandatory: false, expiryTracked: false };
+      return { name: "PVG Scheme Membership", code: "PVG", mandatory: false, expiryTracked: false, isVetting: true };
     case "northern_ireland":
-      return { name: "AccessNI Enhanced Check", code: "ACCESSNI", mandatory: false, expiryTracked: true };
+      return { name: "AccessNI Enhanced Check", code: "ACCESSNI", mandatory: false, expiryTracked: true, isVetting: true };
     case "ireland":
-      return { name: "Garda Vetting", code: "GARDA", mandatory: false, expiryTracked: true };
+      return { name: "Garda Vetting", code: "GARDA", mandatory: false, expiryTracked: true, isVetting: true };
     case "other":
       // Outside the UK & Ireland: a generic vetting record, not mandatory (each
       // centre can make it mandatory in Settings if their jurisdiction requires it).
-      return { name: "Background / Vetting Check", code: "VETTING", mandatory: false, expiryTracked: true };
+      return { name: "Background / Vetting Check", code: "VETTING", mandatory: false, expiryTracked: true, isVetting: true };
     case "england":
     case "wales":
     default:
-      return { name: "Enhanced DBS Check", code: "DBS", mandatory: false, expiryTracked: true };
+      return { name: "Enhanced DBS Check", code: "DBS", mandatory: false, expiryTracked: true, isVetting: true };
   }
 }
 

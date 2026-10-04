@@ -179,9 +179,17 @@ Effort is a rough guide: S = under half a day, M = one to two days, L = a week o
   12 months, closed privacy requests after 3 years. Append-only triggers now allow deletion
   only past those ages (migration 0053). Migration 0052 adds the columns and `left_at`.
 
-### P1-E Vetting and reminders
-- App-level encryption of vetting status; remove certificate uploads for vetting types
-  (decision C5); qualification and vetting expiry reminder emails.
+### P1-E Vetting and reminders — built 4 October
+- `compliance_type.is_vetting` (seeded for DBS, PVG, AccessNI, Garda and the generic check;
+  migration 0054 flags existing rows). Vetting checks take no file: uploads are refused, the
+  document manager offers no upload slot, and any file already attached is removed by the
+  daily sweep (audited). The certificate number is encrypted at rest (`sealToken`) and
+  decrypted only on the admin's staff page and in a person export.
+- Expiry reminders: instructors are now emailed as well as notified in the app (respecting
+  their email preference); admins get one email every Monday listing expired and expiring
+  certs and checks within the centre's lead time.
+- Still to do: a way for a centre to mark one of its own custom check types as vetting
+  (Settings → Checks), noted for P1-G.
 
 ### P1-F Roles and families
 - Roles and permission matrix: welfare officer, senior instructor, under-18, parent

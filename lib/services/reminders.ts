@@ -46,7 +46,7 @@ export async function ensureExpiryReminders(repos: Repositories, ctx: AnyTenantC
     await notifyInstructor(repos, ctx, instructorId, {
       title: expired ? `${d.name} has expired` : `${d.name} expires in ${days} day${days === 1 ? "" : "s"}`,
       body: `${expired ? `It ran out on ${d.expiry}.` : `It runs out on ${d.expiry}.`} Renew it and upload the new copy under Docs so your centre can keep rostering you. ${marker}`,
-      email: false,
+      email: true,
     });
     raised++;
   }

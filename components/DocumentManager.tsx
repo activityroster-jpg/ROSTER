@@ -13,10 +13,13 @@ export interface DocItem {
   mandatory: boolean;
   hasFile: boolean;
   docKey: string | null;
+  /** Vetting checks: status and certificate number only, no file. */
+  noFile?: boolean;
   verified: boolean;
 }
 
 function status(d: DocItem): { tone: "covered" | "attention" | "conflict" | "neutral"; label: string } {
+  if (d.noFile) return d.verified ? { tone: "covered", label: "Recorded" } : { tone: "neutral", label: "Awaiting check" };
   if (!d.hasFile) return { tone: "neutral", label: "Awaiting upload" };
   if (d.expiryDate) {
     const exp = Date.parse(`${d.expiryDate}T23:59:59Z`);
@@ -35,7 +38,8 @@ export function DocumentManager({ items, admin }: { items: DocItem[]; admin: boo
   const router = useRouter();
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
-  const [sel, setSel] = useState(items[0] ? `${items[0].kind}:${items[0].itemId}` : "");
+  const uploadable = items.filter((d) => !d.noFile);
+  const [sel, setSel] = useState(uploadable[0] ? `${uploadable[0].kind}:${uploadable[0].itemId}` : "");
   const fileRef = useRef<HTMLInputElement>(null);
   const [expiry, setExpiry] = useState("");
   const [busy, setBusy] = useState(false);
@@ -77,7 +81,7 @@ export function DocumentManager({ items, admin }: { items: DocItem[]; admin: boo
                 <div className="min-w-0">
                   <span className="text-sm font-medium text-navy">{d.name}</span>
                   {d.mandatory ? <span className="ml-1 text-xs text-port">· required</span> : null}
-                  <span className="block text-xs text-slate-400">{d.expiryDate ? `Expires ${d.expiryDate}` : "No expiry set"}</span>
+                  <span className="block text-xs text-slate-400">{d.expiryDate ? `Expires ${d.expiryDate}` : "No expiry set"}{d.noFile ? " · status and certificate number only, no file is kept" : ""}</span>
                 </div>
                 <div className="flex flex-none items-center gap-2">
                   <StatusPill tone={st.tone}>{st.label}</StatusPill>
@@ -98,14 +102,14 @@ export function DocumentManager({ items, admin }: { items: DocItem[]; admin: boo
         </ul>
       )}
 
-      {items.length > 0 ? (
+      {uploadable.length > 0 ? (
         <form onSubmit={upload} className="rounded-lg bg-canvas p-3">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">{admin ? "Upload a document" : "Upload a cert photo or PDF"}</p>
           <div className="flex flex-wrap items-end gap-2">
             <div>
               <label className="mb-1 block text-xs font-medium text-slate-500">Which cert?</label>
               <select value={sel} onChange={(e) => setSel(e.target.value)} className={field}>
-                {items.map((d) => <option key={`${d.kind}:${d.itemId}`} value={`${d.kind}:${d.itemId}`}>{d.name}</option>)}
+                {items.filter((d) => !d.noFile).map((d) => <option key={`${d.kind}:${d.itemId}`} value={`${d.kind}:${d.itemId}`}>{d.name}</option>)}
               </select>
             </div>
             <div>

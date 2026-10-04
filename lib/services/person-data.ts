@@ -17,6 +17,7 @@ import type { Instructor } from "@/lib/db/schema";
 import { readProtectedContacts } from "./protected-contacts";
 import { writeAudit } from "./audit";
 import { deleteDocument } from "@/lib/r2";
+import { isSealed, openToken } from "@/lib/security/token-crypto";
 
 /**
  * Per-person data rights (compliance P1-A): export, restrict, anonymise, and
@@ -79,7 +80,7 @@ export async function exportPerson(repos: Repositories, ctx: TenantContext, inst
     person: plain(instructor as unknown as Record<string, unknown>, ["guardianName", "guardianPhone", "guardianEmail", "emergencyName", "emergencyPhone", "emergencyRelationship"]),
     contacts,
     qualifications: quals.map((q) => ({ ...plain(q as unknown as Record<string, unknown>, ["instructorId"]), type: qt.get(q.qualificationTypeId) ?? q.qualificationTypeId, document: q.docKey ? "on file" : "none" })),
-    checks: checks.map((c) => ({ ...plain(c as unknown as Record<string, unknown>, ["instructorId", "docKey"]), type: ct.get(c.complianceTypeId) ?? c.complianceTypeId, document: c.docKey ? "on file" : "none" })),
+    checks: await Promise.all(checks.map(async (c) => ({ ...plain(c as unknown as Record<string, unknown>, ["instructorId", "docKey"]), reference: isSealed(c.reference) ? await openToken(c.reference) : c.reference, type: ct.get(c.complianceTypeId) ?? c.complianceTypeId, document: c.docKey ? "on file" : "none" }))),
     assignments: staff.map((s) => ({ ...plain(s as unknown as Record<string, unknown>, ["instructorId"]), course: courseName.get(s.courseId) ?? s.courseId, role: rn.get(s.roleTypeId) ?? s.roleTypeId })),
     availability: avail.map((a) => plain(a as unknown as Record<string, unknown>, ["instructorId"])),
     hours: hours.map((h) => plain(h as unknown as Record<string, unknown>, ["instructorId"])),

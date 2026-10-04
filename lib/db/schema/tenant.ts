@@ -211,6 +211,8 @@ export const complianceType = sqliteTable("compliance_type", {
   code: text("code").notNull(),
   mandatory: boolCol("mandatory").default(false),
   expiryTracked: boolCol("expiry_tracked").default(true),
+  /** A background/vetting check (DBS, PVG, AccessNI, Garda): recorded by status and reference only; certificates are never stored (decision C5). The reference is encrypted at rest. */
+  isVetting: boolCol("is_vetting").default(false),
   active: boolCol("active").default(true),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
