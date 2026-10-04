@@ -934,3 +934,96 @@ The weak points are in the core scheduling loop that every centre lives in each 
 ---
 
 *No code has been changed for this audit. I'll wait for your approval of the phases, or of specific items, before making changes.*
+
+---
+
+## Part E: Conor's decisions (4 October 2026)
+
+Conor returned the audit with an answer against every recommendation and answered
+the follow-up questions. This section is the working spec; the phases below
+replace section 12.
+
+**Approved as written:** every recommendation marked "Do" in the returned document
+(nearly all of them), including the critical fixes, the problems service, editable
+course locations and equipment, cancel workflow, unique keys and batched writes,
+admin-entered availability, pay-rate changes applied to unapproved lines, the
+"roster changed since approval" flag, volunteers hidden from payroll, period
+summary, pence columns, holiday-pay line, settings tabs, a Security tab (plus a
+password-strength indicator), confirmations and PIN step-up for dangerous
+actions, "who can see this" on sensitive pages, offline "my week", Face ID in the
+app with the PIN as the fallback, ICS feed, all the visual improvements, and the
+Cloudflare cron (GitHub stays as the backup pinger).
+
+**Decided differently from the recommendation:**
+
+1. **Roles.** Four kinds of user, nothing else:
+   - *Superadmin*: the person who set the centre up and pays. One per centre; a
+     transfer is done by ActivityRoster from the Dev Center.
+   - *Office admin*: uses the office. Which features they can reach is set by the
+     superadmin per person; a new office admin starts with **nothing ticked**.
+     Toggles: Roster & courses · Staff · Emergency & guardian contacts (incl. the
+     young-worker register) · Payroll · Settings · Billing · Exports & data tools.
+   - *Instructor*: the instructor app. Senior instructors and volunteers are
+     instructors; "senior" is a qualification, not a platform role.
+   - *Parent*: read-only roster of their child plus approve/decline/withdraw
+     parental permission (see 3).
+   The senior-instructor and welfare-officer roles are removed.
+2. **Welfare officer** is not an account. Settings → a free-text list of welfare
+   officers' names; optional default duty pattern (which days/slots); the roster
+   gets an optional "Welfare on duty" field (a dropdown of those names, like
+   locations and equipment). It is a note on the roster, nothing more.
+3. **Parent approval flow.** When a young person signs up in the app and their
+   date of birth shows under 18, they are asked for a parent's email; the parent is
+   invited to make a minimal account and approve. Required by default; a centre
+   setting can make it optional (legally required only under 16 in Ireland; good
+   practice otherwise). Invite email says why, names the centre, allows decline.
+4. **Availability has no blank.** Every slot is Busy until the instructor (or the
+   office) marks it Free or Maybe. Beyond the centre's availability window the
+   slot is "not asked yet" and does not block. The office roster shows a note that
+   the window can be lengthened, linking to the setting. Recurring patterns: yes
+   (A11-3), plus a note per day (A4-1).
+5. **Times.** No time zones. Session times are entered and shown as typed, 24-hour,
+   everywhere (roster, PDF, app, emails, young-worker checks). Clock-in/out stores
+   the device's local wall-clock time. The centre's zone is detected from the
+   browser at sign-up and kept internally only to time the morning digest; the
+   time-zone setting is removed from Settings.
+6. **Roster board (option C).** Desktop. Default layout (a): course cards per day
+   with open roles, drag instructors from a side list; a switch to layout (b):
+   instructor rows × day/slot columns. The board is the Roster page (view and
+   edit); the Courses page keeps course creation and editing. Per-day staffing
+   overrides (A3-3 option B) ship with it.
+7. **New-device check** for office users: challenge on a new device or a new city
+   (not on every network change). Instructors stay at country level.
+8. **Delete vs retire** for locations, equipment, course types and instructors:
+   delete when nothing has ever referenced the item; otherwise retire, with
+   retired items in a collapsed "Retired" section.
+9. **Equipment option B**: quantities per type checked against the courses that
+   need them, with a setting to switch the check off. No "next booked".
+10. **Rate limits** are per account, never per shared address, so a busy centre is
+    never cut off.
+11. **Not doing:** equipment "next booked"; the unique-constraint note in A3-7
+    (covered by A3-6).
+
+**Phases (all to production until 13 October; staging first after that):**
+
+- **Phase 0, now:** finish the "roster" wording; times as typed everywhere;
+  Cloudflare cron for the hourly tick (GitHub as backup); remove phantom pay
+  lines and stop new ones; cancel workflow for courses and sessions (roster,
+  app, PDF, sheet, payroll, notifications).
+- **Phase 1:** the roles model (superadmin, office admins with toggles, transfer
+  from the Dev Center), welfare-officer names and "Welfare on duty", parent
+  approval flow, Security tab, password strength, tighter device check for
+  office users.
+- **Phase 2:** problems service (dashboard, roster, digest, app); re-validation
+  on edits; leave → Busy; qualification check in the picker; editable course
+  locations and equipment; equipment quantities; unique keys and batched
+  writes; availability with no blank, recurring patterns, day notes and
+  office-entered availability; payroll fixes (rate changes, changed-since-
+  approval, volunteers hidden, summary, pence, holiday pay); single staffing
+  panel; delete-or-retire with collapsed Retired sections; tests (role-by-
+  route, lifecycle, times).
+- **Phase 3:** the roster board with per-day staffing and the two layouts; Today
+  strip and dashboard reshuffle; side panels and consequence dialogs; settings
+  tabs; Course setup beside Courses.
+- **Phase 4:** app items (offline week, Face ID, ICS), durable rate limits,
+  remaining P2/P3 technical items.
