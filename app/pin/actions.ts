@@ -22,6 +22,8 @@ import { authSecret } from "@/lib/security/secrets";
 import { resolveHost } from "@/lib/tenant/host";
 import { createTenantRepositories } from "@/lib/db/repositories";
 import { getDb } from "@/lib/cf/bindings";
+import { STEPUP_COOKIE, STEPUP_TTL_S, stepUpCookieValue } from "@/lib/auth/step-up";
+import { hasFreshStepUp } from "@/lib/auth/step-up-server";
 
 export type PinResult = { ok: boolean; error?: string; message?: string };
 
@@ -168,6 +170,38 @@ export async function resetMyPinAction(next: string, proof: PinResetProof): Prom
     `<p>Your login PIN was just reset using ${method === "password" ? "your password" : "an emailed code"}, and a new one is being set.</p>`,
   );
   redirect(`/set-pin?next=${encodeURIComponent(safeNext(next))}`);
+}
+
+/**
+ * Step-up before something you can't take back (a full export, an anonymisation):
+ * the PIN again, with the same lockout as the PIN screen. Sets a ten-minute
+ * cookie bound to this session. Returns ok without asking if one is still fresh.
+ */
+export async function stepUpWithPinAction(pin: string | null): Promise<PinResult & { needsPin?: boolean }> {
+  const info = await sessionInfo();
+  if (!info?.sessionId) return { ok: false, error: "Please sign in again." };
+  if (pin === null) return (await hasFreshStepUp()) ? { ok: true } : { ok: false, needsPin: true };
+  if (!PIN_REGEX.test(pin)) return { ok: false, needsPin: true, error: "Enter your 4-digit PIN." };
+  const { control } = await getRepositories();
+  const sec = await control.getUserSecurity(info.userId);
+  if (!sec?.pinHash) return { ok: false, error: "Set a login PIN first (Settings → Data & account)." };
+  if (sec.pinLockedUntil && sec.pinLockedUntil.getTime() > Date.now()) {
+    const mins = Math.ceil((sec.pinLockedUntil.getTime() - Date.now()) / 60000);
+    return { ok: false, error: `Too many attempts. Try again in ${mins} minute${mins === 1 ? "" : "s"}.` };
+  }
+  if (await verifyPin(pin, sec.pinHash)) {
+    await control.resetPinFailures(info.userId);
+    const env = getEnv();
+    (await cookies()).set(STEPUP_COOKIE, await stepUpCookieValue(authSecret(env), info.sessionId), { httpOnly: true, secure: true, sameSite: "strict", path: "/", domain: `.${env.APP_APEX_DOMAIN}`, maxAge: STEPUP_TTL_S });
+    await recordSecurityEvent("step_up", { userId: info.userId });
+    return { ok: true };
+  }
+  const attempt = (sec.pinFailedCount ?? 0) + 1;
+  const willLock = attempt >= PIN_MAX_FAILS;
+  await control.recordPinFailure(info.userId, willLock ? new Date(Date.now() + PIN_LOCK_MS) : null);
+  await recordSecurityEvent(willLock ? "pin_locked" : "pin_failed", { userId: info.userId, meta: { attempt, stepUp: true } });
+  const left = PIN_MAX_FAILS - attempt;
+  return { ok: false, needsPin: true, error: willLock ? "Too many attempts — locked for 15 minutes." : `Incorrect PIN. ${left} attempt${left === 1 ? "" : "s"} left.` };
 }
 
 /** Verify the PIN for this session (with lockout), then continue. */

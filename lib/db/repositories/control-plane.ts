@@ -1,4 +1,4 @@
-import { and, eq, inArray, lt } from "drizzle-orm";
+import { and, eq, inArray, lt, sql } from "drizzle-orm";
 import type { Database } from "@/lib/db/client";
 import {
   account,
@@ -25,6 +25,7 @@ import {
   type TwoFactorMethod,
   type NewOrganisation,
   type Organisation,
+  rateLimitBucket,
 } from "@/lib/db/schema";
 import { desc } from "drizzle-orm";
 
@@ -344,6 +345,33 @@ export class ControlPlaneRepository {
   }
 
   // --- Login PIN (second factor) -------------------------------------------
+
+  /**
+   * Count one hit against a fixed-window limit and return the count in this
+   * window. One statement: insert, or bump within the same window, or restart
+   * at 1 when the window has moved on. Atomic because D1 serialises writes.
+   */
+  async hitRateLimit(key: string, window: number, expiresAt: Date): Promise<number> {
+    const rows = await this.db
+      .insert(rateLimitBucket)
+      .values({ key, window, count: 1, expiresAt })
+      .onConflictDoUpdate({
+        target: rateLimitBucket.key,
+        set: {
+          count: sql`CASE WHEN ${rateLimitBucket.window} = ${window} THEN ${rateLimitBucket.count} + 1 ELSE 1 END`,
+          window: sql`${window}`,
+          expiresAt: sql`${expiresAt.getTime()}`,
+        },
+      })
+      .returning({ count: rateLimitBucket.count });
+    return rows[0]?.count ?? 1;
+  }
+
+  /** Drop counters whose window is over (run from the hourly tick). */
+  async purgeRateLimits(now: Date = new Date()): Promise<number> {
+    const removed = await this.db.delete(rateLimitBucket).where(lt(rateLimitBucket.expiresAt, now)).returning({ key: rateLimitBucket.key });
+    return removed.length;
+  }
 
   async getUserSecurity(userId: string): Promise<{ pinHash: string | null; pinFailedCount: number; pinLockedUntil: Date | null } | null> {
     const rows = await this.db

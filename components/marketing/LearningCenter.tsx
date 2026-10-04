@@ -651,8 +651,9 @@ const SECTIONS: Section[] = [
     blocks: [
       { kind: "p", text: "Your data is pinned to the EU for GDPR, with PII scrubbing on error monitoring. Each centre's data is structurally isolated — it can never be read alongside another centre's." },
       { kind: "bullets", items: [
-        "Export your centre's data at any time.",
+        "Export your centre's data at any time (Settings → Data & account).",
         "If a centre is ever suspended, it can still export within the retention window before deletion.",
+        "Anything you can't take back — a full export, one person's export, an anonymisation — asks for your 4-digit PIN again first. It's remembered for ten minutes on that sign-in only.",
       ] },
       { kind: "sub", text: "When a staff member asks about their data" },
       { kind: "p", text: "Open their profile and use the Data & privacy card. You are the data controller for your staff; these tools let you answer a request yourself, within the month the law allows." },

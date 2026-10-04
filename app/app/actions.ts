@@ -23,8 +23,11 @@ async function me() {
   return s?.user ? { id: s.user.id, email: s.user.email.toLowerCase(), name: s.user.name, verified: Boolean(s.user.emailVerified) } : null;
 }
 
-/** Remember which centre the app shows (signed; membership is re-checked on every request). */
-export async function rememberCentre(userId: string, organisationId: string): Promise<void> {
+/**
+ * Remember which centre the app shows (signed; membership is re-checked on every request).
+ * Not exported: every export of a "use server" file is an endpoint anyone can call (audit C7).
+ */
+async function rememberCentre(userId: string, organisationId: string): Promise<void> {
   const env = getEnv();
   const jar = await cookies();
   jar.set(CENTRE_COOKIE, await signCentreCookie(authSecret(env), { organisationId, userId }), {

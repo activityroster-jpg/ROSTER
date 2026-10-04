@@ -291,6 +291,19 @@ export const slugReservation = sqliteTable("slug_reservation", {
   createdAt: createdAt(),
 }, (t) => [uniqueIndex("slug_reservation_slug_uq").on(t.slug)]);
 
+/**
+ * Durable fixed-window rate-limit counters (audit C7, Part E decision 10).
+ * One row per limit key; D1 serialises writes, so the increment-and-read is
+ * atomic where the old KV read-then-write was not. Holds keys such as
+ * "auth:signin:email:<address>" and a count, never tenant data.
+ */
+export const rateLimitBucket = sqliteTable("rate_limit_bucket", {
+  key: text("key").primaryKey(),
+  window: integer("window").notNull(),
+  count: integer("count").notNull().default(0),
+  expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+}, (t) => [index("rate_limit_bucket_expires_idx").on(t.expiresAt)]);
+
 // --- Marketing leads (email capture from the public site) ------------------
 
 export const LEAD_ORG_TYPES = ["yacht_club", "sailing_school", "activity_centre", "other"] as const;
@@ -713,6 +726,7 @@ export const SECURITY_EVENT_KINDS = [
   "ghost_start", "ghost_end", "join_requested", "join_code_failed",
   "two_factor_enabled", "two_factor_disabled", "sessions_revoked",
   "subprocessor_notice", "owner_transferred", "office_access_changed",
+  "step_up", "biometric_registered", "biometric_unlock", "biometric_failed", "calendar_feed_reset",
 ] as const;
 export type SecurityEventKind = (typeof SECURITY_EVENT_KINDS)[number];
 

@@ -3,6 +3,7 @@ import { getDb, getEnv } from "@/lib/cf/bindings";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { createSetupCheckout } from "@/lib/billing/setup";
 import { DEFAULT_PRICING } from "@/lib/pricing";
+import { clientIp, rateLimit } from "@/lib/security/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,9 @@ export async function GET(req: Request) {
   const env = getEnv();
   const url = new URL(req.url);
   const apex = `https://${env.APP_APEX_DOMAIN}`;
+  // Public and unauthenticated: each request creates a Stripe Checkout session, so cap it (audit C7).
+  const limit = await rateLimit(`billing-setup:${clientIp(req)}`, 10, 60 * 60);
+  if (!limit.allowed) return NextResponse.redirect(`${apex}/#get-demo`);
 
   let enabled: boolean = DEFAULT_PRICING.setupEnabled;
   try {

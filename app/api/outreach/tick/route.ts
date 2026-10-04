@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb, getEnv } from "@/lib/cf/bindings";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
+import { ControlPlaneRepository } from "@/lib/db/repositories/control-plane";
 import { researchBatch, runDueSends } from "@/lib/outreach/engine";
 import { sendDailyDigests } from "@/lib/services/digest";
 import { sweepLeaving } from "@/lib/services/leaving";
@@ -38,8 +39,9 @@ async function tick(req: Request) {
   // Email retries: anything that failed for a passing reason goes again with backoff.
   const mail = await drainEmailQueue(db, env).catch((e: Error) => ({ due: 0, sent: 0, failed: 0, purged: 0, error: e.message }));
   // Data retention: one sweep per centre per day, with the 14-day notice first.
+  const rateLimitsPurged = await new ControlPlaneRepository(db).purgeRateLimits().catch(() => 0);
   const retention = await sweepRetention(db, env).catch((e: Error) => ({ centres: 0, ran: 0, reminded: 0, platform: {}, error: e.message }));
-  return NextResponse.json({ ok: true, campaigns: running.length, research, sends, digests, leaving, trialSurvey, mail, retention });
+  return NextResponse.json({ ok: true, campaigns: running.length, research, sends, digests, leaving, trialSurvey, mail, retention, rateLimitsPurged });
 }
 
 export async function POST(req: Request) { return tick(req); }

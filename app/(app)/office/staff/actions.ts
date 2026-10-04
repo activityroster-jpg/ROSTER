@@ -13,6 +13,7 @@ import { getAuth } from "@/lib/auth";
 import { dobSchema, protectedContactsSchema, instructorSchema, complianceItemSchema, qualificationSchema } from "@/lib/validation/entities";
 import { writeAudit } from "@/lib/services/audit";
 import { idSchema } from "@/lib/validation/actions";
+import { hasFreshStepUp } from "@/lib/auth/step-up-server";
 import { deleteInstructorIfUnreferenced } from "@/lib/services/retire";
 import { linkInstructorUser } from "@/lib/services/invite";
 import { toggleOnboarding } from "@/lib/services/hr";
@@ -450,6 +451,7 @@ export async function anonymiseInstructorAction(instructorId: string, typedName:
   const i = await repos.tenant.instructor.findById(ctx, instructorId);
   if (!i) return { ok: false, error: "Not found" };
   if (typedName.trim().toLowerCase() !== i.name.trim().toLowerCase()) return { ok: false, error: "Type their name exactly as shown to confirm" };
+  if (!(await hasFreshStepUp())) return { ok: false, error: "Enter your PIN again to anonymise (press the button again)." };
   const res = await anonymisePerson(repos, ctx, instructorId);
   if (!res.ok) return { ok: false, error: res.reason };
   revalidatePath(`/office/staff/${instructorId}`);

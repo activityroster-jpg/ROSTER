@@ -17,6 +17,7 @@ import { retentionPlan } from "@/lib/services/retention";
 import { WelfareSettingsForm } from "@/components/office/WelfareSettingsForm";
 import { parseWelfareSettings } from "@/lib/services/welfare";
 import { SettingsTabs } from "@/components/office/SettingsTabs";
+import { StepUpButton } from "@/components/office/StepUpButton";
 
 export const dynamic = "force-dynamic";
 
@@ -226,9 +227,7 @@ export default async function SettingsPage() {
       <Card className="mt-6">
         <h2 className="mb-3 font-semibold text-navy">Data &amp; billing</h2>
         <div className="flex flex-wrap gap-3">
-          <a href="/api/office/export" className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-navy hover:bg-slate-50">
-            Export all data (JSON)
-          </a>
+          <StepUpButton label="Export all data (JSON)" href="/api/office/export" title="Download the whole centre?" consequences={["One file with every course, roster, person, cert, check, availability answer, hour and pay line.", "It includes personal data about your staff: keep it somewhere safe.", "The download is recorded in the change log. Enter your PIN to continue."]} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-navy hover:bg-slate-50" />
           <a href="/api/billing/portal" className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-navy hover:bg-slate-50">
             Manage billing
           </a>

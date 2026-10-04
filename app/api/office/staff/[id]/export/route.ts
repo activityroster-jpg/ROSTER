@@ -1,11 +1,13 @@
 import { requireTenant } from "@/lib/tenant/require";
 import { exportPerson, personExportToCsv } from "@/lib/services/person-data";
+import { hasFreshStepUp, stepUpRequired } from "@/lib/auth/step-up-server";
 
 export const dynamic = "force-dynamic";
 
 /** Everything held about one person, as JSON (default) or CSV (?format=csv). Admin only; audited. */
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { ctx, repos } = await requireTenant({ permission: "data.export" });
+  if (!(await hasFreshStepUp())) return stepUpRequired();
   const { id } = await params;
   const data = await exportPerson(repos, ctx, id);
   if (!data) return new Response("Not found", { status: 404 });

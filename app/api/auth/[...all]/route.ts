@@ -39,7 +39,11 @@ async function handler(req: Request): Promise<Response> {
   // sees 428 and renders the widget, then retries with the token in a header.
   const isCredentialPost = req.method === "POST" && /\/sign-in\/(email|username)$/.test(url.pathname);
   const ip = clientIp(req);
-  const failKey = `auth:fails:${ip}`;
+  // Failures are counted per account (decision 10): a shared centre Wi-Fi never
+  // pushes everyone else into the human check. No email in the body → the address.
+  let failEmail: string | null = null;
+  if (isCredentialPost) { try { failEmail = emailFromBody(await req.clone().json()); } catch { failEmail = null; } }
+  const failKey = failEmail ? `auth:fails:email:${failEmail}` : `auth:fails:${ip}`;
   if (isCredentialPost && turnstileEnabled()) {
     let fails = 0;
     try { fails = Number((await getEnv().TENANT_CACHE.get(failKey)) ?? "0"); } catch { fails = 0; }

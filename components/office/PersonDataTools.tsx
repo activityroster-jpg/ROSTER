@@ -5,6 +5,7 @@ import { FreeTextHint } from "@/components/FreeTextHint";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { anonymiseInstructorAction, setRestrictionAction } from "@/app/(app)/office/staff/actions";
+import { StepUpButton } from "./StepUpButton";
 
 /** Export, restrict and anonymise one person: the tools behind a data request. */
 export function PersonDataTools({ instructorId, name, restricted, restrictedReason, anonymised }: { instructorId: string; name: string; restricted: boolean; restrictedReason: string | null; anonymised: boolean }) {
@@ -28,8 +29,8 @@ export function PersonDataTools({ instructorId, name, restricted, restrictedReas
         <p className="font-medium text-navy">Copy of their data</p>
         <p className="text-xs text-slate-500">Everything this centre holds about {name}: profile, contacts, certs and checks, assignments, availability, hours, leave, pay rates, notifications, change-log entries and sign-ins. Each download is recorded.</p>
         <div className="mt-1.5 flex gap-2">
-          <a href={`/api/office/staff/${instructorId}/export`} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-navy hover:bg-slate-50">Download JSON</a>
-          <a href={`/api/office/staff/${instructorId}/export?format=csv`} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-navy hover:bg-slate-50">Download CSV</a>
+          <StepUpButton label="Download JSON" href={`/api/office/staff/${instructorId}/export`} title={`Download everything held about ${name}?`} consequences={["The file holds their contact details, certs, checks, availability, hours and pay.", "The download is recorded in the change log.", "Enter your PIN to continue."]} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-navy hover:bg-slate-50" />
+          <StepUpButton label="Download CSV" href={`/api/office/staff/${instructorId}/export?format=csv`} title={`Download everything held about ${name}?`} consequences={["The file holds their contact details, certs, checks, availability, hours and pay.", "The download is recorded in the change log.", "Enter your PIN to continue."]} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-navy hover:bg-slate-50" />
         </div>
       </div>
       <div>
@@ -53,7 +54,11 @@ export function PersonDataTools({ instructorId, name, restricted, restrictedReas
         <p className="text-xs text-slate-500">Removes their name, contact details, date of birth, guardian and emergency contacts, certificates and checks with their files, availability, leave, pay rates and notifications, and their login to this centre. Roster and payroll history stays as “Former staff member” so your records still add up. This cannot be undone, and it is re-applied automatically if the database is ever restored from a backup.</p>
         <div className="mt-1.5 flex flex-wrap items-center gap-2">
           <input value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={`Type “${name}” to confirm`} className="w-64 rounded-lg border border-slate-300 px-2 py-1.5 text-xs" />
-          <button disabled={pending || typed.trim().toLowerCase() !== name.trim().toLowerCase()} onClick={() => { if (confirm(`Anonymise ${name}? This cannot be undone.`)) run(() => anonymiseInstructorAction(instructorId, typed)); }} className="rounded-lg bg-port px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40">Anonymise</button>
+          {typed.trim().toLowerCase() === name.trim().toLowerCase() && !pending ? (
+            <StepUpButton label="Anonymise" title={`Anonymise ${name}?`} consequences={["Their name, contact details, certs, documents, availability, leave and app login are removed for good.", "Roster and payroll history stays, attached to “Former staff member”.", "This cannot be undone. Enter your PIN to continue."]} onVerified={() => run(() => anonymiseInstructorAction(instructorId, typed))} className="rounded-lg bg-port px-3 py-1.5 text-xs font-semibold text-white" />
+          ) : (
+            <button disabled className="rounded-lg bg-port px-3 py-1.5 text-xs font-semibold text-white opacity-40">Anonymise</button>
+          )}
         </div>
       </div>
       {msg ? <p className={msg.ok ? "text-starboard" : "text-port"}>{msg.text}</p> : null}
