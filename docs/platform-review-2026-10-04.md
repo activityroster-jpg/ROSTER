@@ -160,22 +160,21 @@ lead to the next step.
 
 ## 6. Decisions for Conor
 
-1. **Next.js 16 upgrade.** Clears the two advisories (`next` moderate, bundled `postcss`
-   high) and keeps Dependabot quiet. It is a major version: OpenNext adapter, middleware
-   and caching behaviour all need re-testing on staging for a day. Recommendation: yes,
-   but as its own change after the current production deploy, not mixed with features.
-2. **One word for the schedule: "rota" or "roster".** Recommendation: "rota" (what UK
-   centres say; the URL is already `/office/rota`), changing about 60 strings in the
-   sidebar, page titles, guides and emails. Alternatively keep "roster" and rename the
-   PDF step. Either way a single pass.
-3. **Enforce the nonce CSP on 11 October** if the report-only log stays empty. Low risk;
-   a broken third-party script would show up as a blank widget rather than a security
-   hole, and rolling back is one line.
-4. **Production deploy.** Staging is green on today's commits with migrations 0049–0055
-   pending for production, all additive. After you have tried the sign-in flow, the new
-   rota PDF and the Dev Center navigation on staging, press "Deploy production". Then in
-   Dev Center → Blog press "Re-sync article content" and "Refresh covers to match
-   articles (10)" until it says all done.
+Conor's answers, 4 October: 1 rota · 2 yes · 3 remind and ask on the day · 4 Claude
+Code deploys. Also: no users until 13 October (build phase), so everything built until
+then goes straight to production; from the 13th Conor tests on staging first.
+
+1. **Next.js 16 upgrade.** Approved. Clears the two advisories (`next` moderate, bundled
+   `postcss` high). Done as its own commit after the vocabulary change; see the
+   production deploy log in `docs/runbooks/deploy.md` for the outcome.
+2. **One word for the schedule.** "Rota" chosen. The noun is now "rota" everywhere a
+   person reads it (sidebar, page titles, PDF, emails, guides, marketing); "roster" stays
+   as the verb ("fit to roster", "as you roster") and in code identifiers.
+3. **Enforce the nonce CSP.** A reminder is set for 11 October; Claude Code checks the
+   report-only log that day and asks before enforcing.
+4. **Production deploy.** Until 13 October Claude Code presses "Deploy production" after
+   each green staging deploy; the deploy log records every run and its bookmark. From
+   13 October the usual rule returns: Conor tests on staging, then presses the button.
 
 ## 7. Conor's clicks still outstanding (unchanged from the compliance plan)
 

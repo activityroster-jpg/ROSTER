@@ -135,7 +135,7 @@ export default async function DashboardPage() {
       <div className="mb-6 grid gap-3 sm:grid-cols-3">
         {clockOn ? <Tile href="/office/timeclock" label="On the water now" value={attendance.onWater} sub="Clocked in" tone={attendance.onWater > 0 ? "starboard" : "navy"} /> : null}
         {clockOn ? <Tile href="/office/timeclock" label="Hours logged today" value={(attendance.minutesToday / 60).toFixed(1)} sub={`${attendance.started} started`} /> : null}
-        <Tile href="/office/rota" label="Sessions this week" value={weekSessions} sub="View / print roster" tone="teal" />
+        <Tile href="/office/rota" label="Sessions this week" value={weekSessions} sub="View / print rota" tone="teal" />
         {!clockOn ? <Tile href="/office/staff" label="Instructors" value={staff.filter((s) => s.instructor.status === "active").length} sub="On the team" /> : null}
         {staff.some((s) => s.instructor.status === "active" && isUnder18(s.instructor.dateOfBirth)) ? <Tile href="/office/staff" label="Under 18 on the team" value={staff.filter((s) => s.instructor.status === "active" && isUnder18(s.instructor.dateOfBirth)).length} sub="Higher-privacy defaults apply" tone="teal" /> : null}
         {!clockOn ? <Tile href="/office/finance" label="Paid hours this month" value={"→"} sub="Review payroll" /> : null}
@@ -165,9 +165,9 @@ export default async function DashboardPage() {
 
       {/* This week's rota */}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-display text-lg font-semibold text-navy">This week&apos;s roster</h2>
+        <h2 className="font-display text-lg font-semibold text-navy">This week&apos;s rota</h2>
         <Link href="/office/rota" className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-navy hover:bg-slate-50">
-          Full roster · print / PDF →
+          Full rota · print / PDF →
         </Link>
       </div>
       <Card className="p-0">

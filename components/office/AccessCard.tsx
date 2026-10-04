@@ -15,7 +15,7 @@ export function AccessCard({ instructorId, linked, role, canChangeRole, under18,
   const [note, setNote] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
   const run = (fn: () => Promise<{ ok: boolean; error?: string; message?: string }>) => start(async () => { const r = await fn(); setMsg(r.ok ? r.message ?? "Done" : r.error ?? "Failed"); router.refresh(); });
-  const ROLES = [["instructor", "Instructor", "Their own portal: shifts, availability, confirmations, documents."], ["senior_instructor", "Senior instructor", "Also the office roster: courses, assignments, availability grid, leave and cover, publishing. No pay, billing, settings or exports."], ["welfare_officer", "Welfare officer", "Office access to staff profiles, guardian and emergency contacts, the emergency sheet and the young-worker register. Nothing operational or financial."]] as const;
+  const ROLES = [["instructor", "Instructor", "Their own portal: shifts, availability, confirmations, documents."], ["senior_instructor", "Senior instructor", "Also the office rota: courses, assignments, availability grid, leave and cover, publishing. No pay, billing, settings or exports."], ["welfare_officer", "Welfare officer", "Office access to staff profiles, guardian and emergency contacts, the emergency sheet and the young-worker register. Nothing operational or financial."]] as const;
   return (
     <div className="space-y-4 text-sm">
       <div>

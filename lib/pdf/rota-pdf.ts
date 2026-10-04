@@ -95,7 +95,7 @@ function newPage(c: Ctx): void {
   c.page.drawText(right, { x: c.w - M - c.font.widthOfTextAtSize(right, 8), y: c.h - M - 4, size: 8, font: c.font, color: L.muted });
   c.page.drawLine({ start: { x: M, y: c.h - M - 30 }, end: { x: c.w - M, y: c.h - M - 30 }, thickness: 1, color: L.rule });
   c.y = c.h - M - 44;
-  const foot = safe("Produced by ActivityRoster · planning aid, not legal advice · check the live roster for late changes");
+  const foot = safe("Produced by ActivityRoster · planning aid, not legal advice · check the live rota for late changes");
   c.page.drawText(foot, { x: M, y: M - 14, size: 7, font: c.font, color: L.muted });
 }
 

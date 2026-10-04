@@ -115,7 +115,7 @@ export default async function SettingsPage() {
         </Card>
         <Card>
           <h2 className="mb-1 font-semibold text-navy">Time clock &amp; pay</h2>
-          <p className="mb-3 text-xs text-slate-500">Hours always come from the roster. Turn the clock on if you also want instructors to clock in and out from the app.</p>
+          <p className="mb-3 text-xs text-slate-500">Hours always come from the rota. Turn the clock on if you also want instructors to clock in and out from the app.</p>
           <TimeclockSettingsForm timeclockEnabled={Boolean(s?.timeclockEnabled)} paySource={(s?.paySource ?? "roster") as "roster" | "clock"} />
         </Card>
         <Card>

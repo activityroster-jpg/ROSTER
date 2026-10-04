@@ -5,7 +5,7 @@ import { FileDown } from "lucide-react";
 import type { RotaRange } from "@/lib/rota/template";
 
 /**
- * Download the roster as a PDF for a chosen period, using the centre's saved
+ * Download the rota as a PDF for a chosen period, using the centre's saved
  * layout. "One day" means today when today falls in the week on screen,
  * otherwise the Monday of that week, and the label says which.
  */

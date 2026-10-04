@@ -7,7 +7,7 @@ import type { RetentionPolicy } from "@/lib/services/retention";
 type CountKey = "staff" | "leave" | "clock" | "availability" | "notifications" | "audit";
 const COUNT_KEY: Record<keyof RetentionPolicy, CountKey> = { staffMonths: "staff", leaveMonths: "leave", clockMonths: "clock", availabilityMonths: "availability", notificationsMonths: "notifications", auditMonths: "audit" };
 const ROWS: { key: keyof RetentionPolicy; label: string; help: string; min: number }[] = [
-  { key: "staffMonths", label: "Former staff profiles", help: "Months after someone leaves before their name, contact details, certificates and files are removed. Roster and payroll history stays.", min: 1 },
+  { key: "staffMonths", label: "Former staff profiles", help: "Months after someone leaves before their name, contact details, certificates and files are removed. Rota and payroll history stays.", min: 1 },
   { key: "leaveMonths", label: "Leave requests", help: "Months after the leave ended.", min: 1 },
   { key: "availabilityMonths", label: "Availability entries", help: "Months after the date they refer to.", min: 1 },
   { key: "notificationsMonths", label: "Notifications", help: "In-app messages to your team.", min: 1 },

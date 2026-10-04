@@ -150,7 +150,7 @@ For centres that provide accommodation, its quality decides more retention than 
 
 ## Manage the workload
 
-A season of six-day weeks with no breaks burns people out by August and guarantees they will not return. Roster fairly: spread the early starts, the long days, the junior groups and the quiet days across the team. Make sure everyone gets their days off and that they are real days off. Watch for the person who is always covering gaps because they are reliable; they are the one you will lose. Give instructors some say in their rota, and tell them well ahead what it is.
+A season of six-day weeks with no breaks burns people out by August and guarantees they will not return. Rota fairly: spread the early starts, the long days, the junior groups and the quiet days across the team. Make sure everyone gets their days off and that they are real days off. Watch for the person who is always covering gaps because they are reliable; they are the one you will lose. Give instructors some say in their rota, and tell them well ahead what it is.
 
 ## Lead decently
 

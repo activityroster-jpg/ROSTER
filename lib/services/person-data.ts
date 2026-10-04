@@ -140,7 +140,7 @@ export type AnonymiseResult = { ok: true; removed: Record<string, number> } | { 
 /**
  * Anonymise one person: identifying fields go, certificates and checks (and
  * their files) are deleted, their availability, leave, notifications and pay
- * rates are deleted, and their login is removed. Roster and payroll history
+ * rates are deleted, and their login is removed. Rota and payroll history
  * stays, attached to "Former staff member". Writes a deletion-log row unless
  * this is a replay.
  */

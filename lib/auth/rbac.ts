@@ -7,7 +7,7 @@ import type { MembershipRole } from "@/lib/db/schema";
  */
 export const PERMISSIONS = [
   "office.view",        // open the office at all (dashboard, change log is admin-only)
-  "rota.view",          // roster, emergency sheet, rota PDF
+  "rota.view",          // rota, emergency sheet, rota PDF
   "roster.edit",        // courses, assignments, availability grid, leave and cover, publishing
   "staff.view",         // instructors list and profiles (no pay, no data tools)
   "staff.edit",         // edit profiles, certs, invites

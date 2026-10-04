@@ -25,7 +25,7 @@ const PLATFORM = [
 ];
 
 const SAFETY = [
-  { icon: ShieldCheck, title: "Won't roster the under-qualified", body: "Lapsed first aid or vetting? They can't be assigned without a recorded override." },
+  { icon: ShieldCheck, title: "Won't rota the under-qualified", body: "Lapsed first aid or vetting? They can't be assigned without a recorded override." },
   { icon: Users, title: "Ratio-aware", body: "Flags a course the moment it's short of instructors." },
   { icon: LifeBuoy, title: "Safety-boat cover enforced", body: "Nothing goes afloat without cover — overrides are recorded." },
   { icon: AlertTriangle, title: "Nothing lapses quietly", body: "Expiry alerts on every ticket and check." },
@@ -34,9 +34,9 @@ const SAFETY = [
 ];
 
 const AUDIENCES = [
-  { icon: Anchor, title: "Yacht clubs", body: "Volunteer rosters and racing safety cover, without the committee spreadsheet." },
+  { icon: Anchor, title: "Yacht clubs", body: "Volunteer rotas and racing safety cover, without the committee spreadsheet." },
   { icon: Ship, title: "Sailing schools", body: "Back-to-back RYA courses, a big freelance pool, every ticket tracked." },
-  { icon: Waves, title: "Activity centres", body: "Dinghy, windsurf, powerboat and kayak — one roster, one compliance picture." },
+  { icon: Waves, title: "Activity centres", body: "Dinghy, windsurf, powerboat and kayak — one rota, one compliance picture." },
 ];
 
 const PHOTOS = {
@@ -67,7 +67,7 @@ const DISCIPLINES = [
   { src: PHOTOS.keelboat, label: "Keelboat & yacht", sub: "Cruising to Yachtmaster" },
   { src: PHOTOS.catamarans, label: "Dinghies & catamarans", sub: "National & Youth schemes" },
   { src: PHOTOS.kayaks, label: "Kayaking & SUP", sub: "Paddlesports" },
-  { src: PHOTOS.instructors, label: "Instructors & coaching", sub: "Your whole team, one roster" },
+  { src: PHOTOS.instructors, label: "Instructors & coaching", sub: "Your whole team, one rota" },
 ];
 
 function DisciplineGallery() {

@@ -101,7 +101,7 @@ export async function getInstructorHours(
 
 // ---------------------------------------------------------------------------
 // Payroll lines — one per rostered (or clocked) session. Hours come from the
-// roster by default; the clock can supply actuals; the office can pick which
+// rota by default; the clock can supply actuals; the office can pick which
 // to pay per line and override minutes or pay outright during review.
 // ---------------------------------------------------------------------------
 
@@ -115,7 +115,7 @@ export interface PayrollLine {
   courseName: string;
   start: string | null; // HH:MM
   finish: string | null; // HH:MM
-  /** Minutes on the roster for this session. */
+  /** Minutes on the rota for this session. */
   scheduledMinutes: number;
   /** Minutes the clock recorded, if any. */
   clockedMinutes: number | null;

@@ -32,7 +32,7 @@ export default async function RotaPage({ searchParams }: { searchParams: Promise
     <div className="mx-auto max-w-4xl">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3 print:mb-3">
         <div>
-          <h1 className="font-display text-2xl font-bold text-navy">Weekly roster</h1>
+          <h1 className="font-display text-2xl font-bold text-navy">Weekly rota</h1>
           <p className="text-sm text-slate-500">{organisation.name} · {range} · {total} session{total === 1 ? "" : "s"}</p>
         </div>
         <div className="flex items-center gap-2 print:hidden">
@@ -50,7 +50,7 @@ export default async function RotaPage({ searchParams }: { searchParams: Promise
       <RotaView rota={rota} />
       <p className="mt-4 text-center text-xs text-slate-400 print:mt-2">Generated from ActivityRoster · {new Date().toLocaleDateString("en-GB")}</p>
       <p className="mx-auto mt-2 max-w-2xl text-center text-[11px] leading-snug text-slate-400">
-        Under-18s on this roster were checked against the published working-time rules for {organisation.name}&rsquo;s jurisdiction when they were assigned; any override is recorded in the change log.
+        Under-18s on this rota were checked against the published working-time rules for {organisation.name}&rsquo;s jurisdiction when they were assigned; any override is recorded in the change log.
         This is a planning aid, not legal advice. The employer remains responsible for child-employment law, permits and school-leaving rules.
         <span className="print:hidden"> <a href={`/api/office/young-worker-register?from=${monday}&to=${addDays(monday, 6)}`} className="text-teal hover:underline">Download this week&rsquo;s young-worker time register (CSV)</a>.</span>
       </p>

@@ -23,7 +23,7 @@ const NAV = [
     items: [
       { href: "/office", label: "Dashboard", icon: LayoutDashboard },
       { href: "/office/courses", label: "Courses", icon: CalendarDays },
-      { href: "/office/rota", label: "Roster", icon: ClipboardList },
+      { href: "/office/rota", label: "Rota", icon: ClipboardList },
       { href: "/office/availability", label: "Availability", icon: CalendarDays },
       { href: "/office/timeclock", label: "Time clock", icon: Clock },
       { href: "/office/leave", label: "Leave & cover", icon: CalendarOff },

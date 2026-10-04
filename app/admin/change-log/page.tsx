@@ -16,7 +16,7 @@ export default async function AdminChangeLogPage() {
   return (
     <div>
       <h1 className="mb-1 font-display text-2xl font-bold text-navy">Change log</h1>
-      <p className="mb-6 text-sm text-slate-500">Recent activity across every centre — configuration, roster and billing changes (from each centre&apos;s audit trail).</p>
+      <p className="mb-6 text-sm text-slate-500">Recent activity across every centre — configuration, rota and billing changes (from each centre&apos;s audit trail).</p>
 
       <Card className="overflow-x-auto p-0">
         <table className="w-full min-w-[720px] text-left text-sm">

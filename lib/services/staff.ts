@@ -22,7 +22,7 @@ export function fitReason(fit: FitResult): string {
 }
 
 /**
- * List instructors with their fit-to-roster status, computed from the org's
+ * List instructors with their fit-to-rota status, computed from the org's
  * mandatory compliance requirements and each instructor's held checks. This is
  * the compliance moat surfaced for the Staff screen — all reads are tenant
  * scoped through the repositories; the decision is the pure `evaluateFit`.

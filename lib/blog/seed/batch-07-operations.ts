@@ -275,7 +275,7 @@ Maternity and paternity leave, a long illness, a bereavement or a sabbatical rem
 
 ## Use the systems
 
-Leave requests, approvals, balances, the restricted periods, standby rosters and cover records belong in the same system as the rota, so that a request can be checked against the plan, an approval updates the rota, and a cover assignment is recorded for pay and compliance. Spreadsheets and messages can do it for a small team; beyond a dozen people they cannot.
+Leave requests, approvals, balances, the restricted periods, standby rotas and cover records belong in the same system as the rota, so that a request can be checked against the plan, an approval updates the rota, and a cover assignment is recorded for pay and compliance. Spreadsheets and messages can do it for a small team; beyond a dozen people they cannot.
 
 ## Communicate clearly
 

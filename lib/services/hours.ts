@@ -9,7 +9,7 @@ import { payRatesByInstructor, pickPayRate } from "./pay-rates";
  * Hours come from the ROSTER. Every (assignment × session) has an hours record
  * with the scheduled minutes, stamped with the instructor's pay rate and the
  * centre's pay source at the time. Clock-outs write actual minutes onto the same
- * record; the office picks roster or clock per line (or by the centre default)
+ * record; the office picks rota or clock per line (or by the centre default)
  * and can override anything during payroll review. Approved lines are never
  * touched by a sync.
  */
@@ -76,7 +76,7 @@ export async function syncHoursForCourse(repos: Repositories, ctx: AnyTenantCont
   return out;
 }
 
-/** Sync every course (the "Rebuild from roster" button, and a safe backfill). */
+/** Sync every course (the "Rebuild from rota" button, and a safe backfill). */
 export async function rebuildHoursFromRoster(repos: Repositories, ctx: AnyTenantContext): Promise<SyncResult> {
   const courses = await repos.tenant.course.list(ctx);
   const total: SyncResult = { created: 0, updated: 0, removed: 0 };

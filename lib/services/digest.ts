@@ -19,7 +19,7 @@ function londonHour(now: Date): number {
  * from the compliance spec. Runs from the hourly tick; a KV marker makes it
  * once per centre per day. Uses a system context per centre, so every read
  * stays tenant-scoped, and never includes contact details, only names, roles,
- * times and places, plus a link to the printable roster.
+ * times and places, plus a link to the printable rota.
  */
 export async function sendDailyDigests(db: Database, env: CloudflareEnv, now = new Date()): Promise<{ checked: number; sent: number; skipped: number }> {
   const hour = londonHour(now);
@@ -46,7 +46,7 @@ export async function sendDailyDigests(db: Database, env: CloudflareEnv, now = n
     const rows = sessions.map((s) => `<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0"><strong>${escapeHtml(s.courseName)}</strong><br><span style="color:#64748b">${SLOT[s.slot] ?? s.slot} ${time(s.startAt)}–${time(s.endAt)}${s.locations.length ? ` · ${escapeHtml(s.locations.join(", "))}` : ""}</span></td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0">${s.staff.length ? s.staff.map((m) => `${escapeHtml(m.name)} <span style="color:#64748b">(${escapeHtml(m.role)}${m.status === "confirmed" ? "" : m.status === "declined" ? ", declined" : ", unconfirmed"})</span>`).join("<br>") : '<span style="color:#b91c1c">nobody rostered</span>'}${s.understaffed || s.missingSafetyCover ? '<br><span style="color:#b91c1c">⚠ short-staffed or no safety cover</span>' : ""}</td></tr>`).join("");
     const url = `https://${org.slug}.${env.APP_APEX_DOMAIN}/office/rota`;
     const html = sessions.length
-      ? `<p>Today's rota for <strong>${escapeHtml(org.name)}</strong>, ${nice}:</p><table style="border-collapse:collapse;width:100%;font-size:14px"><tr><th style="text-align:left;padding:6px 8px">Session</th><th style="text-align:left;padding:6px 8px">Who</th></tr>${rows}</table><p style="margin-top:12px"><a href="${url}">Open the roster</a> to print it or save as PDF. The <a href="${url}/emergency">emergency sheet</a> has today's contacts.</p><p style="color:#64748b;font-size:12px">You asked for this email in Office → Settings. Switch it off there any time.</p>`
+      ? `<p>Today's rota for <strong>${escapeHtml(org.name)}</strong>, ${nice}:</p><table style="border-collapse:collapse;width:100%;font-size:14px"><tr><th style="text-align:left;padding:6px 8px">Session</th><th style="text-align:left;padding:6px 8px">Who</th></tr>${rows}</table><p style="margin-top:12px"><a href="${url}">Open the rota</a> to print it or save as PDF. The <a href="${url}/emergency">emergency sheet</a> has today's contacts.</p><p style="color:#64748b;font-size:12px">You asked for this email in Office → Settings. Switch it off there any time.</p>`
       : `<p>No sessions are rostered for <strong>${escapeHtml(org.name)}</strong> today, ${nice}.</p><p style="color:#64748b;font-size:12px">You asked for this email in Office → Settings. Switch it off there any time.</p>`;
     await Promise.all(admins.map((to) => sendEmail({ to, subject: `Today's rota · ${org.name} · ${nice}`, html }).catch(() => {})));
     await env.TENANT_CACHE.put(marker, "1", { expirationTtl: 36 * 3600 });

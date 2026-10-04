@@ -117,7 +117,7 @@ export const COMPETITORS: Competitor[] = [
     weWin: [
       "Planday scales scheduling well, but qualifications, ratios and safety cover for watersports aren't part of the model.",
       "ActivityRoster is ready for an RYA centre on day one — schemes, grades, ratios and defaults are seeded.",
-      "Every roster, override and change is written to an audit trail scoped to your centre.",
+      "Every rota, override and change is written to an audit trail scoped to your centre.",
     ],
     migration: "Move staff and schedule via import; keep your pay/hours export for payroll.",
     rows: RYA_ROWS({ "Clock in/out & payroll-ready hours": "yes", "Per-centre data isolation": "yes" }),

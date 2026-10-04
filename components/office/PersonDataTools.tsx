@@ -20,7 +20,7 @@ export function PersonDataTools({ instructorId, name, restricted, restrictedReas
   });
 
   if (anonymised) {
-    return <p className="text-sm text-slate-500">This record was anonymised. Only roster and payroll history remain, with no identifying details.</p>;
+    return <p className="text-sm text-slate-500">This record was anonymised. Only rota and payroll history remain, with no identifying details.</p>;
   }
   return (
     <div className="space-y-4 text-sm">
@@ -50,7 +50,7 @@ export function PersonDataTools({ instructorId, name, restricted, restrictedReas
       </div>
       <div>
         <p className="font-medium text-navy">Anonymise (right to erasure)</p>
-        <p className="text-xs text-slate-500">Removes their name, contact details, date of birth, guardian and emergency contacts, certificates and checks with their files, availability, leave, pay rates and notifications, and their login to this centre. Roster and payroll history stays as “Former staff member” so your records still add up. This cannot be undone, and it is re-applied automatically if the database is ever restored from a backup.</p>
+        <p className="text-xs text-slate-500">Removes their name, contact details, date of birth, guardian and emergency contacts, certificates and checks with their files, availability, leave, pay rates and notifications, and their login to this centre. Rota and payroll history stays as “Former staff member” so your records still add up. This cannot be undone, and it is re-applied automatically if the database is ever restored from a backup.</p>
         <div className="mt-1.5 flex flex-wrap items-center gap-2">
           <input value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={`Type “${name}” to confirm`} className="w-64 rounded-lg border border-slate-300 px-2 py-1.5 text-xs" />
           <button disabled={pending || typed.trim().toLowerCase() !== name.trim().toLowerCase()} onClick={() => { if (confirm(`Anonymise ${name}? This cannot be undone.`)) run(() => anonymiseInstructorAction(instructorId, typed)); }} className="rounded-lg bg-port px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40">Anonymise</button>

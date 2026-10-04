@@ -168,7 +168,7 @@ export function evaluateWorkingTime(input: WorkingTimeInput): WtFinding[] {
   const onDate = input.proposed[0]?.date ?? input.existing[0]!.date;
   const band = selectBand(pack, input.dateOfBirth, onDate);
   if (!band) {
-    // Younger than any band in the pack: the platform does not roster them as
+    // Younger than any band in the pack: the platform does not rota them as
     // workers (minimum age is the youngest band's minAge), so no caps are
     // applied; say so, loudly if they are recorded as employed.
     const age = ageOn(input.dateOfBirth, new Date(`${onDate}T12:00:00Z`));
@@ -180,7 +180,7 @@ export function evaluateWorkingTime(input: WorkingTimeInput): WtFinding[] {
         severity: volunteer ? "info" : "warn",
         message: volunteer
           ? `Aged ${age}: under ${minAge}, so no working-time caps are applied; under-${minAge}s may only volunteer, never be employed, and the centre remains responsible for their supervision.`
-          : `Aged ${age} and recorded as ${input.employmentType}: ActivityRoster does not roster under-${minAge}s as workers and applies no hour caps to them. Change their employment type to volunteer, or do not roster them.`,
+          : `Aged ${age} and recorded as ${input.employmentType}: ActivityRoster does not rota under-${minAge}s as workers and applies no hour caps to them. Change their employment type to volunteer, or do not rota them.`,
         verified: true,
       });
     }

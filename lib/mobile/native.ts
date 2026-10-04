@@ -128,7 +128,7 @@ let deepLinksReady = false;
 
 /**
  * When iOS/Android hand the app one of our links (a sign-in link, a device
- * confirmation, a roster notification), load it inside the app instead of
+ * confirmation, a rota notification), load it inside the app instead of
  * dropping the user on the home screen. Only our own domain is followed.
  * Safe in a browser: does nothing.
  */

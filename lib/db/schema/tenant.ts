@@ -74,7 +74,7 @@ export type PayUnit = (typeof PAY_UNITS)[number];
 export const NOTIFICATION_CHANNELS = ["email", "sms", "in_app"] as const;
 export const TIME_ENTRY_SOURCES = ["clock", "manual"] as const;
 export type TimeEntrySource = (typeof TIME_ENTRY_SOURCES)[number];
-/** Where a payroll line's hours come from: the roster (scheduled), the clock (actual) or typed in. */
+/** Where a payroll line's hours come from: the rota (scheduled), the clock (actual) or typed in. */
 export const HOURS_SOURCES = ["roster", "clock", "manual"] as const;
 export type HoursSource = (typeof HOURS_SOURCES)[number];
 /** A centre's default for payroll: pay what was rostered, or what was clocked. */
@@ -118,7 +118,7 @@ export const orgSettings = sqliteTable("org_settings", {
   enforceAvailabilityChecks: boolCol("enforce_availability_checks").default(true),
   // --- Time clock & pay source -----------------------------------------------
   // The clock is optional: off, instructors don't see the Clock tab and payroll
-  // runs purely on the roster. paySource is the default for new payroll lines.
+  // runs purely on the rota. paySource is the default for new payroll lines.
   timeclockEnabled: boolCol("timeclock_enabled").default(false),
   paySource: text("pay_source", { enum: PAY_SOURCES }).notNull().default("roster"),
   currency: text("currency").notNull().default("GBP"),
@@ -333,7 +333,7 @@ export const instructor = sqliteTable("instructor", {
   shareContact: boolCol("share_contact").default(false),
   /** When they were marked as having left. Starts the retention clock for their profile (Settings → Data retention). */
   leftAt: integer("left_at", { mode: "timestamp_ms" }),
-  /** Set when the person was anonymised; identifying fields are blank from then on and the record is kept only for roster and payroll history. */
+  /** Set when the person was anonymised; identifying fields are blank from then on and the record is kept only for rota and payroll history. */
   anonymisedAt: integer("anonymised_at", { mode: "timestamp_ms" }),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
@@ -499,7 +499,7 @@ export const courseStaff = sqliteTable("course_staff", {
   isOverride: boolCol("is_override").default(false),
   overrideNote: text("override_note"),
   overriddenBy: text("overridden_by"), // user id
-  // The instructor's own answer once the roster is published.
+  // The instructor's own answer once the rota is published.
   confirmedAt: integer("confirmed_at", { mode: "timestamp_ms" }),
   declinedAt: integer("declined_at", { mode: "timestamp_ms" }),
   declineNote: text("decline_note"),
@@ -609,7 +609,7 @@ export const hoursRecord = sqliteTable("hours_record", {
   rate: real("rate"),
   // How the rate applies: per hour, per session or per day (from the pay rate).
   payUnit: text("pay_unit", { enum: PAY_UNITS }).notNull().default("hour"),
-  // Which minutes this line pays on: roster (scheduled), clock (actual) or manual.
+  // Which minutes this line pays on: rota (scheduled), clock (actual) or manual.
   source: text("source", { enum: HOURS_SOURCES }).notNull().default("roster"),
   // Office corrections during payroll review — win over everything else.
   overrideMinutes: integer("override_minutes"),
@@ -626,7 +626,7 @@ export const hoursRecord = sqliteTable("hours_record", {
 export type HoursRecord = typeof hoursRecord.$inferSelect;
 
 /**
- * A published roster week. Until a week is published, instructors see nothing
+ * A published rota week. Until a week is published, instructors see nothing
  * for it and aren't asked to confirm; publishing notifies everyone rostered.
  */
 export const rosterWeek = sqliteTable("roster_week", {
@@ -794,7 +794,7 @@ export const notification = sqliteTable("notification", {
   createdAt: createdAt(),
 }, (t) => [index("notification_org_idx").on(t.organisationId)]);
 
-/** Append-only audit trail for roster/resource/settings/billing changes. */
+/** Append-only audit trail for rota/resource/settings/billing changes. */
 export const auditLog = sqliteTable("audit_log", {
   id: id(),
   organisationId: orgFk(),

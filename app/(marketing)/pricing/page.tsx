@@ -21,7 +21,7 @@ const INCLUDED = [
   "Availability, leave & open-shift cover",
   "Cert, ticket & vetting tracking with expiry alerts",
   "Staff HR, onboarding & encrypted document vault",
-  "Printable weekly roster (PDF) & payroll-ready hours export",
+  "Printable weekly rota (PDF) & payroll-ready hours export",
   "Import your existing courses from a spreadsheet or calendar",
   "Instructor app with clock-in, leave & notifications",
   "Hosted on Cloudflare (EU), UK GDPR-ready, export any time — strictly isolated per centre",
@@ -32,7 +32,7 @@ const SETUP_INCLUDED = [
   "We tailor the platform to your way of working — your courses, grades, roles, ratios, checks and session times, set up your way",
   "Custom features and tweaks built around what you actually need — tell us how you want it and we'll make it work like that",
   "We import your existing schedule, staff and tickets from your spreadsheets",
-  "We invite your instructors and set up availability & the weekly roster",
+  "We invite your instructors and set up availability & the weekly rota",
   "A walk-through so you and your team are confident from day one",
 ];
 
@@ -183,7 +183,7 @@ export default async function PricingPage() {
           <p className="text-sm font-semibold uppercase tracking-wide text-starboard">Flat price vs the per-user platforms</p>
           <h2 className="mt-1 font-display text-2xl font-bold text-navy">Cheaper than the per-user platforms — at every size</h2>
           <p className="mt-2 max-w-2xl text-slate-600">
-            {COMPETITOR_NAMES_AND} charge per user. A centre rosters everyone — instructors, safety-boat cover, shore
+            {COMPETITOR_NAMES_AND} charge per user. A centre rotas everyone — instructors, safety-boat cover, shore
             crew, volunteers — so per-seat pricing bills your whole volunteer base. One flat price per centre comes out
             cheaper at every size.{" "}
             <Link href="/compare" className="font-semibold text-teal hover:underline">Full comparison →</Link>

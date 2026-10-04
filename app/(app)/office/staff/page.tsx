@@ -73,7 +73,7 @@ export default async function StaffPage() {
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-bold text-navy">Instructors</h1>
-          <p className="text-sm text-slate-500">{currentCount} instructor{currentCount === 1 ? "" : "s"}{under18Count ? ` · ${under18Count} under 18` : ""} · fit-to-roster and the courses each can teach, from the certs they hold</p>
+          <p className="text-sm text-slate-500">{currentCount} instructor{currentCount === 1 ? "" : "s"}{under18Count ? ` · ${under18Count} under 18` : ""} · fit-to-rota and the courses each can teach, from the certs they hold</p>
           {missingDob ? <p className="mt-1 text-xs text-amber-700">{missingDob} {missingDob === 1 ? "person has" : "people have"} no date of birth yet. Add it from their profile so under-18 protections and working-hours rules apply correctly.</p> : null}
         </div>
         <div className="flex flex-none items-center gap-3">

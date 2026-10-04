@@ -74,7 +74,7 @@ export function BulkAssignForm({
       >
         <span className="flex items-center gap-2 font-semibold text-navy">
           <span className="text-teal">⚡</span> Bulk assign staff
-          <span className="text-xs font-normal text-slate-400">Roster one person onto several courses at once</span>
+          <span className="text-xs font-normal text-slate-400">Rota one person onto several courses at once</span>
         </span>
         <span className="text-slate-400">{open ? "▲" : "▼"}</span>
       </button>

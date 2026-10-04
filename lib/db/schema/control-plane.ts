@@ -223,7 +223,7 @@ export const platformPricing = sqliteTable("platform_pricing", {
 
 /**
  * admin             runs the centre: everything.
- * senior_instructor rosters, publishes, handles leave and cover; no billing, settings, pay or exports.
+ * senior_instructor rotas, publishes, handles leave and cover; no billing, settings, pay or exports.
  * welfare_officer   sees staff, guardian and emergency contacts and the young-worker register; nothing operational or financial.
  * instructor        their own portal.
  * parent            read-only view of their under-18 child's rota (/parent).

@@ -40,7 +40,7 @@ describe("publish week + confirm / decline", () => {
     expect(await isWeekPublished(repos, ctx, "2026-01-09")).toBe(true);
 
     const notes = await repos.tenant.notification.list(ctx);
-    expect(notes.some((n) => n.instructorId === instructorId && n.title.startsWith("Roster published"))).toBe(true);
+    expect(notes.some((n) => n.instructorId === instructorId && n.title.startsWith("Rota published"))).toBe(true);
 
     const again = await publishWeek(repos, ctx, "2026-01-05");
     expect(again.republished).toBe(true);

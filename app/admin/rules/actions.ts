@@ -30,7 +30,7 @@ export async function saveRulePackAction(key: string, json: string): Promise<Res
     updatedBy: email,
   });
   revalidatePath("/admin/rules");
-  return { ok: true, message: `Saved ${parsed.pack.name} v${parsed.pack.version}. Every centre in that jurisdiction uses it from the next roster change.` };
+  return { ok: true, message: `Saved ${parsed.pack.name} v${parsed.pack.version}. Every centre in that jurisdiction uses it from the next rota change.` };
 }
 
 /** Drop the edit so the built-in pack applies again. */

@@ -33,7 +33,7 @@ export default async function AdminRulesPage() {
       <h1 className="mb-1 font-display text-2xl font-bold text-navy">Rule packs · young workers&rsquo; hours</h1>
       <p className="mb-5 max-w-3xl text-sm text-slate-500">
         The legal figures the rostering checks use, one pack per jurisdiction. They are data, not code: edit a figure here and every centre in that
-        jurisdiction picks it up on its next roster change. A pack is only <strong>verified</strong> once every figure has been checked against the official
+        jurisdiction picks it up on its next rota change. A pack is only <strong>verified</strong> once every figure has been checked against the official
         source and each band&rsquo;s <code>unverified</code> list is empty; until then centres see &ldquo;figure not yet verified&rdquo; on the warnings it produces.
         To verify: GOV.UK child employment pages and the local authority bylaws (England, Wales, Scotland), the Education Authority (Northern Ireland), and the
         WRC / Protection of Young Persons (Employment) Act 1996 (Ireland). Record the source in <code>citations</code> and bump <code>version</code>.

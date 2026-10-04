@@ -10,7 +10,7 @@ const UNIT_SHORT: Record<string, string> = { hour: "/h", session: "/session", da
 
 /**
  * Payroll review: every rostered or clocked session as a line the office can
- * correct before approving and exporting. Roster and clock minutes sit side by
+ * correct before approving and exporting. Rota and clock minutes sit side by
  * side; "Paid on" picks which one each line uses; minutes and pay can be
  * overridden outright; a note explains why.
  */
@@ -58,7 +58,7 @@ export function PayrollTable({
           <span className="text-xs text-slate-400">Switching applies to every unapproved line in this period; change any single line below.</span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <button type="button" disabled={pending} onClick={() => run(null, () => rebuildHoursAction())} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-navy hover:bg-slate-50 disabled:opacity-50" title="Add lines for anything rostered since, without touching approved or edited lines">Refresh from roster</button>
+          <button type="button" disabled={pending} onClick={() => run(null, () => rebuildHoursAction())} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-navy hover:bg-slate-50 disabled:opacity-50" title="Add lines for anything rostered since, without touching approved or edited lines">Refresh from rota</button>
           {unapproved.length ? (
             <button type="button" disabled={pending} onClick={() => { if (confirm(`Approve all ${unapproved.length} unapproved lines shown?`)) run(null, () => approvePayrollLinesAction(unapproved, true)); }} className="rounded-lg bg-starboard px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-50">Approve all shown ({unapproved.length})</button>
           ) : approvedIds.length ? (
@@ -67,7 +67,7 @@ export function PayrollTable({
         </div>
       </div>
       {msg ? <p role="status" className="px-4 pt-2 text-xs text-slate-600 print:hidden">{msg}</p> : null}
-      {unpriced > 0 ? <p className="px-4 pt-2 text-xs text-amber print:hidden">⚠ {unpriced} line{unpriced === 1 ? " has" : "s have"} no pay rate — set one on the instructor&apos;s page and press “Refresh from roster”.</p> : null}
+      {unpriced > 0 ? <p className="px-4 pt-2 text-xs text-amber print:hidden">⚠ {unpriced} line{unpriced === 1 ? " has" : "s have"} no pay rate — set one on the instructor&apos;s page and press “Refresh from rota”.</p> : null}
 
       <div className="overflow-x-auto">
         <table className="w-full min-w-[980px] text-left text-sm">
@@ -75,7 +75,7 @@ export function PayrollTable({
             <tr>
               <th className="px-3 py-2">Date</th><th className="px-3 py-2">Instructor</th><th className="px-3 py-2">Course</th>
               <th className="px-3 py-2">Times</th>
-              <th className="px-3 py-2" title="Minutes on the roster">Rostered</th>
+              <th className="px-3 py-2" title="Minutes on the rota">Rostered</th>
               {clockOn ? <th className="px-3 py-2" title="Minutes the clock recorded">Clocked</th> : null}
               <th className="px-3 py-2">Paid on</th>
               <th className="px-3 py-2" title="Type a number of minutes to correct this line">Minutes</th>
@@ -88,7 +88,7 @@ export function PayrollTable({
           </thead>
           <tbody className="divide-y divide-slate-100">
             {lines.length === 0 ? (
-              <tr><td colSpan={13} className="px-4 py-6 text-center text-slate-400">No hours in this period. Roster staff onto courses and lines appear here; “Refresh from roster” brings in anything older.</td></tr>
+              <tr><td colSpan={13} className="px-4 py-6 text-center text-slate-400">No hours in this period. Roster staff onto courses and lines appear here; “Refresh from rota” brings in anything older.</td></tr>
             ) : lines.map((l) => {
               const locked = l.approved;
               const dim = busy === l.recordId ? "opacity-50" : "";
@@ -97,7 +97,7 @@ export function PayrollTable({
                   <td className="whitespace-nowrap px-3 py-1.5 text-slate-600">{l.date ?? "—"}</td>
                   <td className="px-3 py-1.5 font-medium text-navy">{l.instructorName}</td>
                   <td className="px-3 py-1.5 text-slate-600">{l.courseName}</td>
-                  <td className="whitespace-nowrap px-3 py-1.5 text-slate-600" title={l.clocked ? "From clock-in/out" : "From the roster"}>{l.start ?? "—"}–{l.finish ?? "—"}{l.clocked ? <span className="ml-1 text-[10px] text-teal">⏱</span> : null}</td>
+                  <td className="whitespace-nowrap px-3 py-1.5 text-slate-600" title={l.clocked ? "From clock-in/out" : "From the rota"}>{l.start ?? "—"}–{l.finish ?? "—"}{l.clocked ? <span className="ml-1 text-[10px] text-teal">⏱</span> : null}</td>
                   <td className="px-3 py-1.5 text-slate-600">{h(l.scheduledMinutes)}h</td>
                   {clockOn ? <td className="px-3 py-1.5 text-slate-600">{l.clockedMinutes != null ? `${h(l.clockedMinutes)}h` : <span className="text-slate-300">—</span>}</td> : null}
                   <td className="px-3 py-1.5">
@@ -105,7 +105,7 @@ export function PayrollTable({
                       <span className="text-xs text-slate-500">office</span>
                     ) : (
                       <select value={l.source} disabled={locked || pending} onChange={(e) => edit(l, { source: e.target.value as "roster" | "clock" | "manual" })} className="rounded border border-slate-300 px-1 py-0.5 text-xs disabled:bg-slate-50">
-                        <option value="roster">roster</option>
+                        <option value="roster">rota</option>
                         <option value="clock" disabled={l.clockedMinutes == null}>clock</option>
                       </select>
                     )}

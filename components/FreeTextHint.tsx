@@ -1,7 +1,7 @@
 /**
  * The one-line reminder under every free-text box that ends up in a record
  * (compliance P1-G): notes, reasons and messages are kept, often in the change
- * log, and read by other people, so they should carry facts about the roster
+ * log, and read by other people, so they should carry facts about the rota
  * and never health details or anything about a child or a third party.
  */
 export function FreeTextHint({ className = "" }: { className?: string }) {

@@ -44,7 +44,7 @@ export default function YoungPeoplePrivacyPage() {
       <H2>Things we do differently because you are under 18</H2>
       <UL items={[
         "Your contact details are hidden from colleagues by default.",
-        "Your centre can only roster you within the legal hours for your age. The app checks every shift against those rules and stops a breach.",
+        "Your centre can only rota you within the legal hours for your age. The app checks every shift against those rules and stops a breach.",
         "We never send you marketing, newsletters or offers, and we never build anything that profiles young people.",
         "Vetting checks are recorded by status and reference only; no certificate about you is stored as a file.",
         "When you leave the centre, your personal details are removed after the period your centre has set (12 months unless they chose otherwise); the rota history keeps only that someone did the shift.",

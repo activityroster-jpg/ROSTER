@@ -439,7 +439,7 @@ export function OnboardingWizard({
       {step === 4 ? (
         <div className="rounded-card border border-slate-200 bg-white p-6">
           <h2 className="font-semibold text-navy">Your rota PDF</h2>
-          <p className="mb-4 mt-1 text-sm text-slate-500">The roster you download and pin up or email. Choose what goes on it and how it is laid out; you can change this later under Settings → Rota PDF.</p>
+          <p className="mb-4 mt-1 text-sm text-slate-500">The rota you download and pin up or email. Choose what goes on it and how it is laid out; you can change this later under Settings → Rota PDF.</p>
           <RotaTemplateForm initial={DEFAULT_ROTA_TEMPLATE} compact onSaved={() => setStep(5)} />
           <div className="mt-6 flex justify-between">
             <button onClick={() => setStep(3)} className="text-sm font-semibold text-slate-500 hover:text-navy">← Back</button>

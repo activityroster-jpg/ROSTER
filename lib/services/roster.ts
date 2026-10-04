@@ -37,7 +37,7 @@ export interface PublishWeekResult {
 }
 
 /**
- * Publish (or re-publish) the roster for the week containing `dateIso`.
+ * Publish (or re-publish) the rota for the week containing `dateIso`.
  * Until a week is published instructors see nothing for it; publishing makes
  * it visible in the app and asks everyone rostered that week to confirm.
  * Idempotent on the week row (one per org + Monday).
@@ -69,7 +69,7 @@ export async function publishWeek(
       const myCourses = new Set(staff.filter((r) => r.instructorId === instructorId).map((r) => r.courseId));
       const n = sessions.filter((s) => myCourses.has(s.courseId)).length;
       await notifyInstructor(repos, ctx, instructorId, {
-        title: `Roster published — week of ${label}`,
+        title: `Rota published — week of ${label}`,
         body: `You're on ${n} session${n === 1 ? "" : "s"} that week. Open the app to see them and confirm.`,
         email: true,
       });
@@ -96,7 +96,7 @@ export async function confirmAssignment(
   assignmentId: string,
 ): Promise<ConfirmResult> {
   const row = await repos.tenant.courseStaff.findById(ctx, assignmentId);
-  if (!row || row.instructorId !== instructorId) return { ok: false, error: "That session isn't on your roster." };
+  if (!row || row.instructorId !== instructorId) return { ok: false, error: "That session isn't on your rota." };
   await repos.tenant.courseStaff.update(ctx, assignmentId, {
     status: "confirmed",
     confirmedAt: new Date(),
@@ -127,7 +127,7 @@ export async function declineAssignment(
   if (clean.length < 2) return { ok: false, error: "Tell your centre why, so they can find cover." };
   const t = repos.tenant;
   const row = await t.courseStaff.findById(ctx, assignmentId);
-  if (!row || row.instructorId !== instructorId) return { ok: false, error: "That session isn't on your roster." };
+  if (!row || row.instructorId !== instructorId) return { ok: false, error: "That session isn't on your rota." };
   await t.courseStaff.update(ctx, assignmentId, {
     status: "declined",
     declinedAt: new Date(),

@@ -7,6 +7,13 @@ https://staging.activityroster.com within about five minutes. Sign in there with
 staging centre you created; emails appear under Dev Center → Outbox (and in your inbox
 if a staging Resend key is set).
 
+## Build phase until 13 October 2026
+
+Conor's decision, 4 October: there are no users until 13 October, so Claude Code presses
+"Deploy production" itself after each green staging deploy and records the run in the log
+below. From 13 October the rule under the next heading applies again: Conor tries the
+change on staging and presses the button.
+
 ## Put a change into production (your approval)
 
 1. GitHub → Actions → **Deploy production** → Run workflow → leave the branch as it is → Run workflow.

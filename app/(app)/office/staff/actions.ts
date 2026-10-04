@@ -263,7 +263,7 @@ export async function approveJoinRequestAction(instructorId: string): Promise<Ac
   await repos.tenant.instructor.update(ctx, inst.id, { status: "active" });
   if (inst.userId) await repos.control.setMembershipStatus(inst.userId, ctx.organisationId, "active");
   await writeAudit(repos, ctx, { action: "approve_join_request", entity: "instructor", entityId: inst.id, after: { email: inst.email } });
-  await notifyInstructor(repos, ctx, inst.id, { title: "You're in — your centre approved your request", body: "Open the ActivityRoster app to see your roster, set your availability and upload your certs.", email: true });
+  await notifyInstructor(repos, ctx, inst.id, { title: "You're in — your centre approved your request", body: "Open the ActivityRoster app to see your rota, set your availability and upload your certs.", email: true });
   revalidatePath("/office/staff");
   return { ok: true, message: `${inst.name} approved` };
 }
@@ -437,7 +437,7 @@ export async function anonymiseInstructorAction(instructorId: string, typedName:
   if (!res.ok) return { ok: false, error: res.reason };
   revalidatePath(`/office/staff/${instructorId}`);
   revalidatePath("/office/staff");
-  return { ok: true, message: "Anonymised. Roster and payroll history stays, attached to “Former staff member”." };
+  return { ok: true, message: "Anonymised. Rota and payroll history stays, attached to “Former staff member”." };
 }
 
 /** "Keep for another N months": restarts the retention clock on a former staff member's profile. */
@@ -467,7 +467,7 @@ async function sealIfVetting(repos: Repositories, ctx: AnyTenantContext, itemId:
 import { GRANTABLE_ROLES } from "@/lib/auth/rbac";
 import { inviteGuardian, revokeGuardian } from "@/lib/services/guardians";
 
-/** Grant a team member a role: instructor (portal only), senior instructor (rosters) or welfare officer (contacts and the under-18 register). */
+/** Grant a team member a role: instructor (portal only), senior instructor (rotas) or welfare officer (contacts and the under-18 register). */
 export async function setMemberRoleAction(instructorId: string, role: string): Promise<ActionState> {
   const { ctx, repos } = await requireTenant({ role: "admin" });
   if (!(GRANTABLE_ROLES as readonly string[]).includes(role)) return { ok: false, error: "Unknown role" };

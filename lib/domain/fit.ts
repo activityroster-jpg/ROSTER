@@ -1,5 +1,5 @@
 /**
- * Fit-to-roster: can this instructor be assigned?
+ * Fit-to-rota: can this instructor be assigned?
  *
  * The RYA rule mirrored here: an instructor with ANY expired *mandatory*
  * compliance check (e.g. first aid) is BLOCKED from assignment — a ticket

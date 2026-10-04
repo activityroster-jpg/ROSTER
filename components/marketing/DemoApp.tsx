@@ -289,7 +289,7 @@ function DemoDashboard({ onOpen }: { onOpen: (p: Panel) => void }) {
       <div className="mb-6 grid gap-3 sm:grid-cols-3">
         <Tile label="On the water now" value={2} sub="Clocked in" tone="starboard" />
         <Tile label="Hours logged today" value="6.5" sub="4 started" />
-        <Tile label="Sessions this week" value={9} sub="View / print roster" tone="teal" />
+        <Tile label="Sessions this week" value={9} sub="View / print rota" tone="teal" />
       </div>
 
       <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Needs attention</p>
@@ -308,8 +308,8 @@ function DemoDashboard({ onOpen }: { onOpen: (p: Panel) => void }) {
       <div className="mb-8"><WeekCalendar /></div>
 
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-display text-lg font-semibold text-navy">This week&apos;s roster</h2>
-        <button onClick={() => onOpen("rota")} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-navy hover:bg-slate-50">Full roster · print / PDF →</button>
+        <h2 className="font-display text-lg font-semibold text-navy">This week&apos;s rota</h2>
+        <button onClick={() => onOpen("rota")} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-navy hover:bg-slate-50">Full rota · print / PDF →</button>
       </div>
       <Card className="p-0">
         <div className="divide-y divide-slate-100">
@@ -500,7 +500,7 @@ function DemoRota({ onBack }: { onBack: () => void }) {
     <div>
       <button onClick={onBack} className="mb-2 text-xs text-slate-400 hover:text-slate-600">← Dashboard</button>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="font-display text-2xl font-semibold text-navy">Weekly roster</h1>
+        <h1 className="font-display text-2xl font-semibold text-navy">Weekly rota</h1>
         <div className="flex gap-2">
           <span className="rounded-lg bg-teal px-3 py-1.5 text-xs font-semibold text-white">🖨 Print / Save PDF</span>
           <span className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-navy">Export hours (CSV)</span>
@@ -533,7 +533,7 @@ function DemoRota({ onBack }: { onBack: () => void }) {
           </tbody>
         </table>
       </Card>
-      <p className="mt-2 text-xs text-slate-400">Print a clean one-page roster for the wall, or export actual hours straight to payroll. Flip to any week, past or future.</p>
+      <p className="mt-2 text-xs text-slate-400">Print a clean one-page rota for the wall, or export actual hours straight to payroll. Flip to any week, past or future.</p>
     </div>
   );
 }
@@ -771,7 +771,7 @@ function DemoStaff() {
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-bold text-navy">Staff</h1>
-          <p className="text-sm text-slate-500">{STAFF.length} instructors · fit-to-roster and the courses each can teach, from the certs they hold</p>
+          <p className="text-sm text-slate-500">{STAFF.length} instructors · fit-to-rota and the courses each can teach, from the certs they hold</p>
         </div>
         <span className="flex-none rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-navy">Import from spreadsheet</span>
       </div>
@@ -915,7 +915,7 @@ function DemoLocations() {
       <h1 className="mb-1 font-display text-2xl font-semibold text-navy">Locations</h1>
       <p className="mb-6 text-sm text-slate-500">
         Everywhere activity happens — launch areas, classrooms, pontoons, operating areas. Group them into categories so
-        they&apos;re easy to pick when you build a roster.
+        they&apos;re easy to pick when you build a rota.
       </p>
 
       <div className="mb-6 grid gap-4 lg:grid-cols-2">
@@ -1205,7 +1205,7 @@ function DemoChangeLog() {
           ))}
         </ul>
       </Card>
-      <p className="mt-2 text-xs text-slate-400">Every roster, staff, resource and billing change is recorded — scoped to your centre, and exportable.</p>
+      <p className="mt-2 text-xs text-slate-400">Every rota, staff, resource and billing change is recorded — scoped to your centre, and exportable.</p>
     </div>
   );
 }

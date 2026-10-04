@@ -193,7 +193,7 @@ export async function assignStaff(
     },
   });
 
-  // Hours come from the roster: give every session of this course an hours record.
+  // Hours come from the rota: give every session of this course an hours record.
   await syncHoursForCourse(repos, ctx, input.courseId);
 
   // Tell them — but only once the week is published (publishing itself notifies).
@@ -277,7 +277,7 @@ export async function bulkAssignStaff(
 
 
 /**
- * In-app + push (and email, if they allow it) about a roster change, for the
+ * In-app + push (and email, if they allow it) about a rota change, for the
  * dates whose week has been published. Unpublished weeks stay quiet: the
  * instructor hears about those when the week is published.
  */
@@ -302,6 +302,6 @@ export async function notifyRosterChange(
         : `The time or date of ${courseName} has changed ${when} — check your schedule.`;
     await notifyInstructor(repos, ctx, instructorId, { title, body, email: true });
   } catch (err) {
-    console.error("[roster-notify] failed:", (err as Error).message);
+    console.error("[rota-notify] failed:", (err as Error).message);
   }
 }

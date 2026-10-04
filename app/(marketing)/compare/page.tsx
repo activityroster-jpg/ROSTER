@@ -78,8 +78,8 @@ const ROWS: Row[] = [
     us: "yes", general: "yes", club: "no", sheets: "no",
   },
   {
-    feature: "Printable weekly roster (PDF)",
-    detail: "Clean roster — who's on, where, when — to print or share.",
+    feature: "Printable weekly rota (PDF)",
+    detail: "Clean rota — who's on, where, when — to print or share.",
     us: "yes", general: "partial", club: "no", sheets: "yes",
   },
   {
@@ -131,7 +131,7 @@ export default function ComparePage() {
       {/* Positioning cards */}
       <div className="mt-12 grid gap-4 sm:grid-cols-3">
         {[
-          { h: "vs general rostering apps", p: "They roster any workforce well, but don't know a Level 2 from a Senior Instructor, a safety-boat ratio, or an expired first-aid ticket. You'd bolt compliance on by hand — the exact thing that goes wrong." },
+          { h: "vs general rostering apps", p: "They rota any workforce well, but don't know a Level 2 from a Senior Instructor, a safety-boat ratio, or an expired first-aid ticket. You'd bolt compliance on by hand — the exact thing that goes wrong." },
           { h: "vs club / membership systems", p: "Great at members, subs and public bookings. Instructor rostering, certs and safety cover are an afterthought, if they're there at all." },
           { h: "vs spreadsheets", p: "Free and flexible until a tab breaks, an expiry is missed, or two instructors get double-booked. No alerts, no audit trail, no isolation between sites." },
         ].map((c) => (
@@ -196,7 +196,7 @@ export default function ComparePage() {
       <div className="mt-14 rounded-card border border-teal bg-navy p-8 text-center text-white">
         <h2 className="font-display text-2xl font-bold">See it with your own courses</h2>
         <p className="mx-auto mt-2 max-w-xl text-sm text-white/80">
-          Start a free month — no card required. Import your existing courses in minutes and roster your first
+          Start a free month — no card required. Import your existing courses in minutes and rota your first
           week with the safety checks already switched on.
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
