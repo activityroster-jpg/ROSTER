@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { availabilityProblems, coverageProblems, declinedProblems, describeProblem, doubleBookings, equipmentProblems, perAssignmentProblems, sortProblems, type ProblemAssignment, type ProblemCourse, type ProblemInstructor, type ProblemSession } from "@/lib/domain/problems";
-import { horizonFor, indexAvailability } from "@/lib/domain/availability";
+import { horizonFor, indexAvailability, type AvailabilityIndex } from "@/lib/domain/availability";
 
 const T = (h: number) => Date.UTC(2026, 0, 6, h); // Tuesday 6 January 2026
 const sessions: ProblemSession[] = [
@@ -23,7 +23,7 @@ describe("problems: pure detectors", () => {
 
   it("flags Busy, leave and never-answered slots against assignments", () => {
     const a: ProblemAssignment[] = [{ id: "a1", courseId: "c1", instructorId: "i1", status: "assigned" }, { id: "a2", courseId: "c3", instructorId: "i1", status: "assigned" }, { id: "a3", courseId: "c2", instructorId: "i2", status: "assigned" }];
-    const avail = new Map([
+    const avail = new Map<string, { index: AvailabilityIndex; setBy: Record<string, string> }>([
       ["i1", { index: indexAvailability([{ date: "2026-01-06", weekday: null, slot: "AM", status: "unavailable" }]), setBy: { "2026-01-06|AM": "leave" } }],
       ["i2", { index: indexAvailability([{ date: null, weekday: 2, slot: "AM", status: "unavailable" }]), setBy: {} }],
     ]);
