@@ -7,6 +7,7 @@ import { PlanChoice } from "@/components/office/PlanChoice";
 import { SetupServiceCard } from "@/components/office/SetupServiceCard";
 import { Card, StatusPill } from "@/components/ui";
 import { GuideLink } from "@/components/GuideLink";
+import { surveyStatus } from "@/lib/services/trial-survey";
 
 export const dynamic = "force-dynamic";
 
@@ -15,9 +16,11 @@ const STATUS_WORDS: Record<string, string> = { trialing: "Free trial", active: "
 const fmtDate = (ms: number) => new Date(ms).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
 export default async function BillingPage({ searchParams }: { searchParams: Promise<{ status?: string; locked?: string }> }) {
-  const { organisation, trial } = await requireTenant({ role: "admin", allowReadOnly: true });
+  const { ctx, organisation, trial } = await requireTenant({ role: "admin", allowReadOnly: true });
   const sp = await searchParams;
-  const pricing = await new PlatformRepository(await getDb()).getPricing();
+  const platform = new PlatformRepository(await getDb());
+  const pricing = await platform.getPricing();
+  const surveyOpen = !ctx.ghost && surveyStatus(trial, Boolean(await platform.trialFeedbackForOrg(organisation.id).catch(() => true))) === "open";
   const eff = effectivePricing(organisation, pricing);
   const monthsFree = eff.monthly > 0 ? Math.round((eff.monthly * 12 - eff.annual) / eff.monthly) : 0;
 
@@ -39,6 +42,12 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
         <Card className="mb-5 border-port/40 bg-port/5"><p className="text-sm font-medium text-port">Your free trial has ended and your centre is locked. Choose a plan below and everything comes straight back — nothing has been deleted.</p></Card>
       ) : trial.kind === "read_only" ? (
         <Card className="mb-5 border-amber/40 bg-amber/10"><p className="text-sm text-slate-700">Your free trial ended. Your centre is read-only for {trial.daysUntilLock} more day{trial.daysUntilLock === 1 ? "" : "s"}, then it locks. Choose a plan to carry on.</p></Card>
+      ) : null}
+      {surveyOpen ? (
+        <Card className="mb-5 border-teal/40 bg-teal/5">
+          <p className="text-sm font-medium text-navy">Not ready to choose a plan? Share your feedback in a short survey and get another month free.</p>
+          <a href="/office/trial-survey" className="mt-2 inline-block rounded-lg bg-teal px-3 py-1.5 text-sm font-semibold text-white hover:bg-teal-700">Take the survey</a>
+        </Card>
       ) : null}
       {sp.status === "success" ? (
         <Card className="mb-5 border-starboard/40 bg-starboard/5"><p className="text-sm font-medium text-starboard">Payment set up — thank you! Your subscription is active and your invoice is below and on its way by email.</p></Card>

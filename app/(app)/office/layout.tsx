@@ -11,6 +11,8 @@ import { isPlatformAdminEmail } from "@/lib/platform/admin";
 import { actorUserId } from "@/lib/tenant/context";
 import { eq } from "drizzle-orm";
 import { instructor as instructorTable } from "@/lib/db/schema";
+import { PlatformRepository } from "@/lib/db/repositories/platform";
+import { surveyStatus } from "@/lib/services/trial-survey";
 
 export default async function OfficeLayout({ children }: { children: React.ReactNode }) {
   const { ctx, organisation, trial, repos } = await requireTenant({ permission: "office.view", allowReadOnly: true });
@@ -50,6 +52,15 @@ export default async function OfficeLayout({ children }: { children: React.React
   else if (trial.kind === "read_only") banner = { kind: "readonly", daysLeft: trial.daysUntilLock };
   else if (trial.kind === "locked") banner = { kind: "locked", daysLeft: 0 };
 
+  // Trial over and not yet surveyed: admins can earn another free month (lib/services/trial-survey).
+  let surveyOpen = false;
+  if (ctx.role === "admin" && !ctx.ghost && (trial.kind === "read_only" || trial.kind === "locked")) {
+    try {
+      const answered = await new PlatformRepository(repos.db).trialFeedbackForOrg(organisation.id);
+      surveyOpen = surveyStatus(trial, Boolean(answered)) === "open";
+    } catch { /* table arrives with the next migration */ }
+  }
+
   return (
     <div className="flex min-h-screen bg-canvas">
       <OfficeSidebar orgName={organisation.name} clockOn={clockOn} hasInstructorRecord={hasInstructorRecord} role={ctx.role} />
@@ -57,6 +68,11 @@ export default async function OfficeLayout({ children }: { children: React.React
         <IncidentBanner />
         {ctx.ghost ? <GhostBanner centreName={organisation.name} /> : null}
         {nudgeEmail ? <SetPasswordNudge email={nudgeEmail} /> : null}
+        {surveyOpen ? (
+          <Link href="/office/trial-survey" className="block bg-teal px-6 py-2 text-center text-sm font-semibold text-white hover:bg-teal-700">
+            Share your feedback in a short survey and get another month free. →
+          </Link>
+        ) : null}
         {banner?.kind === "pastdue" ? (
           <Link href="/office/billing" className="block bg-port/15 px-6 py-2 text-center text-sm font-medium text-port hover:bg-port/20">
             Your last payment failed — update your card within {banner.daysLeft} day{banner.daysLeft === 1 ? "" : "s"} to keep editing. Nothing is ever deleted. →

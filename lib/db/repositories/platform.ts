@@ -21,6 +21,7 @@ import {
   outreachSuppression,
   aiUsage,
   privacyRequest,
+  trialFeedback,
   errorReport,
   rulePack,
   emailOutbox,
@@ -51,6 +52,8 @@ import {
   type AiUsage,
   type NewAiUsage,
   type PrivacyRequest,
+  type TrialFeedback,
+  type NewTrialFeedback,
   type NewPrivacyRequest,
   type PrivacyRequestStatus,
   type RulePack,
@@ -602,6 +605,23 @@ export class PlatformRepository {
       ...(notes !== undefined ? { notes } : {}),
     }).where(eq(privacyRequest.id, id));
   }
+  // --- Trial-end survey ----------------------------------------------------------
+
+  async trialFeedbackForOrg(organisationId: string): Promise<TrialFeedback | null> {
+    return (await this.db.select().from(trialFeedback).where(eq(trialFeedback.organisationId, organisationId)).limit(1))[0] ?? null;
+  }
+  /** One set of answers per centre: a second submission returns null (unique index), so the free month is given once. */
+  async insertTrialFeedback(values: Omit<NewTrialFeedback, "id" | "createdAt">): Promise<TrialFeedback | null> {
+    return (await this.db.insert(trialFeedback).values(values).onConflictDoNothing({ target: trialFeedback.organisationId }).returning())[0] ?? null;
+  }
+  /** Every centre's answers with the centre's name, newest first, for the Dev Center. */
+  async listTrialFeedback(): Promise<(TrialFeedback & { centreName: string; centreSlug: string })[]> {
+    const rows = await this.db.select({ f: trialFeedback, centreName: organisation.name, centreSlug: organisation.slug })
+      .from(trialFeedback).innerJoin(organisation, eq(organisation.id, trialFeedback.organisationId))
+      .orderBy(desc(trialFeedback.createdAt));
+    return rows.map((r) => ({ ...r.f, centreName: r.centreName, centreSlug: r.centreSlug }));
+  }
+
   // --- Platform retention (docs/retention.md) -----------------------------------
   async purgeErrorReports(cutoff: Date): Promise<number> {
     return (await this.db.delete(errorReport).where(lt(errorReport.createdAt, cutoff)).returning({ id: errorReport.id })).length;

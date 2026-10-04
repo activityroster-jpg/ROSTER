@@ -474,11 +474,32 @@ const SECTIONS: Section[] = [
     blurb: "Manage your subscription and get VAT invoices.",
     blocks: [
       { kind: "p", text: "Your centre starts with a free month — no card required. When you're ready, choose monthly or annual (annual works out at one month free on Small Club and two on Standard) and enter card details through secure checkout." },
-      { kind: "p", text: "If the trial ends before you choose a plan, nothing is deleted: the centre goes read-only for two weeks (everyone can still look, nobody can change anything), then locks until a plan is chosen. Choosing a plan brings everything straight back." },
+      { kind: "p", text: "If the trial ends before you choose a plan, nothing is deleted: the centre goes read-only for two weeks (everyone can still look, nobody can change anything), then locks until a plan is chosen. Choosing a plan brings everything straight back. Not ready to choose? Answer the trial-end survey and your centre gets another month free (see “Trial-end survey”)." },
       { kind: "bullets", items: [
         "VAT is handled automatically at checkout for business customers.",
         "After payment you get a proper VAT invoice — downloadable as PDF and emailed to you.",
         "Manage your subscription and download past invoices from the billing area at any time.",
+      ] },
+    ],
+  },
+  {
+    id: "trial-survey",
+    icon: "📝",
+    label: "Trial-end survey",
+    blurb: "Tell us about your trial and get another month free.",
+    blocks: [
+      { kind: "p", text: "When your free trial ends without a plan, your centre's admins see a banner in the office and get one email: share your feedback in a short survey and get another month free. Answer the eight questions and your centre unlocks straight away for another 30 days. Nothing you set up during the trial is lost." },
+      { kind: "steps", items: [
+        "Open the survey from the banner, the email, or Billing (Office → Billing → Take the survey).",
+        "Answer the five questions about what's useful, what isn't, what you'd change, what's missing or frustrating, and the one feature you'd add. Each needs at least 30 words; the count under each box turns green when you have enough.",
+        "Say how many people would use ActivityRoster at your centre, including admins and instructors, and add any other feedback.",
+        "Choose whether we can contact you about your answers. If you choose Yes, check the email shown (it's yours, and you can change it). If you choose No, we won't contact you about them.",
+        "Send. Your centre is editable again at once and the new trial end date is shown.",
+      ] },
+      { kind: "bullets", items: [
+        "Only admins can answer, and it's one survey per centre, so the free month is given once.",
+        "Your answers go to the ActivityRoster team only, never to your staff, and the extension appears in your change log.",
+        "Keep answers about the platform: no names, health details or anything about a child or anyone else.",
       ] },
     ],
   },

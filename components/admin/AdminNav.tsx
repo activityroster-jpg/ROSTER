@@ -23,6 +23,7 @@ export function adminSections(opts: { staging: boolean }): NavSection[] {
       { href: "/admin/marketing", label: "Prospects", hint: "the outreach list and lawful basis" },
       { href: "/admin/outreach", label: "Outreach agent", hint: "automated sequences and the daily tick" },
       { href: "/admin/calls", label: "Discovery calls", hint: "call notes and follow-ups" },
+      { href: "/admin/trial-feedback", label: "Trial feedback", hint: "trial-end survey answers and who is happy to be contacted" },
       { href: "/admin/blog", label: "Blog", hint: "articles, scheduling and cover photos" },
     ] },
     { id: "health", label: "Platform health", pages: [

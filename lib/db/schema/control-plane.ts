@@ -192,6 +192,8 @@ export const organisation = sqliteTable("organisation", {
   leavingReminderSentAt: integer("leaving_reminder_sent_at", { mode: "timestamp_ms" }),
   /** Conor was told the 90 days are up and the centre can be erased (erasure itself is a human click). */
   leavingDueNotifiedAt: integer("leaving_due_notified_at", { mode: "timestamp_ms" }),
+  /** The trial-end survey invitation was emailed to the centre's admins (lib/services/trial-survey). */
+  trialSurveySentAt: integer("trial_survey_sent_at", { mode: "timestamp_ms" }),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 }, (t) => [
@@ -820,5 +822,37 @@ export const emailOutbox = sqliteTable("email_outbox", {
 ]);
 export type EmailOutbox = typeof emailOutbox.$inferSelect;
 export type NewEmailOutbox = typeof emailOutbox.$inferInsert;
+
+// --- Trial-end survey ----------------------------------------------------------
+
+/**
+ * A centre's answers to the trial-end survey (lib/services/trial-survey): eight
+ * questions about the platform, one set per centre, rewarded with another free
+ * month. Feedback to ActivityRoster rather than centre data, so it is read in
+ * the Dev Center across centres; it goes when the centre is erased (cascade).
+ * The contact email is kept only when the person said yes to being contacted.
+ */
+export const trialFeedback = sqliteTable("trial_feedback", {
+  id: id(),
+  organisationId: text("organisation_id").notNull().references(() => organisation.id, { onDelete: "cascade" }),
+  userId: text("user_id"),
+  mostUseful: text("most_useful").notNull(),
+  leastUseful: text("least_useful").notNull(),
+  wouldChange: text("would_change").notNull(),
+  missing: text("missing").notNull(),
+  featureRequest: text("feature_request").notNull(),
+  userCount: integer("user_count").notNull(),
+  otherFeedback: text("other_feedback").notNull(),
+  contactOk: boolCol("contact_ok"),
+  contactEmail: text("contact_email"),
+  contactAnsweredAt: integer("contact_answered_at", { mode: "timestamp_ms" }).notNull(),
+  rewardDays: integer("reward_days").notNull(),
+  createdAt: createdAt(),
+}, (t) => [
+  uniqueIndex("trial_feedback_org_uq").on(t.organisationId),
+  index("trial_feedback_contact_idx").on(t.contactOk),
+]);
+export type TrialFeedback = typeof trialFeedback.$inferSelect;
+export type NewTrialFeedback = typeof trialFeedback.$inferInsert;
 
 export const _sql = sql;
