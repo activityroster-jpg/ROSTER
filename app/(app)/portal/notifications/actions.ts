@@ -43,3 +43,16 @@ export async function setNotifyEmailAction(enabled: boolean): Promise<Result> {
   revalidatePath("/portal/notifications");
   return { ok: true };
 }
+
+/** Opt-in: let colleagues see my phone and email in the portal's Team contacts. Never offered to under-18s. */
+export async function setShareContactAction(on: boolean): Promise<{ ok: boolean; error?: string }> {
+  const { ctx, repos } = await requireTenant();
+  const me = (await repos.tenant.instructor.list(ctx, eq(instructorTable.userId, ctx.userId)))[0];
+  if (!me) return { ok: false, error: "No linked instructor profile" };
+  const { isUnder18 } = await import("@/lib/domain/age");
+  if (isUnder18(me.dateOfBirth) && on) return { ok: false, error: "Not available for under-18s" };
+  await repos.tenant.instructor.update(ctx, me.id, { shareContact: Boolean(on) });
+  await writeAudit(repos, ctx, { action: "set_share_contact", entity: "instructor", entityId: me.id, after: { on: Boolean(on) } });
+  revalidatePath("/portal/settings"); revalidatePath("/portal");
+  return { ok: true };
+}

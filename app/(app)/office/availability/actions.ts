@@ -29,7 +29,7 @@ const fmtT = (v: Date | number) =>
  * admin can fill an open shift straight from the availability grid.
  */
 export async function assignableForCellAction(date: string, slot: string, instructorId: string): Promise<CellResult> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !instructorId) return { ok: false, error: "Invalid cell" };
 
   const [sessions, courses, courseTypes, roles, teaching, existing, schedule] = await Promise.all([
@@ -73,7 +73,7 @@ export async function assignableForCellAction(date: string, slot: string, instru
 
 /** Assign an instructor to a course straight from the availability grid. */
 export async function assignFromAvailabilityAction(courseId: string, instructorId: string, roleTypeId: string): Promise<{ ok: boolean; error?: string; message?: string }> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   if (!courseId || !roleTypeId) return { ok: false, error: "Pick a role" };
   const res = await assignStaff(repos, ctx, { courseId, instructorId, roleTypeId });
   if (!res.ok) {

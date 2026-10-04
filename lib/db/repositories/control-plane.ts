@@ -529,6 +529,12 @@ export class ControlPlaneRepository {
     return rows.length > 0;
   }
 
+  /** Change a member's role in one centre (Staff → Access). */
+  async setMembershipRole(userId: string, organisationId: string, role: MembershipRole): Promise<boolean> {
+    const rows = await this.db.update(membership).set({ role, updatedAt: new Date() }).where(and(eq(membership.userId, userId), eq(membership.organisationId, organisationId))).returning({ id: membership.id });
+    return rows.length > 0;
+  }
+
   async deleteMembership(userId: string, organisationId: string): Promise<void> {
     await this.db.delete(membership).where(and(eq(membership.userId, userId), eq(membership.organisationId, organisationId)));
   }

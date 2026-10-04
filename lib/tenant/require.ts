@@ -10,6 +10,7 @@ import { TrialReadOnlyError, type TrialState } from "@/lib/billing/trial";
 import { PATH_HEADER } from "@/lib/auth/device";
 import type { TenantContext } from "./context";
 import { resolveTenant } from "./resolve";
+import { can, isOfficeRole, landingFor, type Permission } from "@/lib/auth/rbac";
 
 export interface RequiredTenant {
   ctx: TenantContext;
@@ -26,7 +27,7 @@ export interface RequiredTenant {
 /** Paths an admin may still use once the trial has locked: billing, so they can pay. */
 const LOCKED_ALLOWED = ["/office/billing", "/api/billing"];
 
-export async function requireTenant(opts?: { role?: "admin"; skipMfaGate?: boolean; allowReadOnly?: boolean }): Promise<RequiredTenant> {
+export async function requireTenant(opts?: { role?: "admin"; permission?: Permission; skipMfaGate?: boolean; allowReadOnly?: boolean }): Promise<RequiredTenant> {
   const h = new Headers(await headers());
   const res = await resolveTenant(h);
 
@@ -46,9 +47,10 @@ export async function requireTenant(opts?: { role?: "admin"; skipMfaGate?: boole
     }
   }
 
-  if (opts?.role === "admin" && res.ctx.role !== "admin") {
-    redirect("/portal");
-  }
+  // Authorisation: "admin" means admin only; a permission consults the matrix (lib/auth/rbac).
+  if (opts?.role === "admin" && res.ctx.role !== "admin") redirect(landingFor(res.ctx.role));
+  if (opts?.permission && !can(res.ctx.role, opts.permission)) redirect(landingFor(res.ctx.role));
+  const landing = landingFor(res.ctx.role);
 
   // Ghost Mode is read-only: server actions (every mutation goes through one)
   // are refused outright, before any control-plane side effect could run.
@@ -58,7 +60,7 @@ export async function requireTenant(opts?: { role?: "admin"; skipMfaGate?: boole
   // (admins) or a "trial ended" page (instructors). Billing itself stays usable.
   const path = h.get(PATH_HEADER) ?? "";
   const billing = LOCKED_ALLOWED.some((p) => path.startsWith(p)) || opts?.allowReadOnly === true;
-  if (res.ctx.locked && !billing) redirect(res.ctx.role === "admin" ? "/office/billing?locked=1" : "/trial-ended");
+  if (res.ctx.locked && !billing) redirect(res.ctx.role === "admin" ? "/office/billing?locked=1" : isOfficeRole(res.ctx.role) ? "/trial-ended" : "/trial-ended");
   if (res.ctx.readOnly && !billing && h.has("next-action")) throw new TrialReadOnlyError();
 
   // Centre admins: every office sign-in is email + password, then an emailed
@@ -66,14 +68,13 @@ export async function requireTenant(opts?: { role?: "admin"; skipMfaGate?: boole
   // 12 hours away, or when the browser closes on a "just this once" sign-in,
   // and then the whole sign-in starts again. Ghost Mode is the platform
   // owner looking in from the Dev Center, which has its own gates.
-  if (res.ctx.role === "admin" && !res.ctx.ghost) await enforceLoginVerified(res.sessionId);
+  if (isOfficeRole(res.ctx.role) && !res.ctx.ghost) await enforceLoginVerified(res.sessionId);
 
   // Unfamiliar device, country or IP → password again first; then the PIN.
-  const landing = res.ctx.role === "admin" ? "/office" : "/portal";
   await enforceDeviceGate(res.ctx.userId, landing, res.ctx.organisationId);
-  // Everyone must set and enter their 4-digit PIN each session — admins land
-  // back in the office, instructors in their portal.
-  await enforcePinGate(res.ctx.userId, res.sessionId, res.ctx.role === "admin" ? "/office" : "/portal");
+  // Office roles and instructors set and enter a 4-digit PIN each session.
+  // Parents (read-only rota of their child) sign in with their password only.
+  if (res.ctx.role !== "parent") await enforcePinGate(res.ctx.userId, res.sessionId, landing);
 
   const repos = await getRepositories();
 

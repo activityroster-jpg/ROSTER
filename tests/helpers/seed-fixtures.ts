@@ -193,6 +193,15 @@ export async function seedFullOrg(
     summary: JSON.stringify({ qualifications: 0 }),
     actorUserId: owner.id,
   });
+  await t.guardianLink.insert(ctx, {
+    instructorId: instructor.id,
+    userId: owner.id,
+    email: `parent@${opts.slug}.test`,
+    status: "revoked",
+    consentGivenAt: new Date(start),
+    consentByUserId: owner.id,
+    consentNote: "fixture",
+  });
   await t.integration.insert(ctx, {
     provider: "ics_generic",
     kind: "ics",

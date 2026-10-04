@@ -13,7 +13,7 @@ import { eq } from "drizzle-orm";
 import { instructor as instructorTable } from "@/lib/db/schema";
 
 export default async function OfficeLayout({ children }: { children: React.ReactNode }) {
-  const { ctx, organisation, trial, repos } = await requireTenant({ role: "admin", allowReadOnly: true });
+  const { ctx, organisation, trial, repos } = await requireTenant({ permission: "office.view", allowReadOnly: true });
   // Maintenance mode (Dev Center → Operations): a holding page for everyone except platform admins.
   const maintenance = await readMaintenance();
   if (maintenance?.on) {
@@ -52,7 +52,7 @@ export default async function OfficeLayout({ children }: { children: React.React
 
   return (
     <div className="flex min-h-screen bg-canvas">
-      <OfficeSidebar orgName={organisation.name} clockOn={clockOn} hasInstructorRecord={hasInstructorRecord} />
+      <OfficeSidebar orgName={organisation.name} clockOn={clockOn} hasInstructorRecord={hasInstructorRecord} role={ctx.role} />
       <div className="flex-1 overflow-x-hidden pt-14 lg:pt-0">
         <IncidentBanner />
         {ctx.ghost ? <GhostBanner centreName={organisation.name} /> : null}

@@ -252,6 +252,25 @@ const SECTIONS: Section[] = [
     ],
   },
   {
+    id: "roles",
+    icon: "🔑",
+    label: "Roles & guardian access",
+    blurb: "Who can do what in your centre, and a parent's view of an under-18's rota.",
+    blocks: [
+      { kind: "p", text: "Every person with an account has one role in your centre, set from the Access card on their profile." },
+      { kind: "bullets", items: [
+        "Admin — runs the centre: everything, including billing, settings, pay and exports. Admins are set up by ActivityRoster.",
+        "Senior instructor — the office roster: courses, assignments, the availability grid, leave and cover, publishing. No pay, billing, settings, exports or contact details beyond names.",
+        "Welfare officer — staff profiles, guardian and emergency contacts, the emergency sheet and the young-worker register. Nothing operational or financial.",
+        "Instructor — their own portal: shifts, availability, confirmations, documents.",
+      ] },
+      { kind: "sub", text: "Contact details between colleagues" },
+      { kind: "p", text: "Colleagues see names and shift times only. An instructor who is happy to be contactable can switch on “Let colleagues see my phone and email” in their portal settings; they then appear in the Team contacts list in everyone's portal. Under-18s are never offered this." },
+      { kind: "sub", text: "Parent or guardian access" },
+      { kind: "p", text: "For an instructor under 18, an admin can invite the parent or guardian on file to a read-only view of the young person's rota: dates, courses, times and places, nothing else and nobody else's details. The consent the centre holds (for example “signed permission form on file”) is recorded with the invitation and shown to the guardian. Remove access from the same card at any time; it ends automatically when the profile is anonymised." },
+    ],
+  },
+  {
     id: "licences",
     icon: "🎫",
     label: "Certs & vetting",
@@ -550,6 +569,16 @@ const SECTIONS: Section[] = [
         "Export your centre's data at any time.",
         "If a centre is ever suspended, it can still export within the retention window before deletion.",
       ] },
+      { kind: "sub", text: "When a staff member asks about their data" },
+      { kind: "p", text: "Open their profile and use the Data & privacy card. You are the data controller for your staff; these tools let you answer a request yourself, within the month the law allows." },
+      { kind: "bullets", items: [
+        "Copy of their data — download everything the centre holds about them as JSON or CSV. Each download is recorded in the change log.",
+        "Correct — edit the profile as usual; every change is recorded.",
+        "Restrict processing — keeps the record but stops it being used: they cannot be rostered and get no notifications until you lift it. Give a reason; it goes in the change log.",
+        "Anonymise (erasure) — removes everything identifying, their certificates and files, availability, leave, pay rates, notifications and their login. Roster and payroll history stays as “Former staff member”. Type their name to confirm; it cannot be undone, and it is re-applied automatically if the database is ever restored from a backup.",
+      ] },
+      { kind: "sub", text: "Your change log" },
+      { kind: "p", text: "Office → Change log lists every change and every sign-in event on your centre's accounts. Download CSV gives you the last 90 days; add ?from=YYYY-MM-DD&to=YYYY-MM-DD to the link for another period." },
     ],
   },
 ];

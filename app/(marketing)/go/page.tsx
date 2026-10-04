@@ -21,11 +21,11 @@ export default async function GoPage({ searchParams }: { searchParams: Promise<{
   if (!s?.user) redirect(`/sign-in?next=${encodeURIComponent(`/go?to=${to}`)}`);
   const { control } = await getRepositories();
   const all = (await control.membershipsForUser(s.user.id)).filter((m) => m.status === "active" && m.orgStatus !== "cancelled");
-  const centres = to === "office" ? all.filter((m) => m.role === "admin") : all;
+  const centres = to === "office" ? all.filter((m) => m.role === "admin" || m.role === "senior_instructor" || m.role === "welfare_officer") : all.filter((m) => m.role !== "parent" || to === "portal");
   const apex = apexDomain();
-  const link = (slug: string) => `https://${slug}.${apex}/${to}`;
+  const link = (slug: string, role?: string) => `https://${slug}.${apex}/${to === "office" ? "office" : role === "parent" ? "parent" : "portal"}`;
 
-  if (centres.length === 1) redirect(link(centres[0]!.slug));
+  if (centres.length === 1) redirect(link(centres[0]!.slug, centres[0]!.role));
 
   return (
     <section className="mx-auto max-w-xl px-4 py-14">
@@ -46,8 +46,8 @@ export default async function GoPage({ searchParams }: { searchParams: Promise<{
           <ul className="mt-4 divide-y divide-slate-100">
             {centres.map((m) => (
               <li key={m.organisationId}>
-                <a href={link(m.slug)} className="flex items-center justify-between py-3 hover:text-teal">
-                  <span><span className="font-medium text-navy">{m.name}</span><span className="block text-xs text-slate-400">{m.slug}.{apex} · {m.role === "admin" ? "admin" : "instructor"}</span></span>
+                <a href={link(m.slug, m.role)} className="flex items-center justify-between py-3 hover:text-teal">
+                  <span><span className="font-medium text-navy">{m.name}</span><span className="block text-xs text-slate-400">{m.slug}.{apex} · {m.role.replace(/_/g, " ")}</span></span>
                   <span className="text-teal">Open →</span>
                 </a>
               </li>

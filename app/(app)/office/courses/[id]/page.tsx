@@ -22,7 +22,7 @@ const AUD: Record<string, { label: string; cls: string }> = {
 
 export default async function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
 
   const course = await repos.tenant.course.findById(ctx, id);
   if (!course) notFound();

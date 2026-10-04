@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 
 export default async function RotaPage({ searchParams }: { searchParams: Promise<{ week?: string }> }) {
-  const { ctx, repos, organisation } = await requireTenant({ role: "admin" });
+  const { ctx, repos, organisation } = await requireTenant({ permission: "rota.view" });
   const thisMonday = weekStart(new Date());
   const sp = await searchParams;
   const monday = typeof sp.week === "string" && ISO.test(sp.week) ? weekStart(new Date(`${sp.week}T00:00:00Z`)) : thisMonday;

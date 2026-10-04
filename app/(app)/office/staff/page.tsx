@@ -11,7 +11,7 @@ import { GuideLink } from "@/components/GuideLink";
 export const dynamic = "force-dynamic";
 
 export default async function StaffPage() {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "staff.view" });
   const [staff, qualTypes, teaching, courseTypes, complianceTypes] = await Promise.all([
     listStaffWithFit(repos, ctx),
     repos.tenant.qualificationType.list(ctx),
@@ -60,6 +60,8 @@ export default async function StaffPage() {
       status: instructor.status,
       under18: isUnder18(instructor.dateOfBirth),
       hasDob: Boolean(instructor.dateOfBirth),
+      restricted: Boolean(instructor.restrictedAt),
+      anonymised: Boolean(instructor.anonymisedAt),
     };
   });
   const currentCount = rows.filter((r) => r.status !== "inactive").length;

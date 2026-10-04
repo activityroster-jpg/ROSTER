@@ -329,6 +329,8 @@ export const instructor = sqliteTable("instructor", {
   /** Restriction of processing (GDPR art. 18): kept but not rostered or contacted while set. */
   restrictedAt: integer("restricted_at", { mode: "timestamp_ms" }),
   restrictedReason: text("restricted_reason"),
+  /** Opt-in: colleagues may see this person's phone and email in the portal. Never offered to under-18s. */
+  shareContact: boolCol("share_contact").default(false),
   /** When they were marked as having left. Starts the retention clock for their profile (Settings → Data retention). */
   leftAt: integer("left_at", { mode: "timestamp_ms" }),
   /** Set when the person was anonymised; identifying fields are blank from then on and the record is kept only for roster and payroll history. */
@@ -756,6 +758,28 @@ export const deletionLog = sqliteTable("deletion_log", {
   createdAt: createdAt(),
 }, (t) => [index("deletion_log_org_idx").on(t.organisationId)]);
 export type DeletionLog = typeof deletionLog.$inferSelect;
+
+/**
+ * A parent or guardian's read-only access to an under-18 instructor's rota,
+ * with the consent record behind it. The guardian is a `parent` member of
+ * the centre; this row says whose rota they may see.
+ */
+export const GUARDIAN_LINK_STATUSES = ["active", "revoked"] as const;
+export const guardianLink = sqliteTable("guardian_link", {
+  id: id(),
+  organisationId: orgFk(),
+  instructorId: text("instructor_id").notNull().references(() => instructor.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull(),
+  email: text("email").notNull(),
+  status: text("status", { enum: GUARDIAN_LINK_STATUSES }).notNull().default("active"),
+  /** Consent to work recorded by the centre: when, by whom (user id) and the note (e.g. "signed form on file"). */
+  consentGivenAt: integer("consent_given_at", { mode: "timestamp_ms" }),
+  consentByUserId: text("consent_by_user_id"),
+  consentNote: text("consent_note"),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, (t) => [index("guardian_link_org_idx").on(t.organisationId), index("guardian_link_user_idx").on(t.userId), index("guardian_link_instructor_idx").on(t.instructorId)]);
+export type GuardianLink = typeof guardianLink.$inferSelect;
 
 export const notification = sqliteTable("notification", {
   id: id(),

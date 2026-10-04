@@ -31,6 +31,10 @@ const ACTION: Record<string, string> = {
   data_export: "Downloaded a full export of", update_protected_contacts: "Updated the emergency or guardian contacts of", view_emergency_sheet: "Opened the emergency sheet for", view_protected_contacts: "Viewed the emergency or guardian contacts of", clock_in: "Clocked in", clock_out: "Clocked out", set_availability: "Changed availability", attach_document: "Uploaded a document for", update_document_meta: "Updated the details of",
   self_add_licence: "Added a cert to their own record", self_add_licence_type: "Added a new cert type", integration_connect: "Connected", integration_remove: "Disconnected", integration_sync: "Checked", integration_apply_changes: "Applied changes from",
   booking_create: "Added a booking", booking_status: "Changed a booking", publish_week: "Published the roster for", republish_week: "Re-published the roster for", confirm_assignment: "Confirmed their place on", decline_assignment: "Declined their place on",
+  export_person: "Downloaded a copy of the data held about", restrict_instructor: "Restricted processing for", unrestrict_instructor: "Lifted the processing restriction on", anonymise_instructor: "Anonymised", replay_deletions: "Re-applied past anonymisations after a restore to",
+  export_audit_log: "Downloaded the change log for", export_rota_pdf: "Downloaded a rota PDF for", view_young_worker_register: "Downloaded the young-worker time register for",
+  retention_run: "Removed records past their retention period from", retention_keep: "Kept the profile of", update_retention: "Changed the retention periods of", vetting_files_removed: "Removed stored vetting certificates (status-only policy) for",
+  set_member_role: "Changed the role of", invite_guardian: "Invited a parent or guardian to view the rota of", revoke_guardian: "Removed a parent or guardian's access to the rota of", set_share_contact: "Changed whether colleagues can see the contact details of",
   set_students: "Set the number of students on", restore_defaults: "Restored the RYA course list", set_notify_email: "Changed email notifications for", update_profile: "Updated the details of",
 };
 

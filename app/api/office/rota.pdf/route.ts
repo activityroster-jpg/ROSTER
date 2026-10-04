@@ -17,7 +17,7 @@ function londonToday(): string {
  * override it for one download. Admin only; each download is audited.
  */
 export async function GET(req: Request) {
-  const { ctx, repos, organisation } = await requireTenant({ role: "admin" });
+  const { ctx, repos, organisation } = await requireTenant({ permission: "rota.view" });
   const sp = new URL(req.url).searchParams;
   const settings = (await repos.tenant.orgSettings.list(ctx))[0];
   const saved = parseRotaTemplate(settings?.rotaTemplate);

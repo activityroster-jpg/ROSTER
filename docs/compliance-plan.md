@@ -191,9 +191,18 @@ Effort is a rough guide: S = under half a day, M = one to two days, L = a week o
 - Still to do: a way for a centre to mark one of its own custom check types as vetting
   (Settings → Checks), noted for P1-G.
 
-### P1-F Roles and families
-- Roles and permission matrix: welfare officer, senior instructor, under-18, parent
-  accounts; per-centre adjustments; contact-detail opt-in; parent consent records.
+### P1-F Roles and families — built 4 October
+- Roles: admin, senior instructor (office roster, no pay/billing/settings/exports), welfare
+  officer (staff profiles, protected contacts, emergency sheet, young-worker register),
+  instructor, parent. Matrix in `lib/auth/rbac.ts`; `requireTenant({ permission })`;
+  sidebar filtered by role; granted from the staff profile's Access card.
+- Contact-detail opt-in: `instructor.share_contact`, portal setting (never offered to
+  under-18s), "Team contacts" list in the portal for those who opted in.
+- Parent accounts: `guardian_link` (consent note, who recorded it, when); admin invites the
+  guardian on file from an under-18's profile; the guardian signs in by email and sees
+  `/parent`, a read-only four-week rota for their child; access revocable; ends with
+  anonymisation. Migration 0055. Per-centre matrix adjustments are not offered (roles are
+  fixed and documented) — raise if a centre needs one.
 
 ### P1-G Public pages and the rest
 - Working-time checks for adults; plain-English under-18 privacy page; free-text warnings;

@@ -15,7 +15,7 @@ import { providerName, providerColor } from "@/lib/integrations/catalogue";
 export const dynamic = "force-dynamic";
 
 export default async function CoursesPage({ searchParams }: { searchParams: Promise<{ view?: string; q?: string }> }) {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const sp = await searchParams;
   const view: "upcoming" | "past" = sp.view === "past" ? "past" : "upcoming";
   const q = (typeof sp.q === "string" ? sp.q : "").trim().slice(0, 80);

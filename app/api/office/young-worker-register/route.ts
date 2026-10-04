@@ -15,7 +15,7 @@ function addDays(iso: string, n: number): string { const d = new Date(`${iso}T12
  * Capped at 400 days so one request can't dump years of a child's history.
  */
 export async function GET(req: Request) {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "protected.view" });
   const sp = new URL(req.url).searchParams;
   const toQ = sp.get("to"), fromQ = sp.get("from");
   const to = toQ && ISO.test(toQ) ? toQ : londonToday();

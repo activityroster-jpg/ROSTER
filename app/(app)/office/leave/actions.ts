@@ -8,7 +8,7 @@ import { cancelOpenShift, confirmOpenShift, createOpenShift } from "@/lib/servic
 type Result = { ok: boolean; error?: string };
 
 export async function decideLeaveAction(leaveId: string, decision: "approved" | "declined"): Promise<Result> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   if (decision !== "approved" && decision !== "declined") return { ok: false, error: "Invalid decision" };
   const res = await decideLeave(repos, ctx, leaveId, decision);
   if (!res) return { ok: false, error: "Not found" };
@@ -17,7 +17,7 @@ export async function decideLeaveAction(leaveId: string, decision: "approved" | 
 }
 
 export async function createOpenShiftAction(courseSessionId: string, roleTypeId: string, note?: string): Promise<Result> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const session = await repos.tenant.courseSession.findById(ctx, courseSessionId);
   const role = await repos.tenant.roleType.findById(ctx, roleTypeId);
   if (!session || !role) return { ok: false, error: "Pick a session and role" };
@@ -27,7 +27,7 @@ export async function createOpenShiftAction(courseSessionId: string, roleTypeId:
 }
 
 export async function confirmOpenShiftAction(shiftId: string, override?: { note: string }): Promise<Result> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const note = override?.note?.trim();
   if (override && !note) return { ok: false, error: "Add a reason to override the checks" };
   const res = await confirmOpenShift(repos, ctx, shiftId, override ? { override: true, overrideNote: note } : {});
@@ -38,7 +38,7 @@ export async function confirmOpenShiftAction(shiftId: string, override?: { note:
 }
 
 export async function cancelOpenShiftAction(shiftId: string): Promise<Result> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   await cancelOpenShift(repos, ctx, shiftId);
   revalidatePath("/office/leave");
   return { ok: true };

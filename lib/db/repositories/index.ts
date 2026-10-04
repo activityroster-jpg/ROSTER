@@ -50,6 +50,7 @@ export function createTenantRepositories(db: Database) {
     notification: repo(t.notification),
     auditLog: repo(t.auditLog),
     deletionLog: repo(t.deletionLog),
+    guardianLink: repo(t.guardianLink),
   } as const;
 }
 
@@ -91,6 +92,7 @@ export const TENANT_TABLES = [
   t.notification,
   t.auditLog,
   t.deletionLog,
+  t.guardianLink,
 ] as const;
 
 /** Everything a request needs: tenant repos + control-plane repo. */

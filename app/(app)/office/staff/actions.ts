@@ -462,3 +462,42 @@ async function sealIfVetting(repos: Repositories, ctx: AnyTenantContext, itemId:
   const item = await repos.tenant.complianceItem.findById(ctx, itemId);
   return item ? sealForType(repos, ctx, item.complianceTypeId, reference) : reference;
 }
+
+// --- Roles and guardian access (P1-F) ---------------------------------------
+import { GRANTABLE_ROLES } from "@/lib/auth/rbac";
+import { inviteGuardian, revokeGuardian } from "@/lib/services/guardians";
+
+/** Grant a team member a role: instructor (portal only), senior instructor (rosters) or welfare officer (contacts and the under-18 register). */
+export async function setMemberRoleAction(instructorId: string, role: string): Promise<ActionState> {
+  const { ctx, repos } = await requireTenant({ role: "admin" });
+  if (!(GRANTABLE_ROLES as readonly string[]).includes(role)) return { ok: false, error: "Unknown role" };
+  const i = await repos.tenant.instructor.findById(ctx, instructorId);
+  if (!i?.userId) return { ok: false, error: "Invite them to sign in first; the role attaches to their account" };
+  if (i.userId === ctx.userId) return { ok: false, error: "You cannot change your own role" };
+  const m = await repos.control.membershipFor(i.userId, ctx.organisationId);
+  if (!m || m.role === "admin") return { ok: false, error: "Admins are managed by ActivityRoster; contact support to change an admin" };
+  await repos.control.setMembershipRole(i.userId, ctx.organisationId, role as "instructor" | "senior_instructor" | "welfare_officer");
+  await writeAudit(repos, ctx, { action: "set_member_role", entity: "instructor", entityId: instructorId, after: { role } });
+  revalidatePath(`/office/staff/${instructorId}`);
+  return { ok: true, message: "Role updated" };
+}
+
+/** Give an under-18's parent or guardian read-only access to their rota, recording the consent. */
+export async function inviteGuardianAction(instructorId: string, consentNote: string): Promise<ActionState> {
+  const { ctx, repos, organisation } = await requireTenant({ role: "admin" });
+  const r = await inviteGuardian(repos, ctx, instructorId, (consentNote ?? "").trim().slice(0, 300));
+  if (!r.ok) return { ok: false, error: r.error };
+  try {
+    const auth = await getAuth();
+    await auth.api.signInMagicLink({ body: { email: r.email, callbackURL: centreUrl(organisation.slug, "/parent") }, headers: new Headers(await headers()) });
+  } catch (err) { console.error("[guardian] magic link failed:", (err as Error).message); }
+  revalidatePath(`/office/staff/${instructorId}`);
+  return { ok: true, message: `Invitation sent to ${r.email}` };
+}
+
+export async function revokeGuardianAction(instructorId: string, linkId: string): Promise<ActionState> {
+  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const ok = await revokeGuardian(repos, ctx, linkId);
+  revalidatePath(`/office/staff/${instructorId}`);
+  return ok ? { ok: true, message: "Guardian access removed" } : { ok: false, error: "Not found" };
+}

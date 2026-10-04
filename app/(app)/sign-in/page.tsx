@@ -27,14 +27,14 @@ export default function SignInPage() {
   const [next, setNext] = useState("/office");
   // Centre admins confirm an emailed code (and choose "stay signed in?") before
   // the office opens; instructors go straight to their portal.
-  const isPortal = next === "/portal" || next.startsWith("/go?to=portal");
+  const isPortal = next === "/portal" || next === "/parent" || next.startsWith("/go?to=portal");
   const after = isPortal ? next : `/verify-login?next=${encodeURIComponent(next)}`;
   // Remember how this person last signed in on this device.
   useEffect(() => {
     try { if (window.localStorage.getItem("ar.signin.mode") === "link") setMode("link"); } catch { /* blocked storage */ }
     const q = new URLSearchParams(window.location.search);
     const n = q.get("next");
-    if (n === "/portal" || n === "/office" || n === "/go?to=portal" || n === "/go?to=office") setNext(n);
+    if (n === "/portal" || n === "/office" || n === "/parent" || n === "/go?to=portal" || n === "/go?to=office") setNext(n);
     if (q.get("expired") === "1") setExpired(true);
   }, []);
   const pickMode = (m: Mode) => { setMode(m); try { window.localStorage.setItem("ar.signin.mode", m); } catch { /* ignore */ } };

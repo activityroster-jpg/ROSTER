@@ -20,7 +20,7 @@ export type ActionState = { ok: boolean; error?: string; message?: string };
 
 /** Load the editable course box for a calendar tile. Admin, tenant scoped. */
 export async function loadCourseEditorAction(courseId: string): Promise<{ ok: true; data: CourseEditorData } | { ok: false; error: string }> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   if (typeof courseId !== "string" || !courseId) return { ok: false, error: "Missing course" };
   const data = await getCourseEditorData(repos, ctx, courseId);
   if (!data) return { ok: false, error: "Course not found" };
@@ -48,7 +48,7 @@ function sessionTemplate(formData: FormData): { ok: true; t: Omit<NewCourseSessi
  * form works two ways: an AM/PM/EV slot, or explicit start/end times (centres on
  * the "set times" style). With times, the slot code is derived for storage. */
 export async function createCourseAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const courseTypeId = String(formData.get("courseTypeId") ?? "");
   const name = (formData.get("name") as string) || undefined;
   const date = String(formData.get("date") ?? "");
@@ -95,7 +95,7 @@ export async function createCourseFlexibleAction(input: {
   /** A manually-typed course type instead of courseTypeId; optionally added to the regular list. */
   newType?: { name: string; addToList: boolean };
 }): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const newTypeName = typeof input.newType?.name === "string" ? input.newType.name.trim().slice(0, 120) : "";
   if (!input.courseTypeId && !newTypeName) return { ok: false, error: "Pick a course type, or type one in" };
   const rawSessions = Array.isArray(input.sessions) ? input.sessions : [];
@@ -142,7 +142,7 @@ export async function createCourseFlexibleAction(input: {
 
 /** Change a course's status (draft/scheduled/confirmed/completed/cancelled). */
 export async function setCourseStatusAction(courseId: string, status: string): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   if (!(COURSE_STATUSES as readonly string[]).includes(status)) return { ok: false, error: "Invalid status" };
   const updated = await repos.tenant.course.update(ctx, courseId, { status: status as CourseStatus });
   if (!updated) return { ok: false, error: "Course not found" };
@@ -155,7 +155,7 @@ export async function setCourseStatusAction(courseId: string, status: string): P
 
 /** Rename a course. */
 export async function renameCourseAction(courseId: string, name: string): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const clean = name.trim();
   const updated = await repos.tenant.course.update(ctx, courseId, { name: clean || null });
   if (!updated) return { ok: false, error: "Course not found" };
@@ -167,7 +167,7 @@ export async function renameCourseAction(courseId: string, name: string): Promis
 
 /** Delete a course (cascades to its sessions, staff, equipment & locations). */
 export async function deleteCourseAction(courseId: string): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const removed = await repos.tenant.course.delete(ctx, courseId);
   if (removed === 0) return { ok: false, error: "Course not found" };
   await writeAudit(repos, ctx, { action: "delete", entity: "course", entityId: courseId });
@@ -178,7 +178,7 @@ export async function deleteCourseAction(courseId: string): Promise<ActionState>
 
 /** Set how many students are booked on a course (drives the ratio check). */
 export async function setCourseStudentsAction(courseId: string, students: number): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const parsed = studentsSchema.safeParse(students);
   if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
   const n = parsed.data;
@@ -193,7 +193,7 @@ export async function setCourseStudentsAction(courseId: string, students: number
 
 /** Set how many staff a course needs (0/blank clears back to the ratio default). */
 export async function setStaffRequiredAction(courseId: string, count: number | null): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const n = count == null || !Number.isFinite(count) || count < 0 ? null : Math.min(50, Math.round(count));
   const updated = await repos.tenant.course.update(ctx, courseId, { staffRequired: n });
   if (!updated) return { ok: false, error: "Course not found" };
@@ -210,7 +210,7 @@ export async function updateSessionTimesAction(
   sessionId: string,
   input: { date: string; startTime?: string; endTime?: string },
 ): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const date = String(input.date ?? "");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return { ok: false, error: "Pick a valid date" };
   const start = normaliseTime(input.startTime ?? "");
@@ -243,7 +243,7 @@ export async function updateSessionTimesAction(
 
 /** Add one session to an existing course. */
 export async function addSessionAction(courseId: string, formData: FormData): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const date = String(formData.get("date") ?? "");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return { ok: false, error: "Pick a valid date" };
   const course = await repos.tenant.course.findById(ctx, courseId);
@@ -267,7 +267,7 @@ export async function addSessionAction(courseId: string, formData: FormData): Pr
 
 /** Remove one session from a course (scoped to the tenant). */
 export async function removeSessionAction(courseId: string, sessionId: string): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const removed = await repos.tenant.courseSession.delete(ctx, sessionId);
   if (removed === 0) return { ok: false, error: "Session not found" };
   await writeAudit(repos, ctx, { action: "remove_session", entity: "course", entityId: courseId, after: { sessionId } });
@@ -280,7 +280,7 @@ export async function removeSessionAction(courseId: string, sessionId: string): 
 
 /** Remove a staff assignment from a course. */
 export async function removeStaffAction(courseId: string, assignmentId: string): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const assignment = await repos.tenant.courseStaff.findById(ctx, assignmentId);
   const removed = await repos.tenant.courseStaff.delete(ctx, assignmentId);
   if (removed === 0) return { ok: false, error: "Assignment not found" };
@@ -298,7 +298,7 @@ export async function removeStaffAction(courseId: string, assignmentId: string):
 
 /** Assign an instructor to a course, enforcing fit + conflict (override allowed). */
 export async function assignStaffAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const res = await assignStaff(repos, ctx, {
     courseId: String(formData.get("courseId") ?? ""),
     instructorId: String(formData.get("instructorId") ?? ""),
@@ -324,7 +324,7 @@ export async function bulkAssignStaffAction(input: {
   override?: boolean;
   overrideNote?: string;
 }): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   if (!input.instructorId || !input.roleTypeId) return { ok: false, error: "Pick an instructor and a role" };
   const courseIds = [...new Set(input.courseIds ?? [])].filter(Boolean);
   if (courseIds.length === 0) return { ok: false, error: "Tick at least one course" };

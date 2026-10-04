@@ -221,7 +221,14 @@ export const platformPricing = sqliteTable("platform_pricing", {
   updatedAt: updatedAt(),
 });
 
-export const MEMBERSHIP_ROLES = ["admin", "instructor"] as const;
+/**
+ * admin             runs the centre: everything.
+ * senior_instructor rosters, publishes, handles leave and cover; no billing, settings, pay or exports.
+ * welfare_officer   sees staff, guardian and emergency contacts and the young-worker register; nothing operational or financial.
+ * instructor        their own portal.
+ * parent            read-only view of their under-18 child's rota (/parent).
+ */
+export const MEMBERSHIP_ROLES = ["admin", "instructor", "senior_instructor", "welfare_officer", "parent"] as const;
 export type MembershipRole = (typeof MEMBERSHIP_ROLES)[number];
 
 // invited = admin invited, not yet accepted · requested = joined via the app's

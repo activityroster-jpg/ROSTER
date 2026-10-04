@@ -1,4 +1,9 @@
 import { RetentionBanner } from "@/components/office/RetentionBanner";
+import { AccessCard } from "@/components/office/AccessCard";
+import { PersonDataTools } from "@/components/office/PersonDataTools";
+import { GuideLink } from "@/components/GuideLink";
+import { guardianLinksFor } from "@/lib/services/guardians";
+import { can } from "@/lib/auth/rbac";
 import { retentionPlan } from "@/lib/services/retention";
 import Link from "next/link";
 import { requireTenant } from "@/lib/tenant/require";
@@ -20,7 +25,7 @@ export const dynamic = "force-dynamic";
 
 export default async function StaffProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "staff.view" });
 
   await ensureOnboarding(repos, ctx, id);
   const profile = await getStaffProfile(repos, ctx, id);
@@ -44,7 +49,10 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
   const inviteStatus = !instructor.userId ? "none" : membership?.status === "active" ? "accepted" : "pending";
   const under18 = isUnder18(instructor.dateOfBirth);
   const age = ageOn(instructor.dateOfBirth);
-  const contacts = await readProtectedContacts(repos, ctx, instructor);
+  const canEdit = can(ctx.role, "staff.edit");
+  const canProtected = can(ctx.role, "protected.view");
+  const contacts = canProtected ? await readProtectedContacts(repos, ctx, instructor) : { guardianName: "", guardianPhone: "", guardianEmail: "", emergencyName: "", emergencyPhone: "", emergencyRelationship: "" };
+  const guardians = under18 ? await guardianLinksFor(repos, ctx, instructor.id) : [];
   const retention = left && !instructor.anonymisedAt ? await retentionPlan(repos, ctx, settings[0], new Date()) : null;
   const scheduled = retention?.staffDue.find((x) => x.id === instructor.id) ?? null;
   const hasPermissionSlot = documents.some((d) => /parental permission/i.test(d.name));
@@ -57,7 +65,7 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
       <Link href="/office/staff" className="text-sm text-slate-400 hover:text-slate-600">← Instructors</Link>
       <div className="mb-6 mt-1 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-semibold text-navy">{instructor.name}{left ? <span className="ml-2 align-middle rounded-full bg-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-600">Left</span> : null}{under18 ? <span className="ml-2 align-middle rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">Under 18</span> : null}</h1>
+          <h1 className="font-display text-2xl font-semibold text-navy">{instructor.name}{left ? <span className="ml-2 align-middle rounded-full bg-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-600">Left</span> : null}{under18 ? <span className="ml-2 align-middle rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">Under 18</span> : null}{instructor.restrictedAt ? <span className="ml-2 align-middle rounded-full bg-port/10 px-2 py-0.5 text-xs font-semibold text-port" title={instructor.restrictedReason ?? ""}>Restricted</span> : null}{instructor.anonymisedAt ? <span className="ml-2 align-middle rounded-full bg-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-600">Anonymised</span> : null}</h1>
           <p className="text-sm text-slate-500"><span className="capitalize">{instructor.employmentType}</span> · {instructor.email ?? "no email"}{instructor.phone ? ` · ${instructor.phone}` : ""}{age !== null ? ` · ${age} years old` : " · no date of birth yet"}</p>
         </div>
         <div className="flex items-center gap-3">
@@ -66,7 +74,7 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
         </div>
       </div>
       {scheduled ? <RetentionBanner instructorId={instructor.id} deleteOn={scheduled.deleteOn.toISOString()} months={retention!.policy.staffMonths} /> : null}
-      <div className="mb-6"><EditInstructorForm instructor={{ id: instructor.id, name: instructor.name, email: instructor.email, phone: instructor.phone, employmentType: instructor.employmentType, status: instructor.status, dateOfBirth: instructor.dateOfBirth }} /></div>
+      {canEdit ? <div className="mb-6"><EditInstructorForm instructor={{ id: instructor.id, name: instructor.name, email: instructor.email, phone: instructor.phone, employmentType: instructor.employmentType, status: instructor.status, dateOfBirth: instructor.dateOfBirth }} /></div> : null}
 
       <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
         <div className="space-y-6">
@@ -76,9 +84,23 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
           </Card>
 
           <Card>
-            <h2 className="mb-1 font-semibold text-navy">Emergency &amp; guardian contacts <span className="text-xs font-normal text-slate-400">admin only</span></h2>
+            <div className="mb-2 flex items-center justify-between"><h2 className="font-semibold text-navy">Access</h2><GuideLink topic="roles" className="text-xs" /></div>
+            <AccessCard instructorId={instructor.id} linked={Boolean(instructor.userId)} role={membership?.role ?? null} canChangeRole={ctx.role === "admin"} under18={under18} guardianEmailOnFile={Boolean(contacts.guardianEmail)} guardians={guardians.map((g) => ({ id: g.id, email: g.email, status: g.status, consentGivenAt: g.consentGivenAt?.toISOString() ?? null, consentNote: g.consentNote, createdAt: g.createdAt.toISOString() }))} />
+          </Card>
+
+          {canProtected ? (
+          <Card>
+            <h2 className="mb-1 font-semibold text-navy">Emergency &amp; guardian contacts <span className="text-xs font-normal text-slate-400">admin and welfare officer only</span></h2>
             <ProtectedContactsForm instructorId={instructor.id} initial={contacts} under18={under18} hasPermissionSlot={hasPermissionSlot} />
           </Card>
+          ) : null}
+
+          {ctx.role === "admin" ? (
+          <Card>
+            <div className="mb-2 flex items-center justify-between"><h2 className="font-semibold text-navy">Data &amp; privacy</h2><GuideLink topic="data" className="text-xs" /></div>
+            <PersonDataTools instructorId={instructor.id} name={instructor.name} restricted={Boolean(instructor.restrictedAt)} restrictedReason={instructor.restrictedReason} anonymised={Boolean(instructor.anonymisedAt)} />
+          </Card>
+          ) : null}
 
           <Card>
             <h2 className="mb-2 font-semibold text-navy">Courses they can teach</h2>
@@ -93,7 +115,7 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
         </div>
 
         <div className="space-y-6">
-          {payOn ? (
+          {payOn && can(ctx.role, "finance.view") ? (
             <Card>
               <h2 className="mb-1 font-semibold text-navy">Pay</h2>
               <p className="mb-3 text-xs text-slate-500">How this instructor is paid. Payroll uses it for every session they&apos;re rostered on.</p>

@@ -56,6 +56,10 @@ export default async function PortalSchedulePage() {
   const myByCourse = new Map(myStaff.map((s) => [s.courseId, s]));
   const nameById = new Map(instructors.map((i) => [i.id, i.name]));
   const studentsByCourse = new Map(courses.map((c) => [c.id, c.capacity]));
+  const teamContacts = instructors
+    .filter((i) => i.id !== me.id && i.status === "active" && i.shareContact && !i.anonymisedAt && !i.restrictedAt && (i.phone || i.email))
+    .map((i) => ({ id: i.id, name: i.name, phone: i.phone, email: i.email }))
+    .sort((a, b) => a.name.localeCompare(b.name));
   const colleaguesOf = (courseId: string) =>
     allStaff.filter((s) => s.courseId === courseId && s.instructorId !== me.id && s.status !== "declined").map((s) => nameById.get(s.instructorId) ?? "Instructor");
 
@@ -134,6 +138,20 @@ export default async function PortalSchedulePage() {
           <p className="text-center text-xs text-slate-400">{pencilled} more session{pencilled === 1 ? "" : "s"} pencilled in for weeks your centre hasn&apos;t published yet.</p>
         ) : null}
       </div>
+      {teamContacts.length ? (
+        <Card>
+          <h2 className="mb-1 font-semibold text-navy">Team contacts</h2>
+          <p className="mb-2 text-xs text-slate-500">Colleagues who chose to share their details for cover and swaps. Share yours under Settings.</p>
+          <ul className="divide-y divide-slate-100 text-sm">
+            {teamContacts.map((c) => (
+              <li key={c.id} className="flex flex-wrap items-baseline justify-between gap-2 py-1.5">
+                <span className="font-medium text-navy">{c.name}</span>
+                <span className="text-slate-600">{c.phone ? <a href={`tel:${c.phone}`} className="hover:text-teal">{c.phone}</a> : null}{c.phone && c.email ? " · " : ""}{c.email ? <a href={`mailto:${c.email}`} className="hover:text-teal">{c.email}</a> : null}</span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      ) : null}
     </div>
   );
 }

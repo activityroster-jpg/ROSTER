@@ -17,7 +17,7 @@ function fmtWeek(mondayIso: string): string {
 }
 
 export default async function AvailabilityPage({ searchParams }: { searchParams: Promise<{ week?: string }> }) {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const thisMonday = weekStart(new Date());
   const sp = await searchParams;
   const requested = typeof sp.week === "string" && ISO.test(sp.week) ? weekStart(new Date(`${sp.week}T00:00:00Z`)) : thisMonday;

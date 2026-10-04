@@ -386,6 +386,13 @@
       "when": 1791073338822,
       "tag": "0054_moaning_spencer_smythe",
       "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "6",
+      "when": 1791073942275,
+      "tag": "0055_mighty_firebrand",
+      "breakpoints": true
     }
   ]
 }

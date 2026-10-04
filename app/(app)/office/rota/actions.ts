@@ -9,7 +9,7 @@ type Result = { ok: boolean; error?: string; message?: string };
 
 /** Publish (or re-publish) one week's roster and tell everyone on it. */
 export async function publishWeekAction(weekStart: string): Promise<Result> {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   if (!isoDateSchema.safeParse(weekStart).success) return { ok: false, error: "Invalid week" };
   const r = await publishWeek(repos, ctx, weekStart);
   revalidatePath("/office/rota");

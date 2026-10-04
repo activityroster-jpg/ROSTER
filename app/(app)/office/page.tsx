@@ -36,7 +36,7 @@ function Tile({ href, label, value, sub, tone = "navy" }: { href: string; label:
 }
 
 export default async function DashboardPage() {
-  const { ctx, repos, organisation } = await requireTenant({ role: "admin" });
+  const { ctx, repos, organisation } = await requireTenant({ permission: "office.view" });
   const monday = weekStart(new Date());
   const today = todayIso();
 

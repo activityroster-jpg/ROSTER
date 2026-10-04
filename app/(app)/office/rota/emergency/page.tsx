@@ -10,7 +10,7 @@ const SLOT: Record<string, string> = { AM: "Morning", PM: "Afternoon", EV: "Even
 
 /** Printable emergency sheet for one day: who is on duty, where, and who to call. Admin only; every view is logged. */
 export default async function EmergencySheetPage({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
-  const { ctx, repos, organisation } = await requireTenant({ role: "admin" });
+  const { ctx, repos, organisation } = await requireTenant({ permission: "rota.view" });
   const sp = await searchParams;
   const date = typeof sp.date === "string" && ISO.test(sp.date) ? sp.date : londonToday();
   const sheet = await getDaySheet(repos, ctx, date);

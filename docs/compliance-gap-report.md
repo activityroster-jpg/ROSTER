@@ -40,7 +40,7 @@ The spec's draft data map needs these corrections (`lib/db/schema/tenant.ts`,
 | Spec says | What the database actually holds |
 | --- | --- |
 | Staff profiles include date of birth | **No date of birth field.** `instructor` holds name, email, phone, employment type, status. Under-18 status cannot be derived today. |
-| Parent and guardian accounts | **None.** Roles are `admin` and `instructor` only (`MEMBERSHIP_ROLES`). |
+| Parent and guardian accounts | Since P1-F: `parent` role plus `guardian_link` with the consent record; read-only `/parent` rota view. |
 | Vetting status: store status only | Since P1-E (4 October): vetting types (`compliance_type.is_vetting`) take no file, uploads are refused and any stored file is removed; the certificate number is encrypted at rest. Other checks (first aid, safeguarding) still carry an uploaded copy. |
 | Student and course records | Courses and sessions hold **headcounts, not names**. The retired `booking` table does hold `customerName` and `customerEmail` (feature removed from the UI, table kept). |
 | Emergency contacts | **Not stored anywhere.** The emergency sheet in the spec needs new fields first. |
@@ -90,7 +90,7 @@ counts only, no content.
 | Server-side permission checks on every endpoint and record | P0 | Done | `requireTenant` (`lib/tenant/require.ts`) on every office/portal page, action and API route; repositories scope by org on every read and write. |
 | Isolation test suite, two schools, on every deploy | P0 | Done | `tests/isolation` covers every tenant table; runs in CI (`.github/workflows/ci.yml`) and before deploy (`.github/workflows/deploy.yml`). |
 | Random IDs in URLs | P1 | Done | `crypto.randomUUID()` (`lib/db/schema/_shared.ts:15`). |
-| Configurable roles and the permission matrix | P1 | Missing | Only `admin` and `instructor`. No welfare officer, senior instructor, under-18 or parent roles; no contact-detail opt-in; no per-school permission settings. Pay rates and exports are admin-only today. |
+| Configurable roles and the permission matrix | P1 | Done (fixed matrix) | admin, senior instructor, welfare officer, instructor, parent in `lib/auth/rbac.ts`; granted from the staff profile; contact-detail opt-in in the portal. Per-centre edits to the matrix are deliberately not offered. |
 
 ## Data security and application hardening
 
@@ -140,9 +140,9 @@ counts only, no content.
 | Requirement | Pri | Status | Evidence / notes |
 | --- | --- | --- | --- |
 | Required date of birth, automatic under-18 flag | P0 | Done | `instructor.dateOfBirth` (required for new staff, prompted for existing on the staff list); under-18 computed on read from `lib/domain/age.ts`, so it lifts at 18 without a job; badges on the staff list, profile and dashboard. Migration 0042. |
-| Under-18 contact details hidden except Owner/Admin/Welfare | P0 | Done | Confirmed: the portal and mobile app show colleagues' names and shift times only; contact details appear in the admin office alone (`app/(app)/portal`, `app/api/mobile`). A welfare role comes with Phase 2 roles. |
+| Under-18 contact details hidden except Owner/Admin/Welfare | P0 | Done | Confirmed: the portal and mobile app show colleagues' names and shift times only; contact details appear in the admin office alone (`app/(app)/portal`, `app/api/mobile`). Welfare officer role since P1-F. |
 | No private adult-to-minor messaging | P0 | Done | No messaging feature at all; notifications are rota/system announcements. |
-| Parent/guardian contact, written permission upload, parent accounts | P0 | Partial | Guardian name, phone (sealed) and email (sealed) on under-18 profiles; "Parental permission to work" compliance slot with upload, date and verified flag (seeded for new centres, one click for existing). Parent accounts need the Phase 2 roles. |
+| Parent/guardian contact, written permission upload, parent accounts | P0 | Partial | Guardian name, phone (sealed) and email (sealed) on under-18 profiles; "Parental permission to work" compliance slot with upload, date and verified flag (seeded for new centres, one click for existing). Parent accounts since P1-F: invited from the under-18's profile with a consent note; read-only rota at `/parent`. |
 | No marketing or profiling of under-18s | P0 | Done | Marketing is B2B to centres only (`lib/outreach`); platform users are never emailed marketing. |
 | Under-18 photos off by default | P1 | Done (by absence) | No profile photos exist. |
 | Vetting tracker: status, date, expiry, reminders; store status only; warn or block | P1 | Conflict C5 | `compliance_item` tracks DBS/first aid/safeguarding with expiry and feeds the fit-to-roster check (warn or block via the licence setting). It also allows uploading the certificate file. The spec says never store certificate contents. |

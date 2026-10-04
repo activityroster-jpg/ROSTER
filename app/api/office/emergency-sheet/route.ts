@@ -6,7 +6,7 @@ const ISO = /^\d{4}-\d{2}-\d{2}$/;
 
 /** CSV of the emergency sheet for one day. Admin only; the service logs the view. */
 export async function GET(req: Request) {
-  const { ctx, repos } = await requireTenant({ role: "admin" });
+  const { ctx, repos } = await requireTenant({ permission: "rota.view" });
   const q = new URL(req.url).searchParams.get("date");
   const date = q && ISO.test(q) ? q : londonToday();
   const csv = sheetToCsv(await getDaySheet(repos, ctx, date));
