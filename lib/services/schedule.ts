@@ -265,7 +265,7 @@ export interface RotaSession {
   coverageOk: boolean;
   understaffed: boolean;
   missingSafetyCover: boolean;
-  staff: { name: string; role: string; status: "assigned" | "confirmed" | "declined"; /** On this day only (a per-day add). */ dayOnly?: boolean }[];
+  staff: { name: string; role: string; status: "assigned" | "confirmed" | "declined"; /** On this day only (a per-day add). */ dayOnly?: boolean; instructorId: string; roleTypeId: string; /** The course_staff row for course-level people; null for a per-day add. */ assignmentId: string | null }[];
   locations: string[];
   /** Equipment on the course, e.g. "Safety RIB 1", "Pico ×2". */
   equipment: string[];
@@ -378,7 +378,7 @@ export async function getRotaDays(
           coverageOk: cov?.ratio.ok ?? true,
           understaffed: cov?.ratio.understaffed ?? false,
           missingSafetyCover: cov?.ratio.missingSafetyCover ?? false,
-          staff: members.map((m) => ({ name: instructorName.get(m.instructorId) ?? "—", role: roleName.get(m.roleTypeId) ?? "Staff", status: m.status as "assigned" | "confirmed" | "declined", ...(m.source === "day" ? { dayOnly: true } : {}) })),
+          staff: members.map((m) => ({ name: instructorName.get(m.instructorId) ?? "—", role: roleName.get(m.roleTypeId) ?? "Staff", status: m.status as "assigned" | "confirmed" | "declined", instructorId: m.instructorId, roleTypeId: m.roleTypeId, assignmentId: m.assignmentId, ...(m.source === "day" ? { dayOnly: true } : {}) })),
           locations: locsByCourse.get(s.courseId) ?? [],
           equipment: equipByCourse.get(s.courseId) ?? [],
           students: course?.capacity ?? 0,

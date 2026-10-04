@@ -347,6 +347,23 @@ const SECTIONS: Section[] = [
     ],
   },
   {
+    id: "board",
+    icon: "🗂️",
+    label: "The roster board",
+    blurb: "Build and fix the week on one screen: courses by day, or people across days.",
+    blocks: [
+      { kind: "p", text: "The Roster page is where the week is built. “Courses by day” shows each day's sessions as cards with who's on them and the roles still open; the people list on the right shows everyone's availability for the slot you've clicked. Drag a person onto a session, or click a person and then a session. “People × days” turns it round: a row per instructor, a column per day and slot, free slots tinted green." },
+      { kind: "sub", text: "The side panel" },
+      { kind: "bullets", items: [
+        "Click any session to see who's on it (confirmed, unconfirmed, can't make it, this day only), the roles still open and the week's problems for that session.",
+        "Add someone: the picker shows their availability for that slot, whether they're cleared to roster, whether their qualifications cover the course type and, for under-18s, the young-worker hours result. On a multi-day course choose “This day only” or “Whole course”.",
+        "Remove, or on a multi-day course “skip this day”. A block (Busy, clash, cert, qualification) can be overridden with a note, which is recorded.",
+        "“Print view” keeps the three printable templates, the PDF and the emergency sheet.",
+      ] },
+      { kind: "tip", text: "Green dot = Free, amber = Maybe, red = Busy, faint red = hasn't answered (counts as Busy), grey = not asked yet (beyond the availability window)." },
+    ],
+  },
+  {
     id: "rostering",
     icon: "✅",
     label: "Rostering & assigning",

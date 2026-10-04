@@ -10,16 +10,22 @@ import { parseWelfareSettings } from "@/lib/services/welfare";
 import { can } from "@/lib/auth/rbac";
 import { availabilityHorizon } from "@/lib/services/availability";
 import { findProblems, problemLabel } from "@/lib/services/problems";
+import { getBoard } from "@/lib/services/board";
+import { RosterBoard } from "@/components/office/RosterBoard";
 
 export const dynamic = "force-dynamic";
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 
-export default async function RotaPage({ searchParams }: { searchParams: Promise<{ week?: string }> }) {
+export default async function RotaPage({ searchParams }: { searchParams: Promise<{ week?: string; view?: string }> }) {
   const { ctx, repos, organisation } = await requireTenant({ permission: "rota.view" });
   const thisMonday = weekStart(new Date());
   const sp = await searchParams;
   const monday = typeof sp.week === "string" && ISO.test(sp.week) ? weekStart(new Date(`${sp.week}T00:00:00Z`)) : thisMonday;
+  const canEdit = can(ctx, "roster.edit");
+  // The board is the roster (view and edit); the print templates stay one click away.
+  const view: "board" | "print" = sp.view === "print" || !canEdit ? "print" : "board";
+  const board = view === "board" ? await getBoard(repos, ctx, monday) : null;
   const [rota, published, settingsRows, problems] = await Promise.all([getWeekRota(repos, ctx, monday), publishedWeeks(repos, ctx), repos.tenant.orgSettings.list(ctx), findProblems(repos, ctx, { from: monday, to: addDays(monday, 7) })]);
   const flags: Record<string, string[]> = Object.fromEntries(Object.entries(problems.bySession).map(([id, ps]) => [id, ps.map((p) => `${p.instructorName ? `${p.instructorName}: ` : ""}${problemLabel(p.kind)} (${p.detail})`)]));
   const rotaTemplate = parseRotaTemplate(settingsRows[0]?.rotaTemplate);
@@ -44,8 +50,14 @@ export default async function RotaPage({ searchParams }: { searchParams: Promise
           <p className="text-sm text-slate-500">{organisation.name} · {range} · {total} session{total === 1 ? "" : "s"}</p>
         </div>
         <div className="flex items-center gap-2 print:hidden">
-          <Link href={`/office/rota?week=${addDays(monday, -7)}`} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-navy hover:bg-slate-50">← Prev</Link>
-          <Link href={`/office/rota?week=${addDays(monday, 7)}`} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-navy hover:bg-slate-50">Next →</Link>
+          <Link href={`/office/rota?week=${addDays(monday, -7)}${view === "print" ? "&view=print" : ""}`} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-navy hover:bg-slate-50">← Prev</Link>
+          <Link href={`/office/rota?week=${addDays(monday, 7)}${view === "print" ? "&view=print" : ""}`} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-navy hover:bg-slate-50">Next →</Link>
+          {canEdit ? (
+            <span className="flex rounded-lg border border-slate-200 p-0.5 text-xs">
+              <Link href={`/office/rota?week=${monday}`} className={`rounded-md px-2.5 py-1 font-semibold ${view === "board" ? "bg-navy text-white" : "text-slate-500 hover:text-navy"}`}>Board</Link>
+              <Link href={`/office/rota?week=${monday}&view=print`} className={`rounded-md px-2.5 py-1 font-semibold ${view === "print" ? "bg-navy text-white" : "text-slate-500 hover:text-navy"}`}>Print view</Link>
+            </span>
+          ) : null}
           <Link href="/office/rota/emergency" className="rounded-lg border border-port/40 px-3 py-1.5 text-sm font-medium text-port hover:bg-port/5">Emergency sheet</Link>
           <a href="/learn?topic=roster" target="_blank" rel="noreferrer" className="text-sm font-medium text-teal hover:underline">📖 Guide</a>
           <RotaDownload weekStart={monday} today={new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date())} defaultRange={rotaTemplate.range} />
@@ -61,7 +73,7 @@ export default async function RotaPage({ searchParams }: { searchParams: Promise
         </p>
       ) : null}
 
-      {problems.problems.length > 0 ? (
+      {view === "print" && problems.problems.length > 0 ? (
         <details className="mb-4 rounded-card border border-port/30 bg-port/5 px-4 py-2 text-sm print:hidden" open={problems.blocks > 0}>
           <summary className="cursor-pointer font-semibold text-navy">⚠ {problems.problems.length} problem{problems.problems.length === 1 ? "" : "s"} this week{problems.blocks ? ` (${problems.blocks} blocking)` : ""}</summary>
           <ul className="mt-2 space-y-1 text-xs text-slate-700">
@@ -74,7 +86,7 @@ export default async function RotaPage({ searchParams }: { searchParams: Promise
           </ul>
         </details>
       ) : null}
-      <RotaView rota={rota} welfareOfficers={welfare.officers} canEditWelfare={can(ctx, "roster.edit")} problems={flags} />
+      {board ? <RosterBoard data={board} canEdit={canEdit} /> : <RotaView rota={rota} welfareOfficers={welfare.officers} canEditWelfare={canEdit} problems={flags} />}
       <p className="mt-4 text-center text-xs text-slate-400 print:mt-2">Generated from ActivityRoster · {new Date().toLocaleDateString("en-GB")}</p>
       <p className="mx-auto mt-2 max-w-2xl text-center text-[11px] leading-snug text-slate-400">
         Under-18s on this roster were checked against the published working-time rules for {organisation.name}&rsquo;s jurisdiction when they were assigned; any override is recorded in the change log.

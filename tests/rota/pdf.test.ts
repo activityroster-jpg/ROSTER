@@ -11,7 +11,7 @@ function day(date: string, n: number): RotaDay {
     sessionId: `${date}-${i}`, courseId: `c${i}`, slot: (i === 0 ? "AM" : "PM") as "AM" | "PM", startAt: base + i * 4 * H, endAt: base + (i * 4 + 3) * H,
     courseName: i % 2 ? "RYA Youth Stage 2 – dinghy sailing for juniors with a long name" : "Powerboat Level 2", courseTypeName: "x", audience: "all" as const, status: "scheduled",
     coverageOk: true, understaffed: false, missingSafetyCover: false,
-    staff: [{ name: "Sam Jones", role: "Senior Instructor", status: "confirmed" as const }, { name: "Sam Patel", role: "Instructor", status: "assigned" as const }, { name: "Alex Brown", role: "Safety Boat", status: "declined" as const }],
+    staff: [{ name: "Sam Jones", role: "Senior Instructor", status: "confirmed" as const, instructorId: "i1", roleTypeId: "r1", assignmentId: "a1" }, { name: "Sam Patel", role: "Instructor", status: "assigned" as const, instructorId: "i2", roleTypeId: "r1", assignmentId: "a2" }, { name: "Alex Brown", role: "Safety Boat", status: "declined" as const, instructorId: "i3", roleTypeId: "r1", assignmentId: "a3" }],
     locations: ["Main lake", "Classroom 1"], equipment: ["Safety RIB 1", "Pico ×4"], students: 6,
   }));
   return { date, label: new Date(`${date}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short", timeZone: "UTC" }), sessions };
