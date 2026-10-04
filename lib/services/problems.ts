@@ -12,6 +12,7 @@ import {
   declinedProblems,
   doubleBookings,
   equipmentProblems,
+  equipmentShortfalls,
   perAssignmentProblems,
   sortProblems,
   type Problem,
@@ -68,7 +69,7 @@ export async function findProblems(repos: Repositories, ctx: AnyTenantContext, o
   const from = opts.from ?? todayIso(settings?.timezone ?? undefined);
   const to = opts.to ?? addDays(from, 56);
 
-  const [allSessions, courseRows, courseTypes, assignmentRows, instructorRows, availRows, complianceTypes, complianceItems, roleTypes, courseEquipment, equipment, teaching, qualifications] = await Promise.all([
+  const [allSessions, courseRows, courseTypes, assignmentRows, instructorRows, availRows, complianceTypes, complianceItems, roleTypes, courseEquipment, equipment, teaching, qualifications, equipmentTypes] = await Promise.all([
     t.courseSession.list(ctx).then(liveSessions),
     t.course.list(ctx),
     t.courseType.list(ctx),
@@ -82,6 +83,7 @@ export async function findProblems(repos: Repositories, ctx: AnyTenantContext, o
     t.equipment.list(ctx),
     getTeachingMatrix(repos, ctx),
     t.qualification.list(ctx),
+    t.equipmentType.list(ctx),
   ]);
 
   const cancelled = new Set(courseRows.filter((c) => c.cancelledAt || c.status === "cancelled").map((c) => c.id));
@@ -183,6 +185,15 @@ export async function findProblems(repos: Repositories, ctx: AnyTenantContext, o
   if (!opts.instructorId) {
     const units = new Map(equipment.map((e) => [e.id, { name: e.identifier ? `${e.name} (${e.identifier})` : e.name, status: e.status }]));
     problems.push(...equipmentProblems(sessions, courseEquipment, units, courses));
+    if (settings?.checkEquipmentQuantities ?? true) {
+      problems.push(...equipmentShortfalls(
+        sessions,
+        courseEquipment,
+        new Map(equipment.map((e) => [e.id, e.equipmentTypeId])),
+        new Map(equipmentTypes.map((et) => [et.id, { name: et.name, quantity: et.quantity ?? null }])),
+        courses,
+      ));
+    }
   }
 
   let list = sortProblems(problems);

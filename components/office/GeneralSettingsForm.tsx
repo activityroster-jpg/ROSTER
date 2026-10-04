@@ -18,6 +18,7 @@ export function GeneralSettingsForm({
   enforceRatioChecks,
   enforceConflictChecks,
   enforceAvailabilityChecks,
+  checkEquipmentQuantities = true,
   privacyNoticeUrl = "",
   dailyDigestEnabled = false,
   dailyDigestHour = 6,
@@ -35,6 +36,7 @@ export function GeneralSettingsForm({
   enforceRatioChecks: boolean;
   enforceConflictChecks: boolean;
   enforceAvailabilityChecks: boolean;
+  checkEquipmentQuantities?: boolean;
   privacyNoticeUrl?: string;
   dailyDigestEnabled?: boolean;
   dailyDigestHour?: number;
@@ -165,6 +167,10 @@ export function GeneralSettingsForm({
           <label className="flex items-start gap-2 text-sm text-slate-600">
             <input type="checkbox" name="enforceAvailabilityChecks" defaultChecked={enforceAvailabilityChecks} className="mt-0.5 h-4 w-4 rounded border-slate-300" />
             <span>Don&apos;t roster someone who is <strong>Busy</strong> for that slot, including anyone who hasn&apos;t marked it Free yet <span className="text-slate-400">(on by default; override allowed)</span></span>
+          </label>
+          <label className="flex items-start gap-2 text-sm text-slate-600">
+            <input type="checkbox" name="checkEquipmentQuantities" defaultChecked={checkEquipmentQuantities} className="mt-0.5 h-4 w-4 rounded border-slate-300" />
+            <span>Flag a day when the courses running need more of an equipment type than you own <span className="text-slate-400">(uses the quantity on each equipment type; on by default)</span></span>
           </label>
         </div>
       </fieldset>

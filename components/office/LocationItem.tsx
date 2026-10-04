@@ -1,22 +1,39 @@
 "use client";
 
-import { useActionState } from "react";
-import { setLocationActiveAction, type ActionState } from "@/app/(app)/office/locations/actions";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import { deleteOrRetireLocationAction, setLocationActiveAction } from "@/app/(app)/office/locations/actions";
 
-const initial: ActionState = { ok: false };
-
-export function LocationItem({ id, name, active }: { id: string; name: string; active: boolean }) {
-  const [, action, pending] = useActionState(setLocationActiveAction, initial);
+/**
+ * One location: delete it when no course has ever used it, otherwise retire it
+ * (it keeps rendering on old courses). Retired ones offer Reactivate.
+ */
+export function LocationItem({ id, name, active, referenced }: { id: string; name: string; active: boolean; referenced: boolean }) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const [msg, setMsg] = useState<string | null>(null);
+  const remove = () => {
+    const q = referenced ? `Retire "${name}"? Courses that used it keep showing it; it won't be offered for new ones.` : `Delete "${name}"? Nothing has used it, so it goes for good.`;
+    if (!confirm(q)) return;
+    start(async () => { const r = await deleteOrRetireLocationAction(id); setMsg(r.ok ? r.message ?? null : r.error ?? "Failed"); router.refresh(); });
+  };
+  const reactivate = () => start(async () => {
+    const fd = new FormData(); fd.set("id", id); fd.set("active", "true");
+    const r = await setLocationActiveAction({ ok: false }, fd);
+    if (!r.ok) setMsg(r.error ?? "Failed");
+    router.refresh();
+  });
   return (
     <li className="flex items-center justify-between gap-2 py-1">
       <span className={active ? "text-sm text-slate-700" : "text-sm text-slate-400 line-through"}>{name}</span>
-      <form action={action}>
-        <input type="hidden" name="id" value={id} />
-        <input type="hidden" name="active" value={active ? "false" : "true"} />
-        <button disabled={pending} className="text-xs text-slate-400 hover:text-navy disabled:opacity-50">
-          {active ? "Deactivate" : "Reactivate"}
-        </button>
-      </form>
+      <span className="flex items-center gap-2">
+        {msg ? <span className="text-xs text-slate-400">{msg}</span> : null}
+        {active ? (
+          <button type="button" disabled={pending} onClick={remove} className="text-xs text-slate-400 hover:text-port disabled:opacity-50">{referenced ? "Retire" : "Delete"}</button>
+        ) : (
+          <button type="button" disabled={pending} onClick={reactivate} className="text-xs font-medium text-teal hover:underline disabled:opacity-50">Reactivate</button>
+        )}
+      </span>
     </li>
   );
 }

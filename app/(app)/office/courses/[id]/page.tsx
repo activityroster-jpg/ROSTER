@@ -11,6 +11,12 @@ import { SessionManager, type SessionRow } from "@/components/office/SessionMana
 import { canDeleteCourse } from "@/lib/services/cancel";
 import { AssignStaffForm } from "@/components/office/AssignStaffForm";
 import { RemoveStaffButton } from "@/components/office/RemoveStaffButton";
+import { StaffingPanel } from "@/components/office/StaffingPanel";
+import { CourseResources } from "@/components/office/CourseResources";
+import { getCourseResources, staffingViewFrom } from "@/lib/services/course-resources";
+import { hasFeature } from "@/lib/features";
+import { getTeachingMatrix } from "@/lib/services/teaching";
+import { qualificationGap } from "@/lib/services/problems";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +34,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
   const course = await repos.tenant.course.findById(ctx, id);
   if (!course) notFound();
 
-  const [courseTypes, sessions, assignments, roles, instructors, staffFit, settings] = await Promise.all([
+  const [courseTypes, sessions, assignments, roles, instructors, staffFit, settings, requirements, locations, units, equipmentTypes, resources, teaching, quals] = await Promise.all([
     repos.tenant.courseType.list(ctx),
     repos.tenant.courseSession.list(ctx, eq(courseSessionTable.courseId, id)),
     repos.tenant.courseStaff.list(ctx, eq(courseStaffTable.courseId, id)),
@@ -36,9 +42,19 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
     repos.tenant.instructor.list(ctx),
     listStaffWithFit(repos, ctx),
     repos.tenant.orgSettings.list(ctx),
+    repos.tenant.courseRoleRequirement.list(ctx),
+    repos.tenant.location.list(ctx),
+    repos.tenant.equipment.list(ctx),
+    repos.tenant.equipmentType.list(ctx),
+    getCourseResources(repos, ctx, id),
+    getTeachingMatrix(repos, ctx),
+    repos.tenant.qualification.list(ctx),
   ]);
 
   const ct = courseTypes.find((c) => c.id === course.courseTypeId);
+  const staffing = staffingViewFrom(course, ct, roles, requirements.filter((r) => r.courseId === id), assignments);
+  const equipmentOn = hasFeature(settings[0]?.enabledFeatures, "equipment");
+  const holdsAny = new Set(quals.map((q) => q.instructorId));
   const slotStyle = (settings[0]?.slotStyle ?? "slots") as "slots" | "times";
   const nameById = new Map(instructors.map((i) => [i.id, i.name]));
   const roleName = new Map(roles.map((r) => [r.id, r.name]));
@@ -47,7 +63,8 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
   const availForCourse = (await getCourseAvailabilityStates(repos, ctx)).get(id);
   const instructorOptions = instructors.filter((i) => i.status === "active").map((i) => {
     const f = fitObjById.get(i.id);
-    return { id: i.id, name: i.name, fit: licenceOn ? (f?.fit ?? true) : true, reason: licenceOn && f ? fitReason(f) : "", avail: availForCourse?.get(i.id) ?? "none" as const };
+    const gap = qualificationGap(teaching.get(i.id) ?? [], holdsAny.has(i.id), course.courseTypeId);
+    return { id: i.id, name: i.name, fit: licenceOn ? (f?.fit ?? true) : true, reason: licenceOn && f ? fitReason(f) : "", avail: availForCourse?.get(i.id) ?? "none" as const, qualified: gap.known ? gap.qualified : null };
   });
   const activeRoles = roles.filter((r) => r.active).map((r) => ({ id: r.id, name: r.name }));
   const aud = AUD[ct?.audience ?? "all"]!;
@@ -69,7 +86,26 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
       </div>
       <p className="mb-6 -mt-4 text-sm text-slate-500">{ct?.name}{ct?.scheme ? ` · ${ct.scheme}` : ""}</p>
 
-      <Card className="mb-6"><h2 className="mb-3 font-semibold text-navy">Manage</h2><CourseManage id={course.id} name={course.name ?? ct?.name ?? ""} status={course.status} students={course.capacity} liveSessions={liveCount} staffCount={staffCount} canDelete={deletable.ok} deleteBlockedBecause={deletable.ok ? null : deletable.reason} cancelReason={course.cancelReason} /></Card>
+      <Card className="mb-6"><h2 className="mb-3 font-semibold text-navy">Manage</h2><CourseManage id={course.id} name={course.name ?? ct?.name ?? ""} status={course.status} liveSessions={liveCount} staffCount={staffCount} canDelete={deletable.ok} deleteBlockedBecause={deletable.ok ? null : deletable.reason} cancelReason={course.cancelReason} /></Card>
+
+      <Card className="mb-6">
+        <h2 className="mb-1 font-semibold text-navy">Staffing</h2>
+        <p className="mb-3 text-xs text-slate-500">Students booked, what the RYA ratio implies, and the roles you want filled. The number of staff needed follows from the roles.</p>
+        <StaffingPanel courseId={course.id} staffing={staffing} />
+      </Card>
+
+      <Card className="mb-6">
+        <h2 className="mb-1 font-semibold text-navy">Where &amp; what</h2>
+        <p className="mb-3 text-xs text-slate-500">Locations and equipment can be changed any time; clashes and units in maintenance show on the problems list.</p>
+        <CourseResources
+          courseId={course.id}
+          locations={locations.map((l) => ({ id: l.id, name: l.name, active: Boolean(l.active) })).sort((a, b) => a.name.localeCompare(b.name))}
+          units={units.map((u) => ({ id: u.id, name: u.identifier ? `${u.name} (${u.identifier})` : u.name, typeId: u.equipmentTypeId, status: u.status })).sort((a, b) => a.name.localeCompare(b.name))}
+          types={equipmentTypes.map((t) => ({ id: t.id, name: t.name, quantity: t.quantity ?? null, inventoryTracked: Boolean(t.inventoryTracked), active: Boolean(t.active) })).sort((a, b) => a.name.localeCompare(b.name))}
+          initial={resources}
+          showEquipment={equipmentOn}
+        />
+      </Card>
 
       <Card className="mb-6">
         <h2 className="mb-1 font-semibold text-navy">Sessions</h2>

@@ -1,0 +1,1 @@
+ALTER TABLE `org_settings` ADD `check_equipment_quantities` integer DEFAULT true NOT NULL;

@@ -12,11 +12,15 @@ export const dynamic = "force-dynamic";
 
 export default async function LocationsPage() {
   const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
-  const [locations, types, settings] = await Promise.all([
+  const [allLocations, types, settings, courseLocations] = await Promise.all([
     repos.tenant.location.list(ctx),
     repos.tenant.locationType.list(ctx),
     repos.tenant.orgSettings.list(ctx),
+    repos.tenant.courseLocation.list(ctx),
   ]);
+  const referenced = new Set(courseLocations.map((cl) => cl.locationId));
+  const locations = allLocations.filter((l) => l.active);
+  const retiredLocations = allLocations.filter((l) => !l.active).sort((a, b) => a.name.localeCompare(b.name));
   const activeTypes = types.filter((t) => t.active).map((t) => ({ id: t.id, name: t.name }));
   const retiredTypes = types.filter((t) => !t.active).map((t) => ({ id: t.id, name: t.name }));
   const locationsEnabled = hasFeature(settings[0]?.enabledFeatures, "locations") || hasFeature(settings[0]?.enabledFeatures, "operatingAreas");
@@ -78,7 +82,7 @@ export default async function LocationsPage() {
               ) : (
                 <ul className="divide-y divide-slate-100">
                   {box.items.map((l) => (
-                    <LocationItem key={l.id} id={l.id} name={l.name} active={Boolean(l.active)} />
+                    <LocationItem key={l.id} id={l.id} name={l.name} active={Boolean(l.active)} referenced={referenced.has(l.id)} />
                   ))}
                 </ul>
               )}
@@ -86,6 +90,15 @@ export default async function LocationsPage() {
           ))}
         </div>
       )}
+
+      {retiredLocations.length > 0 ? (
+        <details className="mt-6 rounded-card border border-slate-200 bg-white px-4 py-3">
+          <summary className="cursor-pointer text-sm font-semibold text-navy">Retired locations <span className="font-normal text-slate-400">({retiredLocations.length}) · still shown on the courses that used them</span></summary>
+          <ul className="mt-2 divide-y divide-slate-100">
+            {retiredLocations.map((l) => <LocationItem key={l.id} id={l.id} name={l.name} active={false} referenced={referenced.has(l.id)} />)}
+          </ul>
+        </details>
+      ) : null}
 
       {retiredTypes.length > 0 ? (
         <Card className="mt-6">

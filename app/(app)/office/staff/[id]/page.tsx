@@ -14,6 +14,7 @@ import { DocumentManager, type DocItem } from "@/components/DocumentManager";
 import { InviteInstructorButton } from "@/components/office/InviteInstructorButton";
 import { Card, StatusPill } from "@/components/ui";
 import { EditInstructorForm } from "@/components/office/EditInstructorForm";
+import { instructorReferences } from "@/lib/services/retire";
 import { PayRateForm } from "@/components/office/PayRateForm";
 import { listPayRates } from "@/lib/services/pay-rates";
 import { hasFeature } from "@/lib/features";
@@ -75,7 +76,7 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
         </div>
       </div>
       {scheduled ? <RetentionBanner instructorId={instructor.id} deleteOn={scheduled.deleteOn.toISOString()} months={retention!.policy.staffMonths} /> : null}
-      {canEdit ? <div className="mb-6"><EditInstructorForm instructor={{ id: instructor.id, name: instructor.name, email: instructor.email, phone: instructor.phone, employmentType: instructor.employmentType, status: instructor.status, dateOfBirth: instructor.dateOfBirth }} /></div> : null}
+      {canEdit ? <div className="mb-6"><EditInstructorForm instructor={{ id: instructor.id, name: instructor.name, email: instructor.email, phone: instructor.phone, employmentType: instructor.employmentType, status: instructor.status, dateOfBirth: instructor.dateOfBirth }} canDelete={(await instructorReferences(repos, ctx, instructor.id)).length === 0} /></div> : null}
 
       <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
         <div className="space-y-6">

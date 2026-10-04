@@ -435,6 +435,13 @@
       "when": 1791137923577,
       "tag": "0061_availability_keys_notes",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "6",
+      "when": 1791139475513,
+      "tag": "0062_equipment_quantity_check",
+      "breakpoints": true
     }
   ]
 }

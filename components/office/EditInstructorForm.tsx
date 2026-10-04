@@ -2,10 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { setInstructorStatusAction, updateInstructorAction } from "@/app/(app)/office/staff/actions";
+import { deleteInstructorAction, setInstructorStatusAction, updateInstructorAction } from "@/app/(app)/office/staff/actions";
 
 /** Edit an instructor's basics, and mark them as having left (or bring them back). */
-export function EditInstructorForm({ instructor }: { instructor: { id: string; name: string; email: string | null; phone: string | null; employmentType: string; status: string; dateOfBirth?: string | null } }) {
+export function EditInstructorForm({ instructor, canDelete = false }: { instructor: { id: string; name: string; email: string | null; phone: string | null; employmentType: string; status: string; dateOfBirth?: string | null }; /** True when nothing (roster, pay, clock, leave) has ever referenced them. */ canDelete?: boolean }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [open, setOpen] = useState(false);
@@ -28,6 +28,10 @@ export function EditInstructorForm({ instructor }: { instructor: { id: string; n
       : `Bring ${instructor.name} back? They can be rostered again and get their app access back.`;
     if (!confirm(q)) return;
     start(async () => { const r = await setInstructorStatusAction(instructor.id, status); setMsg(r.ok ? r.message ?? "Done" : r.error ?? "Could not update"); router.refresh(); });
+  };
+  const del = () => {
+    if (!confirm(`Delete ${instructor.name}? They were never rostered or paid here, so their profile, certs and app access go for good.`)) return;
+    start(async () => { const r = await deleteInstructorAction(instructor.id); if (r.ok) router.push("/office/staff"); else setMsg(r.error ?? "Could not delete"); });
   };
   const field = "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal";
 
@@ -61,6 +65,7 @@ export function EditInstructorForm({ instructor }: { instructor: { id: string; n
           ) : (
             <button type="button" disabled={pending} onClick={() => setStatus("inactive")} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:border-port hover:text-port disabled:opacity-50">Mark as left</button>
           )}
+          {canDelete ? <button type="button" disabled={pending} onClick={del} title="Nothing has ever referenced this person, so they can be removed outright" className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:border-port hover:text-port disabled:opacity-50">Delete</button> : null}
           {msg ? <span className="text-xs text-slate-500">{msg}</span> : null}
         </>
       )}

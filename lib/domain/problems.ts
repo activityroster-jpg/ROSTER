@@ -24,7 +24,8 @@ export type ProblemKind =
   | "unstaffed"
   | "no-safety-cover"
   | "equipment-clash"
-  | "equipment-maintenance";
+  | "equipment-maintenance"
+  | "equipment-short";
 
 export type ProblemSeverity = "block" | "warn";
 
@@ -83,6 +84,7 @@ const KIND_LABEL: Record<ProblemKind, string> = {
   "no-safety-cover": "No safety cover",
   "equipment-clash": "Equipment on two courses at once",
   "equipment-maintenance": "Equipment in maintenance",
+  "equipment-short": "Not enough equipment",
 };
 export const problemLabel = (kind: ProblemKind): string => KIND_LABEL[kind];
 
@@ -229,6 +231,58 @@ export function equipmentProblems(
     const first = sa.startAt <= sb.startAt ? sa : sb;
     const other = first === sa ? sb : sa;
     out.push({ kind: "equipment-clash", severity: "block", date: first.date, slot: first.slot, courseId: first.courseId, courseName: courses.get(first.courseId)?.name ?? "Course", sessionId: first.id, otherCourseId: other.courseId, instructorId: null, instructorName: null, detail: `${units.get(c.resourceId)?.name ?? "A unit"} is also on ${courses.get(other.courseId)?.name ?? "another course"} at the same time` });
+  }
+  return out;
+}
+
+/**
+ * Equipment quantities (audit Part E, decision 9): for every date and slot, the
+ * units of each type the courses running then need (bulk lines by quantity,
+ * tracked units one each) against how many the centre owns. Types with no
+ * quantity recorded are never checked. One problem per type per date/slot,
+ * attached to the first course that needs it.
+ */
+export function equipmentShortfalls(
+  sessions: readonly ProblemSession[],
+  courseEquipment: readonly { courseId: string; equipmentId: string | null; equipmentTypeId: string | null; quantity: number }[],
+  unitType: ReadonlyMap<string, string>,
+  types: ReadonlyMap<string, { name: string; quantity: number | null }>,
+  courses: ReadonlyMap<string, ProblemCourse>,
+): Problem[] {
+  // Demand per course per type.
+  const demand = new Map<string, Map<string, number>>();
+  for (const ce of courseEquipment) {
+    const typeId = ce.equipmentId ? unitType.get(ce.equipmentId) : ce.equipmentTypeId;
+    if (!typeId) continue;
+    const per = demand.get(ce.courseId) ?? new Map<string, number>();
+    per.set(typeId, (per.get(typeId) ?? 0) + (ce.equipmentId ? 1 : Math.max(1, ce.quantity)));
+    demand.set(ce.courseId, per);
+  }
+  // Sum per date|slot|type across the courses running then (one session per course per slot counts once).
+  const slots = new Map<string, { date: string; slot: string; perType: Map<string, { need: number; first: ProblemSession }> }>();
+  const seenCourseSlot = new Set<string>();
+  for (const s of [...sessions].sort((a, b) => a.date.localeCompare(b.date) || a.startAt - b.startAt)) {
+    const per = demand.get(s.courseId);
+    if (!per) continue;
+    const csKey = `${s.courseId}|${s.date}|${s.slot}`;
+    if (seenCourseSlot.has(csKey)) continue;
+    seenCourseSlot.add(csKey);
+    const key = `${s.date}|${s.slot}`;
+    const bucket = slots.get(key) ?? { date: s.date, slot: s.slot, perType: new Map() };
+    for (const [typeId, n] of per) {
+      const cur = bucket.perType.get(typeId);
+      if (cur) cur.need += n; else bucket.perType.set(typeId, { need: n, first: s });
+    }
+    slots.set(key, bucket);
+  }
+  const out: Problem[] = [];
+  for (const b of slots.values()) {
+    for (const [typeId, { need, first }] of b.perType) {
+      const type = types.get(typeId);
+      if (!type || type.quantity === null || type.quantity === undefined) continue;
+      if (need <= type.quantity) continue;
+      out.push({ kind: "equipment-short", severity: "warn", date: b.date, slot: b.slot, courseId: first.courseId, courseName: courses.get(first.courseId)?.name ?? "Course", sessionId: first.id, instructorId: null, instructorName: null, detail: `Courses that ${b.slot} need ${need} × ${type.name}; you have ${type.quantity}` });
+    }
   }
   return out;
 }

@@ -5,7 +5,6 @@ import { courseAvailLabel, type CourseAvailState } from "@/lib/domain/availabili
 import { useRouter } from "next/navigation";
 import {
   renameCourseAction,
-  setStaffRequiredAction,
   updateSessionTimesAction,
   removeStaffAction,
   assignStaffAction,
@@ -16,6 +15,8 @@ export interface CardAssigned { id: string; instructorName: string; roleName: st
 export interface CardInstructor { id: string; name: string; fit: boolean; reason?: string; avail?: string; qualified?: boolean | null }
 export interface CardRole { id: string; name: string }
 export interface CardRatio { ok: boolean; understaffed: boolean; missingSafetyCover: boolean }
+import { StaffingPanel } from "./StaffingPanel";
+import type { StaffingView } from "@/lib/services/course-resources";
 
 const AUD: Record<string, { label: string; cls: string }> = {
   youth: { label: "Youth", cls: "bg-amber/15 text-amber" },
@@ -28,7 +29,7 @@ const fmtDate = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString
 const fmtTime = (ms: number) => new Date(ms).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
 
 export function CourseCard({
-  course, audience, sessions, assigned, instructors, roles, ratioOn, ratio, computedRequired, roleNeeds, shade, defaultOpen = false, onChanged,
+  course, audience, sessions, assigned, instructors, roles, ratioOn, ratio, computedRequired, roleNeeds, staffing, shade, defaultOpen = false, onChanged,
 }: {
   course: { id: string; name: string; courseTypeName: string; status: string; staffRequired: number | null };
   audience: string;
@@ -41,6 +42,7 @@ export function CourseCard({
   computedRequired?: number;
   /** Staff needed by role, e.g. 2× Instructor (1 filled). */
   roleNeeds?: { roleName: string; count: number; filled: number }[];
+  staffing?: StaffingView;
   /** Alternating day shade — true = tinted, false = plain white. */
   shade?: boolean;
   /** Start expanded (e.g. when opened from a calendar tile). */
@@ -63,6 +65,7 @@ export function CourseCard({
   const [s, setS] = useState(single ? hhmm(single.startMs) : "");
   const [e, setE] = useState(single ? hhmm(single.endMs) : "");
 
+  const [staffingOpen, setStaffingOpen] = useState(false);
   const [instr, setInstr] = useState("");
   const [role, setRole] = useState("");
   const [override, setOverride] = useState(false);
@@ -154,16 +157,11 @@ export function CourseCard({
           <a href={`/office/courses/${course.id}`} className="text-sm text-slate-600 hover:underline">{sessions.length} sessions · manage →</a>
         ))}
 
-        {open && (
-          <label className="flex items-center gap-1 text-xs text-slate-500" title="How many staff this course needs">
-            👥
-            <select value={course.staffRequired ?? ""} onChange={(ev) => run(() => setStaffRequiredAction(course.id, ev.target.value === "" ? null : Number(ev.target.value)))}
-              className="rounded border border-slate-300 py-1 pl-1 pr-5 text-xs outline-none focus:border-teal">
-              <option value="">auto</option>
-              {[...new Set([1, 2, 3, 4, 5, 6, 8, 10, ...(course.staffRequired ? [course.staffRequired] : [])])].sort((a, b) => a - b).map((n) => <option key={n} value={n}>{n} staff</option>)}
-            </select>
-          </label>
-        )}
+        {open && staffing ? (
+          <button type="button" onClick={(ev) => { ev.stopPropagation(); setStaffingOpen((v) => !v); }} title="Students, ratio and the roles needed" className="flex items-center gap-1 rounded border border-slate-300 px-1.5 py-0.5 text-xs text-slate-600 hover:bg-slate-50">
+            👥 {staffing.students} students · {staffing.lines.length ? staffing.lines.map((l) => `${l.count} ${l.roleName}`).join(", ") : `${staffing.required} needed (ratio)`} {staffingOpen ? "▾" : "▸"}
+          </button>
+        ) : null}
 
         {open && (() => {
           const required = course.staffRequired ?? computedRequired ?? null;
@@ -194,6 +192,8 @@ export function CourseCard({
           <a href={`/office/courses/${course.id}`} className="text-xs font-medium text-teal hover:underline">manage →</a>
         </span>
       </div>
+
+      {open && staffingOpen && staffing ? <div className="mt-2"><StaffingPanel courseId={course.id} staffing={staffing} compact onSaved={onChanged} /></div> : null}
 
       {/* Assigned staff + assign controls — revealed when the row is expanded. */}
       {open ? (

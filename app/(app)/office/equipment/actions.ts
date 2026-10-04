@@ -5,6 +5,8 @@ import { z } from "zod";
 import { requireTenant } from "@/lib/tenant/require";
 import { writeAudit } from "@/lib/services/audit";
 import { EQUIPMENT_STATUSES } from "@/lib/db/schema";
+import { deleteOrRetireEquipment, deleteOrRetireEquipmentType } from "@/lib/services/retire";
+import { idSchema } from "@/lib/validation/actions";
 
 export type ActionState = { ok: boolean; error?: string; message?: string };
 
@@ -71,6 +73,40 @@ export async function setEquipmentTypeActiveAction(id: string, active: boolean):
   await writeAudit(repos, ctx, { action: active ? "reactivate" : "deactivate", entity: "equipment_type", entityId: id });
   revalidatePath("/office/equipment");
   return { ok: true };
+}
+
+/** Available ↔ in maintenance for one unit (retiring goes through delete-or-retire). */
+export async function setEquipmentUnitStatusAction(id: string, status: string): Promise<ActionState> {
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
+  if (!idSchema.safeParse(id).success || !["available", "maintenance"].includes(status)) return { ok: false, error: "Invalid status" };
+  const updated = await repos.tenant.equipment.update(ctx, id, { status: status as "available" | "maintenance" });
+  if (!updated) return { ok: false, error: "Not found" };
+  await writeAudit(repos, ctx, { action: "update_status", entity: "equipment", entityId: id, after: { status } });
+  revalidatePath("/office/equipment");
+  revalidatePath("/office");
+  return { ok: true };
+}
+
+/** Delete a unit no course has ever used; otherwise retire it. */
+export async function deleteOrRetireEquipmentAction(id: string): Promise<ActionState> {
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
+  if (!idSchema.safeParse(id).success) return { ok: false, error: "Not found" };
+  const r = await deleteOrRetireEquipment(repos, ctx, id);
+  if (r.outcome === "not_found") return { ok: false, error: "Not found" };
+  revalidatePath("/office/equipment");
+  revalidatePath("/office/courses");
+  return { ok: true, message: r.outcome === "deleted" ? `${r.name} deleted` : `${r.name} retired (${r.because})` };
+}
+
+/** Delete an equipment type with no units, courses or course types pointing at it; otherwise retire it. */
+export async function deleteOrRetireEquipmentTypeAction(id: string): Promise<ActionState> {
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
+  if (!idSchema.safeParse(id).success) return { ok: false, error: "Not found" };
+  const r = await deleteOrRetireEquipmentType(repos, ctx, id);
+  if (r.outcome === "not_found") return { ok: false, error: "Not found" };
+  revalidatePath("/office/equipment");
+  revalidatePath("/office/settings");
+  return { ok: true, message: r.outcome === "deleted" ? `${r.name} deleted` : `${r.name} retired (${r.because})` };
 }
 
 /** Change an equipment item's status (available / maintenance / retired). */

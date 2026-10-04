@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireTenant } from "@/lib/tenant/require";
 import { writeAudit } from "@/lib/services/audit";
+import { deleteOrRetireLocation } from "@/lib/services/retire";
+import { idSchema } from "@/lib/validation/actions";
 
 export type ActionState = { ok: boolean; error?: string; message?: string };
 
@@ -63,6 +65,17 @@ export async function setLocationCategoryActiveAction(id: string, active: boolea
   await writeAudit(repos, ctx, { action: active ? "reactivate" : "deactivate", entity: "location_type", entityId: id });
   revalidatePath("/office/locations");
   return { ok: true };
+}
+
+/** Delete a location nothing has ever used; otherwise retire it so old courses keep rendering. */
+export async function deleteOrRetireLocationAction(id: string): Promise<ActionState> {
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
+  if (!idSchema.safeParse(id).success) return { ok: false, error: "Not found" };
+  const r = await deleteOrRetireLocation(repos, ctx, id);
+  if (r.outcome === "not_found") return { ok: false, error: "Not found" };
+  revalidatePath("/office/locations");
+  revalidatePath("/office/courses");
+  return { ok: true, message: r.outcome === "deleted" ? `${r.name} deleted` : `${r.name} retired (${r.because})` };
 }
 
 /** Deactivate/reactivate a location (deactivate-never-delete). */

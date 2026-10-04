@@ -2,13 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { cancelCourseAction, deleteCourseAction, renameCourseAction, restoreSessionAction, setCourseStatusAction, setCourseStudentsAction } from "@/app/(app)/office/courses/actions";
+import { cancelCourseAction, deleteCourseAction, renameCourseAction, restoreSessionAction, setCourseStatusAction } from "@/app/(app)/office/courses/actions";
 import { CancelPanel, type CancelChoice } from "./CancelPanel";
 
 const STATUSES = ["draft", "scheduled", "confirmed", "completed"];
 
-export function CourseManage({ id, name, status, students, liveSessions, staffCount, canDelete, deleteBlockedBecause, cancelReason }: {
-  id: string; name: string; status: string; students: number;
+export function CourseManage({ id, name, status, liveSessions, staffCount, canDelete, deleteBlockedBecause, cancelReason }: {
+  id: string; name: string; status: string;
   /** Sessions not yet cancelled. */
   liveSessions: number;
   /** People rostered (not declined): how many a cancellation tells. */
@@ -21,12 +21,10 @@ export function CourseManage({ id, name, status, students, liveSessions, staffCo
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
   const [nm, setNm] = useState(name);
-  const [st, setSt] = useState(String(students));
   const [cancelling, setCancelling] = useState(false);
   const cancelled = status === "cancelled";
 
   const rename = () => start(async () => { const r = await renameCourseAction(id, nm); setMsg(r.ok ? "Saved" : r.error ?? "Failed"); router.refresh(); });
-  const saveStudents = () => start(async () => { const r = await setCourseStudentsAction(id, Number(st)); setMsg(r.ok ? "Saved" : r.error ?? "Failed"); router.refresh(); });
   const setStatus = (s: string) => start(async () => { const r = await setCourseStatusAction(id, s); setMsg(r.ok ? null : r.error ?? "Failed"); router.refresh(); });
   const del = () => {
     if (!confirm("Delete this draft course and its sessions? Nobody is rostered on it. This can't be undone.")) return;
@@ -62,13 +60,6 @@ export function CourseManage({ id, name, status, students, liveSessions, staffCo
             {cancelled ? <option value="cancelled">cancelled</option> : null}
           </select>
           {!cancelled ? <span className="mt-1 block font-normal text-slate-400">To cancel, use the button below so everyone is told.</span> : null}
-        </label>
-        <label className="text-xs font-semibold text-slate-500">Students booked
-          <div className="mt-1 flex gap-2">
-            <input type="number" min={1} max={500} value={st} onChange={(e) => setSt(e.target.value)} className={`w-full ${field}`} />
-            <button onClick={saveStudents} disabled={pending || Number(st) === students} className="rounded-lg border border-slate-300 px-3 text-sm font-semibold text-navy hover:bg-slate-50 disabled:opacity-50">Save</button>
-          </div>
-          <span className="mt-1 block font-normal text-slate-400">Used for the instructor-to-student ratio check.</span>
         </label>
         <div className="sm:col-span-2 flex flex-wrap items-center justify-between gap-2">
           {msg ? <span className="text-sm text-slate-500">{msg}</span> : <span />}

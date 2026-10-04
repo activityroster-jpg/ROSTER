@@ -18,6 +18,8 @@ import { firstIssue, idSchema, studentsSchema } from "@/lib/validation/actions";
 import { eq } from "drizzle-orm";
 import { courseSession as courseSessionTable, courseStaff as courseStaffTable } from "@/lib/db/schema";
 import { problemsForCourse, problemsSuffix } from "@/lib/services/problems";
+import { setCourseEquipment, setCourseLocations, setCourseStaffing } from "@/lib/services/course-resources";
+import { courseEquipmentSchema, courseLocationsSchema, courseStaffingSchema } from "@/lib/validation/actions";
 
 export type ActionState = { ok: boolean; error?: string; message?: string };
 
@@ -243,16 +245,42 @@ export async function setCourseStudentsAction(courseId: string, students: number
   return { ok: true, message: "Saved" };
 }
 
-/** Set how many staff a course needs (0/blank clears back to the ratio default). */
-export async function setStaffRequiredAction(courseId: string, count: number | null): Promise<ActionState> {
+/** The staffing panel: students booked and the role lines; staff required is derived from the lines. */
+export async function setCourseStaffingAction(input: { courseId: string; students: number; roles: { roleTypeId: string; count: number }[] }): Promise<ActionState> {
   const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
-  const n = count == null || !Number.isFinite(count) || count < 0 ? null : Math.min(50, Math.round(count));
-  const updated = await repos.tenant.course.update(ctx, courseId, { staffRequired: n });
-  if (!updated) return { ok: false, error: "Course not found" };
-  await writeAudit(repos, ctx, { action: "set_staff_required", entity: "course", entityId: courseId, after: { staffRequired: n } });
+  const parsed = courseStaffingSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: firstIssue(parsed.error, "Check the staffing values") };
+  const r = await setCourseStaffing(repos, ctx, parsed.data.courseId, parsed.data);
+  if (!r.ok) return r;
   revalidatePath("/office/courses");
-  revalidatePath(`/office/courses/${courseId}`);
+  revalidatePath(`/office/courses/${parsed.data.courseId}`);
   revalidatePath("/office");
+  return { ok: true, message: "Saved" };
+}
+
+/** Replace a course's locations (editable after creation). */
+export async function setCourseLocationsAction(input: { courseId: string; locationIds: string[] }): Promise<ActionState> {
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
+  const parsed = courseLocationsSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: firstIssue(parsed.error, "Check the locations") };
+  const r = await setCourseLocations(repos, ctx, parsed.data.courseId, parsed.data.locationIds);
+  if (!r.ok) return r;
+  revalidatePath(`/office/courses/${parsed.data.courseId}`);
+  revalidatePath("/office/courses");
+  revalidatePath("/office/rota");
+  return { ok: true, message: "Saved" };
+}
+
+/** Replace a course's equipment: tracked units and bulk quantities (editable after creation). */
+export async function setCourseEquipmentAction(input: { courseId: string; unitIds: string[]; bulk: { equipmentTypeId: string; quantity: number }[] }): Promise<ActionState> {
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
+  const parsed = courseEquipmentSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: firstIssue(parsed.error, "Check the equipment") };
+  const r = await setCourseEquipment(repos, ctx, parsed.data.courseId, parsed.data);
+  if (!r.ok) return r;
+  revalidatePath(`/office/courses/${parsed.data.courseId}`);
+  revalidatePath("/office/courses");
+  revalidatePath("/office/rota");
   return { ok: true, message: "Saved" };
 }
 

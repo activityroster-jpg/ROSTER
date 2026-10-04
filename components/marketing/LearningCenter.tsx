@@ -91,6 +91,8 @@ const SECTIONS: Section[] = [
         "Open “More options” if you want to say who's needed (e.g. 2× Instructor and 1× Safety Boat) or tick the locations and equipment the course uses — all optional.",
         "Click “Create course”.",
       ] },
+      { kind: "sub", text: "Staffing: one panel" },
+      { kind: "p", text: "Each course has a single Staffing panel (on the course page, and under 👥 on the course card). Enter the students booked; it shows what the RYA ratio from the course type implies and can suggest the roles. Adjust the role lines (say, 2 × Instructor and 1 × Safety boat) and the number of staff needed follows from them. If the lines fall short of the ratio, the panel says so." },
       { kind: "sub", text: "Manage a course" },
       { kind: "bullets", items: [
         "Open a course to rename it, change its status (draft, scheduled, confirmed, completed, cancelled), set how many students are booked (this drives the ratio check), add or remove sessions, and assign instructors.",
@@ -415,8 +417,10 @@ const SECTIONS: Section[] = [
       { kind: "p", text: "If you switched on equipment tracking, the Equipment tab lets you record your fleet and kit by type — dinghies, keelboats, yachts, motor cruisers, coach/safety boats, SUPs and more." },
       { kind: "bullets", items: [
         "Manage your equipment types at the top of the Equipment tab — rename them, set how many of each you have (e.g. 12 Pico dinghies), and mark each as tracked or bulk.",
-        "Assign tracked units to a course; the platform flags if the same unit is booked on two overlapping sessions.",
-        "Bulk (untracked) kit doesn't conflict — use it for consumables and shared gear.",
+        "Attach tracked units or bulk quantities to a course when you create it, or later from the course page (“Where & what”).",
+        "The problems list flags a unit booked on two overlapping sessions, a unit in maintenance that is still on a course, and a day when the courses running need more of a type than you own (Settings → General switches that last check off).",
+        "Bulk (untracked) kit doesn't clash by unit; its quantities still count against what you own.",
+        "Delete removes a unit or type that nothing has ever used; anything a course used is retired instead and kept in a collapsed “Retired” section, still showing on old courses. The same rule applies to locations, course types and instructors.",
       ] },
       { kind: "tip", text: "Equipment isn't gated — if it's not switched on you'll see a notice on the page with a one-click option to turn it on." },
     ],

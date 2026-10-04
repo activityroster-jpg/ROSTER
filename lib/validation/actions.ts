@@ -35,6 +35,17 @@ export const availabilityNoteSchema = z.object({
   date: isoDateSchema,
   note: z.string().trim().max(140, "Keep the note under 140 characters"),
 });
+export const courseLocationsSchema = z.object({ courseId: idSchema, locationIds: z.array(idSchema).max(50) });
+export const courseEquipmentSchema = z.object({
+  courseId: idSchema,
+  unitIds: z.array(idSchema).max(200),
+  bulk: z.array(z.object({ equipmentTypeId: idSchema, quantity: z.number().int().min(0).max(1000) })).max(50),
+});
+export const courseStaffingSchema = z.object({
+  courseId: idSchema,
+  students: z.number().int().min(0).max(500),
+  roles: z.array(z.object({ roleTypeId: idSchema, count: z.number().int().min(0).max(50) })).max(20),
+});
 /** The office setting availability for a staff member: the instructor id comes from the client here, so it is checked. */
 export const availabilityForStaffSchema = availabilityEntrySchema.extend({ instructorId: idSchema });
 

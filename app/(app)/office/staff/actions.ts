@@ -12,6 +12,8 @@ import { requireTenant } from "@/lib/tenant/require";
 import { getAuth } from "@/lib/auth";
 import { dobSchema, protectedContactsSchema, instructorSchema, complianceItemSchema, qualificationSchema } from "@/lib/validation/entities";
 import { writeAudit } from "@/lib/services/audit";
+import { idSchema } from "@/lib/validation/actions";
+import { deleteInstructorIfUnreferenced } from "@/lib/services/retire";
 import { linkInstructorUser } from "@/lib/services/invite";
 import { toggleOnboarding } from "@/lib/services/hr";
 import { instructorCapState, capUpgradeMessage } from "@/lib/tenant/limits";
@@ -313,6 +315,18 @@ export async function updateInstructorAction(instructorId: string, input: { name
  * history and hours but drop out of every picker and lose app access (their
  * membership is suspended, never deleted).
  */
+/** Delete an instructor who was never rostered, paid, clocked or on leave; anyone else is marked as left instead. */
+export async function deleteInstructorAction(instructorId: string): Promise<ActionState> {
+  const { ctx, repos } = await requireTenant({ permission: "staff.edit" });
+  if (!idSchema.safeParse(instructorId).success) return { ok: false, error: "Not found" };
+  const r = await deleteInstructorIfUnreferenced(repos, ctx, instructorId);
+  if (r.outcome === "not_found") return { ok: false, error: "Not found" };
+  if (r.outcome === "retired") return { ok: false, error: `${r.name} has a record here (${r.because}), so they can't be deleted. Mark them as left instead; Data & privacy has the erasure tools.` };
+  revalidatePath("/office/staff");
+  revalidatePath("/office/courses");
+  return { ok: true, message: `${r.name} deleted` };
+}
+
 export async function setInstructorStatusAction(instructorId: string, status: "active" | "inactive"): Promise<ActionState> {
   const { ctx, repos, organisation } = await requireTenant({ permission: "staff.edit" });
   if (status !== "active" && status !== "inactive") return { ok: false, error: "Invalid status" };

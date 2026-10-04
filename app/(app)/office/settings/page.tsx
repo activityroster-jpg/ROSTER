@@ -83,6 +83,7 @@ export default async function SettingsPage() {
           enforceRatioChecks={Boolean(s?.enforceRatioChecks)}
           enforceConflictChecks={Boolean(s?.enforceConflictChecks)}
           enforceAvailabilityChecks={s?.enforceAvailabilityChecks ?? true}
+          checkEquipmentQuantities={s?.checkEquipmentQuantities ?? true}
         />
       </Card>
 

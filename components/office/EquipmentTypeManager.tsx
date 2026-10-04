@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { saveEquipmentTypeAction, setEquipmentTypeActiveAction, type EquipmentTypeInput } from "@/app/(app)/office/equipment/actions";
+import { deleteOrRetireEquipmentTypeAction, saveEquipmentTypeAction, setEquipmentTypeActiveAction, type EquipmentTypeInput } from "@/app/(app)/office/equipment/actions";
 
 export interface EquipmentTypeRow { id: string; name: string; quantity: number | null; inventoryTracked: boolean; active: boolean }
 
@@ -46,7 +46,7 @@ function Row({ row, onMsg }: { row: EquipmentTypeRow; onMsg: (m: { ok: boolean; 
       </td>
       <td className="whitespace-nowrap px-4 py-2 text-right">
         {dirty ? <button type="button" disabled={pending} onClick={() => run(() => saveEquipmentTypeAction(row.id, v))} className="mr-3 rounded bg-teal px-2.5 py-1 text-xs font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{pending ? "…" : "Save"}</button> : null}
-        <button type="button" disabled={pending} onClick={() => run(() => setEquipmentTypeActiveAction(row.id, false))} className="text-xs text-slate-400 hover:text-navy">Deactivate</button>
+        <button type="button" disabled={pending} onClick={() => { if (confirm(`Delete "${row.name}"? If any unit, course or course type still uses it, it is retired instead.`)) run(() => deleteOrRetireEquipmentTypeAction(row.id)); }} className="text-xs text-slate-400 hover:text-port">Delete</button>
       </td>
     </tr>
   );
@@ -67,7 +67,8 @@ export function EquipmentTypeManager({ rows }: { rows: EquipmentTypeRow[] }) {
       if (res.ok) { setNv(blank); router.refresh(); }
     });
 
-  const sorted = [...rows.filter((r) => r.active), ...rows.filter((r) => !r.active)];
+  const activeRows = rows.filter((r) => r.active);
+  const retiredRows = rows.filter((r) => !r.active);
 
   return (
     <div>
@@ -77,7 +78,7 @@ export function EquipmentTypeManager({ rows }: { rows: EquipmentTypeRow[] }) {
             <tr><th className="px-4 py-3">Type</th><th className="px-4 py-3">Quantity</th><th className="px-4 py-3">Tracking</th><th className="px-4 py-3"></th></tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {sorted.map((r) => <Row key={`${r.id}-${r.active}`} row={r} onMsg={setMsg} />)}
+            {activeRows.map((r) => <Row key={`${r.id}-${r.active}`} row={r} onMsg={setMsg} />)}
             <tr className="bg-teal/5">
               <td className="px-4 py-2"><input aria-label="New type name" value={nv.name} onChange={(e) => setNv({ ...nv, name: e.target.value })} placeholder="Add a type, e.g. Pico dinghy" className={`${cell} w-full min-w-[10rem]`} /></td>
               <td className="px-4 py-2"><input aria-label="New quantity" type="number" min={0} value={nv.quantity ?? ""} onChange={(e) => setNv({ ...nv, quantity: e.target.value })} placeholder="How many" className={`${cell} w-24`} /></td>
@@ -87,6 +88,12 @@ export function EquipmentTypeManager({ rows }: { rows: EquipmentTypeRow[] }) {
           </tbody>
         </table>
       </div>
+      {retiredRows.length > 0 ? (
+        <details className="mt-3 rounded-card border border-slate-200 bg-white">
+          <summary className="cursor-pointer px-4 py-2 text-sm font-semibold text-navy">Retired types <span className="font-normal text-slate-400">({retiredRows.length})</span></summary>
+          <table className="w-full min-w-[560px] text-left text-sm"><tbody className="divide-y divide-slate-100 border-t border-slate-100">{retiredRows.map((r) => <Row key={`${r.id}-${r.active}`} row={r} onMsg={setMsg} />)}</tbody></table>
+        </details>
+      ) : null}
       {msg ? <p role="status" className={`mt-2 text-sm ${msg.ok ? "text-starboard" : "text-port"}`}>{msg.text}</p> : null}
     </div>
   );

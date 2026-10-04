@@ -128,7 +128,7 @@ export function CourseTypeTable({ rows }: { rows: CourseTypeRow[] }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {[...active, ...retired].map((r) => <Row key={`${r.id}-${r.active}`} row={r} onMsg={setMsg} />)}
+            {active.map((r) => <Row key={`${r.id}-${r.active}`} row={r} onMsg={setMsg} />)}
             <tr className="bg-teal/5">
               <td className="px-4 py-2"><input aria-label="New course type name" value={nv.name} onChange={(e) => setNv({ ...nv, name: e.target.value })} placeholder="Add a course type…" className={`${cell} w-full min-w-[10rem]`} /></td>
               <td className="px-4 py-2"><input aria-label="New scheme" value={nv.scheme ?? ""} onChange={(e) => setNv({ ...nv, scheme: e.target.value })} placeholder="e.g. RYA Youth Sailing" className={`${cell} w-full min-w-[8rem]`} /></td>
@@ -146,6 +146,12 @@ export function CourseTypeTable({ rows }: { rows: CourseTypeRow[] }) {
           </tbody>
         </table>
       </div>
+      {retired.length > 0 ? (
+        <details className="mt-3 rounded-card border border-slate-200 bg-white">
+          <summary className="cursor-pointer px-4 py-2 text-sm font-semibold text-navy">Retired course types <span className="font-normal text-slate-400">({retired.length}) · old courses still show them</span></summary>
+          <table className="w-full min-w-[720px] text-left text-sm"><tbody className="divide-y divide-slate-100 border-t border-slate-100">{retired.map((r) => <Row key={`${r.id}-${r.active}`} row={r} onMsg={setMsg} />)}</tbody></table>
+        </details>
+      ) : null}
       {msg ? <p role="status" className={`mt-2 text-sm ${msg.ok ? "text-starboard" : "text-port"}`}>{msg.text}</p> : null}
     </div>
   );

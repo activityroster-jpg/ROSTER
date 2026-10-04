@@ -6,6 +6,7 @@ import { getCourseAvailabilityStates } from "@/lib/services/availability";
 import { liveSessions } from "@/lib/domain/sessions";
 import { getTeachingMatrix } from "@/lib/services/teaching";
 import { qualificationGap } from "@/lib/services/problems";
+import { staffingViewFrom, type StaffingView } from "@/lib/services/course-resources";
 
 /** Everything the editable CourseCard needs for one course (serialisable). */
 export interface CourseEditorData {
@@ -19,6 +20,7 @@ export interface CourseEditorData {
   ratio?: { ok: boolean; understaffed: boolean; missingSafetyCover: boolean };
   computedRequired?: number;
   roleNeeds?: RoleNeed[];
+  staffing: StaffingView;
 }
 
 /** One "staff needed" line on a course: how many of a role, and how many filled. */
@@ -127,6 +129,7 @@ export async function getCourseEditorData(
     roles: roles.filter((r) => r.active).map((r) => ({ id: r.id, name: r.name })),
     ratioOn,
     ratio: ratioOn ? { ok: ratio.ok, understaffed: ratio.understaffed, missingSafetyCover: ratio.missingSafetyCover } : undefined,
+    staffing: staffingViewFrom(course, ct, roles, requirements.filter((r) => r.courseId === course.id), mine),
     computedRequired: ratio.requiredStaff,
     roleNeeds: roleNeedsByCourse(
       requirements.filter((r) => r.courseId === course.id),

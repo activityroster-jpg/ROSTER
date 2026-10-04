@@ -123,6 +123,9 @@ export const orgSettings = sqliteTable("org_settings", {
   // When on (the default), rostering blocks an instructor who marked that slot
   // "Busy" in their availability (override allowed).
   enforceAvailabilityChecks: boolCol("enforce_availability_checks").default(true),
+  // When on (the default), the problems list flags a date/slot whose courses need
+  // more of an equipment type than the centre owns (types with a quantity set).
+  checkEquipmentQuantities: boolCol("check_equipment_quantities").default(true),
   // --- Time clock & pay source -----------------------------------------------
   // The clock is optional: off, instructors don't see the Clock tab and payroll
   // runs purely on the roster. paySource is the default for new payroll lines.

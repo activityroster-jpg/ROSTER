@@ -1,21 +1,27 @@
 import { requireTenant } from "@/lib/tenant/require";
-import { Card, StatusPill } from "@/components/ui";
+import { Card } from "@/components/ui";
 import { AddEquipmentForm } from "@/components/office/AddEquipmentForm";
 import { EquipmentTypeManager, type EquipmentTypeRow } from "@/components/office/EquipmentTypeManager";
 import { FeatureNotice } from "@/components/office/FeatureNotice";
 import { hasFeature } from "@/lib/features";
 import { GuideLink } from "@/components/GuideLink";
+import { EquipmentRow } from "@/components/office/EquipmentRow";
 
 export const dynamic = "force-dynamic";
 
 export default async function EquipmentPage() {
   const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
-  const [equipment, types, settings] = await Promise.all([
+  const [equipment, types, settings, courseEquipment] = await Promise.all([
     repos.tenant.equipment.list(ctx),
     repos.tenant.equipmentType.list(ctx),
     repos.tenant.orgSettings.list(ctx),
+    repos.tenant.courseEquipment.list(ctx),
   ]);
   const typeName = new Map(types.map((t) => [t.id, t.name]));
+  const referenced = new Set(courseEquipment.map((ce) => ce.equipmentId).filter((x): x is string => Boolean(x)));
+  const rowOf = (e: (typeof equipment)[number]) => ({ id: e.id, name: e.name, type: typeName.get(e.equipmentTypeId) ?? "—", identifier: e.identifier ?? null, status: e.status, referenced: referenced.has(e.id) });
+  const current = equipment.filter((e) => e.status !== "retired").sort((a, b) => a.name.localeCompare(b.name));
+  const retiredUnits = equipment.filter((e) => e.status === "retired").sort((a, b) => a.name.localeCompare(b.name));
   const activeTypes = types.filter((t) => t.active).map((t) => ({ id: t.id, name: t.name }));
   const enabled = hasFeature(settings[0]?.enabledFeatures, "equipment");
   const typeRows: EquipmentTypeRow[] = types
@@ -46,32 +52,33 @@ export default async function EquipmentPage() {
               <th className="px-4 py-3">Type</th>
               <th className="px-4 py-3">Identifier</th>
               <th className="px-4 py-3">Status</th>
+              <th className="px-4 py-3"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {equipment.length === 0 ? (
+            {current.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-slate-400">
+                <td colSpan={5} className="px-4 py-8 text-center text-slate-400">
                   No equipment yet.
                 </td>
               </tr>
             ) : (
-              equipment.map((e) => (
-                <tr key={e.id}>
-                  <td className="px-4 py-3 font-medium text-navy">{e.name}</td>
-                  <td className="px-4 py-3 text-slate-600">{typeName.get(e.equipmentTypeId) ?? "—"}</td>
-                  <td className="px-4 py-3 text-slate-600">{e.identifier ?? "—"}</td>
-                  <td className="px-4 py-3">
-                    <StatusPill tone={e.status === "available" ? "covered" : e.status === "retired" ? "neutral" : "attention"}>
-                      {e.status}
-                    </StatusPill>
-                  </td>
-                </tr>
-              ))
+              current.map((e) => <EquipmentRow key={e.id} row={rowOf(e)} />)
             )}
           </tbody>
         </table>
       </Card>
+      <p className="mt-2 text-xs text-slate-400">A unit in maintenance stays on its courses and shows on the problems list until it&apos;s back. Delete removes a unit nothing has used; anything a course used is retired instead.</p>
+      {retiredUnits.length > 0 ? (
+        <details className="mt-4 rounded-card border border-slate-200 bg-white">
+          <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-navy">Retired equipment <span className="font-normal text-slate-400">({retiredUnits.length}) · still shown on the courses that used it</span></summary>
+          <table className="w-full text-left text-sm">
+            <tbody className="divide-y divide-slate-100 border-t border-slate-100">
+              {retiredUnits.map((e) => <EquipmentRow key={e.id} row={rowOf(e)} />)}
+            </tbody>
+          </table>
+        </details>
+      ) : null}
     </div>
   );
 }
