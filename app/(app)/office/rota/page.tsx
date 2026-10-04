@@ -8,6 +8,7 @@ import { PublishWeek } from "@/components/office/PublishWeek";
 import { publishedWeeks } from "@/lib/services/roster";
 import { parseWelfareSettings } from "@/lib/services/welfare";
 import { can } from "@/lib/auth/rbac";
+import { availabilityHorizon } from "@/lib/services/availability";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,8 @@ export default async function RotaPage({ searchParams }: { searchParams: Promise
   const rotaTemplate = parseRotaTemplate(settingsRows[0]?.rotaTemplate);
   const welfare = parseWelfareSettings(settingsRows[0]?.welfareOfficers, settingsRows[0]?.welfareDuty);
   const publishedAt = published.get(monday) ?? null;
+  const horizon = availabilityHorizon(settingsRows[0]);
+  const beyondWindow = monday >= horizon.to;
   // One assignment per course, however many sessions it has.
   const perCourse = new Map<string, { status: string }[]>();
   for (const d of rota) for (const s of d.sessions) if (!perCourse.has(s.courseId)) perCourse.set(s.courseId, s.staff);
@@ -49,6 +52,12 @@ export default async function RotaPage({ searchParams }: { searchParams: Promise
       </div>
 
       <PublishWeek weekStart={monday} publishedAt={publishedAt ? publishedAt.toISOString() : null} sessions={total} assigned={allStaff.length} confirmed={confirmed} declined={declined} />
+      {beyondWindow ? (
+        <p className="mb-4 rounded-lg border border-amber/40 bg-amber/10 px-3 py-2 text-xs text-navy print:hidden">
+          Instructors haven&apos;t been asked about this week yet: they can set availability {horizon.weeksAhead} week{horizon.weeksAhead === 1 ? "" : "s"} ahead, so nothing here is blocked by availability.{" "}
+          <Link href="/office/settings#availability-window" className="font-medium text-teal hover:underline">Lengthen the window in Settings</Link> if you roster further out.
+        </p>
+      ) : null}
 
       <RotaView rota={rota} welfareOfficers={welfare.officers} canEditWelfare={can(ctx, "roster.edit")} />
       <p className="mt-4 text-center text-xs text-slate-400 print:mt-2">Generated from ActivityRoster · {new Date().toLocaleDateString("en-GB")}</p>

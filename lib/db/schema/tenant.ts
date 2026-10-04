@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { index, integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { organisation } from "./control-plane";
 import { boolCol, createdAt, id, organisationId, updatedAt } from "./_shared";
@@ -72,6 +73,9 @@ export const COURSE_STAFF_STATUSES = ["assigned", "confirmed", "declined"] as co
 export const CANCEL_PAY_RULES = ["none", "rostered", "fee"] as const;
 export type CancelPayRule = (typeof CANCEL_PAY_RULES)[number];
 export const AVAILABILITY_STATUSES = ["available", "unavailable", "tentative"] as const;
+/** Who wrote an availability row: the instructor, the office on their behalf, or approved leave. */
+export const AVAILABILITY_SET_BY = ["self", "office", "leave"] as const;
+export type AvailabilitySetBy = (typeof AVAILABILITY_SET_BY)[number];
 export const PAY_UNITS = ["hour", "day", "session"] as const;
 export type PayUnit = (typeof PAY_UNITS)[number];
 export const NOTIFICATION_CHANNELS = ["email", "sms", "in_app"] as const;
@@ -591,15 +595,37 @@ export const availability = sqliteTable("availability", {
     .notNull()
     .references(() => instructor.id, { onDelete: "cascade" }),
   date: text("date"), // specific date, OR
-  weekday: integer("weekday"), // 0-6 recurring
+  weekday: integer("weekday"), // 0-6 (Sunday = 0) for the instructor's usual week
   slot: text("slot", { enum: SLOT_CODES }).notNull(),
   status: text("status", { enum: AVAILABILITY_STATUSES }).notNull().default("available"),
+  setBy: text("set_by", { enum: AVAILABILITY_SET_BY }).notNull().default("self"),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 }, (t) => [
   index("availability_org_idx").on(t.organisationId),
   index("availability_instructor_idx").on(t.instructorId),
+  // One answer per instructor, date and slot; one per instructor, weekday and slot. Two
+  // quick taps on a fresh cell used to leave two rows (audit A4-5).
+  uniqueIndex("availability_instructor_date_slot_uq").on(t.instructorId, t.date, t.slot).where(sql`"date" IS NOT NULL`),
+  uniqueIndex("availability_instructor_weekday_slot_uq").on(t.instructorId, t.weekday, t.slot).where(sql`"weekday" IS NOT NULL`),
 ]);
+
+/** A short note an instructor leaves against one day ("back by 2pm", "exam week"). */
+export const availabilityNote = sqliteTable("availability_note", {
+  id: id(),
+  organisationId: orgFk(),
+  instructorId: text("instructor_id")
+    .notNull()
+    .references(() => instructor.id, { onDelete: "cascade" }),
+  date: text("date").notNull(),
+  note: text("note").notNull(),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, (t) => [
+  index("availability_note_org_idx").on(t.organisationId),
+  uniqueIndex("availability_note_instructor_date_uq").on(t.instructorId, t.date),
+]);
+export type AvailabilityNote = typeof availabilityNote.$inferSelect;
 
 export const payRate = sqliteTable("pay_rate", {
   id: id(),

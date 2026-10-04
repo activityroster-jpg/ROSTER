@@ -12,6 +12,7 @@ export interface PackStatus { name: string; version: string; verified: boolean; 
 export function GeneralSettingsForm({
   schedulingMode,
   alertLeadDays,
+  availabilityWeeksAhead = 4,
   currency,
   enforceLicenceChecks,
   enforceRatioChecks,
@@ -28,6 +29,7 @@ export function GeneralSettingsForm({
 }: {
   schedulingMode: string;
   alertLeadDays: number;
+  availabilityWeeksAhead?: number;
   currency: string;
   enforceLicenceChecks: boolean;
   enforceRatioChecks: boolean;
@@ -53,6 +55,11 @@ export function GeneralSettingsForm({
       <div className="sm:col-span-2">
         <label className="mb-1 block text-xs font-medium text-slate-500">Warn me this many days before a cert or check expires</label>
         <input name="alertLeadDays" type="number" defaultValue={alertLeadDays} min={0} max={365} className="w-28 rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal" />
+      </div>
+      <div id="availability-window" className="sm:col-span-2">
+        <label className="mb-1 block text-xs font-medium text-slate-500">Ask instructors for availability this many weeks ahead</label>
+        <input name="availabilityWeeksAhead" type="number" defaultValue={availabilityWeeksAhead} min={1} max={26} className="w-28 rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal" />
+        <p className="mt-1 text-[11px] text-slate-400">Inside this window a slot counts as Busy until the instructor marks it Free or Maybe. Beyond it nobody has been asked yet, so nothing blocks.</p>
       </div>
       <div>
         <label className="mb-1 block text-xs font-medium text-slate-500">Currency</label>
@@ -157,7 +164,7 @@ export function GeneralSettingsForm({
           </label>
           <label className="flex items-start gap-2 text-sm text-slate-600">
             <input type="checkbox" name="enforceAvailabilityChecks" defaultChecked={enforceAvailabilityChecks} className="mt-0.5 h-4 w-4 rounded border-slate-300" />
-            <span>Don&apos;t roster someone who marked that slot <strong>Busy</strong> <span className="text-slate-400">(on by default; override allowed)</span></span>
+            <span>Don&apos;t roster someone who is <strong>Busy</strong> for that slot, including anyone who hasn&apos;t marked it Free yet <span className="text-slate-400">(on by default; override allowed)</span></span>
           </label>
         </div>
       </fieldset>

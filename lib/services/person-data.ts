@@ -4,6 +4,7 @@ import type { AnyTenantContext, TenantContext } from "@/lib/tenant/context";
 import { actorUserId } from "@/lib/tenant/context";
 import {
   availability as availabilityTable,
+  availabilityNote as availabilityNoteTable,
   complianceItem as complianceItemTable,
   courseStaff as courseStaffTable,
   hoursRecord as hoursRecordTable,
@@ -33,6 +34,7 @@ export interface PersonExport {
   checks: Record<string, unknown>[];
   assignments: Record<string, unknown>[];
   availability: Record<string, unknown>[];
+  availabilityNotes: Record<string, unknown>[];
   hours: Record<string, unknown>[];
   clock: Record<string, unknown>[];
   leave: Record<string, unknown>[];
@@ -52,11 +54,12 @@ export async function exportPerson(repos: Repositories, ctx: TenantContext, inst
   const instructor = await t.instructor.findById(ctx, instructorId);
   if (!instructor) return null;
   const by = (col: { instructorId: unknown }) => eq(col.instructorId as never, instructorId);
-  const [quals, checks, staff, avail, hours, clock, leave, rates, notes, audit, courses, qualTypes, checkTypes, roles] = await Promise.all([
+  const [quals, checks, staff, avail, availNotes, hours, clock, leave, rates, notes, audit, courses, qualTypes, checkTypes, roles] = await Promise.all([
     t.qualification.list(ctx, by(qualificationTable)),
     t.complianceItem.list(ctx, by(complianceItemTable)),
     t.courseStaff.list(ctx, by(courseStaffTable)),
     t.availability.list(ctx, by(availabilityTable)),
+    t.availabilityNote.list(ctx, by(availabilityNoteTable)),
     t.hoursRecord.list(ctx, by(hoursRecordTable)),
     t.timeEntry.list(ctx, by(timeEntryTable)),
     t.leaveRequest.list(ctx, by(leaveRequestTable)),
@@ -83,6 +86,7 @@ export async function exportPerson(repos: Repositories, ctx: TenantContext, inst
     checks: await Promise.all(checks.map(async (c) => ({ ...plain(c as unknown as Record<string, unknown>, ["instructorId", "docKey"]), reference: isSealed(c.reference) ? await openToken(c.reference) : c.reference, type: ct.get(c.complianceTypeId) ?? c.complianceTypeId, document: c.docKey ? "on file" : "none" }))),
     assignments: staff.map((s) => ({ ...plain(s as unknown as Record<string, unknown>, ["instructorId"]), course: courseName.get(s.courseId) ?? s.courseId, role: rn.get(s.roleTypeId) ?? s.roleTypeId })),
     availability: avail.map((a) => plain(a as unknown as Record<string, unknown>, ["instructorId"])),
+    availabilityNotes: availNotes.map((a) => plain(a as unknown as Record<string, unknown>, ["instructorId"])),
     hours: hours.map((h) => plain(h as unknown as Record<string, unknown>, ["instructorId"])),
     clock: clock.map((c) => plain(c as unknown as Record<string, unknown>, ["instructorId"])),
     leave: leave.map((l) => plain(l as unknown as Record<string, unknown>, ["instructorId"])),
@@ -110,7 +114,7 @@ export function personExportToCsv(data: PersonExport): string {
     ["Person", [data.person]],
     ["Guardian and emergency contacts", data.contacts ? [data.contacts] : []],
     ["Qualifications", data.qualifications], ["Checks", data.checks], ["Assignments", data.assignments],
-    ["Availability", data.availability], ["Hours", data.hours], ["Clock", data.clock], ["Leave", data.leave],
+    ["Availability", data.availability], ["Availability notes", data.availabilityNotes], ["Hours", data.hours], ["Clock", data.clock], ["Leave", data.leave],
     ["Pay rates", data.payRates], ["Notifications", data.notifications], ["Change log", data.changeLog], ["Sign-ins", data.signIns],
   ];
   return `Exported ${data.exportedAt}\n\n${sections.map(([t, r]) => block(t, r)).join("\n")}`;
@@ -157,7 +161,7 @@ export async function anonymisePerson(repos: Repositories, ctx: AnyTenantContext
   for (const q of quals) { if (q.docKey) await deleteDocument(ctx, q.docKey).catch(() => {}); await t.qualification.delete(ctx, q.id); }
   for (const c of checks) { if (c.docKey) await deleteDocument(ctx, c.docKey).catch(() => {}); await t.complianceItem.delete(ctx, c.id); }
   removed.qualifications = quals.length; removed.checks = checks.length;
-  for (const [name, repo, table] of [["availability", t.availability, availabilityTable], ["leave", t.leaveRequest, leaveRequestTable], ["notifications", t.notification, notificationTable], ["payRates", t.payRate, payRateTable]] as const) {
+  for (const [name, repo, table] of [["availability", t.availability, availabilityTable], ["availabilityNotes", t.availabilityNote, availabilityNoteTable], ["leave", t.leaveRequest, leaveRequestTable], ["notifications", t.notification, notificationTable], ["payRates", t.payRate, payRateTable]] as const) {
     const rows = await repo.list(ctx, by(table));
     for (const r of rows) await repo.delete(ctx, r.id);
     removed[name] = rows.length;

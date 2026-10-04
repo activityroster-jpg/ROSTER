@@ -58,7 +58,7 @@ export async function eraseOrganisationData(repos: Repositories, ctx: AnyTenantC
   const order = [
     // 1. rows that reference courses / people / config
     t.courseStaff, t.courseEquipment, t.courseLocation, t.courseRoleRequirement, t.courseSession,
-    t.hoursRecord, t.availability, t.payRate, t.rosterWeek,
+    t.hoursRecord, t.availability, t.availabilityNote, t.payRate, t.rosterWeek,
     t.courseTypeStaffing, t.courseTypeEquipment,
     t.qualification, t.complianceItem,
     // 2. courses (reference courseType)

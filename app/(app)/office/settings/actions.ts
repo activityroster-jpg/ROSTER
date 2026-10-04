@@ -56,6 +56,7 @@ export async function updateSettingsAction(_prev: ActionState, formData: FormDat
   const parsed = orgSettingsSchema.safeParse({
     schedulingMode: formData.get("schedulingMode"),
     alertLeadDays: Number(formData.get("alertLeadDays")),
+    availabilityWeeksAhead: Number(formData.get("availabilityWeeksAhead") ?? 4),
     currency: formData.get("currency"),
     enforceLicenceChecks: formData.get("enforceLicenceChecks") === "on",
     enforceRatioChecks: formData.get("enforceRatioChecks") === "on",
@@ -80,6 +81,7 @@ export async function updateSettingsAction(_prev: ActionState, formData: FormDat
     workingTimeMode: rest.workingTimeMode ?? "block_override",
     idleTimeoutMinutes: rest.idleTimeoutMinutes ?? 30,
     requireParentApproval: rest.requireParentApproval ?? true,
+    availabilityWeeksAhead: rest.availabilityWeeksAhead ?? 4,
     termDates: JSON.stringify((termDates ?? []).map((r) => ({ from: r.from, to: r.to, ...(r.label ? { label: r.label } : {}) }))),
   };
   const existing = (await repos.tenant.orgSettings.list(ctx))[0];

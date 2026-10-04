@@ -5,6 +5,7 @@ import { writeAudit } from "./audit";
 import { notifyInstructor } from "./notifications";
 import { emailAdmins } from "./admin-mail";
 import { escapeHtml } from "@/lib/mail";
+import { markLeaveBusy } from "./availability";
 
 export interface LeaveInput {
   type: LeaveType;
@@ -72,6 +73,8 @@ export async function decideLeave(
     decidedAt: new Date(),
   });
   if (!updated) return null;
+  // Approved leave is Busy in availability from now on, so the picker and the roster see it.
+  if (decision === "approved") await markLeaveBusy(repos, ctx, updated.instructorId, updated.startDate, updated.endDate);
   await writeAudit(repos, ctx, {
     action: `leave_${decision}`,
     entity: "leave_request",

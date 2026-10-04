@@ -69,6 +69,7 @@ export default async function SettingsPage() {
         <GeneralSettingsForm
           schedulingMode={s?.schedulingMode ?? "session"}
           alertLeadDays={s?.alertLeadDays ?? 30}
+          availabilityWeeksAhead={s?.availabilityWeeksAhead ?? 4}
           currency={s?.currency ?? "GBP"}
           privacyNoticeUrl={s?.privacyNoticeUrl ?? ""}
           dailyDigestEnabled={Boolean(s?.dailyDigestEnabled)}

@@ -7,6 +7,7 @@ import type { AnyTenantContext } from "@/lib/tenant/context";
 import {
   auditLog as auditLogTable,
   availability as availabilityTable,
+  availabilityNote as availabilityNoteTable,
   hoursRecord as hoursRecordTable,
   leaveRequest as leaveRequestTable,
   notification as notificationTable,
@@ -87,21 +88,22 @@ export async function retentionPlan(repos: Repositories, ctx: AnyTenantContext, 
     .filter((x) => x.left.getTime() <= cut(policy.staffMonths).getTime())
     .map((x) => ({ id: x.id, name: x.name, deleteOn: x.deleteOn, overdue: x.deleteOn.getTime() <= now.getTime() }));
 
-  const [leave, clock, hours, avail, notes, audit] = await Promise.all([
+  const [leave, clock, hours, avail, availNotes, notes, audit] = await Promise.all([
     t.leaveRequest.list(ctx, lt(leaveRequestTable.endDate, isoOf(cut(policy.leaveMonths)))),
     t.timeEntry.list(ctx, lt(timeEntryTable.clockInAt, cut(policy.clockMonths))),
     t.hoursRecord.list(ctx, lt(hoursRecordTable.createdAt, cut(policy.clockMonths))),
     t.availability.list(ctx, lt(availabilityTable.date, isoOf(cut(policy.availabilityMonths)))),
+    t.availabilityNote.list(ctx, lt(availabilityNoteTable.date, isoOf(cut(policy.availabilityMonths)))),
     t.notification.list(ctx, lt(notificationTable.createdAt, cut(policy.notificationsMonths))),
     t.auditLog.list(ctx, lt(auditLogTable.createdAt, cut(policy.auditMonths))),
   ]);
   const dueOf = <T,>(rows: T[], when: (r: T) => number, cutoff: Date) => rows.filter((r) => when(r) < cutoff.getTime()).length;
-  const pending = { staff: staffDue.length, leave: leave.length, clock: clock.length + hours.length, availability: avail.length, notifications: notes.length, audit: audit.length };
+  const pending = { staff: staffDue.length, leave: leave.length, clock: clock.length + hours.length, availability: avail.length + availNotes.length, notifications: notes.length, audit: audit.length };
   const due = {
     staff: staffDue.filter((x) => x.overdue).length,
     leave: dueOf(leave, (r) => Date.parse(`${r.endDate}T00:00:00Z`), dueCut(policy.leaveMonths)),
     clock: dueOf(clock, (r) => r.clockInAt.getTime(), dueCut(policy.clockMonths)) + dueOf(hours, (r) => r.createdAt.getTime(), dueCut(policy.clockMonths)),
-    availability: dueOf(avail, (r) => Date.parse(`${r.date}T00:00:00Z`), dueCut(policy.availabilityMonths)),
+    availability: dueOf(avail, (r) => Date.parse(`${r.date}T00:00:00Z`), dueCut(policy.availabilityMonths)) + dueOf(availNotes, (r) => Date.parse(`${r.date}T00:00:00Z`), dueCut(policy.availabilityMonths)),
     notifications: dueOf(notes, (r) => r.createdAt.getTime(), dueCut(policy.notificationsMonths)),
     audit: dueOf(audit, (r) => r.createdAt.getTime(), dueCut(policy.auditMonths)),
   };
@@ -121,6 +123,7 @@ export async function runRetention(repos: Repositories, ctx: AnyTenantContext, s
   for (const r of await t.timeEntry.list(ctx, lt(timeEntryTable.clockInAt, dueCut(plan.policy.clockMonths)))) { await t.timeEntry.delete(ctx, r.id); removed.clock++; }
   for (const r of await t.hoursRecord.list(ctx, lt(hoursRecordTable.createdAt, dueCut(plan.policy.clockMonths)))) { await t.hoursRecord.delete(ctx, r.id); removed.clock++; }
   for (const r of await t.availability.list(ctx, lt(availabilityTable.date, isoOf(dueCut(plan.policy.availabilityMonths))))) { await t.availability.delete(ctx, r.id); removed.availability++; }
+  for (const r of await t.availabilityNote.list(ctx, lt(availabilityNoteTable.date, isoOf(dueCut(plan.policy.availabilityMonths))))) { await t.availabilityNote.delete(ctx, r.id); removed.availability++; }
   for (const r of await t.notification.list(ctx, lt(notificationTable.createdAt, dueCut(plan.policy.notificationsMonths)))) { await t.notification.delete(ctx, r.id); removed.notifications++; }
   for (const r of await t.auditLog.list(ctx, lt(auditLogTable.createdAt, dueCut(plan.policy.auditMonths)))) { try { await t.auditLog.delete(ctx, r.id); removed.audit++; } catch { /* still inside the database's 3-year floor */ } }
 

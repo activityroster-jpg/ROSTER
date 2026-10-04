@@ -26,6 +26,17 @@ export const availabilityEntrySchema = z.object({
   status: z.enum(AVAILABILITY_STATUSES).nullable(),
 });
 export const availabilityBulkSchema = z.array(availabilityEntrySchema).min(1, "Nothing to set").max(50);
+export const availabilityPatternSchema = z.object({
+  weekday: z.number().int().min(0).max(6),
+  slot: z.enum(SLOT_CODES),
+  status: z.enum(AVAILABILITY_STATUSES).nullable(),
+});
+export const availabilityNoteSchema = z.object({
+  date: isoDateSchema,
+  note: z.string().trim().max(140, "Keep the note under 140 characters"),
+});
+/** The office setting availability for a staff member: the instructor id comes from the client here, so it is checked. */
+export const availabilityForStaffSchema = availabilityEntrySchema.extend({ instructorId: idSchema });
 
 export const twoFactorPrefsSchema = z.object({ method: z.enum(TWO_FACTOR_METHODS) });
 export const otpCodeSchema = z.string().trim().regex(/^\d{6}$/, "Enter the 6-digit code");

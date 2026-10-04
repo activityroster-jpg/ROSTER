@@ -94,6 +94,37 @@ export class TenantRepository<T extends TenantTable> {
   }
 
   /**
+   * Insert a row, or update the matching one when a unique key already holds it.
+   * `target` names the unique index's columns (and `targetWhere` its partial
+   * condition); `set` is what changes on conflict. The org id is forced from the
+   * context on insert and the update is pinned to this tenant too, so a key held
+   * by another org's row is never touched.
+   */
+  async upsert(
+    ctx: AnyTenantContext,
+    values: Omit<T["$inferInsert"], "organisationId">,
+    conflict: { target: SQLiteColumn[]; targetWhere?: SQL },
+    set: Partial<Omit<T["$inferInsert"], "organisationId" | "id">>,
+  ): Promise<T["$inferSelect"]> {
+    this.assertWritable(ctx);
+    const row = { ...values, organisationId: ctx.organisationId } as T["$inferInsert"];
+    const { organisationId: _drop, id: _dropId, ...safe } = set as Record<string, unknown>;
+    void _drop;
+    void _dropId;
+    const out = await this.db
+      .insert(this.table)
+      .values(row)
+      .onConflictDoUpdate({
+        target: conflict.target,
+        ...(conflict.targetWhere ? { targetWhere: conflict.targetWhere } : {}),
+        set: safe as Partial<T["$inferInsert"]>,
+        setWhere: eq(this.table.organisationId, ctx.organisationId),
+      })
+      .returning();
+    return (out as T["$inferSelect"][])[0]!;
+  }
+
+  /**
    * Update a row by id, scoped to the tenant. Returns the updated row, or null
    * if no row with that id belongs to the tenant (so cross-tenant updates are a
    * silent no-op that returns null rather than touching another org's data).

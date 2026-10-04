@@ -9,7 +9,9 @@ import {
   type HeldCompliance,
   type ResourceBooking,
 } from "@/lib/domain";
-import { courseStaff as courseStaffTable, availability as availabilityTable } from "@/lib/db/schema";
+import { courseStaff as courseStaffTable } from "@/lib/db/schema";
+import { availabilityHorizon, loadInstructorAvailability } from "./availability";
+import { blocksRostering, describeBusy, effectiveAvailability } from "@/lib/domain/availability";
 import { writeAudit } from "./audit";
 import { syncHoursForCourse } from "./hours";
 import { notifyInstructor } from "./notifications";
@@ -150,14 +152,19 @@ export async function assignStaff(
 
   // --- 3. Availability: "Busy" blocks (on by default), override allowed ----
   const availabilityOn = settings?.enforceAvailabilityChecks ?? true;
-  let busy: { date: string; slot: string } | undefined;
+  // No blank: inside the centre's window a slot is Busy until marked Free or Maybe
+  // (their usual week counts); beyond the window nobody has been asked, so nothing blocks.
+  let busy: { date: string; slot: string; why: string } | undefined;
   if (availabilityOn && targetSessions.length) {
-    const avail = await t.availability.list(ctx, eq(availabilityTable.instructorId, input.instructorId));
-    const busyKeys = new Set(avail.filter((a) => a.status === "unavailable" && a.date).map((a) => `${a.date}|${a.slot}`));
-    busy = targetSessions.find((s) => busyKeys.has(`${s.date}|${s.slot}`));
+    const { index } = await loadInstructorAvailability(repos, ctx, input.instructorId);
+    const horizon = availabilityHorizon(settings);
+    for (const s of targetSessions) {
+      const e = effectiveAvailability(index, horizon, s.date, s.slot);
+      if (blocksRostering(e)) { busy = { date: s.date, slot: s.slot, why: describeBusy(e, s.date, s.slot) }; break; }
+    }
   }
   if (busy && !input.override) {
-    return { ok: false, reason: "unavailable", detail: `Marked busy on ${busy.date} ${busy.slot}` };
+    return { ok: false, reason: "unavailable", detail: busy.why };
   }
 
   // --- 4. Young workers' hours (rule pack for the jurisdiction) ----------

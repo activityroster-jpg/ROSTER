@@ -25,7 +25,8 @@ export default async function AvailabilityPage({ searchParams }: { searchParams:
   const prev = addDays(monday, -7);
   const next = addDays(monday, 7);
   const isThisWeek = monday === thisMonday;
-  const { days, rows, availableCounts } = await getWeekAvailabilityMatrix(repos, ctx, monday);
+  const { days, rows, availableCounts, horizon } = await getWeekAvailabilityMatrix(repos, ctx, monday);
+  const beyondWindow = monday >= horizon.to;
 
   return (
     <div>
@@ -34,8 +35,13 @@ export default async function AvailabilityPage({ searchParams }: { searchParams:
         <GuideLink topic="availability" />
       </div>
       <p className="mb-4 text-sm text-slate-500">
-        Who&apos;s available — submitted by instructors in their app. Hover a <span className="font-medium text-navy">●</span> to see what they&apos;re rostered on, or <span className="font-medium text-navy">click any slot</span> to fill an open shift with that instructor.
+        Who&apos;s free — from the instructor app, their usual week, or entered here by the office. A slot is Busy until it&apos;s marked Free or Maybe. Hover a <span className="font-medium text-navy">●</span> to see what they&apos;re rostered on, or <span className="font-medium text-navy">click any slot</span> to set their availability or fill an open shift.
       </p>
+      {beyondWindow ? (
+        <p className="mb-4 rounded-lg border border-amber/40 bg-amber/10 px-3 py-2 text-xs text-navy">
+          Instructors haven&apos;t been asked about this week yet: they can set availability {horizon.weeksAhead} week{horizon.weeksAhead === 1 ? "" : "s"} ahead. <Link href="/office/settings#availability-window" className="font-medium text-teal hover:underline">Lengthen the window in Settings</Link> to ask further out. You can still enter availability for anyone by clicking a slot.
+        </p>
+      ) : null}
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Link href={`/office/availability?week=${prev}`} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-navy hover:bg-slate-50">← Previous</Link>
@@ -48,7 +54,10 @@ export default async function AvailabilityPage({ searchParams }: { searchParams:
         <span className="inline-flex items-center gap-1 rounded-full bg-starboard/15 px-2.5 py-0.5 font-medium text-starboard">✓ Free</span>
         <span className="inline-flex items-center gap-1 rounded-full bg-amber/15 px-2.5 py-0.5 font-medium text-amber">~ Maybe</span>
         <span className="inline-flex items-center gap-1 rounded-full bg-port/15 px-2.5 py-0.5 font-medium text-port">✕ Busy</span>
-        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 font-medium text-slate-400">— Not set</span>
+        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 font-medium text-slate-400">· Busy (not answered yet)</span>
+        <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-0.5 font-medium text-slate-300 ring-1 ring-slate-200">? Not asked yet</span>
+        <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-2.5 py-0.5 font-medium text-slate-500 ring-1 ring-slate-200"><span className="text-[9px] uppercase">usual</span> from their usual week</span>
+        <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-2.5 py-0.5 font-medium text-slate-500 ring-1 ring-slate-200">✎ has a note</span>
         <span className="inline-flex items-center gap-1 rounded-full bg-navy/10 px-2.5 py-0.5 font-medium text-navy">● Rostered</span>
       </div>
 
@@ -57,7 +66,7 @@ export default async function AvailabilityPage({ searchParams }: { searchParams:
       ) : (
         <AvailabilityMatrix days={days} rows={rows} availableCounts={availableCounts} />
       )}
-      <p className="mt-2 text-xs text-slate-400">The number under each slot is how many instructors are free then. Click a slot to fill an open shift with that instructor.</p>
+      <p className="mt-2 text-xs text-slate-400">The number under each slot is how many instructors are free then. Click a slot to set that person&apos;s availability (recorded as set by the office) or fill an open shift with them.</p>
     </div>
   );
 }

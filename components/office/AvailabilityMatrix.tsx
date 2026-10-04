@@ -2,9 +2,20 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { assignableForCellAction, assignFromAvailabilityAction, type CellCandidate } from "@/app/(app)/office/availability/actions";
+import { assignableForCellAction, assignFromAvailabilityAction, setAvailabilityForStaffAction, type CellCandidate } from "@/app/(app)/office/availability/actions";
 
-export interface MatrixRow { instructorId: string; name: string; cells: Record<string, string>; assigned: Record<string, string[]> }
+export interface MatrixRow {
+  instructorId: string;
+  name: string;
+  /** Effective status per `${date}|${slot}`: available, tentative, unavailable or unasked. */
+  cells: Record<string, string>;
+  /** set | pattern | default | unasked. */
+  sources: Record<string, string>;
+  /** self | office | leave for dated answers. */
+  setBy: Record<string, string>;
+  notes: Record<string, string>;
+  assigned: Record<string, string[]>;
+}
 
 const SLOTS = ["AM", "PM", "EV"] as const;
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -13,8 +24,10 @@ const CELL: Record<string, { label: string; word: string; cls: string }> = {
   available: { label: "✓", word: "Free", cls: "bg-starboard/15 text-starboard hover:bg-starboard/25" },
   tentative: { label: "~", word: "Maybe", cls: "bg-amber/15 text-amber hover:bg-amber/25" },
   unavailable: { label: "✕", word: "Busy", cls: "bg-port/15 text-port hover:bg-port/25" },
-  none: { label: "·", word: "Not set", cls: "bg-slate-50 text-slate-300 hover:bg-slate-100" },
+  default: { label: "·", word: "Busy (not answered yet)", cls: "bg-slate-100 text-slate-400 hover:bg-slate-200" },
+  unasked: { label: "?", word: "Not asked yet", cls: "bg-white text-slate-300 hover:bg-slate-50" },
 };
+const SET_BY: Record<string, string> = { office: "set by the office", leave: "approved leave", self: "" };
 
 interface Selected { instructorId: string; name: string; date: string; slot: string; dayLabel: string }
 
@@ -50,6 +63,22 @@ export function AvailabilityMatrix({ days, rows, availableCounts }: { days: stri
     });
   };
 
+  const setStatus = (status: "available" | "tentative" | "unavailable" | null) => {
+    if (!sel) return;
+    setMsg(null);
+    start(async () => {
+      const res = await setAvailabilityForStaffAction({ instructorId: sel.instructorId, date: sel.date, slot: sel.slot, status });
+      setMsg({ ok: res.ok, text: res.ok ? (status ? `Set to ${CELL[status]!.word} (recorded as set by the office)` : "Answer removed; their usual week or Busy applies") : res.error ?? "Failed" });
+      if (res.ok) router.refresh();
+    });
+  };
+
+  const selRow = sel ? rows.find((r) => r.instructorId === sel.instructorId) : null;
+  const selKey = sel ? `${sel.date}|${sel.slot}` : "";
+  const selStatus = selRow?.cells[selKey] ?? "unavailable";
+  const selSource = selRow?.sources[selKey] ?? "default";
+  const selNote = sel ? selRow?.notes[sel.date] : undefined;
+
   return (
     <div>
       <div className="overflow-x-auto rounded-card border border-slate-200 bg-white">
@@ -78,12 +107,16 @@ export function AvailabilityMatrix({ days, rows, availableCounts }: { days: stri
               <tr key={r.instructorId} className="hover:bg-slate-50/40">
                 <td className="sticky left-0 z-10 whitespace-nowrap border-r border-slate-200 bg-white px-4 py-1.5 text-left text-sm font-semibold text-navy">{r.name}</td>
                 {days.map((d, di) => SLOTS.map((s, si) => {
-                  const status = r.cells[`${d}|${s}`] ?? "none";
-                  const cfg = CELL[status] ?? CELL.none;
-                  const rostered = r.assigned[`${d}|${s}`];
+                  const key = `${d}|${s}`;
+                  const status = r.cells[key] ?? "unavailable";
+                  const source = r.sources[key] ?? "default";
+                  const cfg = (source === "default" ? CELL.default : source === "unasked" ? CELL.unasked : CELL[status]) ?? CELL.default!;
+                  const rostered = r.assigned[key];
                   const rosterLabel = rostered?.length ? `Rostered: ${rostered.join(" · ")}` : "";
+                  const note = si === 0 ? r.notes[d] : undefined;
+                  const by = SET_BY[r.setBy[key] ?? "self"];
                   const isSel = sel?.instructorId === r.instructorId && sel?.date === d && sel?.slot === s;
-                  const cellLabel = `${r.name}, ${DAY_LABELS[di]} ${s}: ${cfg!.word}${rosterLabel ? ` · ${rosterLabel}` : ""} — click to fill a shift`;
+                  const cellLabel = `${r.name}, ${DAY_LABELS[di]} ${s}: ${cfg.word}${source === "pattern" ? " (usual week)" : ""}${by ? ` (${by})` : ""}${r.notes[d] ? ` · note: ${r.notes[d]}` : ""}${rosterLabel ? ` · ${rosterLabel}` : ""} — click to set or fill a shift`;
                   return (
                     <td key={`${r.instructorId}-${di}-${s}`} className={`p-0 ${si === 0 ? "border-l border-slate-200" : ""}`}>
                       <button
@@ -91,9 +124,11 @@ export function AvailabilityMatrix({ days, rows, availableCounts }: { days: stri
                         onClick={() => openCell(r.instructorId, r.name, d, s, `${DAY_LABELS[di]} ${days[di]?.slice(8) ?? ""}`)}
                         title={cellLabel}
                         aria-label={cellLabel}
-                        className={`relative flex h-10 w-12 items-center justify-center text-base font-semibold transition ${cfg!.cls} ${isSel ? "ring-2 ring-inset ring-navy" : ""}`}
+                        className={`relative flex h-10 w-12 items-center justify-center text-base font-semibold transition ${cfg.cls} ${isSel ? "ring-2 ring-inset ring-navy" : ""}`}
                       >
-                        <span aria-hidden="true">{cfg!.label}</span>
+                        <span aria-hidden="true">{cfg.label}</span>
+                        {source === "pattern" ? <span aria-hidden="true" className="absolute right-0.5 top-0.5 text-[7px] font-bold uppercase leading-none opacity-60">usual</span> : null}
+                        {note ? <span aria-hidden="true" className="absolute left-0.5 top-0.5 text-[9px] leading-none text-slate-500">✎</span> : null}
                         {rostered?.length ? <span title={rosterLabel} className="absolute bottom-1 left-1/2 h-2 w-2 -translate-x-1/2 rounded-full bg-navy" /> : null}
                       </button>
                     </td>
@@ -105,21 +140,36 @@ export function AvailabilityMatrix({ days, rows, availableCounts }: { days: stri
         </table>
       </div>
 
-      {/* Fill-a-shift panel */}
+      {/* Cell panel: set availability, fill a shift */}
       {sel ? (
         <div className="mt-4 rounded-card border border-navy/20 bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between gap-2">
             <p className="font-semibold text-navy">
-              Fill a shift — <span className="text-teal">{sel.name}</span>, {sel.dayLabel} {sel.slot}
+              <span className="text-teal">{sel.name}</span>, {sel.dayLabel} {sel.slot}
             </p>
             <button type="button" onClick={() => { setSel(null); setCands(null); setMsg(null); }} className="text-sm text-slate-400 hover:text-navy">✕ Close</button>
           </div>
 
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+            <span className="text-xs font-medium text-slate-500">Availability:</span>
+            <span className="text-xs text-slate-600">
+              {selSource === "unasked" ? "not asked yet (beyond the window)" : selSource === "default" ? "Busy, not answered yet" : `${CELL[selStatus]?.word ?? selStatus}${selSource === "pattern" ? " from their usual week" : ""}${SET_BY[selRow?.setBy[selKey] ?? "self"] ? ` (${SET_BY[selRow?.setBy[selKey] ?? "self"]})` : ""}`}
+            </span>
+            <span className="mx-1 text-slate-300">|</span>
+            <span className="text-xs font-medium text-slate-500">Set for them:</span>
+            {(["available", "tentative", "unavailable"] as const).map((s) => (
+              <button key={s} type="button" disabled={pending} onClick={() => setStatus(s)} className={`rounded-full px-2.5 py-1 text-xs font-semibold disabled:opacity-50 ${CELL[s]!.cls} ${selStatus === s && selSource === "set" ? "ring-2 ring-navy/40" : ""}`}>{CELL[s]!.label} {CELL[s]!.word}</button>
+            ))}
+            {selSource === "set" ? <button type="button" disabled={pending} onClick={() => setStatus(null)} className="text-xs text-slate-400 hover:text-navy disabled:opacity-50">remove answer</button> : null}
+          </div>
+          {selNote ? <p className="mt-2 text-xs text-slate-600">✎ Note from {sel.name} for {sel.dayLabel}: “{selNote}”</p> : null}
+
+          <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">Fill a shift</p>
           {pending && cands === null ? (
-            <p className="mt-3 text-sm text-slate-400">Finding sessions they can cover…</p>
+            <p className="mt-2 text-sm text-slate-400">Finding sessions they can cover…</p>
           ) : cands && cands.length > 0 ? (
             <>
-              <div className="mt-3 flex items-center gap-2">
+              <div className="mt-2 flex items-center gap-2">
                 <label className="text-xs font-medium text-slate-500">Assign as</label>
                 <select value={role} onChange={(e) => setRole(e.target.value)} className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal">
                   {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
@@ -139,7 +189,7 @@ export function AvailabilityMatrix({ days, rows, availableCounts }: { days: stri
               </ul>
             </>
           ) : cands ? (
-            <p className="mt-3 text-sm text-slate-500">No sessions {sel.dayLabel} {sel.slot} that {sel.name} can be assigned to (nothing scheduled they can teach, or they&apos;re already on them). Create the course in <a href="/office/courses" className="text-teal hover:underline">Courses</a> first.</p>
+            <p className="mt-2 text-sm text-slate-500">No sessions {sel.dayLabel} {sel.slot} that {sel.name} can be assigned to (nothing scheduled they can teach, or they&apos;re already on them). Create the course in <a href="/office/courses" className="text-teal hover:underline">Courses</a> first.</p>
           ) : null}
 
           {msg ? <p className={`mt-3 text-sm ${msg.ok ? "text-starboard" : "text-port"}`}>{msg.text}</p> : null}

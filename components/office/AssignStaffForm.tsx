@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { assignStaffAction, type ActionState } from "@/app/(app)/office/courses/actions";
+import { courseAvailLabel, type CourseAvailState } from "@/lib/domain/availability";
 
 const initial: ActionState = { ok: false };
 
@@ -11,17 +12,17 @@ export function AssignStaffForm({
   roles,
 }: {
   courseId: string;
-  instructors: { id: string; name: string; fit: boolean; reason?: string; avail?: "available" | "unavailable" | "partial" | "unset" | "none" }[];
+  instructors: { id: string; name: string; fit: boolean; reason?: string; avail?: CourseAvailState }[];
   roles: { id: string; name: string }[];
 }) {
   const [state, action, pending] = useActionState(assignStaffAction, initial);
   const [override, setOverride] = useState(false);
   const [chosen, setChosen] = useState("");
 
-  const availLabel = (a?: string) =>
-    a === "available" ? "✓ available" : a === "unavailable" ? "✕ not available" : a === "partial" ? "~ partly available" : a === "unset" ? "availability not set" : "";
+  const availLabel = (a?: CourseAvailState) => (a ? courseAvailLabel(a) : "");
   const selected = instructors.find((i) => i.id === chosen);
-  const availWarn = selected && (selected.avail === "unavailable" || selected.avail === "unset" || selected.avail === "partial");
+  const availWarn = selected && (selected.avail === "unavailable" || selected.avail === "silent" || selected.avail === "unset" || selected.avail === "partial");
+  const warnText = selected?.avail === "unavailable" ? "said they're busy" : selected?.avail === "silent" ? "hasn't marked themselves free yet, so they count as busy" : selected?.avail === "partial" ? "is only partly free" : "hasn't been asked about these dates yet (beyond the availability window)";
 
   return (
     <form action={action} className="mt-3 grid gap-2 rounded-lg bg-slate-50 p-3 sm:grid-cols-2">
@@ -50,7 +51,7 @@ export function AssignStaffForm({
       </label>
       {availWarn ? (
         <p className="sm:col-span-2 rounded-lg bg-amber/10 px-2.5 py-1.5 text-xs text-navy">
-          ⚠ {selected!.name} {selected!.avail === "unavailable" ? "said they're not available" : selected!.avail === "partial" ? "is only partly available" : "hasn't set availability"} for this course&apos;s times — you can still assign them.
+          ⚠ {selected!.name} {warnText} for this course&apos;s times — you can still assign them{selected!.avail === "unset" ? <>, or <a href="/office/settings#availability-window" className="text-teal hover:underline">lengthen the window</a> so they&apos;re asked</> : null}.
         </p>
       ) : null}
       <div className="sm:col-span-2">

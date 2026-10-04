@@ -1,9 +1,11 @@
-import { describe, expect, it } from "vitest";
-import { isSealed, openToken, sealToken } from "@/lib/security/token-crypto";
+import { describe, expect, it, vi } from "vitest";
 import { createTestDb } from "@/tests/helpers/test-db";
 import { seedFullOrg } from "@/tests/helpers/seed-fixtures";
 import { exportOrganisationData } from "@/lib/services/export";
 import type { TenantContext } from "@/lib/tenant/context";
+
+// Other test files mock this module; pin the real one here regardless of which worker we share.
+const { isSealed, openToken, sealToken } = await vi.importActual<typeof import("@/lib/security/token-crypto")>("@/lib/security/token-crypto");
 
 const SECRET = "test-secret-that-is-long-enough-123";
 

@@ -1,8 +1,7 @@
 import { eq } from "drizzle-orm";
 import { requireTenant } from "@/lib/tenant/require";
 import { instructor as instructorTable } from "@/lib/db/schema";
-import { getAvailabilityRange } from "@/lib/services/availability";
-import { addDays, weekStart } from "@/lib/services/schedule";
+import { availabilityHorizon, loadInstructorAvailability, patternOf } from "@/lib/services/availability";
 import { AvailabilityWeeks } from "@/components/portal/AvailabilityWeeks";
 import { Card } from "@/components/ui";
 
@@ -21,17 +20,21 @@ export default async function PortalAvailabilityPage() {
   }
 
   const settings = (await repos.tenant.orgSettings.list(ctx))[0];
-  const weeksAhead = Math.max(1, Math.min(26, settings?.availabilityWeeksAhead ?? 4));
-  const monday = weekStart(new Date());
-  const horizonEnd = addDays(monday, weeksAhead * 7);
-  const initial = await getAvailabilityRange(repos, ctx, me.id, monday, horizonEnd);
+  const horizon = availabilityHorizon(settings);
+  const { index, notes } = await loadInstructorAvailability(repos, ctx, me.id);
+  const dated: Record<string, "available" | "tentative" | "unavailable"> = {};
+  for (const [k, v] of Object.entries(index.dated)) {
+    const date = k.slice(0, 10);
+    if (date >= horizon.from && date < horizon.to) dated[k] = v;
+  }
+  const notesInWindow = Object.fromEntries(Object.entries(notes).filter(([d]) => d >= horizon.from && d < horizon.to));
 
   return (
     <div>
       <h1 className="mb-1 font-display text-xl font-semibold text-navy">My availability</h1>
-      <p className="mb-4 text-sm text-slate-500">Set when you can work — swipe through the weeks and tap each slot.</p>
+      <p className="mb-4 text-sm text-slate-500">Every slot counts as Busy until you mark it Free or Maybe. Set your usual week once and only change the exceptions.</p>
       <Card>
-        <AvailabilityWeeks weeksAhead={weeksAhead} initial={initial} />
+        <AvailabilityWeeks horizon={horizon} dated={dated} pattern={patternOf(index)} notes={notesInWindow} />
       </Card>
     </div>
   );

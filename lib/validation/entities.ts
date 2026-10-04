@@ -22,6 +22,7 @@ const timeStr = z.string().regex(/^\d{2}:\d{2}$/, "Expected HH:MM");
 export const orgSettingsSchema = z.object({
   schedulingMode: z.enum(SCHEDULING_MODES),
   alertLeadDays: z.number().int().min(0).max(365),
+  availabilityWeeksAhead: z.number().int().min(1, "Ask for at least one week").max(26, "Up to 26 weeks ahead").optional(),
   currency: z.string().length(3),
   timezone: z.string().min(1).optional(),
   enforceLicenceChecks: z.boolean().optional(),

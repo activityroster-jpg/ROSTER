@@ -7,6 +7,8 @@ import { getWeekSchedule, weekStart } from "@/lib/services/schedule";
 import { getTeachingMatrix } from "@/lib/services/teaching";
 import { assignStaff, assignBlockMessage } from "@/lib/services/assignment";
 import { courseStaff as courseStaffTable } from "@/lib/db/schema";
+import { setAvailability } from "@/lib/services/availability";
+import { availabilityForStaffSchema, firstIssue } from "@/lib/validation/actions";
 
 export interface CellCandidate {
   courseId: string;
@@ -69,6 +71,22 @@ export async function assignableForCellAction(date: string, slot: string, instru
 
   const activeRoles = roles.filter((r) => r.active).map((r) => ({ id: r.id, name: r.name }));
   return { ok: true, candidates: unique, roles: activeRoles };
+}
+
+/**
+ * The office sets availability for a staff member (volunteers without the app, a
+ * phone call). Audited as set by the office; the instructor sees it in their app.
+ */
+export async function setAvailabilityForStaffAction(input: { instructorId: string; date: string; slot: string; status: string | null }): Promise<{ ok: boolean; error?: string }> {
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
+  const parsed = availabilityForStaffSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: firstIssue(parsed.error, "Invalid slot") };
+  const who = await repos.tenant.instructor.findById(ctx, parsed.data.instructorId);
+  if (!who) return { ok: false, error: "Instructor not found" };
+  await setAvailability(repos, ctx, who.id, parsed.data.date, parsed.data.slot, parsed.data.status, { setBy: "office" });
+  revalidatePath("/office/availability");
+  revalidatePath("/office/courses");
+  return { ok: true };
 }
 
 /** Assign an instructor to a course straight from the availability grid. */
