@@ -53,12 +53,27 @@ const ROWS: Row[] = [
     us: "yes", general: "no", club: "partial", sheets: "partial",
   },
   {
+    feature: "Young workers' hours checked",
+    detail: "Under-18s checked against the legal hours, start and finish times and rest for their age; adults warned over 48 hours.",
+    us: "yes", general: "partial", club: "no", sheets: "no",
+  },
+  {
+    feature: "Parent / guardian view for under-18 staff",
+    detail: "A read-only rota for a young instructor's parent, with the consent recorded.",
+    us: "yes", general: "no", club: "partial", sheets: "no",
+  },
+  {
+    feature: "Instructor app",
+    detail: "Shifts, availability, swaps, leave, hours and documents on their phone, with notifications.",
+    us: "yes", general: "yes", club: "partial", sheets: "no",
+  },
+  {
     feature: "Course-based scheduling (multi-session)",
     detail: "A 5-day camp or a weekly club as one course with many sessions across days/times.",
     us: "yes", general: "partial", club: "no", sheets: "partial",
   },
   {
-    feature: "Visual week calendar + drag-free planner",
+    feature: "Visual week calendar and planner",
     detail: "Google-Calendar-style week view; click a day to add a session.",
     us: "yes", general: "yes", club: "no", sheets: "no",
   },
@@ -78,8 +93,8 @@ const ROWS: Row[] = [
     us: "yes", general: "yes", club: "no", sheets: "no",
   },
   {
-    feature: "Printable weekly rota (PDF)",
-    detail: "Clean rota — who's on, where, when — to print or share.",
+    feature: "Printable rota (PDF)",
+    detail: "A day-by-day breakdown of courses, times and staff, in the layout and style you choose.",
     us: "yes", general: "partial", club: "no", sheets: "yes",
   },
   {
@@ -131,7 +146,7 @@ export default function ComparePage() {
       {/* Positioning cards */}
       <div className="mt-12 grid gap-4 sm:grid-cols-3">
         {[
-          { h: "vs general rostering apps", p: "They rota any workforce well, but don't know a Level 2 from a Senior Instructor, a safety-boat ratio, or an expired first-aid ticket. You'd bolt compliance on by hand — the exact thing that goes wrong." },
+          { h: "vs general rostering apps", p: "They roster any workforce well, but don't know a Level 2 from a Senior Instructor, a safety-boat ratio, or an expired first-aid ticket. You'd bolt compliance on by hand — the exact thing that goes wrong." },
           { h: "vs club / membership systems", p: "Great at members, subs and public bookings. Instructor rostering, certs and safety cover are an afterthought, if they're there at all." },
           { h: "vs spreadsheets", p: "Free and flexible until a tab breaks, an expiry is missed, or two instructors get double-booked. No alerts, no audit trail, no isolation between sites." },
         ].map((c) => (
@@ -152,8 +167,31 @@ export default function ComparePage() {
         </div>
       </div>
 
-      {/* Matrix */}
-      <div className="mt-12 overflow-x-auto rounded-card border border-slate-200 bg-white shadow-sm">
+      {/* Phones: one card per capability, ours first, the others as small labelled marks. */}
+      <ul className="mt-12 space-y-3 md:hidden">
+        {ROWS.map((r) => (
+          <li key={r.feature} className="rounded-card border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="font-semibold text-navy">{r.feature}</p>
+                <p className="mt-0.5 text-xs text-slate-500">{r.detail}</p>
+              </div>
+              <span className="flex-none rounded-full bg-teal/10 px-2 py-1 text-[11px] font-semibold text-teal">{r.us === "yes" ? "Built in" : r.us === "partial" ? "Partial" : "No"}</span>
+            </div>
+            <div className="mt-3 grid grid-cols-3 gap-2 border-t border-slate-100 pt-2 text-center text-[11px] text-slate-500">
+              {([["general", "Rostering apps"], ["club", "Club systems"], ["sheets", "Spreadsheets"]] as const).map(([k, label]) => (
+                <div key={k}>
+                  <div className="[&>svg]:h-4 [&>svg]:w-4">{ICON[r[k]]}</div>
+                  <span>{label}</span>
+                </div>
+              ))}
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      {/* Matrix (tablet and up) */}
+      <div className="mt-12 hidden overflow-x-auto rounded-card border border-slate-200 bg-white shadow-sm md:block">
         <table className="w-full min-w-[46rem] border-collapse text-sm">
           <thead>
             <tr className="border-b border-slate-200">
@@ -196,7 +234,7 @@ export default function ComparePage() {
       <div className="mt-14 rounded-card border border-teal bg-navy p-8 text-center text-white">
         <h2 className="font-display text-2xl font-bold">See it with your own courses</h2>
         <p className="mx-auto mt-2 max-w-xl text-sm text-white/80">
-          Start a free month — no card required. Import your existing courses in minutes and rota your first
+          Start a free month — no card required. Import your existing courses in minutes and roster your first
           week with the safety checks already switched on.
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">

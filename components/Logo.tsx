@@ -39,7 +39,7 @@ export function Logo({
       </svg>
       <span className={`font-display tracking-tight ${type} ${c.text}`}>
         <span className="font-semibold">Activity</span>
-        <span className="font-extrabold">Rota</span>
+        <span className="font-extrabold">Roster</span>
       </span>
     </span>
   );

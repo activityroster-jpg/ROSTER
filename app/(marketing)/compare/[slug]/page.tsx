@@ -104,7 +104,7 @@ export default async function CompetitorPage({ params }: { params: Promise<{ slu
       {/* CTA */}
       <div className="mt-12 rounded-card border border-teal bg-navy p-8 text-center text-white">
         <h2 className="font-display text-2xl font-bold">Try it with your own courses</h2>
-        <p className="mx-auto mt-2 max-w-xl text-sm text-white/80">Start a free month — no card required. Import your schedule and rota your first week with the safety checks on.</p>
+        <p className="mx-auto mt-2 max-w-xl text-sm text-white/80">Start a free month — no card required. Import your schedule and roster your first week with the safety checks on.</p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
           <a href="/#get-demo" className="rounded-lg bg-teal px-6 py-3 font-semibold text-white hover:bg-teal-700">Start my free month</a>
           <Link href="/learn" className="rounded-lg border border-white/30 px-6 py-3 font-semibold text-white hover:bg-white/10">Learning Centre</Link>

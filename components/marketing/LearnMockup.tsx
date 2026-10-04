@@ -184,7 +184,7 @@ function OnboardingMock() {
   return (
     <Frame title="Welcome — set up your centre">
       <div className="mb-3 flex flex-wrap items-center gap-1.5 text-[10px] font-semibold">
-        {["How you run", "Courses", "Team", "Finish"].map((s, i) => (
+        {["How you run", "Courses", "Team", "Rota PDF", "Finish"].map((s, i) => (
           <span key={s} className="flex items-center gap-1"><span className={`flex h-4 w-4 items-center justify-center rounded-full ${i === 0 ? "bg-teal text-white" : "bg-slate-200 text-slate-500"}`}>{i + 1}</span><span className={i === 0 ? "text-navy" : "text-slate-400"}>{s}</span></span>
         ))}
       </div>

@@ -29,16 +29,17 @@ const SECTIONS: Section[] = [
     blurb: "Set your centre up in a few minutes with the guided wizard.",
     blocks: [
       { kind: "p", text: "When you first sign in you land on the onboarding wizard. It only asks for what it needs to get you rostering — everything else can wait." },
-      { kind: "sub", text: "The four steps" },
+      { kind: "sub", text: "The five steps" },
       { kind: "steps", items: [
         "How you run — pick the extra features you want (equipment, locations, operating areas, payroll, info) and choose whether your sessions run as Morning/Afternoon/Evening slots or with explicit start & end times.",
         "Courses — tick the RYA courses you offer (grouped by youth and adult), or add your own. Use “Add all RYA courses” if you run a lot of them.",
         "Team — add each instructor, tick the qualifications they hold and the courses they can teach, and add their email to send an invite.",
+        "Rota PDF — choose what your printable rota shows (times, staff, students, locations, equipment), its style and whether it is portrait or landscape. You can change it later under Settings.",
         "Finish — you're ready to roster. Any optional features you switched on appear here with a “set up” link.",
       ] },
       { kind: "tip", text: "You can leave the wizard at any time with “Skip for now”. The dashboard keeps a checklist so you can finish setup later." },
       { kind: "sub", text: "Instructors under 18" },
-      { kind: "p", text: "Every staff profile has a date of birth. Anyone under 18 is flagged automatically (the flag lifts on their 18th birthday), and their profile gains a parent or guardian contact plus a slot for the signed parental permission to work. Phone numbers and emails of under-18s are only ever shown to centre admins; colleagues see names and shift times. Every staff member also has an emergency contact, stored encrypted and visible to admins only, with each view written to your change log." },
+      { kind: "p", text: "Every staff profile has a date of birth. Anyone under 18 is flagged automatically (the flag lifts on their 18th birthday), and their profile gains a parent or guardian contact plus a slot for the signed parental permission to work. Phone numbers and emails of under-18s are shown only to centre admins and the welfare officer; colleagues see names and shift times unless the young person chooses to share their contact details. A parent or guardian can be given a read-only view of their rota. Every staff member also has an emergency contact, stored encrypted and visible to admins only, with each view written to your change log." },
       { kind: "sub", text: "Your privacy notice" },
       { kind: "p", text: "You are the data controller for your staff's details; ActivityRoster processes them for you. Add a link to your own privacy notice under Office → Settings and it appears beside ours for every member of your team. Need wording? We publish a template notice for staff and a plain-English version for under-18 instructors in our documentation; ask us for a copy." },
       { kind: "sub", text: "Coming back to sign in" },
@@ -654,9 +655,9 @@ export function LearningCenter({ initialTopic }: { initialTopic?: string }) {
         </p>
       </div>
 
-      <div className="mt-10 grid gap-6 lg:grid-cols-[16rem_1fr]">
+      <div className="mt-10 grid grid-cols-1 gap-6 lg:grid-cols-[16rem_minmax(0,1fr)]">
         {/* Tab list */}
-        <nav aria-label="Learning topics" className="lg:sticky lg:top-6 lg:self-start">
+        <nav aria-label="Learning topics" className="min-w-0 lg:sticky lg:top-6 lg:self-start">
           <ul className="flex gap-2 overflow-x-auto pb-2 lg:flex-col lg:gap-1 lg:overflow-visible lg:pb-0">
             {SECTIONS.map((s) => {
               const on = s.id === active;
@@ -678,7 +679,7 @@ export function LearningCenter({ initialTopic }: { initialTopic?: string }) {
         </nav>
 
         {/* Panel */}
-        <article className="rounded-card border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+        <article className="min-w-0 rounded-card border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
           <div className="flex items-start gap-3">
             <span className="text-3xl" aria-hidden="true">{section.icon}</span>
             <div>

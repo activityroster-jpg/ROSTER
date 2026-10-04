@@ -136,7 +136,7 @@ export function LeadCapture({
       ) : null}
       <div className="grid gap-3">
         <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@yourcentre.com" className={field} aria-label="Email" autoComplete="email" />
-        <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Create a password (8+ characters, letters and numbers)" className={field} aria-label="Password" autoComplete="new-password" />
+        <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Create a password" className={field} aria-label="Password" autoComplete="new-password" />
         <PasswordStrength password={password} className="mt-1" />
         <input required value={centreName} onChange={(e) => onCentreName(e.target.value)} placeholder="Centre / club name" className={field} aria-label="Centre name" />
 
@@ -186,15 +186,16 @@ export function LeadCapture({
         </div>
       ) : null}
 
-      <div className="mt-4 flex flex-wrap gap-3">
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
         <Turnstile onToken={setTurnstileToken} resetKey={tsReset} className="my-2" />
-        <button type="submit" disabled={status === "busy" || !acceptedTerms} className="rounded-lg bg-teal px-5 py-3 font-semibold text-white transition hover:bg-teal-700 disabled:opacity-50">
+        <button type="submit" disabled={status === "busy" || !acceptedTerms} className="w-full rounded-lg bg-teal px-5 py-3.5 font-semibold text-white transition hover:bg-teal-700 disabled:opacity-50 sm:w-auto">
           {status === "busy" ? "Setting up…" : "Start my free month"}
         </button>
-        <Link href="/demo" className="rounded-lg border border-slate-300 px-5 py-3 font-semibold text-navy hover:bg-slate-50">
+        <Link href="/demo" className="hidden rounded-lg border border-slate-300 px-5 py-3 font-semibold text-navy hover:bg-slate-50 md:inline-block">
           Explore the demo first
         </Link>
       </div>
+      {!acceptedTerms && status !== "busy" ? <p className="mt-2 text-xs text-slate-500">Tick the box above to agree to the terms, then start.</p> : null}
       <p className="mt-2 text-xs text-slate-500">Free for a month · no card required · cancel anytime.</p>
     </form>
   );

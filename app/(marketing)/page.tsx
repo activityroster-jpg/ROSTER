@@ -1,31 +1,31 @@
 import Link from "next/link";
 import {
   AlertTriangle, Anchor, CalendarCheck, LifeBuoy, ShieldCheck, Ship, Users, Waves, Wallet, FileCheck,
-  Clock, CalendarOff, Repeat, BarChart3, FolderLock, UserPlus, Smartphone, ClipboardCheck,
-  GitCompare, BookOpen, Newspaper, Tag, ArrowRight,
+  Clock, CalendarOff, Smartphone, ClipboardCheck,
+  GitCompare, BookOpen, Newspaper, Tag, ArrowRight, Baby, KeyRound, FileText, Upload,
 } from "lucide-react";
 import { LeadCapture } from "@/components/marketing/LeadCapture";
 import { apexDomain } from "@/lib/config";
 
-// The full platform — one line each. Bodies are hidden on phones to keep the
-// page light; the titles carry the message.
+// The full platform, one line each, in the order a centre manager cares about.
+// Keep this in step with what is built (and with INCLUDED on the pricing page).
 const PLATFORM = [
-  { icon: CalendarCheck, title: "Scheduling & rostering", body: "Build the week; fit-checked as you go." },
-  { icon: Clock, title: "Time & attendance", body: "Clock in/out; timesheets build themselves." },
-  { icon: CalendarOff, title: "Availability & leave", body: "Staff set it in the app; you approve in a tap." },
-  { icon: Repeat, title: "Open shifts & swaps", body: "Uncovered sessions claimed by fit, free staff." },
-  { icon: ShieldCheck, title: "Compliance engine", body: "Ratios, safety cover and tickets enforced." },
-  { icon: FileCheck, title: "Cert tracking", body: "Every RYA cert and vetting check, with expiry alerts." },
-  { icon: UserPlus, title: "HR & onboarding", body: "Staff records, documents and a new-starter checklist." },
-  { icon: FolderLock, title: "Document vault", body: "Certificates held privately, encrypted, in the EU." },
-  { icon: Wallet, title: "Payroll export", body: "Real hours × pay rates, one click a month." },
-  { icon: BarChart3, title: "Emergency sheet & registers", body: "Today's staff and emergency contacts, printable; a young-worker register." },
-  { icon: Smartphone, title: "Instructor app", body: "Schedule, hours and documents in their pocket." },
-  { icon: ClipboardCheck, title: "Audit trail", body: "Every change logged, nothing off the record." },
+  { icon: CalendarCheck, title: "Rota builder", body: "Build the week; every assignment is checked for tickets, ratios and clashes." },
+  { icon: Smartphone, title: "Instructor app", body: "Shifts, availability, swaps, hours and documents on their phone, with notifications." },
+  { icon: FileCheck, title: "Certs & vetting", body: "Every RYA ticket, first aid and DBS/PVG/AccessNI/Garda check, with expiry reminders." },
+  { icon: Baby, title: "Young workers' hours", body: "Under-18s checked against the legal hours for their age; adults warned over 48 a week." },
+  { icon: Users, title: "Parent & guardian view", body: "A read-only rota for the parents of under-18 staff. Nothing else, nobody else's details." },
+  { icon: KeyRound, title: "Roles for your team", body: "Admin, senior instructor and welfare officer, each seeing only what they need." },
+  { icon: FileText, title: "Printable rota", body: "A day-by-day PDF in the layout you choose, ready for the noticeboard." },
+  { icon: LifeBuoy, title: "Emergency sheet", body: "Today's staff and emergency contacts on one page for the duty officer." },
+  { icon: CalendarOff, title: "Leave & cover", body: "Staff ask in the app; you approve in a tap and open the gap to the team." },
+  { icon: Clock, title: "Hours & payroll", body: "Hours from the rota (or the optional clock), times pay rates, exported monthly." },
+  { icon: Upload, title: "Import in minutes", body: "Bring your courses and staff across from a spreadsheet or calendar." },
+  { icon: ClipboardCheck, title: "Audit trail & GDPR tools", body: "Every change logged; export, restrict or anonymise a person's data in a click." },
 ];
 
 const SAFETY = [
-  { icon: ShieldCheck, title: "Won't rota the under-qualified", body: "Lapsed first aid or vetting? They can't be assigned without a recorded override." },
+  { icon: ShieldCheck, title: "Won't roster the under-qualified", body: "Lapsed first aid or vetting? They can't be assigned without a recorded override." },
   { icon: Users, title: "Ratio-aware", body: "Flags a course the moment it's short of instructors." },
   { icon: LifeBuoy, title: "Safety-boat cover enforced", body: "Nothing goes afloat without cover — overrides are recorded." },
   { icon: AlertTriangle, title: "Nothing lapses quietly", body: "Expiry alerts on every ticket and check." },
@@ -154,29 +154,39 @@ export default function MarketingHome() {
               Staff rostering that knows the RYA rules.
             </h1>
             <p className="mt-4 max-w-xl text-lg text-white/80">
-              Rostering, hours, leave and payroll in one place — and it won&apos;t let an under-qualified instructor,
-              an over-ratio course or a boat without safety cover slip through.
+              Rota, certificates, hours and leave in one place, with an app for your instructors. It won&apos;t let an
+              under-qualified instructor, an over-ratio course or a boat without safety cover slip through.
             </p>
-            <div className="mt-7 flex flex-wrap gap-3">
-              <Link href="/contact" className="rounded-lg bg-[#0C6B74] px-6 py-3 font-semibold text-white shadow-lg transition hover:bg-teal-700">
-                Schedule a call →
-              </Link>
-              <Link href="/demo" className="hidden rounded-lg border border-white/25 px-6 py-3 font-semibold text-white hover:bg-white/10 md:inline-block">
-                Explore the demo
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+              <a href="#get-demo" className="rounded-lg bg-[#0C6B74] px-6 py-3.5 text-center font-semibold text-white shadow-lg transition hover:bg-teal-700">
+                Start my free month →
+              </a>
+              <Link href="/book" className="rounded-lg border border-white/30 px-6 py-3.5 text-center font-semibold text-white hover:bg-white/10">
+                Book a 30-minute call
               </Link>
             </div>
-            <p className="mt-3 text-sm text-white/60">
-              Free for a month · no card ·{" "}
-              <Link href="/pricing" className="font-semibold text-white/90 underline decoration-white/30 underline-offset-2 hover:decoration-white">Pricing</Link>
+            <p className="mt-3 text-sm text-white/70">
+              Free for a month · no card · set up in an afternoon ·{" "}
+              <Link href="/pricing" className="font-semibold text-white underline decoration-white/40 underline-offset-2 hover:decoration-white">from £35/month</Link>
             </p>
           </div>
-          <div className="flex justify-center md:justify-end">
-            <div className="w-full max-w-md rounded-card bg-white/5 p-6 text-center ring-1 ring-white/15 backdrop-blur md:p-8">
-              <p className="font-display text-2xl font-bold text-white">Start your free month</p>
-              <p className="mt-2 text-sm text-white/70">Your centre is created instantly.</p>
-              <a href="#get-demo" className="mt-5 inline-flex w-full items-center justify-center rounded-lg bg-[#0C6B74] px-6 py-3 font-semibold text-white shadow-lg transition hover:bg-teal-700">
-                Start your free month →
+          <div className="hidden justify-end md:flex">
+            <div className="w-full max-w-md rounded-card bg-white/5 p-8 ring-1 ring-white/15 backdrop-blur">
+              <p className="font-display text-2xl font-bold text-white">What you get on day one</p>
+              <ul className="mt-4 space-y-2.5 text-sm text-white/85">
+                {[
+                  "RYA course types, roles and checks already set up",
+                  "A guided set-up that imports your courses and staff",
+                  "The instructor app for your whole team",
+                  "Young workers' hours and safety cover checked as you build",
+                ].map((x) => (
+                  <li key={x} className="flex gap-2"><ShieldCheck className="mt-0.5 h-4 w-4 flex-none text-[#4fd1c5]" />{x}</li>
+                ))}
+              </ul>
+              <a href="#get-demo" className="mt-6 inline-flex w-full items-center justify-center rounded-lg bg-[#0C6B74] px-6 py-3 font-semibold text-white shadow-lg transition hover:bg-teal-700">
+                Start my free month →
               </a>
+              <Link href="/demo" className="mt-3 block text-center text-sm font-semibold text-white/80 hover:text-white">or explore the live demo</Link>
             </div>
           </div>
         </div>
@@ -206,13 +216,13 @@ export default function MarketingHome() {
         <div className="mx-auto max-w-6xl px-4 py-12 md:py-16">
           <h2 className="font-display text-2xl font-semibold text-navy">The whole staff platform, built for the water</h2>
           <p className="mt-2 max-w-2xl text-slate-600">Everything you stitch together today — spreadsheets, WhatsApp, a folder of certificates — in one place.</p>
-          <div className="mt-8 grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3">
+          <div className="mt-8 grid gap-3 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
             {PLATFORM.map((f) => (
-              <div key={f.title} className="flex gap-3 rounded-card border border-slate-200 p-3 sm:p-4">
+              <div key={f.title} className="flex gap-3 rounded-card border border-slate-200 p-4">
                 <f.icon className="h-6 w-6 flex-none text-teal" />
                 <div>
-                  <h3 className="text-sm font-semibold text-navy sm:text-base">{f.title}</h3>
-                  <p className="mt-0.5 hidden text-sm text-slate-600 sm:block">{f.body}</p>
+                  <h3 className="text-base font-semibold text-navy">{f.title}</h3>
+                  <p className="mt-0.5 text-sm text-slate-600">{f.body}</p>
                 </div>
               </div>
             ))}
@@ -230,12 +240,12 @@ export default function MarketingHome() {
       {/* How it works */}
       <section className="bg-canvas">
         <div className="mx-auto max-w-6xl px-4 py-12 md:py-16">
-          <h2 className="font-display text-2xl font-semibold text-navy">Up and running in a weekend</h2>
+          <h2 className="font-display text-2xl font-semibold text-navy">Set up in an afternoon</h2>
           <div className="mt-8 grid gap-4 md:grid-cols-3 md:gap-6">
             {[
-              { n: "1", title: "Set up your centre", body: "RYA defaults are seeded for you. Tweak them, add your staff and their tickets." },
+              { n: "1", title: "Set up your centre", body: "RYA defaults are in place from the start. A guided set-up imports your courses and staff." },
               { n: "2", title: "Build the week", body: "Drop courses on the calendar. Staff, ratios and safety cover are checked as you go." },
-              { n: "3", title: "Run the season", body: "Staff clock in, claim shifts and book leave from their phone. Hours flow to payroll." },
+              { n: "3", title: "Run the season", body: "Staff confirm shifts, swap, pick up cover and book leave in the app. Hours flow to payroll." },
             ].map((s) => (
               <div key={s.n} className="flex gap-4 rounded-card border border-slate-200 bg-white p-5 md:block md:p-6">
                 <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-teal font-display text-lg font-bold text-white">{s.n}</span>
@@ -309,9 +319,10 @@ export default function MarketingHome() {
       {/* Quote */}
       <section className="border-y border-slate-200 bg-white">
         <div className="mx-auto max-w-3xl px-4 py-12 text-center md:py-16">
-          <p className="font-display text-2xl font-medium leading-snug text-navy" style={{ textWrap: "balance" }}>
-            &ldquo;The Saturday morning scramble to check who&apos;s ticketed and who&apos;s on safety boat just… stopped.&rdquo;
+          <p className="font-display text-2xl font-semibold leading-snug text-navy" style={{ textWrap: "balance" }}>
+            No more Saturday-morning scramble to check who&apos;s ticketed and who&apos;s on safety boat.
           </p>
+          <p className="mx-auto mt-3 max-w-xl text-slate-600">The checks happen when you build the rota, so the morning is about the water, not the paperwork.</p>
         </div>
       </section>
 
@@ -346,11 +357,11 @@ export default function MarketingHome() {
         <div className="mx-auto grid max-w-5xl items-center gap-8 px-4 py-12 md:grid-cols-2 md:gap-10 md:py-16">
           <div className="text-white">
             <h2 className="font-display text-3xl font-bold" style={{ textWrap: "balance" }}>Try it free for a month</h2>
-            <p className="mt-3 text-white/80">Leave your email and we&apos;ll set up your centre and offer a free walkthrough.</p>
-            <ul className="mt-5 space-y-2 text-white/80">
-              <li>• No card required</li>
-              <li>• EU-hosted, UK GDPR-ready, export any time</li>
-              <li>• Your data stays strictly yours</li>
+            <p className="mt-3 text-white/80">Your centre is created in seconds with the RYA defaults in place. A guided set-up does the rest, and we&apos;re happy to walk you through it.</p>
+            <ul className="mt-5 space-y-2 text-white/85">
+              {["No card required, cancel any time", "From £35 a month afterwards, nothing per user", "Hosted in the EU, export your data whenever you like"].map((x) => (
+                <li key={x} className="flex gap-2"><ShieldCheck className="mt-0.5 h-4 w-4 flex-none text-[#4fd1c5]" />{x}</li>
+              ))}
             </ul>
           </div>
           <div className="rounded-card bg-white p-6 shadow-xl">
@@ -366,9 +377,13 @@ export default function MarketingHome() {
           <dl className="mt-6 space-y-5">
             {[
               ["Is my club's data kept separate?", "Yes — isolation is enforced in code, with an automated test that proves no centre can see another's data."],
-              ["Where is data stored?", "In the EU. Certificates and vetting documents are held privately and encrypted."],
+              ["Where is data stored?", "In the EU. Certificates are held privately and encrypted; DBS, PVG, AccessNI and Garda checks are recorded by status and reference only, so the certificate itself is never stored."],
               ["Which jurisdictions are supported?", "England, Wales, Scotland, Northern Ireland and Ireland — DBS, PVG, AccessNI or Garda vetting set up automatically."],
               ["Can we tailor it to how we run?", "Yes. Grades, roles, checks, session times and course types are all yours to edit."],
+              ["Do our instructors need to install anything?", "They get the instructor app on their phone for shifts, availability, swaps, hours and documents. It also works in any phone browser, so nobody is left out."],
+              ["We have under-18 assistants. Is that covered?", "Yes. Their hours are checked against the legal limits for their age, their contact details stay private, and a parent or guardian can be given a read-only view of their rota."],
+              ["Can we bring our existing schedule across?", "Yes. Import courses and staff from a spreadsheet or calendar, check what was read, then save. Most centres are set up in an afternoon."],
+              ["What does it cost after the free month?", "£35 a month for up to 10 people or £65 a month for unlimited instructors and volunteers. No per-user fees, and annual billing gives you months free."],
             ].map(([q, a]) => (
               <div key={q}>
                 <dt className="font-semibold text-navy">{q}</dt>

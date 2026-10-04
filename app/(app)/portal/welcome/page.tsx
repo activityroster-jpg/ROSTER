@@ -73,7 +73,7 @@ export default async function PortalWelcomePage() {
           <span className="mt-0.5 flex h-9 w-9 flex-none items-center justify-center rounded-full bg-teal/15 text-teal"><CalendarClock className="h-5 w-5" /></span>
           <div className="flex-1">
             <p className="font-semibold text-navy">2. Set your availability</p>
-            <p className="text-sm text-slate-600">Tell the office which sessions you can work so they can rota you in.</p>
+            <p className="text-sm text-slate-600">Tell the office which sessions you can work so they can roster you in.</p>
           </div>
           <span className="self-center text-teal">→</span>
         </Link>

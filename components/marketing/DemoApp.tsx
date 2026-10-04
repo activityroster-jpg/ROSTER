@@ -144,7 +144,7 @@ export function DemoApp() {
 
       {view === "office" ? (
         <div className="overflow-hidden rounded-card border border-slate-200 shadow-sm">
-          <div className="grid md:grid-cols-[220px_1fr]">
+          <div className="grid grid-cols-1 md:grid-cols-[220px_minmax(0,1fr)]">
             <aside className="hidden bg-navy p-4 text-white md:block">
               <Logo variant="onDark" size="sm" />
               <p className="mb-3 mt-1 border-b border-white/10 pb-3 text-xs text-white/60">Harbour Sailing Centre</p>
@@ -168,7 +168,7 @@ export function DemoApp() {
               ))}
             </aside>
 
-            <div className="bg-canvas p-5">
+            <div className="min-w-0 bg-canvas p-5">
               <div className="mb-4 flex gap-2 overflow-x-auto pb-1 md:hidden">
                 {NAV_FLAT.map((item) => (
                   <button

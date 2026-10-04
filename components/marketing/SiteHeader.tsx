@@ -49,10 +49,11 @@ export function SiteHeader() {
 
         {/* Mobile controls */}
         <div className="flex items-center gap-2 md:hidden">
-          <Link href="/login" className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-navy">
+          {/* Sign in lives in the menu on the narrowest phones so the bar never wraps. */}
+          <Link href="/login" className="hidden whitespace-nowrap rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-navy min-[420px]:inline-block">
             Sign in
           </Link>
-          <a href="/#get-demo" className="rounded-lg bg-navy px-3 py-2 text-sm font-medium text-white">
+          <a href="/#get-demo" className="whitespace-nowrap rounded-lg bg-navy px-3 py-2 text-sm font-medium text-white">
             Try free
           </a>
           <button

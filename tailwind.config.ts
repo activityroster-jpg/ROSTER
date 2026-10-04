@@ -36,7 +36,14 @@ const config: Config = {
         },
         starboard: "#1E8E5A", // covered / confirmed
         port: "#C43D3D", // conflict
-        amber: "#B9821A", // expiring / attention
+        // Expiring / attention. DEFAULT is the brand amber; the numbered shades are
+        // Tailwind's standard amber scale, kept so warning banners (bg-amber-50,
+        // text-amber-800 and so on) render. A bare string here would remove them.
+        amber: {
+          DEFAULT: "#B9821A",
+          50: "#fffbeb", 100: "#fef3c7", 200: "#fde68a", 300: "#fcd34d", 400: "#fbbf24",
+          500: "#f59e0b", 600: "#d97706", 700: "#b45309", 800: "#92400e", 900: "#78350f",
+        },
       },
       fontFamily: {
         sans: ["var(--font-sans)", "Fira Sans", "system-ui", "sans-serif"],

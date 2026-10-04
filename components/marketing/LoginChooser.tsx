@@ -16,7 +16,7 @@ export function LoginChooser() {
     <div className="mx-auto max-w-2xl">
       <div className="grid gap-4 sm:grid-cols-2">
         {door("/sign-in?next=%2Fgo%3Fto%3Doffice", "Centre admin", "Run the rota, courses, team, documents and billing for your centre.", "Sign in to the office")}
-        {door("/sign-in?next=%2Fgo%3Fto%3Dportal", "Instructor portal", "See your shifts, set availability, confirm sessions, clock in and request leave.", "Sign in to my portal")}
+        {door("/sign-in?next=%2Fgo%3Fto%3Dportal", "Instructor portal", "See your shifts, set availability, confirm sessions, swap and request leave.", "Sign in to my portal")}
       </div>
       <p className="mt-6 text-center text-sm text-slate-500">Your email tells us which centre you belong to. If you belong to more than one, you choose after signing in.</p>
       <p className="mt-2 text-center text-sm text-slate-500">New here? <a href="/#get-demo" className="font-semibold text-teal hover:underline">Start your free month</a> and your centre is created instantly. On your phone? The <a href="/app" className="font-semibold text-teal hover:underline">ActivityRoster app</a> signs you in the same way.</p>
