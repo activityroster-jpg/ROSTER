@@ -1,6 +1,7 @@
 import { requirePlatformAdmin } from "@/lib/platform/admin";
 import { getDb } from "@/lib/cf/bindings";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
+import { extraTrialOf } from "@/lib/services/trial-survey";
 import { CONTACT_LABEL, OTHER_LABEL, TEXT_QUESTIONS, USER_COUNT_LABEL } from "@/lib/validation/trial-survey";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +14,7 @@ export async function GET(req: Request) {
   const contact = new URL(req.url).searchParams.get("contact");
   const all = await new PlatformRepository(await getDb()).listTrialFeedback();
   const rows = contact === "yes" ? all.filter((r) => r.contactOk) : contact === "no" ? all.filter((r) => !r.contactOk) : all;
-  const head = ["Submitted", "Centre", "Subdomain", ...TEXT_QUESTIONS.map((q) => q.label), USER_COUNT_LABEL, OTHER_LABEL, `${CONTACT_LABEL} (happy to be contacted)`, "Contact email", "Contact answer recorded", "Extra 30-day trial activated", "Extra trial ends"];
+  const head = ["Submitted", "Centre", "Subdomain", ...TEXT_QUESTIONS.map((q) => q.label), USER_COUNT_LABEL, OTHER_LABEL, `${CONTACT_LABEL} (happy to be contacted)`, "Contact email", "Contact answer recorded", "Extra trial activated", "Extra trial expires"];
   const lines = [head.map(cell).join(",")];
   for (const r of rows) {
     lines.push([
@@ -21,7 +22,7 @@ export async function GET(req: Request) {
       r.mostUseful, r.leastUseful, r.wouldChange, r.missing, r.featureRequest,
       r.userCount, r.otherFeedback,
       r.contactOk ? "Yes" : "No", r.contactOk ? r.contactEmail : "", r.contactAnsweredAt.toISOString(),
-      r.extraTrialGrantedAt?.toISOString() ?? "", r.extraTrialEndsAt?.toISOString() ?? "",
+      extraTrialOf(r).activatedAt.toISOString(), extraTrialOf(r).expiresAt.toISOString(),
     ].map(cell).join(","));
   }
   const suffix = contact === "yes" ? "-contactable" : contact === "no" ? "-not-contactable" : "";

@@ -499,7 +499,6 @@ const SECTIONS: Section[] = [
       { kind: "bullets", items: [
         "Only admins can answer, and it's one survey per centre, so the free month is given once.",
         "Your answers go to the ActivityRoster team only, never to your staff, and the extension appears in your change log.",
-        "After reading your answers we may add a further 30 days to your trial. If we do, your admins get an email with the new end date and it shows in your change log.",
         "Keep answers about the platform: no names, health details or anything about a child or anyone else.",
       ] },
     ],

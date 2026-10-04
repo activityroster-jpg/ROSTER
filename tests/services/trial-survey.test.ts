@@ -8,7 +8,7 @@ vi.mock("@/lib/mail", () => ({
 
 import { createTestDb } from "@/tests/helpers/test-db";
 import { seedFullOrg } from "@/tests/helpers/seed-fixtures";
-import { ExtraTrialError, grantExtraTrial, submitTrialSurvey, surveyStatus, sweepTrialSurvey, SurveyNotOpenError } from "@/lib/services/trial-survey";
+import { extraTrialOf, submitTrialSurvey, surveyStatus, sweepTrialSurvey, SurveyNotOpenError } from "@/lib/services/trial-survey";
 import { MIN_WORDS, QUESTION_COUNT, SURVEY_REWARD_DAYS, trialSurveySchema, wordCount } from "@/lib/validation/trial-survey";
 import { trialState } from "@/lib/billing/trial";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
@@ -86,6 +86,9 @@ describe("trial-end survey: eligibility, reward and invitation", () => {
     expect(row.contactAnsweredAt.toISOString()).toBe(now.toISOString());
     expect(row.missing).toBe(thirty);
     expect(row.userCount).toBe(12);
+    // The extra month is recorded on the answers: activated now, expiring when the new trial ends.
+    expect(extraTrialOf(row)).toEqual({ activatedAt: now, expiresAt: r.trialEndsAt });
+    expect(extraTrialOf({ ...row, extraTrialGrantedAt: null, extraTrialEndsAt: null })).toEqual({ activatedAt: now, expiresAt: r.trialEndsAt });
 
     const log = await repos.tenant.auditLog.list({ organisationId, slug: "alpha", system: true, reason: "test" });
     expect(log.some((l) => l.action === "trial_extended")).toBe(true);
@@ -124,41 +127,5 @@ describe("trial-end survey: eligibility, reward and invitation", () => {
     sent.length = 0;
     expect(await sweepTrialSurvey(db2, env, now)).toEqual({ checked: 0, sent: 0 });
     expect(sent).toHaveLength(0);
-  });
-
-  it("activates one extra 30 days from the Dev Center, on top of any time left, logs it and emails the admins", async () => {
-    const { db } = createTestDb();
-    const { repos, organisationId } = await seedFullOrg(db, { name: "Alpha", slug: "alpha", jurisdiction: "england" });
-    const now = new Date("2026-10-04T12:00:00Z");
-    const org = (await repos.control.updateOrganisation(organisationId, { trialEndsAt: new Date(now.getTime() - 3 * DAY), subscriptionStatus: "trialing" }))!;
-    const { trialEndsAt: rewarded } = await submitTrialSurvey(repos, { organisation: org, userId: "u", trialDays: 30, answers: trialSurveySchema.parse(valid), now });
-    const fb = (await new PlatformRepository(db).trialFeedbackForOrg(organisationId))!;
-    sent.length = 0;
-
-    const later = new Date(now.getTime() + 2 * DAY);
-    const r = await grantExtraTrial(repos, env, { feedbackId: fb.id, grantedBy: "conor@platform.test", trialDays: 30, now: later });
-    // Still 28 days left from the survey month, so the extra 30 days go on the end of it.
-    expect(r.trialEndsAt.getTime()).toBe(rewarded.getTime() + 30 * DAY);
-    expect((await repos.control.organisationById(organisationId))!.trialEndsAt!.getTime()).toBe(r.trialEndsAt.getTime());
-    const after = (await new PlatformRepository(db).trialFeedbackById(fb.id))!;
-    expect(after.extraTrialGrantedBy).toBe("conor@platform.test");
-    expect(after.extraTrialGrantedAt!.toISOString()).toBe(later.toISOString());
-    expect(sent.map((m) => m.to)).toEqual(["owner@alpha.test"]);
-    const log = await repos.tenant.auditLog.list({ organisationId, slug: "alpha", system: true, reason: "test" });
-    expect(log.some((l) => l.action === "trial_extended_by_platform")).toBe(true);
-
-    await expect(grantExtraTrial(repos, env, { feedbackId: fb.id, grantedBy: "conor@platform.test", trialDays: 30, now: later })).rejects.toBeInstanceOf(ExtraTrialError);
-  });
-
-  it("won't extend a centre that is on a paid plan", async () => {
-    const { db } = createTestDb();
-    const { repos, organisationId } = await seedFullOrg(db, { name: "Alpha", slug: "alpha", jurisdiction: "england" });
-    const now = new Date("2026-10-04T12:00:00Z");
-    const org = (await repos.control.updateOrganisation(organisationId, { trialEndsAt: new Date(now.getTime() - DAY), subscriptionStatus: "trialing" }))!;
-    await submitTrialSurvey(repos, { organisation: org, userId: "u", trialDays: 30, answers: trialSurveySchema.parse(valid), now });
-    await repos.control.updateOrganisation(organisationId, { subscriptionStatus: "active" });
-    const fb = (await new PlatformRepository(db).trialFeedbackForOrg(organisationId))!;
-    await expect(grantExtraTrial(repos, env, { feedbackId: fb.id, grantedBy: "c", trialDays: 30, now })).rejects.toThrow(/paid plan/);
-    expect((await new PlatformRepository(db).trialFeedbackById(fb.id))!.extraTrialGrantedAt).toBeNull();
   });
 });

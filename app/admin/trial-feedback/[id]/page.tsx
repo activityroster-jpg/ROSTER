@@ -6,7 +6,7 @@ import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { ControlPlaneRepository } from "@/lib/db/repositories/control-plane";
 import { trialEndsAt, trialState } from "@/lib/billing/trial";
 import { CONTACT_LABEL, OTHER_LABEL, TEXT_QUESTIONS, USER_COUNT_LABEL } from "@/lib/validation/trial-survey";
-import { ExtraTrialButton } from "@/components/admin/ExtraTrialButton";
+import { extraTrialOf } from "@/lib/services/trial-survey";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Trial feedback" };
@@ -26,6 +26,8 @@ export default async function TrialFeedbackDetailPage({ params }: { params: Prom
   const trialDays = (await platform.getPricing().catch(() => null))?.trialDays ?? 30;
   const state = org ? trialState(org, trialDays) : null;
   const ends = org ? trialEndsAt(org, trialDays) : null;
+  const extra = extraTrialOf(fb);
+  const expired = extra.expiresAt.getTime() < Date.now();
 
   const answers: [string, string][] = [
     ...TEXT_QUESTIONS.map((q) => [q.label, fb[q.key]] as [string, string]),
@@ -47,14 +49,12 @@ export default async function TrialFeedbackDetailPage({ params }: { params: Prom
         <section className="rounded-xl border border-slate-200 bg-white p-4">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Free trial</h2>
           <p className="mt-1 text-sm text-slate-700">{state ? TRIAL_WORDS[state.kind] : "Centre not found"}{ends && state?.kind !== "paid" ? ` · ends ${day(ends)}` : ""}</p>
-          <p className="mt-1 text-xs text-slate-500">Answering the survey added {fb.rewardDays} days.</p>
-          <div className="mt-3">
-            {fb.extraTrialGrantedAt ? (
-              <p className="text-sm text-slate-700">Extra 30-day trial activated {when(fb.extraTrialGrantedAt)}{fb.extraTrialGrantedBy ? ` by ${fb.extraTrialGrantedBy}` : ""}{fb.extraTrialEndsAt ? `, to ${day(fb.extraTrialEndsAt)}` : ""}.</p>
-            ) : (
-              <ExtraTrialButton feedbackId={fb.id} centreName={fb.centreName} disabledReason={!org ? "The centre no longer exists." : state?.kind === "paid" ? "This centre is on a paid plan, so there is no trial to extend." : null} />
-            )}
-          </div>
+          <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+            <dt className="text-slate-500">Extra {fb.rewardDays}-day trial activated</dt>
+            <dd className="text-slate-700">{when(extra.activatedAt)}</dd>
+            <dt className="text-slate-500">{expired ? "Expired" : "Expires"}</dt>
+            <dd className={expired ? "text-port" : "text-slate-700"}>{day(extra.expiresAt)}</dd>
+          </dl>
         </section>
         <section className="rounded-xl border border-slate-200 bg-white p-4">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500">{CONTACT_LABEL}</h2>

@@ -3,8 +3,8 @@ import type { CloudflareEnv } from "@/lib/cf/bindings";
 import type { Repositories } from "@/lib/db/repositories";
 import { ControlPlaneRepository } from "@/lib/db/repositories/control-plane";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
-import type { Organisation } from "@/lib/db/schema";
-import { TRIAL_GRACE_DAYS, trialEndsAt, trialState, type TrialState } from "@/lib/billing/trial";
+import type { Organisation, TrialFeedback } from "@/lib/db/schema";
+import { TRIAL_GRACE_DAYS, trialState, type TrialState } from "@/lib/billing/trial";
 import { SURVEY_REWARD_DAYS, type TrialSurveyAnswers } from "@/lib/validation/trial-survey";
 import { writeAudit } from "@/lib/services/audit";
 import { sendEmail, escapeHtml } from "@/lib/mail";
@@ -49,17 +49,20 @@ export async function submitTrialSurvey(
   const status = surveyStatus(trialState(org, trialDays, now.getTime()), Boolean(await platform.trialFeedbackForOrg(org.id)));
   if (status !== "open") throw new SurveyNotOpenError(status);
 
+  const trialEndsAt = new Date(now.getTime() + SURVEY_REWARD_DAYS * DAY);
   const row = await platform.insertTrialFeedback({
     organisationId: org.id,
     userId,
     ...answers,
     contactAnsweredAt: now,
     rewardDays: SURVEY_REWARD_DAYS,
+    extraTrialGrantedAt: now,
+    extraTrialGrantedBy: userId,
+    extraTrialEndsAt: trialEndsAt,
   });
   // Lost a race with another admin of the same centre: their answers won, and the month is already given.
   if (!row) throw new SurveyNotOpenError("answered");
 
-  const trialEndsAt = new Date(now.getTime() + SURVEY_REWARD_DAYS * DAY);
   await repos.control.updateOrganisation(org.id, { trialEndsAt, subscriptionStatus: org.subscriptionStatus ?? "trialing" });
   await writeAudit(repos, { organisationId: org.id, slug: org.slug, system: true, reason: "trial-survey" }, {
     action: "trial_extended",
@@ -71,52 +74,10 @@ export async function submitTrialSurvey(
   return { trialEndsAt };
 }
 
-export class ExtraTrialError extends Error {
-  constructor(message: string) { super(message); this.name = "ExtraTrialError"; }
-}
-
-/**
- * The Dev Center's "Activate 30-day trial" on a centre's feedback: the trial
- * runs SURVEY_REWARD_DAYS from today, or from its current end if that is
- * later, so nothing already given is lost. Once per set of answers. Goes in
- * the centre's change log and the centre's admins are told by email.
- */
-export async function grantExtraTrial(
-  repos: Repositories,
-  env: Pick<CloudflareEnv, "APP_APEX_DOMAIN">,
-  args: { feedbackId: string; grantedBy: string; trialDays: number; now?: Date },
-): Promise<{ trialEndsAt: Date; centreName: string }> {
-  const now = args.now ?? new Date();
-  const platform = new PlatformRepository(repos.db);
-  const fb = await platform.trialFeedbackById(args.feedbackId);
-  if (!fb) throw new ExtraTrialError("Feedback not found");
-  if (fb.extraTrialGrantedAt) throw new ExtraTrialError("The extra 30 days have already been activated for this centre");
-  const org = await repos.control.organisationById(fb.organisationId);
-  if (!org) throw new ExtraTrialError("Centre not found");
-  if (trialState(org, args.trialDays, now.getTime()).kind === "paid") throw new ExtraTrialError("This centre is on a paid plan, so there is no trial to extend");
-
-  const base = Math.max(now.getTime(), trialEndsAt(org, args.trialDays));
-  const ends = new Date(base + SURVEY_REWARD_DAYS * DAY);
-  // Claim the grant first so a double click can never add two months.
-  if (!(await platform.markExtraTrialGranted(fb.id, args.grantedBy, ends, now))) throw new ExtraTrialError("The extra 30 days have already been activated for this centre");
-  await repos.control.updateOrganisation(org.id, { trialEndsAt: ends, subscriptionStatus: org.subscriptionStatus ?? "trialing" });
-  await writeAudit(repos, { organisationId: org.id, slug: org.slug, system: true, reason: "dev-center-extra-trial" }, {
-    action: "trial_extended_by_platform",
-    entity: "organisation",
-    entityId: org.id,
-    before: { trialEndsAt: new Date(trialEndsAt(org, args.trialDays)).toISOString() },
-    after: { trialEndsAt: ends.toISOString(), reason: "extra 30-day trial from ActivityRoster after the trial-end survey" },
-  });
-
-  const apex = env.APP_APEX_DOMAIN || "activityroster.com";
-  const until = ends.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/London" });
-  const html = `
-    <p>Hello,</p>
-    <p>Thank you for your feedback on <strong>${escapeHtml(org.name)}</strong>'s trial. We've added another 30 days: your free trial now runs until <strong>${until}</strong>.</p>
-    <p><a href="https://${org.slug}.${apex}/office">Open your centre</a></p>`;
-  const admins = await repos.control.adminEmailsForOrg(org.id);
-  await Promise.all(admins.map((email) => sendEmail({ to: email, subject: `${org.name}: your free trial now runs until ${until}`, html }).catch(() => {})));
-  return { trialEndsAt: ends, centreName: org.name };
+/** When the survey's extra month was activated and when it expires (rows saved before those were stored: from the answer time). */
+export function extraTrialOf(fb: Pick<TrialFeedback, "extraTrialGrantedAt" | "extraTrialEndsAt" | "contactAnsweredAt" | "rewardDays">): { activatedAt: Date; expiresAt: Date } {
+  const activatedAt = fb.extraTrialGrantedAt ?? fb.contactAnsweredAt;
+  return { activatedAt, expiresAt: fb.extraTrialEndsAt ?? new Date(activatedAt.getTime() + fb.rewardDays * DAY) };
 }
 
 /**

@@ -847,7 +847,7 @@ export const trialFeedback = sqliteTable("trial_feedback", {
   contactEmail: text("contact_email"),
   contactAnsweredAt: integer("contact_answered_at", { mode: "timestamp_ms" }).notNull(),
   rewardDays: integer("reward_days").notNull(),
-  /** The platform owner pressed "Activate 30-day trial" in the Dev Center: when, by whom, and the trial end it set. */
+  /** The extra month answering the survey activated: when, by which user, and when it expires. */
   extraTrialGrantedAt: integer("extra_trial_granted_at", { mode: "timestamp_ms" }),
   extraTrialGrantedBy: text("extra_trial_granted_by"),
   extraTrialEndsAt: integer("extra_trial_ends_at", { mode: "timestamp_ms" }),

@@ -20,7 +20,8 @@ export interface FeedbackRow {
   contactEmail: string | null;
   contactAnsweredAt: string;
   createdAt: string;
-  extraTrialGrantedAt: string | null;
+  extraTrialActivatedAt: string;
+  extraTrialExpiresAt: string;
 }
 
 type Filter = "all" | "yes" | "no";
@@ -29,6 +30,7 @@ const FILTERS: { id: Filter; label: string }[] = [
   { id: "yes", label: "Happy to be contacted" },
   { id: "no", label: "Not to be contacted" },
 ];
+const fmtDay = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/London" });
 const fmt = (iso: string) => new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" });
 
 /** Trial-end survey answers: one row per centre, click a row to read it in full; filter and export by the contact answer. */
@@ -70,7 +72,7 @@ export function TrialFeedbackTable({ rows }: { rows: FeedbackRow[] }) {
                 <th className="px-3 py-2">Centre</th>
                 <th className="px-3 py-2">Users</th>
                 <th className="px-3 py-2">Happy to be contacted</th>
-                <th className="px-3 py-2">Extra 30-day trial</th>
+                <th className="px-3 py-2">Extra trial</th>
                 <th className="px-3 py-2"><span className="sr-only">Open</span></th>
               </tr>
             </thead>
@@ -93,7 +95,8 @@ export function TrialFeedbackTable({ rows }: { rows: FeedbackRow[] }) {
                     <div className="mt-0.5 text-[11px] text-slate-400">answered {fmt(r.contactAnsweredAt)}</div>
                   </td>
                   <td className="px-3 py-2 text-xs">
-                    {r.extraTrialGrantedAt ? <span className="text-starboard">Activated {fmt(r.extraTrialGrantedAt)}</span> : <span className="text-slate-400">Not yet</span>}
+                    <div className="text-slate-700">Activated {fmtDay(r.extraTrialActivatedAt)}</div>
+                    <div className={Date.parse(r.extraTrialExpiresAt) < Date.now() ? "text-port" : "text-slate-500"}>{Date.parse(r.extraTrialExpiresAt) < Date.now() ? "Expired" : "Expires"} {fmtDay(r.extraTrialExpiresAt)}</div>
                   </td>
                   <td className="px-3 py-2 text-right text-xs font-medium text-teal">View →</td>
                 </tr>
