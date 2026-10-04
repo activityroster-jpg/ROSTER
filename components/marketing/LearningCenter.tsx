@@ -165,6 +165,10 @@ const SECTIONS: Section[] = [
     blurb: "ActivityRoster on the App Store and Google Play — your roster, hours and certs in your pocket.",
     blocks: [
       { kind: "p", text: "Instructors and volunteers use the free ActivityRoster app (iPhone and Android). Everything in the instructor portal is in it — schedule, availability, clock in/out, leave, hours, documents — plus phone notifications, Face ID / fingerprint unlock and a camera button for cert photos." },
+      { kind: "sub", text: "No signal on the beach" },
+      { kind: "p", text: "Each time you open My schedule with a signal, the next seven days are saved on your phone. If the schedule can't load later, you see that saved week instead, with the time it was saved. Signing out removes it from the phone. Face ID or fingerprint unlocks the app in place of typing your PIN (Settings → App), and the PIN is always there as the fallback." },
+      { kind: "sub", text: "Shifts in your own calendar" },
+      { kind: "p", text: "In the app, Settings → Calendar → “Make my calendar link”, then “Add to my calendar” (or Google Calendar). Published shifts appear in the phone's own calendar with the course, your role, the time and the place, and update about every hour. The link is private and shown only once; “Make a new link” replaces it and the old one stops working, and “Turn off” stops it entirely. It never contains colleagues' names or contact details." },
       { kind: "sub", text: "Your company code" },
       { kind: "steps", items: [
         "Open Settings → “Company code · instructor app”. Each centre has its own 6-character code — copy it and share it with your team (a notice board, a WhatsApp group, your welcome email).",

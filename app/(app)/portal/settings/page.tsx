@@ -16,6 +16,7 @@ import { eq } from "drizzle-orm";
 import { instructor as instructorTable } from "@/lib/db/schema";
 import { DetailsCard } from "@/components/portal/DetailsCard";
 import { guardianLinksFor } from "@/lib/services/guardians";
+import { CalendarFeedCard } from "@/components/portal/CalendarFeedCard";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +57,13 @@ export default async function PortalSettingsPage() {
           <ProfileCard name={me.name} phone={me.phone} email={me.email} />
           <div className="mt-4 border-t border-slate-100 pt-3"><DetailsCard dateOfBirth={me.dateOfBirth} parentInvited={parentInvited} approvalRequired={settingsRow?.requireParentApproval !== false} /></div>
           {!isUnder18(me.dateOfBirth) ? <div className="mt-4 border-t border-slate-100 pt-3"><ShareContactPref initial={Boolean(me.shareContact)} /></div> : null}
+        </Card>
+      ) : null}
+
+      {me ? (
+        <Card>
+          <h2 className="mb-1 font-semibold text-navy">Calendar</h2>
+          <CalendarFeedCard active={Boolean(me.calendarTokenHash)} createdAt={me.calendarTokenCreatedAt ? me.calendarTokenCreatedAt.toISOString() : null} />
         </Card>
       ) : null}
 

@@ -353,11 +353,15 @@ export const instructor = sqliteTable("instructor", {
   leftAt: integer("left_at", { mode: "timestamp_ms" }),
   /** Set when the person was anonymised; identifying fields are blank from then on and the record is kept only for roster and payroll history. */
   anonymisedAt: integer("anonymised_at", { mode: "timestamp_ms" }),
+  /** SHA-256 of the secret part of their private calendar (ICS) link; null = no feed. The link itself is shown once. */
+  calendarTokenHash: text("calendar_token_hash"),
+  calendarTokenCreatedAt: integer("calendar_token_created_at", { mode: "timestamp_ms" }),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 }, (t) => [
   index("instructor_org_idx").on(t.organisationId),
   index("instructor_user_idx").on(t.userId),
+  index("instructor_calendar_token_idx").on(t.calendarTokenHash),
 ]);
 
 export const qualification = sqliteTable("qualification", {

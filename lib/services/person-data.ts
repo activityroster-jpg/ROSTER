@@ -81,7 +81,7 @@ export async function exportPerson(repos: Repositories, ctx: TenantContext, inst
   const mentions = audit.filter((a) => a.entityId === instructorId || (a.after ?? "").includes(instructorId) || a.actorUserId === instructor.userId);
   const out: PersonExport = {
     exportedAt: new Date().toISOString(),
-    person: plain(instructor as unknown as Record<string, unknown>, ["guardianName", "guardianPhone", "guardianEmail", "emergencyName", "emergencyPhone", "emergencyRelationship"]),
+    person: plain(instructor as unknown as Record<string, unknown>, ["guardianName", "guardianPhone", "guardianEmail", "emergencyName", "emergencyPhone", "emergencyRelationship", "calendarTokenHash"]),
     contacts,
     qualifications: quals.map((q) => ({ ...plain(q as unknown as Record<string, unknown>, ["instructorId"]), type: qt.get(q.qualificationTypeId) ?? q.qualificationTypeId, document: q.docKey ? "on file" : "none" })),
     checks: await Promise.all(checks.map(async (c) => ({ ...plain(c as unknown as Record<string, unknown>, ["instructorId", "docKey"]), reference: isSealed(c.reference) ? await openToken(c.reference) : c.reference, type: ct.get(c.complianceTypeId) ?? c.complianceTypeId, document: c.docKey ? "on file" : "none" }))),
@@ -179,6 +179,7 @@ export async function anonymisePerson(repos: Repositories, ctx: AnyTenantContext
     guardianName: null, guardianPhone: null, guardianEmail: null,
     emergencyName: null, emergencyPhone: null, emergencyRelationship: null,
     notifyEmail: false, status: "inactive", userId: null, restrictedAt: null, restrictedReason: null,
+    calendarTokenHash: null, calendarTokenCreatedAt: null,
     anonymisedAt: new Date(),
   });
 

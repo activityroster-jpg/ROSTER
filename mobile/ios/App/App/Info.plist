@@ -76,5 +76,9 @@
 	<string>Record your approximate location when you clock in or out, so your centre can see where you were.</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>WKAppBoundDomains</key>
+	<array>
+		<string>activityroster.com</string>
+	</array>
 </dict>
 </plist>

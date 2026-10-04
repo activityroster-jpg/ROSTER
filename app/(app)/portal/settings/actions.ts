@@ -15,8 +15,31 @@ import { ageOn } from "@/lib/domain/age";
 import { guardianLinksFor, requestParentApprovalFromPortal } from "@/lib/services/guardians";
 import { escapeHtml, sendEmail } from "@/lib/mail";
 import { apexDomain } from "@/lib/config";
+import { issueCalendarToken, revokeCalendarToken } from "@/lib/services/calendar-feed";
 
 type Result = { ok: boolean; error?: string };
+
+/** Make (or replace) my private calendar link. The link is returned once and never stored. */
+export async function createMyCalendarFeedAction(): Promise<Result & { url?: string }> {
+  const { ctx, repos } = await requireTenant();
+  const me = (await repos.tenant.instructor.list(ctx, eq(instructorTable.userId, ctx.userId)))[0];
+  if (!me) return { ok: false, error: "No linked instructor profile" };
+  const token = await issueCalendarToken(repos, ctx, me.id);
+  if (!token) return { ok: false, error: "Couldn't make a link" };
+  await recordSecurityEvent("calendar_feed_reset", { userId: ctx.userId, organisationId: ctx.organisationId });
+  revalidatePath("/portal/settings");
+  return { ok: true, url: `https://${apexDomain()}/api/calendar/${token}.ics` };
+}
+
+/** Switch my calendar link off; calendars that use it stop updating. */
+export async function revokeMyCalendarFeedAction(): Promise<Result> {
+  const { ctx, repos } = await requireTenant();
+  const me = (await repos.tenant.instructor.list(ctx, eq(instructorTable.userId, ctx.userId)))[0];
+  if (!me) return { ok: false, error: "No linked instructor profile" };
+  await revokeCalendarToken(repos, ctx, me.id);
+  revalidatePath("/portal/settings");
+  return { ok: true };
+}
 
 /** Update my own name and phone number (the instructor record this centre holds). */
 export async function updateMyProfileAction(input: { name: string; phone: string }): Promise<Result> {

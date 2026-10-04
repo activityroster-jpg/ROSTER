@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="robots" content="noindex" />
+  <title>My week (offline) · ActivityRoster</title>
+  <style>
+    :root { color-scheme: light; }
+    body { margin: 0; background: #f6f8fb; color: #0A2E52; font-family: -apple-system, system-ui, "Segoe UI", Roboto, sans-serif; }
+    header { background: #0A2E52; color: #fff; padding: 16px; }
+    header h1 { margin: 0; font-size: 18px; }
+    header p { margin: 4px 0 0; font-size: 13px; color: rgba(255,255,255,.8); }
+    main { max-width: 480px; margin: 0 auto; padding: 12px 16px 32px; }
+    h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: #64748b; margin: 18px 0 6px; }
+    .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; margin-bottom: 8px; }
+    .t { font-weight: 600; }
+    .c { font-size: 14px; color: #334155; margin-top: 2px; }
+    .s { font-size: 12px; color: #64748b; margin-top: 2px; }
+    .empty { color: #64748b; font-size: 14px; }
+    a.btn { display: inline-block; margin-top: 16px; background: #0C6B74; color: #fff; padding: 10px 16px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>You're offline</h1>
+    <p id="saved">Showing the week saved on this phone.</p>
+  </header>
+  <main>
+    <div id="week"><p class="empty">Nothing saved on this phone yet. Open your schedule once with a signal and it will be here next time.</p></div>
+    <a class="btn" href="/portal">Try again</a>
+  </main>
+  <script src="/offline.js"></script>
+</body>
+</html>

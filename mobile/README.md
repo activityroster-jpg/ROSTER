@@ -10,7 +10,7 @@ and the camera. Nothing in this folder talks to the database.
 mobile/
   capacitor.config.ts   app id, name, start URL, allowed hosts
   package.json          Capacitor + plugins (install here, not in the repo root)
-  www/index.html        offline fallback only
+  www/index.html        offline fallback only (shown if the site can't be reached at launch)
   resources/            icon + splash sources (generated → platform assets)
   ios/, android/        created by `npx cap add` on your Mac (not committed)
 ```
@@ -184,3 +184,14 @@ environment variables — set them and the links start opening in the app.
 Web changes need nothing — the app shows the live site. Only change the native
 projects when a plugin or Capacitor version changes: bump `package.json`,
 `npm install && npx cap sync`, rebuild, re-submit.
+
+
+## Offline "my week" (iOS)
+
+The portal registers a small service worker (`public/sw.js`) that shows the
+instructor's saved week when there is no signal. WKWebView only runs service
+workers for app-bound domains, so `activityroster.com` is listed under
+`WKAppBoundDomains` in `ios/App/App/Info.plist` and the Capacitor config sets
+`ios.limitsNavigationsToAppBoundDomains`. Rebuild the iOS app on the Mac
+(`npx cap sync ios`, then archive in Xcode) for this to take effect; Android
+WebView supports it without changes.

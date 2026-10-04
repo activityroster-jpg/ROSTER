@@ -23,6 +23,9 @@ const config: CapacitorConfig = {
     contentInset: "always",
     scheme: "ActivityRoster",
     backgroundColor: "#0A2E52",
+    // Service workers (the offline "my week") only run in WKWebView for app-bound
+    // domains; the domain is listed under WKAppBoundDomains in Info.plist.
+    limitsNavigationsToAppBoundDomains: true,
   },
   android: {
     backgroundColor: "#0A2E52",

@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { stepUpWithPinAction } from "@/app/pin/actions";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { biometricPinSaved, isNative, unlockPinWithBiometrics } from "@/lib/mobile/native";
 
 /**
  * A download or action that needs the PIN again first (full export, person
@@ -26,7 +27,14 @@ export function StepUpButton({ label, href, onVerified, className, consequences,
   const begin = () => start(async () => {
     setErr(null);
     const r = await stepUpWithPinAction(null);
-    if (r.ok) go(); else if (r.needsPin) setOpen(true); else setErr(r.error ?? "Please sign in again");
+    if (r.ok) { go(); return; }
+    if (!r.needsPin) { setErr(r.error ?? "Please sign in again"); return; }
+    // In the app, Face ID / fingerprint first; typing the PIN is the fallback.
+    if (isNative() && biometricPinSaved()) {
+      const saved = await unlockPinWithBiometrics().catch(() => null);
+      if (saved) { const b = await stepUpWithPinAction(saved); if (b.ok) { go(); return; } }
+    }
+    setOpen(true);
   });
   const confirm = () => start(async () => {
     const r = await stepUpWithPinAction(pin);

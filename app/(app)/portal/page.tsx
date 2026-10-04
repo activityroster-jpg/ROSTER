@@ -10,6 +10,7 @@ import { problemsForInstructor } from "@/lib/services/problems";
 import { loadOverrides } from "@/lib/services/session-staff";
 import { effectiveStaffBySession } from "@/lib/domain/session-staff";
 import Link from "next/link";
+import { OfflineWeek, type OfflineSession } from "@/components/portal/OfflineWeek";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +27,7 @@ const joinNames = (names: string[]) => (names.length <= 2 ? names.join(" and ") 
  * and how many students are shown once the week is published.
  */
 export default async function PortalSchedulePage() {
-  const { ctx, repos } = await requireTenant();
+  const { ctx, repos, organisation } = await requireTenant();
 
   const me = (await repos.tenant.instructor.list(ctx, eq(instructorTable.userId, ctx.userId)))[0];
   if (!me) {
@@ -78,6 +79,11 @@ export default async function PortalSchedulePage() {
   const mine = mineAll.filter((e) => published.has(weekOf(e.date)));
   const pencilled = mineAll.length - mine.length;
 
+  const weekEnd = addDays(today, 7);
+  const offline: OfflineSession[] = mine.filter((s) => s.date < weekEnd).map((s) => {
+    const row = myByCourse.get(s.courseId);
+    return { day: s.date, dayLabel: `${s.date === today ? "Today · " : s.date === addDays(today, 1) ? "Tomorrow · " : ""}${fmtDay(s.date)}`, time: `${fmtTime(s.startAt)}–${fmtTime(s.endAt)}`, course: s.courseName, place: placesOf(s.courseId).join(", ") || null, note: !row ? "Cover for this day only" : row.status === "declined" ? "You said you can't make it" : row.status === "assigned" ? "Not confirmed yet" : null };
+  });
   const byDay = new Map<string, typeof mine>();
   for (const s of mine) byDay.set(s.date, [...(byDay.get(s.date) ?? []), s]);
   const nextMonday = addDays(monday, 7);
@@ -87,6 +93,7 @@ export default async function PortalSchedulePage() {
 
   return (
     <div>
+      <OfflineWeek centre={organisation.name} sessions={offline} />
       <h1 className="mb-1 font-display text-xl font-semibold text-navy">My schedule</h1>
       <p className="mb-4 text-sm text-slate-500">
         {thisWeek === 0 ? "Nothing this week." : `${thisWeek} session${thisWeek === 1 ? "" : "s"} this week.`} Showing the next {weeksAhead} weeks.
