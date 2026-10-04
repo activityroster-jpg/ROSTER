@@ -27,7 +27,10 @@ async function me() {
   return { userId: s.user.id, email: s.user.email, sessionId: s.session.id as string, twoFactor: Boolean((s.user as { twoFactorEnabled?: boolean | null }).twoFactorEnabled) };
 }
 
-const cookieOpts = { httpOnly: true, secure: true, sameSite: "lax" as const, path: "/" };
+// Apex-wide, like the session cookie: the code can be entered on the main site
+// (sign in by email, then "/go" picks the centre) and the proof must travel to
+// the centre's own subdomain.
+const cookieOpts = { httpOnly: true, secure: true, sameSite: "lax" as const, path: "/", domain: `.${getEnv().APP_APEX_DOMAIN || "activityroster.com"}` };
 
 /** Email a six-digit code to the signed-in person. Send-limited per session. */
 export async function sendLoginCodeAction(): Promise<LoginVerifyResult> {

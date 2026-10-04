@@ -12,6 +12,7 @@ import { isNonceCspPath, makeNonce, noncePolicy } from "@/lib/security/csp";
  * signed value with a fresh 30-minute Max-Age; no re-signing needed.
  */
 function slidePinCookie(req: NextRequest, res: NextResponse): NextResponse {
+  const domain = `.${apex()}`;
   const pin = req.cookies.get(PIN_COOKIE)?.value;
   if (pin) {
     res.cookies.set(PIN_COOKIE, pin, {
@@ -27,11 +28,11 @@ function slidePinCookie(req: NextRequest, res: NextResponse): NextResponse {
   // without a Max-Age so it still vanishes when the browser closes.
   const lv = req.cookies.get(LV_COOKIE)?.value;
   if (lv) {
-    res.cookies.set(LV_COOKIE, lv, { httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: LV_IDLE_MAX_AGE_S });
+    res.cookies.set(LV_COOKIE, lv, { httpOnly: true, secure: true, sameSite: "lax", path: "/", domain, maxAge: LV_IDLE_MAX_AGE_S });
     const lvs = req.cookies.get(LV_SESSION_COOKIE)?.value;
-    if (lvs) res.cookies.set(LV_SESSION_COOKIE, lvs, { httpOnly: true, secure: true, sameSite: "lax", path: "/" });
+    if (lvs) res.cookies.set(LV_SESSION_COOKIE, lvs, { httpOnly: true, secure: true, sameSite: "lax", path: "/", domain });
     const lvd = req.cookies.get(LV_DEVICE_COOKIE)?.value;
-    if (lvd) res.cookies.set(LV_DEVICE_COOKIE, lvd, { httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: LV_IDLE_MAX_AGE_S });
+    if (lvd) res.cookies.set(LV_DEVICE_COOKIE, lvd, { httpOnly: true, secure: true, sameSite: "lax", path: "/", domain, maxAge: LV_IDLE_MAX_AGE_S });
   }
   return res;
 }
@@ -51,7 +52,7 @@ function slidePinCookie(req: NextRequest, res: NextResponse): NextResponse {
  * build works for production and staging; the build-time public var is only
  * a fallback for local dev.
  */
-const apex = () => process.env.APP_APEX_DOMAIN || process.env.NEXT_PUBLIC_APEX_DOMAIN || "activityroster.com";
+function apex(): string { return process.env.APP_APEX_DOMAIN || process.env.NEXT_PUBLIC_APEX_DOMAIN || "activityroster.com"; }
 
 export function middleware(req: NextRequest) {
   const url = req.nextUrl;
