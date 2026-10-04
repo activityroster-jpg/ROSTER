@@ -6,6 +6,13 @@ export interface SeedArticle {
   excerpt: string;
   tags: string[];
   coverEmoji: string;
+  /**
+   * What the cover photo should show, as a stock-photo search phrase. Specific to
+   * the article's subject (a dinghy for a dinghy piece, a yacht for yachting, an
+   * office desk for admin, an instructor teaching for staff articles) rather than
+   * a generic marine scene.
+   */
+  imageQuery: string;
   body: string;
 }
 

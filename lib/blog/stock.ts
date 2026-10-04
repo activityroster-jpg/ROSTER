@@ -9,7 +9,7 @@ import type { CloudflareEnv } from "@/lib/cf/bindings";
 import { searchPexels } from "./pexels";
 import { searchPixabay } from "./pixabay";
 
-export { queryForArticle } from "./pexels";
+export { queryForArticle, queryFingerprint } from "./pexels";
 
 export interface StockCandidate {
   downloadUrl: string;

@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { seedArticlesAction, resyncArticlesAction, fetchCoverImageAction, fetchMissingCoversAction, setPostStatusAction, deletePostAction } from "@/app/admin/blog/actions";
+import { seedArticlesAction, resyncArticlesAction, fetchCoverImageAction, fetchMissingCoversAction, refreshStaleCoversAction, setPostStatusAction, deletePostAction } from "@/app/admin/blog/actions";
 
 export interface PostRow {
   id: string;
@@ -52,6 +52,9 @@ export function BlogAdminList({ posts }: { posts: PostRow[] }) {
               </button>
               <button type="button" onClick={() => run(() => fetchMissingCoversAction(10))} disabled={pending} title="Fetch self-hosted cover images from Pexels for articles that don't have one (10 at a time)" className="text-sm font-medium text-teal hover:underline disabled:opacity-50">
                 {pending ? "Working…" : "Fetch cover images (10)"}
+              </button>
+              <button type="button" onClick={() => run(() => refreshStaleCoversAction(10))} disabled={pending} title="Replace cover photos that don't match their article's subject any more (10 at a time; run until it says all done)" className="text-sm font-medium text-teal hover:underline disabled:opacity-50">
+                {pending ? "Working…" : "Refresh covers to match articles (10)"}
               </button>
             </>
           )}

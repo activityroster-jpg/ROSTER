@@ -10,6 +10,8 @@
  * Worker but not in the restricted build sandbox.
  */
 
+import { SEED_ARTICLES } from "./seed";
+
 export interface PexelsPhoto {
   id: number;
   width: number;
@@ -53,11 +55,18 @@ export async function downloadPexelsImage(photo: PexelsPhoto): Promise<{ body: A
 }
 
 /**
- * Build an ON-TOPIC search query for an article. We deliberately do NOT feed the
- * article's tags into the image search — tags like "first aid", "GDPR" or
- * "safeguarding" return wildly off-theme stock (surgery photos, padlocks, etc.).
- * Instead we map the category to a set of reliably marine queries and pick one by
- * a hash of the title, so covers stay varied but always sailing/watersports.
+ * Build an ON-TOPIC search query for an article.
+ *
+ * Starter articles carry their own `imageQuery` (lib/blog/seed) describing what
+ * the photo should show — a dinghy for a dinghy article, a yacht for yachting,
+ * an office desk for admin, an instructor teaching for staff pieces — so that is
+ * used whenever the post is one of ours (matched by slug).
+ *
+ * For posts written by hand we deliberately do NOT feed the article's tags into
+ * the image search — tags like "first aid", "GDPR" or "safeguarding" return
+ * wildly off-theme stock (surgery photos, padlocks, etc.). Instead the category
+ * maps to a set of reliably marine queries and one is picked by a hash of the
+ * title, so covers stay varied but always sailing/watersports.
  */
 const MARINE_BY_CATEGORY: { match: RegExp; queries: string[] }[] = [
   { match: /instructor|staff|team|coach/i, queries: ["sailing instructor", "sailing coach", "dinghy sailing lesson", "sailing crew"] },
@@ -74,8 +83,27 @@ function hashStr(s: string): number {
   return h;
 }
 
-export function queryForArticle(a: { title: string; category: string; tags: string }): string {
+let seedQueries: Map<string, string> | null = null;
+function seedQueryFor(slug: string | undefined): string | undefined {
+  if (!slug) return undefined;
+  if (!seedQueries) seedQueries = new Map(SEED_ARTICLES.map((a) => [a.slug, a.imageQuery]));
+  return seedQueries.get(slug);
+}
+
+export function queryForArticle(a: { slug?: string; title: string; category: string; tags: string }): string {
+  const own = seedQueryFor(a.slug);
+  if (own) return own;
   const hint = MARINE_BY_CATEGORY.find((h) => h.match.test(a.category));
   const pool = hint ? hint.queries : GENERAL_MARINE;
   return pool[hashStr(a.title) % pool.length]!;
+}
+
+/**
+ * Short fingerprint of the query a cover was fetched with. It is embedded in
+ * the R2 key, so when an article's query changes (the photo should now show
+ * something else) the existing cover counts as stale and "Refresh covers"
+ * replaces it, without touching covers that already match.
+ */
+export function queryFingerprint(query: string): string {
+  return hashStr(query.trim().toLowerCase()).toString(36).padStart(6, "0").slice(-6);
 }

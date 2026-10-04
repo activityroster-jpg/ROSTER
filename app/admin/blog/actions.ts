@@ -7,7 +7,7 @@ import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { BLOG_STATUSES, type BlogStatus } from "@/lib/db/schema";
 import { buildSeedRows } from "@/lib/blog/seed";
 import { getEnv } from "@/lib/cf/bindings";
-import { findCover, downloadImage, queryForArticle, hasStockKey } from "@/lib/blog/stock";
+import { findCover, downloadImage, queryForArticle, queryFingerprint, hasStockKey } from "@/lib/blog/stock";
 
 export type BlogResult = { ok: boolean; error?: string; message?: string; id?: string };
 
@@ -181,8 +181,16 @@ export async function resyncArticlesAction(): Promise<BlogResult> {
 const NO_KEY = "Set a PIXABAY_API_KEY (instant free key at pixabay.com/api/docs) or PEXELS_API_KEY Worker secret first.";
 
 // Timestamped R2 key per fetch so a re-fetch gets a fresh URL (busts the CDN /
-// browser cache) rather than silently showing the old cached image.
-const newCoverKey = (slug: string) => `blog/${slug}-${Date.now().toString(36)}.jpg`;
+// browser cache) rather than silently showing the old cached image. The key also
+// carries a fingerprint of the search query the photo was chosen for, so a cover
+// fetched for an older, less relevant query shows up as stale (see below).
+const newCoverKey = (slug: string, query: string) => `blog/${slug}-q${queryFingerprint(query)}-${Date.now().toString(36)}.jpg`;
+
+/** True when the post has no cover, or its cover was fetched for a different query than the article now wants. */
+function coverIsStale(post: { coverImageKey: string | null } & Parameters<typeof queryForArticle>[0]): boolean {
+  if (!post.coverImageKey) return true;
+  return !post.coverImageKey.includes(`-q${queryFingerprint(queryForArticle(post))}-`);
+}
 
 /**
  * Fetch (or re-fetch) a relevant cover image for one post from a free stock API,
@@ -203,15 +211,16 @@ export async function fetchCoverImageAction(postId: string): Promise<BlogResult>
   const exclude = new Set(all.filter((p) => p.id !== post.id).map((p) => p.coverImageCreditUrl).filter(Boolean) as string[]);
   if (post.coverImageCreditUrl) exclude.add(post.coverImageCreditUrl);
 
+  const query = queryForArticle(post);
   let candidate;
   try {
-    candidate = await findCover(env, queryForArticle(post), exclude);
+    candidate = await findCover(env, query, exclude);
   } catch (e) {
     return { ok: false, error: `Image search failed: ${(e as Error).message}` };
   }
   if (!candidate) return { ok: false, error: "No matching photo found — try again." };
 
-  const key = newCoverKey(post.slug);
+  const key = newCoverKey(post.slug, query);
   try {
     const { body, contentType } = await downloadImage(candidate.downloadUrl);
     await env.DOCS.put(key, body, { httpMetadata: { contentType } });
@@ -240,22 +249,43 @@ export async function fetchCoverImageAction(postId: string): Promise<BlogResult>
  * — run it a few times to cover the whole blog. Avoids repeating photos.
  */
 export async function fetchMissingCoversAction(limit = 6): Promise<BlogResult> {
+  return fetchCoversBatch(limit, "missing");
+}
+
+/**
+ * Replace covers that no longer match their article: every post without a cover,
+ * plus every post whose cover was fetched for a different search query than the
+ * article now asks for (after the starter articles were given subject-specific
+ * image queries). Batched like the missing-cover fetch; run it until it says done.
+ */
+export async function refreshStaleCoversAction(limit = 6): Promise<BlogResult> {
+  return fetchCoversBatch(limit, "stale");
+}
+
+async function fetchCoversBatch(limit: number, mode: "missing" | "stale"): Promise<BlogResult> {
   const repo = await platform();
   const env = getEnv();
   if (!hasStockKey(env)) return { ok: false, error: NO_KEY };
   const all = await repo.listAllPosts();
   const used = new Set(all.map((p) => p.coverImageCreditUrl).filter(Boolean) as string[]);
-  const missing = all.filter((p) => !p.coverImageKey).slice(0, limit);
+  const wanted = (p: (typeof all)[number]) => (mode === "missing" ? !p.coverImageKey : coverIsStale(p));
+  const todo = all.filter(wanted).slice(0, limit);
   let done = 0;
   let rateLimited = false;
-  for (const [i, post] of missing.entries()) {
+  for (const [i, post] of todo.entries()) {
     try {
       if (i > 0) await new Promise((r) => setTimeout(r, 500)); // gentle spacing to avoid 429s
-      const candidate = await findCover(env, queryForArticle(post), used);
+      const query = queryForArticle(post);
+      // On a replace, also avoid the photo currently on this post.
+      const exclude = post.coverImageCreditUrl ? new Set([...used, post.coverImageCreditUrl]) : used;
+      const candidate = await findCover(env, query, exclude);
       if (!candidate) continue;
-      const key = newCoverKey(post.slug);
+      const key = newCoverKey(post.slug, query);
       const { body, contentType } = await downloadImage(candidate.downloadUrl);
       await env.DOCS.put(key, body, { httpMetadata: { contentType } });
+      if (post.coverImageKey && post.coverImageKey !== key) {
+        try { await env.DOCS.delete(post.coverImageKey); } catch { /* ignore */ }
+      }
       await repo.updatePost(post.id, {
         coverImageKey: key,
         coverImageCredit: candidate.credit,
@@ -268,11 +298,12 @@ export async function fetchMissingCoversAction(limit = 6): Promise<BlogResult> {
       // otherwise skip this one; the next run will retry it
     }
   }
-  const remaining = all.filter((p) => !p.coverImageKey).length - done;
+  const remaining = all.filter(wanted).length - done;
   revalidatePath("/admin/blog");
   revalidatePath("/blog");
   const suffix = rateLimited
     ? ` — hit the Pixabay rate limit, wait a minute then run again (${remaining} to do)`
     : remaining > 0 ? ` — ${remaining} still to do, run again` : " — all done";
-  return { ok: true, message: `Fetched ${done} cover image${done === 1 ? "" : "s"}${suffix}.` };
+  const verb = mode === "missing" ? "Fetched" : "Refreshed";
+  return { ok: true, message: `${verb} ${done} cover image${done === 1 ? "" : "s"}${suffix}.` };
 }

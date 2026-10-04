@@ -11,28 +11,44 @@ export const ROTA_ORIENTATIONS = ["vertical", "horizontal"] as const;
 export type RotaOrientation = (typeof ROTA_ORIENTATIONS)[number];
 export const ROTA_FIELDS = [
   { key: "times", label: "Start and finish times" },
-  { key: "locations", label: "Locations / classrooms" },
-  { key: "instructors", label: "Instructors" },
+  { key: "instructors", label: "Staff working" },
   { key: "roles", label: "Their role (Senior Instructor, Safety Boat…)" },
+  { key: "locations", label: "Locations / classrooms" },
   { key: "equipment", label: "Equipment (boats, RIBs…)" },
 ] as const;
 export type RotaField = (typeof ROTA_FIELDS)[number]["key"];
 
+/**
+ * The look of the sheet. Every style is the same day breakdown (a table per
+ * day, a row per course, columns for name, times, staff, then the optional
+ * extras); the style changes colour, weight and density.
+ */
+export const ROTA_STYLES = [
+  { key: "classic", label: "Classic", blurb: "Navy headings, a soft band for each day, clear rules between courses." },
+  { key: "bold", label: "Bold", blurb: "Solid navy day bars and teal column headings. Reads well from across the room." },
+  { key: "minimal", label: "Minimal", blurb: "Black and white, thin lines, no fills. Cheap to print and easy to annotate." },
+  { key: "compact", label: "Compact", blurb: "Smaller type and tighter rows so a busy day fits on one page." },
+] as const;
+export type RotaStyle = (typeof ROTA_STYLES)[number]["key"];
+
 export interface RotaTemplateSettings {
   range: RotaRange;
   orientation: RotaOrientation;
+  style: RotaStyle;
   fields: Record<RotaField, boolean>;
 }
 
 export const rotaTemplateSchema = z.object({
   range: z.enum(ROTA_RANGES),
   orientation: z.enum(ROTA_ORIENTATIONS),
+  style: z.enum(["classic", "bold", "minimal", "compact"]).default("classic"),
   fields: z.object({ times: z.boolean(), locations: z.boolean(), instructors: z.boolean(), roles: z.boolean(), equipment: z.boolean() }),
 });
 
 export const DEFAULT_ROTA_TEMPLATE: RotaTemplateSettings = {
-  range: "week",
+  range: "day",
   orientation: "vertical",
+  style: "classic",
   fields: { times: true, locations: true, instructors: true, roles: false, equipment: false },
 };
 
@@ -41,9 +57,11 @@ export function parseRotaTemplate(json: string | null | undefined): RotaTemplate
   let raw: unknown = {};
   try { raw = json ? JSON.parse(json) : {}; } catch { raw = {}; }
   const r = (typeof raw === "object" && raw !== null ? raw : {}) as Partial<RotaTemplateSettings> & { fields?: Partial<RotaTemplateSettings["fields"]> };
+  const styles = ROTA_STYLES.map((x) => x.key) as readonly string[];
   return {
     range: (ROTA_RANGES as readonly string[]).includes(String(r.range)) ? (r.range as RotaRange) : DEFAULT_ROTA_TEMPLATE.range,
     orientation: (ROTA_ORIENTATIONS as readonly string[]).includes(String(r.orientation)) ? (r.orientation as RotaOrientation) : DEFAULT_ROTA_TEMPLATE.orientation,
+    style: styles.includes(String(r.style)) ? (r.style as RotaStyle) : DEFAULT_ROTA_TEMPLATE.style,
     fields: { ...DEFAULT_ROTA_TEMPLATE.fields, ...Object.fromEntries(Object.entries(r.fields ?? {}).filter(([k, v]) => k in DEFAULT_ROTA_TEMPLATE.fields && typeof v === "boolean")) },
   };
 }

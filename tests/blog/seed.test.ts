@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { SEED_ARTICLES, buildSeedRows } from "@/lib/blog/seed";
+import { queryForArticle, queryFingerprint } from "@/lib/blog/stock";
 
 describe("blog seed corpus", () => {
   it("has 100 articles with unique slugs", () => {
@@ -8,12 +9,26 @@ describe("blog seed corpus", () => {
     expect(new Set(slugs).size).toBe(100);
   });
 
-  it("every article has a title, excerpt and non-trivial body", () => {
+  it("every article has a title, excerpt and a substantial body (at least 800 words)", () => {
     for (const a of SEED_ARTICLES) {
       expect(a.title.length).toBeGreaterThan(5);
       expect(a.excerpt.length).toBeGreaterThan(10);
-      expect(a.body.length).toBeGreaterThan(300);
+      const words = a.body.split(/\s+/).filter(Boolean).length;
+      expect(words, `${a.slug} has ${words} words`).toBeGreaterThanOrEqual(800);
     }
+  });
+
+  it("every article says what its cover photo should show, and the image search uses it", () => {
+    for (const a of SEED_ARTICLES) {
+      expect(a.imageQuery.trim().length, a.slug).toBeGreaterThan(3);
+      expect(queryForArticle({ slug: a.slug, title: a.title, category: a.category, tags: a.tags.join(",") })).toBe(a.imageQuery);
+    }
+    // A hand-written post (unknown slug) still gets an on-topic marine query.
+    const q = queryForArticle({ slug: "my-own-post", title: "Hello", category: "Instructors & staff", tags: "first aid" });
+    expect(q).toMatch(/sail|dinghy/i);
+    // The fingerprint is stable and short enough to live in an R2 key.
+    expect(queryFingerprint("Sailing Dinghy ")).toBe(queryFingerprint("sailing dinghy"));
+    expect(queryFingerprint("sailing dinghy")).toMatch(/^[0-9a-z]{6}$/);
   });
 });
 

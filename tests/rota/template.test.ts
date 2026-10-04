@@ -23,7 +23,9 @@ describe("rota template", () => {
     expect(t.orientation).toBe("horizontal");
     expect(t.fields.equipment).toBe(true);
     expect(t.fields.times).toBe(true);
-    expect(parseRotaTemplate(JSON.stringify({ range: "year" })).range).toBe("week");
+    expect(parseRotaTemplate(JSON.stringify({ range: "year" })).range).toBe("day");
+    expect(parseRotaTemplate(JSON.stringify({ style: "neon" })).style).toBe("classic");
+    expect(parseRotaTemplate(JSON.stringify({ style: "bold" })).style).toBe("bold");
   });
   it("works out the period from any date", () => {
     expect(rangeBounds("week", "2026-10-07")).toMatchObject({ from: "2026-10-05", days: 7 });
