@@ -164,17 +164,23 @@ Conor's answers, 4 October: 1 rota · 2 yes · 3 remind and ask on the day · 4 
 Code deploys. Also: no users until 13 October (build phase), so everything built until
 then goes straight to production; from the 13th Conor tests on staging first.
 
-1. **Next.js 16 upgrade.** Approved. Clears the two advisories (`next` moderate, bundled
-   `postcss` high). Done as its own commit after the vocabulary change; see the
-   production deploy log in `docs/runbooks/deploy.md` for the outcome.
+1. **Next.js 16 upgrade.** Approved and done (commit a2928d7): Next 16.3.8 with Turbopack,
+   no code changes needed, typecheck, 337 tests and the OpenNext build green. The `next`
+   and `postcss` advisories are gone; what remains in `npm audit` is build-time tooling
+   (drizzle-kit/esbuild, tailwind's glob chain). The middleware-to-proxy rename Next 16
+   recommends is left for a quiet moment.
 2. **One word for the schedule.** "Rota" chosen. The noun is now "rota" everywhere a
    person reads it (sidebar, page titles, PDF, emails, guides, marketing); "roster" stays
    as the verb ("fit to roster", "as you roster") and in code identifiers.
 3. **Enforce the nonce CSP.** A reminder is set for 11 October; Claude Code checks the
    report-only log that day and asks before enforcing.
-4. **Production deploy.** Until 13 October Claude Code presses "Deploy production" after
-   each green staging deploy; the deploy log records every run and its bookmark. From
-   13 October the usual rule returns: Conor tests on staging, then presses the button.
+4. **Production deploy.** Done at 02:44 UTC on 4 October (run 37171883925): bookmark
+   `000001cc-00000100-000050fa-3f4d08a7b9ebd4a1f8db56ce430b9222`, migrations 0049–0055
+   applied, smoke test passed, tag `prod-20261004-0244`, main now at a2928d7. Until
+   13 October Claude Code keeps pressing it after each green staging deploy and logs every
+   run; from 13 October Conor tests on staging first and presses the button himself.
+   Still to do in Dev Center → Blog: "Re-sync article content", then "Refresh covers to
+   match articles (10)" until it says all done.
 
 ## 7. Conor's clicks still outstanding (unchanged from the compliance plan)
 
