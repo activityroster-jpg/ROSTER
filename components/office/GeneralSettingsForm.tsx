@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { updateSettingsAction, type ActionState } from "@/app/(app)/office/settings/actions";
+import { ConfirmDialog } from "./ConfirmDialog";
 
 const initial: ActionState = { ok: false };
 
@@ -50,6 +51,15 @@ export function GeneralSettingsForm({
 }) {
   const [state, action, pending] = useActionState(updateSettingsAction, initial);
   const [terms, setTerms] = useState<TermDate[]>(termDates);
+  const [checks, setChecks] = useState({ licence: enforceLicenceChecks, ratio: enforceRatioChecks, conflict: enforceConflictChecks, availability: enforceAvailabilityChecks });
+  const [askOff, setAskOff] = useState<null | keyof typeof checks>(null);
+  const CHECK_TEXT: Record<keyof typeof checks, { title: string; consequences: string[] }> = {
+    licence: { title: "Stop blocking people with a missing or expired must-have cert?", consequences: ["Anyone can be rostered whatever their DBS, first aid or other must-have checks say.", "Expiry still shows on the Instructors tab, but nothing stops an assignment.", "The problems list will no longer flag it either."] },
+    conflict: { title: "Stop checking for double-bookings?", consequences: ["The same person can be put on two courses at the same time without a warning.", "The problems list stops flagging clashes created by moving sessions.", "Recorded in the change log."] },
+    availability: { title: "Stop checking availability when rostering?", consequences: ["People marked Busy, on approved leave, or who never answered can be rostered without a warning.", "The problems list stops flagging rostered-while-Busy.", "Instructors still see and set availability; the office just isn't stopped by it."] },
+    ratio: { title: "Stop flagging short-staffed courses and missing safety cover?", consequences: ["Courses no longer show Covered / Under-staffed / No safety cover.", "The Today strip and the problems list stop counting uncovered sessions.", "Ratios are still stored on each course type for when you switch it back on."] },
+  };
+  const toggle = (k: keyof typeof checks, on: boolean) => { if (!on && checks[k]) setAskOff(k); else setChecks((c) => ({ ...c, [k]: on })); };
   const setTerm = (i: number, patch: Partial<TermDate>) => setTerms((t) => t.map((r, j) => (j === i ? { ...r, ...patch } : r)));
 
   return (
@@ -160,19 +170,19 @@ export function GeneralSettingsForm({
         </p>
         <div className="grid gap-2 sm:grid-cols-3">
           <label className="flex items-start gap-2 text-sm text-slate-600">
-            <input type="checkbox" name="enforceLicenceChecks" defaultChecked={enforceLicenceChecks} className="mt-0.5 h-4 w-4 rounded border-slate-300" />
+            <input type="checkbox" name="enforceLicenceChecks" checked={checks.licence} onChange={(e) => toggle("licence", e.target.checked)} className="mt-0.5 h-4 w-4 rounded border-slate-300" />
             <span>Block rostering an instructor with a missing or expired must-have cert or check <span className="text-slate-400">(override allowed)</span></span>
           </label>
           <label className="flex items-start gap-2 text-sm text-slate-600">
-            <input type="checkbox" name="enforceRatioChecks" defaultChecked={enforceRatioChecks} className="mt-0.5 h-4 w-4 rounded border-slate-300" />
+            <input type="checkbox" name="enforceRatioChecks" checked={checks.ratio} onChange={(e) => toggle("ratio", e.target.checked)} className="mt-0.5 h-4 w-4 rounded border-slate-300" />
             <span>Flag courses that are short of instructors or safety-boat cover</span>
           </label>
           <label className="flex items-start gap-2 text-sm text-slate-600">
-            <input type="checkbox" name="enforceConflictChecks" defaultChecked={enforceConflictChecks} className="mt-0.5 h-4 w-4 rounded border-slate-300" />
+            <input type="checkbox" name="enforceConflictChecks" checked={checks.conflict} onChange={(e) => toggle("conflict", e.target.checked)} className="mt-0.5 h-4 w-4 rounded border-slate-300" />
             <span>Stop an instructor being double-booked <span className="text-slate-400">(override allowed)</span></span>
           </label>
           <label className="flex items-start gap-2 text-sm text-slate-600">
-            <input type="checkbox" name="enforceAvailabilityChecks" defaultChecked={enforceAvailabilityChecks} className="mt-0.5 h-4 w-4 rounded border-slate-300" />
+            <input type="checkbox" name="enforceAvailabilityChecks" checked={checks.availability} onChange={(e) => toggle("availability", e.target.checked)} className="mt-0.5 h-4 w-4 rounded border-slate-300" />
             <span>Don&apos;t roster someone who is <strong>Busy</strong> for that slot, including anyone who hasn&apos;t marked it Free yet <span className="text-slate-400">(on by default; override allowed)</span></span>
           </label>
           <label className="flex items-start gap-2 text-sm text-slate-600">
@@ -182,6 +192,7 @@ export function GeneralSettingsForm({
         </div>
       </fieldset>
 
+      <ConfirmDialog open={askOff !== null} title={askOff ? CHECK_TEXT[askOff].title : ""} consequences={askOff ? CHECK_TEXT[askOff].consequences : []} confirmLabel="Switch it off" onCancel={() => setAskOff(null)} onConfirm={() => { if (askOff) setChecks((c) => ({ ...c, [askOff]: false })); setAskOff(null); }} />
       <div className="sm:col-span-4 flex items-center gap-3">
         <button disabled={pending} className="rounded-lg bg-teal px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">
           {pending ? "Saving…" : "Save settings"}

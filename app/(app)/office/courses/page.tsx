@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireTenant } from "@/lib/tenant/require";
 import { addDays, getSessionEvents, getWeekSchedule, weekStart } from "@/lib/services/schedule";
 import { fitReason, listStaffWithFit } from "@/lib/services/staff";
@@ -183,7 +184,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
   return (
     <div>
       <div className="mb-1 flex items-center justify-between">
-        <h1 className="font-display text-2xl font-semibold text-navy">Courses</h1>
+        <h1 className="font-display text-2xl font-semibold text-navy">Courses <Link href="/office/course-setup" className="ml-2 align-middle text-sm font-medium text-teal hover:underline">Course setup →</Link></h1>
         <div className="flex items-center gap-3">
           <span className="text-sm text-slate-500">{courses.length} scheduled</span>
           <a href="/office/integrations" className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-navy hover:bg-slate-50">Integrations &amp; import →</a>

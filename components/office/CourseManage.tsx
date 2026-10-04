@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { cancelCourseAction, deleteCourseAction, renameCourseAction, restoreSessionAction, setCourseStatusAction } from "@/app/(app)/office/courses/actions";
 import { CancelPanel, type CancelChoice } from "./CancelPanel";
+import { ConfirmDialog } from "./ConfirmDialog";
 
 const STATUSES = ["draft", "scheduled", "confirmed", "completed"];
 
@@ -22,14 +23,12 @@ export function CourseManage({ id, name, status, liveSessions, staffCount, canDe
   const [msg, setMsg] = useState<string | null>(null);
   const [nm, setNm] = useState(name);
   const [cancelling, setCancelling] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const cancelled = status === "cancelled";
 
   const rename = () => start(async () => { const r = await renameCourseAction(id, nm); setMsg(r.ok ? "Saved" : r.error ?? "Failed"); router.refresh(); });
   const setStatus = (s: string) => start(async () => { const r = await setCourseStatusAction(id, s); setMsg(r.ok ? null : r.error ?? "Failed"); router.refresh(); });
-  const del = () => {
-    if (!confirm("Delete this draft course and its sessions? Nobody is rostered on it. This can't be undone.")) return;
-    start(async () => { const r = await deleteCourseAction(id); if (r.ok) router.push("/office/courses"); else setMsg(r.error ?? "Failed"); });
-  };
+  const del = () => start(async () => { const r = await deleteCourseAction(id); if (r.ok) router.push("/office/courses"); else { setMsg(r.error ?? "Failed"); setConfirmDelete(false); } });
   const cancel = (c: CancelChoice) => start(async () => {
     const r = await cancelCourseAction(id, c);
     setMsg(r.ok ? r.message ?? "Cancelled" : r.error ?? "Failed");
@@ -68,13 +67,15 @@ export function CourseManage({ id, name, status, liveSessions, staffCount, canDe
               <button onClick={() => setCancelling((v) => !v)} disabled={pending} className="rounded-lg border border-port/40 px-4 py-2 text-sm font-semibold text-port hover:bg-port/5 disabled:opacity-50">Cancel course…</button>
             ) : null}
             {canDelete ? (
-              <button onClick={del} disabled={pending} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-50 disabled:opacity-50">Delete draft</button>
+              <button onClick={() => setConfirmDelete(true)} disabled={pending} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-50 disabled:opacity-50">Delete draft</button>
             ) : (
               <span className="text-xs text-slate-400" title={deleteBlockedBecause ?? undefined}>Can&rsquo;t be deleted{deleteBlockedBecause ? `: ${deleteBlockedBecause.replace(/\. Cancel it instead.*$/, "")}` : ""}. Cancel it instead.</span>
             )}
           </div>
         </div>
       </div>
+      <ConfirmDialog open={confirmDelete} title={`Delete “${name}”?`} confirmLabel="Delete the course" busy={pending} onCancel={() => setConfirmDelete(false)} onConfirm={del}
+        consequences={[`${liveSessions} session${liveSessions === 1 ? "" : "s"} and the course's locations and equipment links are removed.`, "Nobody is rostered on it, so nobody is told and no pay lines change.", "This can't be undone; a course people have worked on is cancelled instead."]} />
       {cancelling ? (
         <CancelPanel what={liveSessions === 1 ? "the whole course (1 remaining day)" : `the whole course (${liveSessions} remaining days)`} people={staffCount} pending={pending} onConfirm={cancel} onClose={() => setCancelling(false)} />
       ) : null}

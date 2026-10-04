@@ -1,5 +1,7 @@
 "use client";
 
+import { ConfirmDialog } from "./ConfirmDialog";
+
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { inviteOfficeAdminAction, removeOfficeAccessAction, setOfficeFeaturesAction } from "@/app/(app)/office/staff/access-actions";
@@ -14,6 +16,7 @@ export interface OfficeMemberRow { userId: string; name: string; email: string; 
 export function OfficeAccess({ members, isOwner, meId }: { members: OfficeMemberRow[]; isOwner: boolean; meId: string }) {
   const router = useRouter();
   const [pending, start] = useTransition();
+  const [removing, setRemoving] = useState<{ userId: string; name: string } | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [inviting, setInviting] = useState(false);
   const [name, setName] = useState("");
@@ -34,7 +37,7 @@ export function OfficeAccess({ members, isOwner, meId }: { members: OfficeMember
                 <p className="text-xs text-slate-500">{m.email} · {m.role === "owner" ? "Superadmin" : "Office admin"}{m.status === "invited" ? " · invited, not signed in yet" : ""}</p>
               </div>
               {isOwner && m.role === "admin" ? (
-                <button type="button" disabled={pending} onClick={() => { if (confirm(`Remove ${m.name || m.email}'s office access? If they're also an instructor they keep the app.`)) run(() => removeOfficeAccessAction(m.userId)); }} className="text-xs text-slate-400 hover:text-port disabled:opacity-50">Remove office access</button>
+                <button type="button" disabled={pending} onClick={() => setRemoving({ userId: m.userId, name: m.name || m.email })} className="text-xs text-slate-400 hover:text-port disabled:opacity-50">Remove office access</button>
               ) : null}
             </div>
             {m.role === "owner" ? (
@@ -82,6 +85,9 @@ export function OfficeAccess({ members, isOwner, meId }: { members: OfficeMember
         )
       ) : null}
       {msg ? <p className="mt-2 text-xs text-slate-500">{msg}</p> : null}
+      <ConfirmDialog open={removing !== null} title={`Remove ${removing?.name ?? ""}'s office access?`} confirmLabel="Remove access" busy={pending} onCancel={() => setRemoving(null)}
+        onConfirm={() => { const u = removing; setRemoving(null); if (u) run(() => removeOfficeAccessAction(u.userId)); }}
+        consequences={["They can no longer open the office on any device.", "If they are also an instructor they keep the app and their roster.", "Their past changes stay in the change log under their name."]} />
     </div>
   );
 }

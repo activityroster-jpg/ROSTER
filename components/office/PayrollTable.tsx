@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { approvePayrollLinesAction, rebuildHoursAction, setPaySourceAction, updatePayrollLineAction } from "@/app/(app)/office/finance/actions";
 import type { PayrollLine } from "@/lib/services/finance";
+import { ConfirmDialog } from "./ConfirmDialog";
 
 const h = (m: number) => (m / 60).toFixed(2);
 const UNIT_SHORT: Record<string, string> = { hour: "/h", session: "/session", day: "/day" };
@@ -21,6 +22,7 @@ export function PayrollTable({
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [askApprove, setAskApprove] = useState(false);
   const money = (n: number | null) => (n == null ? "—" : `${currency}${n.toFixed(2)}`);
 
   const run = (id: string | null, fn: () => Promise<{ ok: boolean; error?: string; message?: string }>) => {
@@ -62,12 +64,15 @@ export function PayrollTable({
         <div className="flex flex-wrap items-center gap-2">
           <button type="button" disabled={pending} onClick={() => run(null, () => rebuildHoursAction())} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-navy hover:bg-slate-50 disabled:opacity-50" title="Add lines for anything rostered since, without touching approved or edited lines">Refresh from roster</button>
           {unapproved.length ? (
-            <button type="button" disabled={pending} onClick={() => { if (confirm(`Approve all ${unapproved.length} unapproved lines shown?`)) run(null, () => approvePayrollLinesAction(unapproved, true)); }} className="rounded-lg bg-starboard px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-50">Approve all shown ({unapproved.length})</button>
+            <button type="button" disabled={pending} onClick={() => setAskApprove(true)} className="rounded-lg bg-starboard px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-50">Approve all shown ({unapproved.length})</button>
           ) : approvedIds.length ? (
             <button type="button" disabled={pending} onClick={() => run(null, () => approvePayrollLinesAction(approvedIds, false))} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50">Re-open all</button>
           ) : null}
         </div>
       </div>
+      <ConfirmDialog open={askApprove} title={`Approve all ${unapproved.length} unapproved line${unapproved.length === 1 ? "" : "s"} shown?`} confirmLabel="Approve them" tone="teal" busy={pending} onCancel={() => setAskApprove(false)}
+        onConfirm={() => { setAskApprove(false); run(null, () => approvePayrollLinesAction(unapproved, true)); }}
+        consequences={[`${unapproved.length} line${unapproved.length === 1 ? " is" : "s are"} locked at today's minutes and pay; later roster changes flag them rather than change them.`, unpriced ? `${unpriced} of them ha${unpriced === 1 ? "s" : "ve"} no rate yet and will be approved with pay unknown.` : "Every line has a rate.", "You can untick OK on any line to re-open it."]} />
       {msg ? <p role="status" className="px-4 pt-2 text-xs text-slate-600 print:hidden">{msg}</p> : null}
       {unpriced > 0 ? <p className="px-4 pt-2 text-xs text-amber print:hidden">⚠ {unpriced} line{unpriced === 1 ? " has" : "s have"} no pay rate — set one on the instructor&apos;s page and press “Refresh from roster”.</p> : null}
       {changed > 0 ? <p className="px-4 pt-2 text-xs text-port print:hidden">⚠ {changed} approved line{changed === 1 ? "" : "s"} changed on the roster after approval (moved, resized or the person was taken off). Untick OK to re-check, then approve again.</p> : null}

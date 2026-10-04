@@ -16,6 +16,8 @@ import { todayIso } from "@/lib/domain";
 import { GuideLink } from "@/components/GuideLink";
 import { confirmationSummary } from "@/lib/services/roster";
 import { findProblems, problemLabel } from "@/lib/services/problems";
+import { summariseToday } from "@/lib/domain/today";
+import { Collapsible } from "@/components/office/Collapsible";
 
 export const dynamic = "force-dynamic";
 
@@ -71,6 +73,9 @@ export default async function DashboardPage() {
   const openShifts = shifts.filter((s) => s.status === "open" || s.status === "offered").length;
 
   const weekSessions = sessions.length;
+  const todayDay = rota.find((d) => d.date === today);
+  const todaySummary = summariseToday((todayDay?.sessions ?? []).map((s) => ({ sessionId: s.sessionId, courseName: s.courseName, startAt: s.startAt, endAt: s.endAt, coverageOk: s.coverageOk, staff: s.staff.map((m) => ({ instructorId: m.instructorId, name: m.name, status: m.status })) })));
+  const problemsToday = problems.problems.filter((p) => p.date === today);
 
   return (
     <div>
@@ -131,8 +136,25 @@ export default async function DashboardPage() {
         </Card>
       ) : null}
 
-      {/* Today */}
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Today</p>
+      {/* Today strip: what matters at 08:00 on a sailing day */}
+      <div className="mb-4 rounded-card border border-navy/15 bg-navy px-4 py-3 text-white">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <p className="font-display text-lg font-semibold">Today · {new Date(`${today}T12:00:00Z`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" })}</p>
+          <p className="text-sm text-white/80">
+            {todaySummary.sessions === 0 ? "Nothing on the water today." : <>{todaySummary.sessions} session{todaySummary.sessions === 1 ? "" : "s"}{todaySummary.firstStart != null && todaySummary.lastEnd != null ? ` from ${fmtTime(todaySummary.firstStart)} to ${fmtTime(todaySummary.lastEnd)}` : ""} · {todaySummary.people} {todaySummary.people === 1 ? "person" : "people"} on</>}
+          </p>
+        </div>
+        {todaySummary.sessions > 0 ? (
+          <div className="mt-2 flex flex-wrap gap-2 text-xs">
+            <Link href="/office/rota" className={`rounded-full px-2.5 py-1 font-semibold ${todaySummary.uncovered ? "bg-amber text-navy" : "bg-white/15 text-white"}`}>{todaySummary.uncovered ? `${todaySummary.uncovered} uncovered` : "All covered"}</Link>
+            <Link href="/office/rota" className={`rounded-full px-2.5 py-1 font-semibold ${todaySummary.declined ? "bg-port text-white" : "bg-white/15 text-white"}`}>{todaySummary.declined ? `${todaySummary.declined} can't make it${todaySummary.declinedNames.length ? `: ${todaySummary.declinedNames.slice(0, 3).join(", ")}` : ""}` : "Nobody has dropped out"}</Link>
+            {todaySummary.unconfirmed ? <Link href="/office/rota" className="rounded-full bg-white/15 px-2.5 py-1 font-semibold text-white">{todaySummary.unconfirmed} unconfirmed</Link> : null}
+            {problemsToday.length ? <a href="#problems" className="rounded-full bg-port px-2.5 py-1 font-semibold text-white">{problemsToday.length} problem{problemsToday.length === 1 ? "" : "s"} today</a> : null}
+            <Link href="/office/rota/emergency" className="rounded-full bg-white/15 px-2.5 py-1 font-semibold text-white hover:bg-white/25">Emergency sheet →</Link>
+          </div>
+        ) : null}
+      </div>
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">At a glance</p>
       <div className="mb-6 grid gap-3 sm:grid-cols-3">
         {clockOn ? <Tile href="/office/timeclock" label="On the water now" value={attendance.onWater} sub="Clocked in" tone={attendance.onWater > 0 ? "starboard" : "navy"} /> : null}
         {clockOn ? <Tile href="/office/timeclock" label="Hours logged today" value={(attendance.minutesToday / 60).toFixed(1)} sub={`${attendance.started} started`} /> : null}
@@ -176,15 +198,12 @@ export default async function DashboardPage() {
         </div>
       ) : null}
 
-      {/* Calendar — the visual heart of the week */}
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-display text-lg font-semibold text-navy">Calendar</h2>
-        <Link href="/office/courses" className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-navy hover:bg-slate-50">
-          Plan courses →
-        </Link>
-      </div>
+      {/* Calendar: open at a desk, folded on a phone */}
       <div className="mb-8">
-        <WeekCalendarView events={events} addHref="/office/courses" />
+        <Collapsible title="Calendar">
+          <div className="mb-2 flex justify-end"><Link href="/office/courses" className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-navy hover:bg-slate-50">Plan courses →</Link></div>
+          <WeekCalendarView events={events} addHref="/office/courses" />
+        </Collapsible>
       </div>
 
       {/* This week's roster */}
@@ -214,7 +233,7 @@ export default async function DashboardPage() {
                       <span className="text-xs text-slate-500">
                         {s.staff.length ? s.staff.map((m) => (m.status === "confirmed" ? `${m.name} ✓` : m.status === "declined" ? `${m.name} ✕` : m.name)).join(", ") : <span className="font-semibold text-port">Unassigned</span>}
                       </span>
-                      {!s.coverageOk ? <StatusPill tone="attention">Needs cover</StatusPill> : null}
+                      {ratioOn ? (!s.coverageOk ? <StatusPill tone="attention">{s.missingSafetyCover ? "No safety cover" : "Needs cover"}</StatusPill> : <StatusPill tone="covered">Covered</StatusPill>) : !s.coverageOk ? <StatusPill tone="attention">Needs cover</StatusPill> : null}
                     </li>
                   ))}
                 </ul>
@@ -224,35 +243,6 @@ export default async function DashboardPage() {
         )}
       </Card>
 
-      {/* Coverage — only when the centre uses ratio & safety-cover checks */}
-      {ratioOn ? (
-      <div className="mt-6">
-        <h2 className="mb-3 font-display text-lg font-semibold text-navy">Coverage</h2>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {[...coverageByCourse.values()].map((c) => (
-            <Card key={c.courseId} className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-navy">{c.courseName}</p>
-                <p className="text-xs text-slate-500">{c.courseTypeName}</p>
-              </div>
-              <div className="text-right">
-                {c.ratio.ok ? (
-                  <StatusPill tone="covered">Covered</StatusPill>
-                ) : c.ratio.missingSafetyCover ? (
-                  <StatusPill tone="conflict">No safety cover</StatusPill>
-                ) : (
-                  <StatusPill tone="attention">Under-staffed</StatusPill>
-                )}
-                <p className="mt-1 text-xs text-slate-400">{c.ratio.ratioCountingStaff}/{c.ratio.requiredStaff} staff</p>
-              </div>
-            </Card>
-          ))}
-          {coverageByCourse.size === 0 ? (
-            <p className="text-sm text-slate-400">No courses yet. Create one from Courses.</p>
-          ) : null}
-        </div>
-      </div>
-      ) : null}
     </div>
   );
 }

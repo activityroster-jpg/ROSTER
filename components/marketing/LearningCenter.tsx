@@ -67,9 +67,9 @@ const SECTIONS: Section[] = [
     label: "Dashboard & calendar",
     blurb: "Your week at a glance — the visual heart of the platform.",
     blocks: [
-      { kind: "p", text: "The dashboard opens on today. At the top you'll find quick tiles (on the water now, hours logged, sessions this week) and anything needing attention (staff not cleared, checks expiring, courses to cover, leave to approve, open shifts, and problems on the roster)." },
+      { kind: "p", text: "The dashboard opens on today: a Today strip with the sessions running, how many people are on, what's uncovered, who can't make it and today's problems, with a link to the emergency sheet. Below it: quick tiles (on the water now, hours logged, sessions this week) and anything needing attention (staff not cleared, checks expiring, courses to cover, leave to approve, open shifts, problems on the roster)." },
       { kind: "sub", text: "The week calendar" },
-      { kind: "p", text: "Below the tiles is a colour-coded week calendar — youth courses in amber, adult in teal. Use the ← → buttons to move between weeks, or “This week” to jump back. Click any course block to open it." },
+      { kind: "p", text: "Below the tiles is a colour-coded week calendar — youth courses in amber, adult in teal. Use the ← → buttons to move between weeks, or “This week” to jump back. Click any course block to open it. On a phone the calendar starts folded so the useful parts come first." },
       { kind: "sub", text: "This week's roster" },
       { kind: "p", text: "Under the calendar is the written roster for the week — every session, who's on it, where and when — with a link to the full printable roster." },
       { kind: "tip", text: "The “＋ New course” button on the calendar takes you straight to the course planner." },
@@ -609,7 +609,7 @@ const SECTIONS: Section[] = [
     label: "Settings & configuration",
     blurb: "Tune courses, roles, checks and how sessions run.",
     blocks: [
-      { kind: "p", text: "Settings is where you adjust the defaults you set during onboarding." },
+      { kind: "p", text: "Settings is where you adjust the defaults you set during onboarding. It is split into tabs: General (company code, warnings, the checks applied when rostering, the availability window, holiday pay), Roster & welfare (welfare officers, the roster PDF, course default schedules), Time & pay, Lists (slots, roles, certs, checks) and Data & account (retention, export, billing, security, PIN). Switching off a safety check asks you to confirm and names what will no longer be stopped." },
       { kind: "bullets", items: [
         "Activate or retire course types, qualification/instructor types and compliance checks — retired items keep their history and stop appearing for new records.",
         "Switch optional features on or off.",

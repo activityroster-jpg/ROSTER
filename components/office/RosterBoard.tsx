@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import type { BoardData, BoardInstructor, OpenRole } from "@/lib/services/board";
 import type { RotaDay, RotaSession } from "@/lib/services/schedule";
 import { boardAssignAction, boardRemoveAction, boardWorkingTimeAction } from "@/app/(app)/office/rota/board-actions";
+import { ConfirmDialog } from "./ConfirmDialog";
 
 type Layout = "courses" | "people";
 const STORAGE = "ar.board.layout";
@@ -249,6 +250,7 @@ function SessionPanel({ data, selected, canEdit, preselect, instructors, byId, o
   const [note, setNote] = useState("");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [wt, setWt] = useState<{ blocks: string; warns: string } | null>(null);
+  const [askRemove, setAskRemove] = useState<RotaSession["staff"][number] | null>(null);
   const key = `${day.date}|${s.slot}`;
   const chosen = who ? byId.get(who) : undefined;
   const chosenAvail = chosen?.availability[key];
@@ -298,7 +300,7 @@ function SessionPanel({ data, selected, canEdit, preselect, instructors, byId, o
                     {m.dayOnly ? <button type="button" disabled={pending} onClick={() => remove(m, "day")} className="text-slate-400 hover:text-port">remove</button> : (
                       <>
                         {meta?.multiDay ? <button type="button" disabled={pending} onClick={() => remove(m, "day")} className="text-slate-400 hover:text-port" title="Not needed this day; stays on the rest of the course">skip this day</button> : null}
-                        <button type="button" disabled={pending} onClick={() => { if (confirm(`Take ${m.name} off the whole course? ${meta?.multiDay ? "Every day goes, " : ""}their unapproved pay lines are removed and they're told if the week is published.`)) remove(m, "course"); }} className="text-slate-400 hover:text-port">remove</button>
+                        <button type="button" disabled={pending} onClick={() => setAskRemove(m)} className="text-slate-400 hover:text-port">remove</button>
                       </>
                     )}
                   </span>
@@ -347,6 +349,9 @@ function SessionPanel({ data, selected, canEdit, preselect, instructors, byId, o
         ) : null}
         {msg ? <p className={`mt-3 text-xs ${msg.ok ? "text-starboard" : "text-port"}`}>{msg.text}</p> : null}
       </div>
+      <ConfirmDialog open={askRemove !== null} title={`Take ${askRemove?.name ?? ""} off ${s.courseName}?`} confirmLabel="Remove from the course" busy={pending} onCancel={() => setAskRemove(null)}
+        onConfirm={() => { const m = askRemove; setAskRemove(null); if (m) remove(m, "course"); }}
+        consequences={[meta?.multiDay ? "They come off every day of this course, not just this one (use “skip this day” for one day)." : "They come off this session.", "Their unapproved pay lines for it are removed; approved ones are kept and flagged.", "If the week is published they are told straight away.", "Any open role this leaves shows on the board and the problems list."]} />
     </div>
   );
 }

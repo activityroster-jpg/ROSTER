@@ -16,6 +16,7 @@ import { RetentionForm } from "@/components/office/RetentionForm";
 import { retentionPlan } from "@/lib/services/retention";
 import { WelfareSettingsForm } from "@/components/office/WelfareSettingsForm";
 import { parseWelfareSettings } from "@/lib/services/welfare";
+import { SettingsTabs } from "@/components/office/SettingsTabs";
 
 export const dynamic = "force-dynamic";
 
@@ -55,6 +56,16 @@ export default async function SettingsPage() {
         Retiring an item hides it from new records but keeps your history intact (nothing is deleted).
       </p>
 
+      <SettingsTabs
+        tabs={[
+          { id: "general", label: "General", hint: "Company code, warnings, checks when rostering, availability window, holiday pay" },
+          { id: "roster", label: "Roster & welfare", hint: "Welfare officers, the roster PDF, course default schedules" },
+          { id: "time", label: "Time & pay", hint: "Time clock, pay source, lunch breaks" },
+          { id: "lists", label: "Lists", hint: "Session slots, roles, certs and checks" },
+          { id: "data", label: "Data & account", hint: "Retention, export, billing, security and PIN" },
+        ]}
+        panels={{
+          general: (<>
       <Card className="mb-6">
         <div className="mb-1 flex items-center justify-between">
           <h2 className="font-semibold text-navy">Company code · instructor app</h2>
@@ -88,17 +99,8 @@ export default async function SettingsPage() {
         />
       </Card>
 
-      <div id="retention" className="mb-6">
-      <Card>
-        <div className="mb-1 flex items-center justify-between">
-          <h2 className="font-semibold text-navy">Data retention</h2>
-          <a href="/learn?topic=retention" target="_blank" rel="noreferrer" className="text-xs font-medium text-teal hover:underline">📖 Read the guide</a>
-        </div>
-        <p className="mb-3 text-xs text-slate-500">How long each kind of record is kept. The defaults follow the published retention schedule; statutory minimums cannot be shortened.</p>
-        <RetentionForm initial={retention.policy} pending={retention.pending} />
-      </Card>
-      </div>
-
+          </>),
+          roster: (<>
       <div id="rota-pdf" className="mb-6">
       <Card className="mb-6">
         <div className="mb-1 flex items-center justify-between"><h2 className="font-semibold text-navy">Welfare officers</h2><a href="/learn?topic=roles" target="_blank" rel="noreferrer" className="text-xs font-medium text-teal hover:underline">📖 Read the guide</a></div>
@@ -116,6 +118,8 @@ export default async function SettingsPage() {
       </Card>
       </div>
 
+          </>),
+          time: (<>
       <div className="mb-6 grid gap-6 lg:grid-cols-3">
         <Card>
           <div className="mb-1 flex items-center justify-between">
@@ -137,6 +141,8 @@ export default async function SettingsPage() {
         </Card>
       </div>
 
+          </>),
+          lists: (<>
       <div className="grid gap-6 lg:grid-cols-2">
         <ConfigManager
           title="Session slots"
@@ -204,6 +210,19 @@ export default async function SettingsPage() {
         </div>
       </Card>
 
+          </>),
+          data: (<>
+      <div id="retention" className="mb-6">
+      <Card>
+        <div className="mb-1 flex items-center justify-between">
+          <h2 className="font-semibold text-navy">Data retention</h2>
+          <a href="/learn?topic=retention" target="_blank" rel="noreferrer" className="text-xs font-medium text-teal hover:underline">📖 Read the guide</a>
+        </div>
+        <p className="mb-3 text-xs text-slate-500">How long each kind of record is kept. The defaults follow the published retention schedule; statutory minimums cannot be shortened.</p>
+        <RetentionForm initial={retention.policy} pending={retention.pending} />
+      </Card>
+      </div>
+
       <Card className="mt-6">
         <h2 className="mb-3 font-semibold text-navy">Data &amp; billing</h2>
         <div className="flex flex-wrap gap-3">
@@ -225,6 +244,9 @@ export default async function SettingsPage() {
           intact.
         </p>
       </Card>
+          </>),
+        }}
+      />
     </div>
   );
 }

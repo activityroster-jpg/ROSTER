@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { deleteInstructorAction, setInstructorStatusAction, updateInstructorAction } from "@/app/(app)/office/staff/actions";
+import { ConfirmDialog } from "./ConfirmDialog";
 
 /** Edit an instructor's basics, and mark them as having left (or bring them back). */
 export function EditInstructorForm({ instructor, canDelete = false }: { instructor: { id: string; name: string; email: string | null; phone: string | null; employmentType: string; status: string; dateOfBirth?: string | null }; /** True when nothing (roster, pay, clock, leave) has ever referenced them. */ canDelete?: boolean }) {
@@ -15,6 +16,7 @@ export function EditInstructorForm({ instructor, canDelete = false }: { instruct
   const [employment, setEmployment] = useState(instructor.employmentType);
   const [dob, setDob] = useState(instructor.dateOfBirth ?? "");
   const [msg, setMsg] = useState<string | null>(null);
+  const [ask, setAsk] = useState<"left" | "delete" | null>(null);
   const left = instructor.status === "inactive";
 
   const save = () => start(async () => {
@@ -23,16 +25,11 @@ export function EditInstructorForm({ instructor, canDelete = false }: { instruct
     if (r.ok) { setOpen(false); router.refresh(); }
   });
   const setStatus = (status: "active" | "inactive") => {
-    const q = status === "inactive"
-      ? `Mark ${instructor.name} as left? They disappear from rostering and lose app access; their history and hours stay.`
-      : `Bring ${instructor.name} back? They can be rostered again and get their app access back.`;
-    if (!confirm(q)) return;
+    if (status === "inactive") { setAsk("left"); return; }
     start(async () => { const r = await setInstructorStatusAction(instructor.id, status); setMsg(r.ok ? r.message ?? "Done" : r.error ?? "Could not update"); router.refresh(); });
   };
-  const del = () => {
-    if (!confirm(`Delete ${instructor.name}? They were never rostered or paid here, so their profile, certs and app access go for good.`)) return;
-    start(async () => { const r = await deleteInstructorAction(instructor.id); if (r.ok) router.push("/office/staff"); else setMsg(r.error ?? "Could not delete"); });
-  };
+  const confirmLeft = () => start(async () => { const r = await setInstructorStatusAction(instructor.id, "inactive"); setMsg(r.ok ? r.message ?? "Done" : r.error ?? "Could not update"); setAsk(null); router.refresh(); });
+  const del = () => start(async () => { const r = await deleteInstructorAction(instructor.id); if (r.ok) router.push("/office/staff"); else { setMsg(r.error ?? "Could not delete"); setAsk(null); } });
   const field = "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal";
 
   return (
@@ -65,10 +62,14 @@ export function EditInstructorForm({ instructor, canDelete = false }: { instruct
           ) : (
             <button type="button" disabled={pending} onClick={() => setStatus("inactive")} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:border-port hover:text-port disabled:opacity-50">Mark as left</button>
           )}
-          {canDelete ? <button type="button" disabled={pending} onClick={del} title="Nothing has ever referenced this person, so they can be removed outright" className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:border-port hover:text-port disabled:opacity-50">Delete</button> : null}
+          {canDelete ? <button type="button" disabled={pending} onClick={() => setAsk("delete")} title="Nothing has ever referenced this person, so they can be removed outright" className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:border-port hover:text-port disabled:opacity-50">Delete</button> : null}
           {msg ? <span className="text-xs text-slate-500">{msg}</span> : null}
         </>
       )}
+      <ConfirmDialog open={ask === "left"} title={`Mark ${instructor.name} as left?`} confirmLabel="Mark as left" busy={pending} onCancel={() => setAsk(null)} onConfirm={confirmLeft}
+        consequences={["They disappear from the staff pickers and the availability sheet.", "Their app access is suspended; they can be brought back later.", "Their history, hours and pay lines stay exactly as they are.", "Data retention counts from today for their record."]} />
+      <ConfirmDialog open={ask === "delete"} title={`Delete ${instructor.name}?`} confirmLabel="Delete for good" busy={pending} onCancel={() => setAsk(null)} onConfirm={del}
+        consequences={["Nothing has ever referenced them (no roster, pay, clock or leave), so the record can go.", "Their profile, certs, uploaded documents, availability and app login are removed.", "This can't be undone."]} />
     </div>
   );
 }
