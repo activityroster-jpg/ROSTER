@@ -1,7 +1,7 @@
-import { eq } from "drizzle-orm";
+import { and, eq, gte, lt } from "drizzle-orm";
 import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
-import { availability as availabilityTable } from "@/lib/db/schema";
+import { availability as availabilityTable, courseSession as courseSessionTable } from "@/lib/db/schema";
 import { evaluateFit, evaluateRatio, type AssignedRole, type ComplianceRequirement, type HeldCompliance } from "@/lib/domain";
 import { liveSessions } from "@/lib/domain/sessions";
 import { isUnder18 } from "@/lib/domain/age";
@@ -69,8 +69,10 @@ export async function findProblems(repos: Repositories, ctx: AnyTenantContext, o
   const from = opts.from ?? todayIso(settings?.timezone ?? undefined);
   const to = opts.to ?? addDays(from, 56);
 
+  // Bounded read (audit C2): the range plus a week either side, which is all the
+  // weekly young-worker limits and clash checks ever look at.
   const [allSessions, courseRows, courseTypes, assignmentRows, instructorRows, availRows, complianceTypes, complianceItems, roleTypes, courseEquipment, equipment, teaching, qualifications, equipmentTypes, overrideRows] = await Promise.all([
-    t.courseSession.list(ctx).then(liveSessions),
+    t.courseSession.list(ctx, and(gte(courseSessionTable.date, addDays(from, -7)), lt(courseSessionTable.date, addDays(to, 7)))).then(liveSessions),
     t.course.list(ctx),
     t.courseType.list(ctx),
     t.courseStaff.list(ctx),

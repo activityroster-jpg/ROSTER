@@ -42,6 +42,10 @@ export async function enablePush(): Promise<"granted" | "denied" | "unavailable"
   const perm = await PushNotifications.requestPermissions();
   if (perm.receive !== "granted") return "denied";
 
+  // Android shows the channel name in the phone's notification settings (audit C11).
+  if (nativePlatform() === "android") {
+    try { await PushNotifications.createChannel({ id: "roster", name: "Roster updates", description: "Shifts, changes, open shifts and leave decisions", importance: 4, visibility: 1, sound: "default" }); } catch { /* older Android: no channels */ }
+  }
   await PushNotifications.removeAllListeners();
   await PushNotifications.addListener("registration", async ({ value }) => {
     try {

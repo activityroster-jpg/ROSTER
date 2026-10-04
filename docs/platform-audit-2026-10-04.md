@@ -1027,3 +1027,23 @@ Cloudflare cron (GitHub stays as the backup pinger).
   tabs; Course setup beside Courses.
 - **Phase 4:** app items (offline week, Face ID, ICS), durable rate limits,
   remaining P2/P3 technical items.
+
+---
+
+## Part F: What was built (4 October 2026)
+
+Every phase in Part E is built and deployed to production (see `docs/runbooks/deploy.md` for each tag and migration).
+
+- **Phase 0:** roster wording; times as typed everywhere; Cloudflare cron tick; phantom pay lines removed; cancel workflow.
+- **Phase 1:** superadmin and office admins with feature toggles; welfare officers and Welfare on duty; parental approval; office security list; password strength; device check by device or city.
+- **Phase 2:** availability with no blank, usual week, day notes, office entry and leave as Busy; the problems service (dashboard, roster, digest, app) with re-checks on edits and the qualification match; one staffing panel; editable course locations and equipment; equipment quantities; delete or retire; payroll fixes (rate changes, changed since approval, volunteers hidden, summary, pence, holiday pay); unique keys; role-by-route and lifecycle tests.
+- **Phase 3:** per-day staffing; the roster board (courses by day with drag and drop, people × days, side panel); Today strip; settings tabs; consequence dialogs; Course setup beside Courses.
+- **Phase 4:** durable per-account rate limits; PIN step-up before exports and anonymising; https-only privacy link; `rememberCentre` internal; billing setup limited; private calendar (ICS) feed; offline "my week"; Face ID on the step-up; atomic course creation; bounded problem reads; isolation-list completeness check; Android channel name; session-time convention documented.
+
+**Left for Conor (outside the code):**
+- DMARC to `quarantine` once reports are clean (DNS change at the domain host).
+- Rebuild and resubmit the iOS app on the Mac so the offline week works there (`mobile/README.md`).
+- 11 October: decide whether to enforce the stricter app CSP (report-only until then).
+- From 13 October: test on staging and press "Deploy production" yourself.
+
+**Not done, and why:** a Playwright smoke run on staging (C13) needs a browser install in CI and was left for after the 13 October switch to staging-first; whole-history reads are now bounded on the problems service, and the remaining pages (Courses, payroll) are fine at today's centre sizes.

@@ -498,6 +498,12 @@ export const courseSession = sqliteTable("course_session", {
     .references(() => course.id, { onDelete: "cascade" }),
   date: text("date").notNull(), // "YYYY-MM-DD"
   slot: text("slot", { enum: SLOT_CODES }).notNull(),
+  /**
+   * Wall-clock times, NOT instants (Part E, decision 5: no time zones). 09:00 on
+   * 1 July is stored as `2026-07-01T09:00:00Z` and every reader shows it with
+   * `timeZone: "UTC"` (fmtWallTime in lib/domain/time). Never convert these to
+   * a centre's zone: what was typed is what everyone sees, all year round.
+   */
   startAt: integer("start_at", { mode: "timestamp_ms" }).notNull(),
   endAt: integer("end_at", { mode: "timestamp_ms" }).notNull(),
   /** A cancelled session (weather, no bookings) stays on record but leaves the roster, PDF, app and payroll (per cancelPay). */

@@ -2,6 +2,7 @@ import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
 import type { SlotCode } from "@/lib/db/schema";
 import { writeAudit } from "./audit";
+import { runAtomic } from "@/lib/db/batch";
 
 export interface NewCourseSession {
   date: string; // YYYY-MM-DD
@@ -50,64 +51,61 @@ export async function createCourseWithSessions(
   const slots = await t.sessionSlot.list(ctx);
   const slotByCode = new Map(slots.map((s) => [s.code, s]));
 
-  const course = await t.course.insert(ctx, {
-    courseTypeId: courseType.id,
-    name: input.name ?? courseType.name,
-    capacity: input.capacity ?? courseType.defaultCapacity,
-    ratio: input.ratio ?? courseType.studentsPerInstructor,
-    status: "scheduled",
-  });
-
-  for (const s of input.sessions) {
-    const slot = slotByCode.get(s.slot);
-    const startTime = s.startTime ?? slot?.startTime ?? "09:00";
-    const endTime = s.endTime ?? slot?.endTime ?? "12:00";
-    await t.courseSession.insert(ctx, {
-      courseId: course.id,
-      date: s.date,
-      slot: s.slot,
-      startAt: new Date(instant(s.date, startTime)),
-      endAt: new Date(instant(s.date, endTime)),
-    });
+  // Validate everything first (all reads, tenant scoped), then write the course,
+  // its sessions, places, kit and role lines in one atomic batch.
+  const locIds: string[] = [];
+  for (const locationId of new Set([...(input.locationId ? [input.locationId] : []), ...(input.locationIds ?? [])])) {
+    if (await t.location.findById(ctx, locationId)) locIds.push(locationId);
   }
-
-  // Locations (legacy single id + the multi-select), de-duplicated and only ones
-  // that belong to this centre (findById is tenant scoped).
-  const locIds = [...new Set([...(input.locationId ? [input.locationId] : []), ...(input.locationIds ?? [])])];
-  for (const locationId of locIds) {
-    if (await t.location.findById(ctx, locationId)) {
-      await t.courseLocation.insert(ctx, { courseId: course.id, locationId });
-    }
+  const unitIds: string[] = [];
+  for (const equipmentId of new Set(input.equipmentIds ?? [])) {
+    if (await t.equipment.findById(ctx, equipmentId)) unitIds.push(equipmentId);
   }
-
-  for (const equipmentId of [...new Set(input.equipmentIds ?? [])]) {
-    if (await t.equipment.findById(ctx, equipmentId)) {
-      await t.courseEquipment.insert(ctx, { courseId: course.id, equipmentId, quantity: 1 });
-    }
-  }
-
   // Staff needed by role; merge duplicate roles and record the total as the
   // course's staff requirement so the assigned/required pill reflects it.
   const needByRole = new Map<string, number>();
   for (const r of input.roleRequirements ?? []) {
     const n = Math.max(1, Math.min(50, Math.round(Number(r.count) || 0)));
     if (!r.roleTypeId) continue;
+    if (!(await t.roleType.findById(ctx, r.roleTypeId))) continue;
     needByRole.set(r.roleTypeId, (needByRole.get(r.roleTypeId) ?? 0) + n);
   }
-  let totalNeeded = 0;
-  for (const [roleTypeId, count] of needByRole) {
-    if (!(await t.roleType.findById(ctx, roleTypeId))) continue;
-    await t.courseRoleRequirement.insert(ctx, { courseId: course.id, roleTypeId, count });
-    totalNeeded += count;
+  const totalNeeded = [...needByRole.values()].reduce((a, b) => a + b, 0);
+
+  const courseId = crypto.randomUUID();
+  const course = {
+    id: courseId,
+    courseTypeId: courseType.id,
+    name: input.name ?? courseType.name,
+    capacity: input.capacity ?? courseType.defaultCapacity,
+    ratio: input.ratio ?? courseType.studentsPerInstructor,
+    status: "scheduled" as const,
+    staffRequired: totalNeeded > 0 ? totalNeeded : null,
+  };
+  const statements: PromiseLike<unknown>[] = [t.course.insertStatement(ctx, course)];
+  for (const s of input.sessions) {
+    const slot = slotByCode.get(s.slot);
+    const startTime = s.startTime ?? slot?.startTime ?? "09:00";
+    const endTime = s.endTime ?? slot?.endTime ?? "12:00";
+    statements.push(t.courseSession.insertStatement(ctx, {
+      courseId,
+      date: s.date,
+      slot: s.slot,
+      startAt: new Date(instant(s.date, startTime)),
+      endAt: new Date(instant(s.date, endTime)),
+    }));
   }
-  if (totalNeeded > 0) await t.course.update(ctx, course.id, { staffRequired: totalNeeded });
+  for (const locationId of locIds) statements.push(t.courseLocation.insertStatement(ctx, { courseId, locationId }));
+  for (const equipmentId of unitIds) statements.push(t.courseEquipment.insertStatement(ctx, { courseId, equipmentId, quantity: 1 }));
+  for (const [roleTypeId, count] of needByRole) statements.push(t.courseRoleRequirement.insertStatement(ctx, { courseId, roleTypeId, count }));
+  await runAtomic(repos.db, statements);
 
   await writeAudit(repos, ctx, {
     action: "create",
     entity: "course",
-    entityId: course.id,
-    after: { name: course.name, sessions: input.sessions.length, roles: totalNeeded, locations: locIds.length, equipment: input.equipmentIds?.length ?? 0 },
+    entityId: courseId,
+    after: { name: course.name, sessions: input.sessions.length, roles: totalNeeded, locations: locIds.length, equipment: unitIds.length },
   });
 
-  return { courseId: course.id };
+  return { courseId };
 }

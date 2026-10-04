@@ -74,6 +74,16 @@ export class TenantRepository<T extends TenantTable> {
     return (inserted as T["$inferSelect"][])[0]!;
   }
 
+  /**
+   * Build (but don't run) an insert, with the org id forced from the context,
+   * for {@link runAtomic}. The caller supplies the id when later statements in
+   * the same batch refer to this row.
+   */
+  insertStatement(ctx: AnyTenantContext, values: Omit<T["$inferInsert"], "organisationId">) {
+    this.assertWritable(ctx);
+    return this.db.insert(this.table).values({ ...values, organisationId: ctx.organisationId } as T["$inferInsert"]);
+  }
+
   /** Insert many rows, each forced into this tenant. */
   async insertMany(
     ctx: AnyTenantContext,
