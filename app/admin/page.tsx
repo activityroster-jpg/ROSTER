@@ -13,7 +13,7 @@ import { PRICE_KINDS, priceLabel, resolvePrices } from "@/lib/billing/prices";
 import { TIERS } from "@/lib/tiers";
 import { ON_SITE_DAY_PRICE } from "@/lib/pricing";
 import { Card, StatusPill } from "@/components/ui";
-import { fmtBytes, readLastBackup } from "@/lib/ops/backup-status";
+import { fmtBytes, readLastBackup, readLastRehearsal } from "@/lib/ops/backup-status";
 import { mailProviderOrder, readMailFailover } from "@/lib/ops/mail-status";
 import { leavingDeadline } from "@/lib/services/leaving";
 import { readIncident, readMaintenance } from "@/lib/ops/incident";
@@ -106,7 +106,7 @@ export default async function AdminOverviewPage({ searchParams }: { searchParams
     .filter((o) => o.subscriptionStatus === "active")
     .reduce((sum, o) => sum + effectivePricing(o, pricing).monthly, 0);
 
-  const [lastBackup, mailFailover, incident, maintenance] = await Promise.all([readLastBackup(), readMailFailover(), readIncident(), readMaintenance()]);
+  const [lastBackup, lastRehearsal, mailFailover, incident, maintenance] = await Promise.all([readLastBackup(), readLastRehearsal(), readMailFailover(), readIncident(), readMaintenance()]);
   const mailOrder = mailProviderOrder();
   return (
     <div>
@@ -130,6 +130,9 @@ export default async function AdminOverviewPage({ searchParams }: { searchParams
               <p className="text-xs text-slate-400">Runs nightly at 02:30 UTC once BACKUP_PASSPHRASE is set in GitHub.</p>
             </>
           )}
+          <p className={`mt-1 text-xs ${lastRehearsal && !lastRehearsal.ok ? "text-port" : "text-slate-400"}`} title="Monthly: last night's backup restored into a throwaway database and checked">
+            {lastRehearsal ? `Restore rehearsal ${lastRehearsal.ok ? "passed" : "FAILED"} ${new Date(lastRehearsal.at).toLocaleDateString("en-GB", { timeZone: "Europe/London", day: "numeric", month: "short" })}` : "Restore rehearsal: not run yet"}
+          </p>
         </Card>
         <Card><p className="text-xs font-semibold text-navy">Suspended</p><p className="mt-1 text-2xl font-semibold text-port">{suspended}</p></Card>
         <Card>

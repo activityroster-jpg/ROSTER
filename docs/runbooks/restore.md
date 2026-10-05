@@ -38,6 +38,22 @@ Use when Time Travel cannot reach the point you need.
 4. Replay the deletion log (Phase 2) so anything deleted after the backup stays deleted.
 5. Log it.
 
+## Monthly restore rehearsal (automatic)
+
+On the 3rd of every month at 04:17 UTC, **Actions → Restore rehearsal** takes last
+night's backup, decrypts it and loads it into a throwaway database in the EU
+jurisdiction. It checks that every table's row count matches the backup file, applies any
+newer migrations on top, runs an integrity check where D1 allows it, and then deletes the
+throwaway database. Production and staging are never written to. Staging is avoided on
+purpose because it can send email, and real people's data should not reach it.
+
+The result is emailed to the platform owner ("Restore rehearsal passed …") and shown under
+Last backup on the Dev Center overview. To rehearse now, or with an older file, press
+**Run workflow** on it (leave the file box empty for last night's).
+
+This proves the file restores. It does not replace a full drill of Case B, which is worth
+doing once a year with Claude Code walking through it.
+
 ## Case C: rebuild in a fresh Cloudflare account (account lost or compromised)
 
 1. New Cloudflare account on Workers Paid; add the domain or a temporary one.
