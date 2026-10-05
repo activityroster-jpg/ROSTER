@@ -87,7 +87,7 @@ export function AdminNav({ staging, email, brand }: { staging: boolean; email: s
                 href={p.href}
                 title={p.hint}
                 aria-current={on ? "page" : undefined}
-                className={`whitespace-nowrap rounded-md px-2.5 py-1 transition ${on ? "bg-white text-navy" : p.tone === "staging" ? "text-amber-200 hover:bg-white/10" : "text-white/75 hover:bg-white/10 hover:text-white"}`}
+                className={`whitespace-nowrap rounded-md px-2.5 py-1 transition first:ml-auto ${on ? "bg-white text-navy" : p.tone === "staging" ? "text-amber-200 hover:bg-white/10" : "text-white/75 hover:bg-white/10 hover:text-white"}`}
               >
                 {p.label}{p.tone === "staging" ? <span className="ml-1 text-[10px] uppercase tracking-wide opacity-80">staging</span> : null}
               </Link>

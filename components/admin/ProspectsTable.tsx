@@ -46,6 +46,16 @@ const mailtoHref = (r: ProspectRow) => {
   const { subject, body } = draftProspectEmail(r);
   return `mailto:${encodeURIComponent(r.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 };
+/**
+ * Opens the same draft in Gmail in a new tab. A plain mailto link does nothing
+ * useful in browsers with no mail app set up (Arc just copies the address), and
+ * Conor's outreach mail goes out through Gmail ("send as" the domain).
+ */
+const gmailHref = (r: ProspectRow) => {
+  const { subject, body } = draftProspectEmail(r);
+  const q = new URLSearchParams({ view: "cm", fs: "1", to: r.email, su: subject, body });
+  return `https://mail.google.com/mail/?${q.toString()}`;
+};
 const linkedinHref = (url: string) => (url.startsWith("http") ? url : `https://${url}`);
 const TONE_CHIP: Record<string, string> = {
   neutral: "bg-slate-100 text-slate-600",
@@ -238,7 +248,7 @@ export function ProspectsTable({ rows }: { rows: ProspectRow[] }) {
                   <td className="truncate px-2 py-1 text-slate-600">{r.region || "—"}</td>
                   <td className="truncate px-2 py-1 text-slate-600" title={[r.addressLine1, r.city, r.postcode].filter(Boolean).join(", ")}>{r.city || "—"}{r.postcode ? <span className="text-slate-400"> · {r.postcode}</span> : null}</td>
                   <td className="truncate px-2 py-1 text-slate-600">
-                    {r.email ? <a href={`mailto:${r.email}`} className="hover:text-teal" title={r.email}>{r.email}</a> : <span className="text-slate-300">no email</span>}
+                    {r.email ? <a href={gmailHref(r)} target="_blank" rel="noreferrer" className="hover:text-teal" title={`Draft an email to ${r.email} in Gmail`}>{r.email}</a> : <span className="text-slate-300">no email</span>}
                     {r.contactName ? <span className="text-slate-400" title={`${r.contactName}${r.contactRole ? ` · ${r.contactRole}` : ""}`}> · {r.contactName}</span> : null}
                   </td>
                   <td className="px-2 py-1">
@@ -269,7 +279,8 @@ export function ProspectsTable({ rows }: { rows: ProspectRow[] }) {
                           ? <a href={`/admin/marketing/${r.id}/letter`} target="_blank" rel="noreferrer" className={menuItem}>✉ Letter</a>
                           : <span className={`${menuItem} cursor-not-allowed text-slate-300`} title="Add a complete address first">✉ Letter (no address)</span>}
                         <a href={`/admin/marketing/${r.id}/mockup`} target="_blank" rel="noreferrer" className={menuItem}>📄 Mock-up PDF</a>
-                        {r.email ? <a href={mailtoHref(r)} className={menuItem}>📧 Email</a> : <span className={`${menuItem} cursor-not-allowed text-slate-300`}>📧 Email (none)</span>}
+                        {r.email ? <a href={gmailHref(r)} target="_blank" rel="noreferrer" className={menuItem}>📧 Draft in Gmail</a> : <span className={`${menuItem} cursor-not-allowed text-slate-300`}>📧 Email (none)</span>}
+                        {r.email ? <a href={mailtoHref(r)} className={menuItem}>✉️ Draft in mail app</a> : null}
                         {r.linkedinUrl ? <a href={linkedinHref(r.linkedinUrl)} target="_blank" rel="noreferrer" className={menuItem}>in LinkedIn ↗</a> : null}
                         <button type="button" onClick={() => startTransition(async () => { await setProspectBasisAction(r.id, { soleTrader: !r.soleTrader, lawfulBasis: r.lawfulBasis }); router.refresh(); })} className={menuItem}>{r.soleTrader ? "☑ Sole trader" : "☐ Sole trader"}</button>
                         <button type="button" onClick={() => startTransition(async () => { await setProspectBasisAction(r.id, { soleTrader: r.soleTrader, lawfulBasis: r.lawfulBasis === "consent" ? "legitimate_interests" : "consent" }); router.refresh(); })} className={menuItem}>{r.lawfulBasis === "consent" ? "Basis: consent → legitimate interests" : "Basis: legitimate interests → consent"}</button>
