@@ -5,6 +5,7 @@ import { LV_COOKIE, LV_DEVICE_COOKIE, LV_IDLE_MAX_AGE_S, LV_SESSION_COOKIE } fro
 import { DEVICE_COOKIE, DEVICE_HEADER, DEVICE_MAX_AGE_S, PATH_HEADER, isDeviceId } from "@/lib/auth/device";
 import { CENTRE_COOKIE } from "@/lib/auth/centre-cookie";
 import { isNonceCspPath, makeNonce, noncePolicy } from "@/lib/security/csp";
+import { PREVIEW_COOKIE, isPreviewGated, previewGateOn, previewToken } from "@/lib/preview/gate";
 
 /**
  * Slide the "PIN verified" cookie forward on each authenticated app request, so
@@ -54,7 +55,7 @@ function slidePinCookie(req: NextRequest, res: NextResponse): NextResponse {
  */
 function apex(): string { return process.env.APP_APEX_DOMAIN || process.env.NEXT_PUBLIC_APEX_DOMAIN || "activityroster.com"; }
 
-export function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const url = req.nextUrl;
   const path = url.pathname;
   const APEX = apex();
@@ -100,6 +101,20 @@ export function middleware(req: NextRequest) {
     }
     // Keep the PIN session alive while the admin/instructor is active.
     return isAppPath ? slidePinCookie(req, next()) : next();
+  }
+
+  // Coming soon (lib/preview/gate): the public pages show the Coming soon page
+  // at their own address until the preview PIN has been entered.
+  if ((host.kind === "apex" || (host.kind === "reserved" && host.label === "www")) && previewGateOn() && isPreviewGated(path)) {
+    if (req.cookies.get(PREVIEW_COOKIE)?.value !== (await previewToken())) {
+      const to = url.clone();
+      to.pathname = "/coming-soon";
+      to.search = `?next=${encodeURIComponent(path + url.search)}`;
+      const res = NextResponse.rewrite(to, { request: { headers: fwd } });
+      res.headers.set("X-Robots-Tag", "noindex");
+      if (deviceId !== existing) res.cookies.set(DEVICE_COOKIE, deviceId, { httpOnly: true, secure: true, sameSite: "lax", path: "/", domain: `.${APEX}`, maxAge: DEVICE_MAX_AGE_S });
+      return res;
+    }
   }
 
   // Apex / reserved / unknown: the office is never served here. The instructor
