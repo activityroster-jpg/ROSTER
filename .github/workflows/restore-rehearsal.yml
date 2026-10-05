@@ -73,7 +73,6 @@ jobs:
           set -euo pipefail
           npx wrangler d1 delete "$SCRATCH" --skip-confirmation >/dev/null 2>&1 || true
           npx wrangler d1 create "$SCRATCH" --jurisdiction eu
-          head -c 400 backup.sql | grep -v "INSERT" | cut -c1-120 || true
           ID="$(npx wrangler d1 info "$SCRATCH" --json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const j=JSON.parse(s.slice(s.indexOf("{")));console.log(j.uuid)})')"
           printf 'name = "restore-rehearsal"\ncompatibility_date = "2026-09-01"\n\n[[d1_databases]]\nbinding = "DB"\ndatabase_name = "%s"\ndatabase_id = "%s"\nmigrations_dir = "lib/db/migrations"\n' "$SCRATCH" "$ID" > rehearsal.toml
 
@@ -81,7 +80,8 @@ jobs:
         run: |
           set -euo pipefail
           START=$(date +%s)
-          if ! npx wrangler d1 execute "$SCRATCH" -c rehearsal.toml --remote --file backup.sql --yes > load.log 2>&1; then
+          node .github/scripts/order-export.mjs backup.sql backup.ordered.sql
+          if ! npx wrangler d1 execute "$SCRATCH" -c rehearsal.toml --remote --file backup.ordered.sql --yes > load.log 2>&1; then
             # Surface wrangler's own error line (truncated) so it shows on the run page.
             grep -E "ERROR|Error|error" load.log | tail -3 | cut -c1-300 | while read -r l; do echo "::error::$l"; done
             exit 1
@@ -106,7 +106,7 @@ jobs:
       - name: Delete the throwaway database
         if: always()
         run: |
-          rm -f backup.sql backup.enc
+          rm -f backup.sql backup.ordered.sql backup.enc load.log
           npx wrangler d1 delete "$SCRATCH" --skip-confirmation || echo "::warning::Could not delete $SCRATCH; delete it in Cloudflare → D1."
 
       - name: Report success
