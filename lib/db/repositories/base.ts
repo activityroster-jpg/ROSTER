@@ -84,6 +84,21 @@ export class TenantRepository<T extends TenantTable> {
     return this.db.insert(this.table).values({ ...values, organisationId: ctx.organisationId } as T["$inferInsert"]);
   }
 
+  /** Build (but don't run) a tenant-scoped update by id, for {@link runAtomic}. */
+  updateStatement(ctx: AnyTenantContext, id: string, patch: Partial<Omit<T["$inferInsert"], "organisationId" | "id">>) {
+    this.assertWritable(ctx);
+    const { organisationId: _drop, id: _dropId, ...safe } = patch as Record<string, unknown>;
+    void _drop;
+    void _dropId;
+    return this.db.update(this.table).set(safe as Partial<T["$inferInsert"]>).where(this.scoped(ctx, eq(this.table.id, id)));
+  }
+
+  /** Build (but don't run) a tenant-scoped delete by id, for {@link runAtomic}. */
+  deleteStatement(ctx: AnyTenantContext, id: string) {
+    this.assertWritable(ctx);
+    return this.db.delete(this.table).where(this.scoped(ctx, eq(this.table.id, id)));
+  }
+
   /** Insert many rows, each forced into this tenant. */
   async insertMany(
     ctx: AnyTenantContext,

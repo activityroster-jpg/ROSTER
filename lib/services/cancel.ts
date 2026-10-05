@@ -8,7 +8,8 @@ import {
   type CancelPayRule,
   type CourseSession,
 } from "@/lib/db/schema";
-import { writeAudit } from "./audit";
+import { auditStatement } from "./audit";
+import { runAtomic } from "@/lib/db/batch";
 import { syncHoursForCourse } from "./hours";
 import { notifyInstructor } from "./notifications";
 import { publishedWeeks, weekOf } from "./roster";
@@ -64,38 +65,43 @@ export async function cancelSessions(repos: Repositories, ctx: AnyTenantContext,
     t.courseStaff.list(ctx, eq(courseStaffTable.courseId, course.id)),
   ]);
 
+  // Every change below, and its change-log entry, is written in one batch:
+  // a dropped connection can't leave some days cancelled and others not, or
+  // days cancelled with their pay lines untouched.
+  const ops: PromiseLike<unknown>[] = [];
   for (const s of targets) {
-    await t.courseSession.update(ctx, s.id, { cancelledAt: now, cancelReason: reason || null, cancelPay: input.pay.rule, cancelFee: fee });
+    ops.push(t.courseSession.updateStatement(ctx, s.id, { cancelledAt: now, cancelReason: reason || null, cancelPay: input.pay.rule, cancelFee: fee }));
   }
 
   // Payroll follows the rule. Approved lines are never changed silently: they get a note to review.
   for (const r of records) {
     if (r.approved) {
-      await t.hoursRecord.update(ctx, r.id, { note: [r.note, "Session cancelled after this line was approved: review"].filter(Boolean).join(" · ") });
+      ops.push(t.hoursRecord.updateStatement(ctx, r.id, { note: [r.note, "Session cancelled after this line was approved: review"].filter(Boolean).join(" · ") }));
       continue;
     }
     if (input.pay.rule === "none") {
-      if (r.actualMinutes == null && r.overrideMinutes == null && r.overridePay == null) await t.hoursRecord.delete(ctx, r.id);
-      else await t.hoursRecord.update(ctx, r.id, { overridePay: 0, note: [r.note, "Session cancelled: not paid"].filter(Boolean).join(" · ") });
+      if (r.actualMinutes == null && r.overrideMinutes == null && r.overridePay == null) ops.push(t.hoursRecord.deleteStatement(ctx, r.id));
+      else ops.push(t.hoursRecord.updateStatement(ctx, r.id, { overridePay: 0, note: [r.note, "Session cancelled: not paid"].filter(Boolean).join(" · ") }));
     } else if (input.pay.rule === "rostered") {
-      await t.hoursRecord.update(ctx, r.id, { overrideMinutes: r.overrideMinutes ?? r.scheduledMinutes, note: [r.note, "Session cancelled: paid as rostered"].filter(Boolean).join(" · ") });
+      ops.push(t.hoursRecord.updateStatement(ctx, r.id, { overrideMinutes: r.overrideMinutes ?? r.scheduledMinutes, note: [r.note, "Session cancelled: paid as rostered"].filter(Boolean).join(" · ") }));
     } else {
-      await t.hoursRecord.update(ctx, r.id, { overridePay: fee ?? 0, note: [r.note, `Session cancelled: cancellation fee`].filter(Boolean).join(" · ") });
+      ops.push(t.hoursRecord.updateStatement(ctx, r.id, { overridePay: fee ?? 0, note: [r.note, `Session cancelled: cancellation fee`].filter(Boolean).join(" · ") }));
     }
   }
 
   const remainingLive = all.filter((s) => isLive(s) && !wanted.has(s.id)).length;
   const courseCancelled = remainingLive === 0;
-  if (courseCancelled) await t.course.update(ctx, course.id, { status: "cancelled", cancelledAt: now, cancelReason: reason || null });
+  if (courseCancelled) ops.push(t.course.updateStatement(ctx, course.id, { status: "cancelled", cancelledAt: now, cancelReason: reason || null }));
 
   const courseName = course.name ?? "a course";
   const dates = fmtDates(targets.map((s) => s.date));
-  await writeAudit(repos, ctx, {
+  const audit = auditStatement(repos, ctx, {
     action: courseCancelled ? "cancel_course" : "cancel_session",
     entity: "course",
     entityId: course.id,
     after: { name: courseName, sessions: targets.length, dates, reason, pay: input.pay.rule, fee },
   });
+  await runAtomic(repos.db, [...ops, ...(audit ? [audit] : [])]);
 
   // Tell everyone rostered (declined people already know they're off).
   let notified = 0;
@@ -118,18 +124,20 @@ export async function restoreSessions(repos: Repositories, ctx: AnyTenantContext
   const all = await t.courseSession.list(ctx, eq(courseSessionTable.courseId, courseId));
   const targets = all.filter((s) => s.cancelledAt && (!sessionIds || sessionIds.includes(s.id)));
   if (targets.length === 0) return { restored: 0 };
-  for (const s of targets) await t.courseSession.update(ctx, s.id, { cancelledAt: null, cancelReason: null, cancelPay: null, cancelFee: null });
+  // The restore and its log entry go in one batch; pay lines are then rebuilt from the roster (re-runnable).
+  const ops: PromiseLike<unknown>[] = targets.map((s) => t.courseSession.updateStatement(ctx, s.id, { cancelledAt: null, cancelReason: null, cancelPay: null, cancelFee: null }));
   // Lines the cancellation touched carry its note; clear the cancellation overrides so the roster drives them again.
   const records = await t.hoursRecord.list(ctx, inArray(hoursRecordTable.courseSessionId, targets.map((s) => s.id)));
   for (const r of records) {
     if (r.approved) continue;
-    if (r.note?.includes("Session cancelled")) await t.hoursRecord.update(ctx, r.id, { overrideMinutes: null, overridePay: null, note: r.note.split(" · ").filter((n) => !n.startsWith("Session cancelled")).join(" · ") || null });
+    if (r.note?.includes("Session cancelled")) ops.push(t.hoursRecord.updateStatement(ctx, r.id, { overrideMinutes: null, overridePay: null, note: r.note.split(" · ").filter((n) => !n.startsWith("Session cancelled")).join(" · ") || null }));
   }
-  if (course.cancelledAt || course.status === "cancelled") await t.course.update(ctx, courseId, { status: "scheduled", cancelledAt: null, cancelReason: null });
-  await syncHoursForCourse(repos, ctx, courseId);
+  if (course.cancelledAt || course.status === "cancelled") ops.push(t.course.updateStatement(ctx, courseId, { status: "scheduled", cancelledAt: null, cancelReason: null }));
   const courseName = course.name ?? "a course";
   const dates = fmtDates(targets.map((s) => s.date));
-  await writeAudit(repos, ctx, { action: "restore_session", entity: "course", entityId: courseId, after: { name: courseName, sessions: targets.length, dates } });
+  const audit = auditStatement(repos, ctx, { action: "restore_session", entity: "course", entityId: courseId, after: { name: courseName, sessions: targets.length, dates } });
+  await runAtomic(repos.db, [...ops, ...(audit ? [audit] : [])]);
+  await syncHoursForCourse(repos, ctx, courseId);
   const staff = await t.courseStaff.list(ctx, eq(courseStaffTable.courseId, courseId));
   const published = await publishedWeeks(repos, ctx);
   if (targets.some((s) => published.has(weekOf(s.date)))) {

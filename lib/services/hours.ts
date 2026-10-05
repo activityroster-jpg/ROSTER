@@ -6,7 +6,8 @@ import { durationMinutes } from "@/lib/domain";
 import { payRatesByInstructor, pickPayRate } from "./pay-rates";
 import { writeAudit } from "./audit";
 import { liveSessions } from "@/lib/domain/sessions";
-import { effectiveStaffBySession } from "@/lib/domain/session-staff";
+import { effectiveStaffBySession, type CourseAssignmentLike, type SessionOverrideLike } from "@/lib/domain/session-staff";
+import { runAtomic } from "@/lib/db/batch";
 import { sessionStaffOverride as overrideTable } from "@/lib/db/schema";
 
 /**
@@ -24,23 +25,44 @@ export interface SyncResult { created: number; updated: number; removed: number 
 
 /** Reconcile hours records for one course with its current sessions and staff. */
 export async function syncHoursForCourse(repos: Repositories, ctx: AnyTenantContext, courseId: string): Promise<SyncResult> {
+  const plan = await planHoursForCourse(repos, ctx, courseId);
+  await runAtomic(repos.db, plan.statements);
+  return plan.result;
+}
+
+/**
+ * Work out the hours-record changes for one course without making them, so a
+ * caller can write them in the same batch as the roster change that caused
+ * them (audit follow-up: all-or-nothing saves). `staffOverride` replaces the
+ * course's assignments as read from the database: pass the list as it will be
+ * after the change (for example with the new assignment added).
+ */
+export async function planHoursForCourse(
+  repos: Repositories,
+  ctx: AnyTenantContext,
+  courseId: string,
+  opts: { staffOverride?: readonly CourseAssignmentLike[]; adjustOverrides?: (rows: SessionOverrideLike[]) => SessionOverrideLike[] } = {},
+): Promise<{ statements: PromiseLike<unknown>[]; result: SyncResult }> {
   const t = repos.tenant;
-  const [allSessions, staff, settingsRows, rates] = await Promise.all([
+  const [allSessions, dbStaff, settingsRows, rates] = await Promise.all([
     t.courseSession.list(ctx, eq(courseSessionTable.courseId, courseId)),
-    t.courseStaff.list(ctx, eq(courseStaffTable.courseId, courseId)),
+    opts.staffOverride ? Promise.resolve(null) : t.courseStaff.list(ctx, eq(courseStaffTable.courseId, courseId)),
     t.orgSettings.list(ctx),
     payRatesByInstructor(repos, ctx),
   ]);
+  const staff: readonly CourseAssignmentLike[] = opts.staffOverride ?? dbStaff ?? [];
   const out: SyncResult = { created: 0, updated: 0, removed: 0 };
+  const statements: PromiseLike<unknown>[] = [];
   // Cancelled sessions earn nothing new; what the cancellation decided about their lines stands (lib/services/cancel).
   const sessions = liveSessions(allSessions);
-  if (allSessions.length === 0) return out;
+  if (allSessions.length === 0) return { statements, result: out };
   const paySource = settingsRows[0]?.paySource ?? "roster";
 
-  const [existing, overrides] = await Promise.all([
+  const [existing, storedOverrides] = await Promise.all([
     t.hoursRecord.list(ctx, inArray(hoursRecordTable.courseSessionId, allSessions.map((s) => s.id))),
     t.sessionStaffOverride.list(ctx, inArray(overrideTable.courseSessionId, allSessions.map((s) => s.id))),
   ]);
+  const overrides = opts.adjustOverrides ? opts.adjustOverrides(storedOverrides) : storedOverrides;
   const byKey = new Map<string, HoursRecord>();
   for (const r of existing) if (r.courseSessionId) byKey.set(`${r.instructorId}|${r.courseSessionId}`, r);
   // Who is on each session: the course's people minus per-day skips, plus per-day adds.
@@ -52,35 +74,33 @@ export async function syncHoursForCourse(repos: Repositories, ctx: AnyTenantCont
       if (a.status === "declined") continue;
       const rate = pickPayRate(rates.get(a.instructorId) ?? [], a.roleTypeId);
       const key = `${a.instructorId}|${s.id}`;
+      if (wanted.has(key)) continue;
       wanted.add(key);
       const scheduled = durationMinutes({ startAt: toMs(s.startAt), endAt: toMs(s.endAt) });
       const row = byKey.get(key);
       if (!row) {
-        try {
-          await t.hoursRecord.insert(ctx, {
-            instructorId: a.instructorId,
-            courseSessionId: s.id,
-            scheduledMinutes: scheduled,
-            actualMinutes: null,
-            rate: rate?.rate ?? null,
-            ratePence: rate?.ratePence ?? null,
-            payUnit: rate?.unit ?? "hour",
-            source: paySource,
-            approved: false,
-          });
-          out.created++;
-        } catch {
-          // The unique key says a parallel sync got there first: nothing to add.
-        }
+        // A parallel sync may have got there first: the unique key then means nothing to add.
+        statements.push(t.hoursRecord.insertStatement(ctx, {
+          instructorId: a.instructorId,
+          courseSessionId: s.id,
+          scheduledMinutes: scheduled,
+          actualMinutes: null,
+          rate: rate?.rate ?? null,
+          ratePence: rate?.ratePence ?? null,
+          payUnit: rate?.unit ?? "hour",
+          source: paySource,
+          approved: false,
+        }).onConflictDoNothing());
+        out.created++;
       } else if (!row.approved) {
         const patch: Partial<HoursRecord> = {};
         if (row.scheduledMinutes !== scheduled) patch.scheduledMinutes = scheduled;
         // Fill in a rate the record never had (set after the person was rostered).
         if (row.rate == null && rate) { patch.rate = rate.rate; patch.ratePence = rate.ratePence; patch.payUnit = rate.unit; }
-        if (Object.keys(patch).length) { await t.hoursRecord.update(ctx, row.id, patch); out.updated++; }
+        if (Object.keys(patch).length) { statements.push(t.hoursRecord.updateStatement(ctx, row.id, patch)); out.updated++; }
       } else if (row.approvedMinutes != null && !row.rosterChangedAt && (row.approvedMinutes !== scheduled || (row.approvedDate && row.approvedDate !== s.date))) {
         // Approved and frozen, but the roster moved under it: flag for review (audit A8-5).
-        await t.hoursRecord.update(ctx, row.id, { rosterChangedAt: new Date() });
+        statements.push(t.hoursRecord.updateStatement(ctx, row.id, { rosterChangedAt: new Date() }));
         out.updated++;
       }
     }
@@ -90,14 +110,14 @@ export async function syncHoursForCourse(repos: Repositories, ctx: AnyTenantCont
   for (const [key, row] of byKey) {
     if (wanted.has(key)) continue;
     if (row.approved) {
-      if (!row.rosterChangedAt) { await t.hoursRecord.update(ctx, row.id, { rosterChangedAt: new Date() }); out.updated++; }
+      if (!row.rosterChangedAt) { statements.push(t.hoursRecord.updateStatement(ctx, row.id, { rosterChangedAt: new Date() })); out.updated++; }
       continue;
     }
     if (row.actualMinutes != null || row.overrideMinutes != null || row.overridePay != null) continue;
-    await t.hoursRecord.delete(ctx, row.id);
+    statements.push(t.hoursRecord.deleteStatement(ctx, row.id));
     out.removed++;
   }
-  return out;
+  return { statements, result: out };
 }
 
 /**

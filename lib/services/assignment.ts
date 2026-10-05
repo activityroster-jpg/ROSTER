@@ -1,3 +1,4 @@
+import { runAtomic } from "@/lib/db/batch";
 import { eq } from "drizzle-orm";
 import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
@@ -12,8 +13,8 @@ import {
 import { courseStaff as courseStaffTable } from "@/lib/db/schema";
 import { availabilityHorizon, loadInstructorAvailability } from "./availability";
 import { blocksRostering, describeBusy, effectiveAvailability } from "@/lib/domain/availability";
-import { writeAudit } from "./audit";
-import { syncHoursForCourse } from "./hours";
+import { auditStatement } from "./audit";
+import { planHoursForCourse } from "./hours";
 import { notifyInstructor } from "./notifications";
 import { publishedWeeks, weekOf } from "./roster";
 import { checkWorkingTime, describeFindings } from "./working-time";
@@ -212,17 +213,21 @@ export async function assignStaff(
 
   // --- 5. Persist ----------------------------------------------------------
   const overridden = Boolean(input.override && (!fit.fit || notQualified || clashing || busy || wtBlocked || parentBlocked));
-  const row = await t.courseStaff.insert(ctx, {
+  // The assignment, its pay lines and the change-log entry are written in one
+  // batch: all of it lands or none of it does.
+  const row = {
+    id: crypto.randomUUID(),
     courseId: input.courseId,
     instructorId: input.instructorId,
     roleTypeId: input.roleTypeId,
-    status: "assigned",
+    status: "assigned" as const,
     isOverride: overridden,
     overrideNote: overridden ? input.overrideNote ?? null : null,
     overriddenBy: overridden ? actorUserId(ctx) : null,
-  });
-
-  await writeAudit(repos, ctx, {
+  };
+  const current = await t.courseStaff.list(ctx, eq(courseStaffTable.courseId, input.courseId));
+  const hours = await planHoursForCourse(repos, ctx, input.courseId, { staffOverride: [...current, row] });
+  const audit = auditStatement(repos, ctx, {
     action: overridden ? "assign_staff_override" : "assign_staff",
     entity: "course_staff",
     entityId: row.id,
@@ -231,9 +236,12 @@ export async function assignStaff(
       ...(wt.findings.length ? { workingTime: wt.findings.map((f) => `${f.severity}:${f.code}:${f.message}`) } : {}),
     },
   });
-
-  // Hours come from the rota: give every session of this course an hours record.
-  await syncHoursForCourse(repos, ctx, input.courseId);
+  try {
+    await runAtomic(repos.db, [t.courseStaff.insertStatement(ctx, row), ...hours.statements, ...(audit ? [audit] : [])]);
+  } catch (err) {
+    if (/UNIQUE/i.test(String((err as Error)?.message ?? err))) return { ok: false, reason: "invalid", detail: "They are already on this course in that role" };
+    throw err;
+  }
 
   // Tell them — but only once the week is published (publishing itself notifies).
   await notifyRosterChange(repos, ctx, input.instructorId, course.name ?? "a course", targetSessions.map((s) => s.date), "added");

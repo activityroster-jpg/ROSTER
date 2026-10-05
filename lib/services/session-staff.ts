@@ -6,8 +6,9 @@ import { effectiveStaffBySession, type EffectiveStaffMember } from "@/lib/domain
 import { hasConflict, type ResourceBooking } from "@/lib/domain";
 import { effectiveAvailability, blocksRostering, describeBusy } from "@/lib/domain/availability";
 import { availabilityHorizon, loadInstructorAvailability } from "./availability";
-import { writeAudit } from "./audit";
-import { syncHoursForCourse } from "./hours";
+import { auditStatement } from "./audit";
+import { runAtomic } from "@/lib/db/batch";
+import { planHoursForCourse } from "./hours";
 import { notifyInstructor } from "./notifications";
 import { isWeekPublished } from "./roster";
 import { liveSessions } from "@/lib/domain/sessions";
@@ -101,12 +102,15 @@ export async function setDayStaff(repos: Repositories, ctx: AnyTenantContext, in
     if (overridden) warnings.push(...reasons);
   }
 
+  // The day change, its pay lines and its log entry are one batch: all or nothing.
   const existing = (await t.sessionStaffOverride.list(ctx, eq(overrideTable.courseSessionId, session.id))).find((o) => o.instructorId === input.instructorId);
-  if (existing) await t.sessionStaffOverride.update(ctx, existing.id, { roleTypeId: input.roleTypeId, mode: input.mode, note: input.note ?? null });
-  else await t.sessionStaffOverride.insert(ctx, { courseSessionId: session.id, instructorId: input.instructorId, roleTypeId: input.roleTypeId, mode: input.mode, note: input.note ?? null });
-
-  await writeAudit(repos, ctx, { action: "set_day_staff", entity: "course_session", entityId: session.id, after: { courseId: session.courseId, date: session.date, instructorId: input.instructorId, roleTypeId: input.roleTypeId, mode: input.mode, overridden, note: input.note ?? null } });
-  await syncHoursForCourse(repos, ctx, session.courseId);
+  const values = { courseSessionId: session.id, instructorId: input.instructorId, roleTypeId: input.roleTypeId, mode: input.mode, note: input.note ?? null };
+  const write = existing ? t.sessionStaffOverride.updateStatement(ctx, existing.id, { roleTypeId: values.roleTypeId, mode: values.mode, note: values.note }) : t.sessionStaffOverride.insertStatement(ctx, values);
+  const hours = await planHoursForCourse(repos, ctx, session.courseId, {
+    adjustOverrides: (rows) => [...rows.filter((o) => !(o.courseSessionId === session.id && o.instructorId === input.instructorId)), values],
+  });
+  const audit = auditStatement(repos, ctx, { action: "set_day_staff", entity: "course_session", entityId: session.id, after: { courseId: session.courseId, date: session.date, instructorId: input.instructorId, roleTypeId: input.roleTypeId, mode: input.mode, overridden, note: input.note ?? null } });
+  await runAtomic(repos.db, [write, ...hours.statements, ...(audit ? [audit] : [])]);
   if (await isWeekPublished(repos, ctx, session.date)) {
     await notifyInstructor(repos, ctx, input.instructorId, {
       title: input.mode === "add" ? "Added to a day" : "Taken off a day",
@@ -124,8 +128,8 @@ export async function clearDayStaff(repos: Repositories, ctx: AnyTenantContext, 
   if (!session) return { ok: false, error: "Session not found" };
   const row = (await t.sessionStaffOverride.list(ctx, eq(overrideTable.courseSessionId, sessionId))).find((o) => o.instructorId === instructorId);
   if (!row) return { ok: false, error: "Nothing to undo" };
-  await t.sessionStaffOverride.delete(ctx, row.id);
-  await writeAudit(repos, ctx, { action: "clear_day_staff", entity: "course_session", entityId: sessionId, after: { courseId: session.courseId, date: session.date, instructorId, was: row.mode } });
-  await syncHoursForCourse(repos, ctx, session.courseId);
+  const hours = await planHoursForCourse(repos, ctx, session.courseId, { adjustOverrides: (rows) => rows.filter((o) => !(o.courseSessionId === sessionId && o.instructorId === instructorId)) });
+  const audit = auditStatement(repos, ctx, { action: "clear_day_staff", entity: "course_session", entityId: sessionId, after: { courseId: session.courseId, date: session.date, instructorId, was: row.mode } });
+  await runAtomic(repos.db, [t.sessionStaffOverride.deleteStatement(ctx, row.id), ...hours.statements, ...(audit ? [audit] : [])]);
   return { ok: true };
 }
