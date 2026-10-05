@@ -47,7 +47,7 @@ These are the questions still at 7 or below, and what would lift them:
 - **Roster: two admins at once (7)**: no "someone else just changed this" warning; the last save wins.
 - **Server code (7)**: only course creation is all-or-nothing. Other multi-step saves could still half-finish on a bad connection.
 - **Database backups (7)**: nightly backups are running, but no restore has been practised yet (due from about 10 October).
-- **Staff: after adding someone (7)**: no "invite pending" label or resend button on the staff list.
+- **Staff: after adding someone (7)**: the invite email is the generic sign-in email: it doesn't name the centre or say what happens next.
 - **Settings: permissions understandable (7)**: "who can see this" is only on emergency contacts, not payroll.
 - **Equipment (7s)**: "next booked" on each boat was left out by your decision, so these stay at 7.
 - **Adding an instructor / locations (7s)**: already fine; nothing planned.
@@ -104,7 +104,7 @@ Outside the code: switch DMARC to quarantine once reports are clean, rebuild the
 | Adding an instructor | 7 | **7** | Unchanged (already fine). |
 | Roles clear | 7 | **8** | Four simple roles: superadmin, office admin, instructor, parent. |
 | Admin vs instructor vs volunteer | 5 | **9** | Several office admins, each with chosen features. |
-| What happens after adding | 7 | **7** | No 'invite pending / resend' yet. |
+| What happens after adding | 7 | **7** | Invite pending and resend exist; the invite email is generic and doesn't name the centre. |
 | Sign-up, passwords, 2FA | 8 | **9** | Password strength meter; Face ID in the app. |
 | What each person can reach | 8 | **9** | Loose sign-in helper closed off. |
 
