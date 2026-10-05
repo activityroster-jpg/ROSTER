@@ -21,10 +21,11 @@ process.on("uncaughtException", (e) => {
 
 const [, , backupFile, scratch, config] = process.argv;
 
-function query(db, sql, extra = []) {
+function run(db, sql, extra = []) {
   const out = execFileSync("npx", ["wrangler", "d1", "execute", db, ...extra, "--remote", "--json", "--command", sql], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
-  return JSON.parse(out.slice(out.indexOf("[")))[0].results;
+  return JSON.parse(out.slice(out.indexOf("[")));
 }
+const query = (db, sql, extra = []) => run(db, sql, extra)[0].results;
 
 // Rows per table in the backup file: one INSERT statement per row.
 const expected = new Map();
@@ -34,11 +35,13 @@ for (const stmt of splitStatements(readFileSync(backupFile, "utf8"))) {
 }
 
 const tables = query(scratch, "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%' ORDER BY name", ["-c", config]).map((r) => r.name);
-const countSql = (names) => names.map((t) => `SELECT '${t}' AS t, COUNT(*) AS n FROM "${t}"`).join(" UNION ALL ");
-/** Row counts, ten tables per query (D1 refuses one very long compound SELECT). */
+/** Row counts: one small SELECT per table, twenty statements per request (D1 refuses long compound SELECTs). */
 function countAll(db, names, extra = []) {
   const out = new Map();
-  for (let i = 0; i < names.length; i += 10) for (const r of query(db, countSql(names.slice(i, i + 10)), extra)) out.set(r.t, Number(r.n));
+  for (let i = 0; i < names.length; i += 20) {
+    const chunk = names.slice(i, i + 20);
+    for (const set of run(db, chunk.map((t) => `SELECT '${t}' AS t, COUNT(*) AS n FROM "${t}";`).join(" "), extra)) for (const r of set.results ?? []) out.set(r.t, Number(r.n));
+  }
   return out;
 }
 const restored = countAll(scratch, tables, ["-c", config]);
