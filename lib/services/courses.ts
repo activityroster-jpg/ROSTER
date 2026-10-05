@@ -3,6 +3,7 @@ import type { AnyTenantContext } from "@/lib/tenant/context";
 import type { SlotCode } from "@/lib/db/schema";
 import { writeAudit } from "./audit";
 import { runAtomic } from "@/lib/db/batch";
+import { suggestedKit } from "./kit";
 
 export interface NewCourseSession {
   date: string; // YYYY-MM-DD
@@ -98,6 +99,8 @@ export async function createCourseWithSessions(
   for (const locationId of locIds) statements.push(t.courseLocation.insertStatement(ctx, { courseId, locationId }));
   for (const equipmentId of unitIds) statements.push(t.courseEquipment.insertStatement(ctx, { courseId, equipmentId, quantity: 1 }));
   for (const [roleTypeId, count] of needByRole) statements.push(t.courseRoleRequirement.insertStatement(ctx, { courseId, roleTypeId, count }));
+  // Kit rules (off unless the centre switched them on): bulk kit from the course type, for the students booked.
+  for (const k of await suggestedKit(repos, ctx, courseType.id, course.capacity)) statements.push(t.courseEquipment.insertStatement(ctx, { courseId, equipmentId: null, equipmentTypeId: k.equipmentTypeId, quantity: k.quantity }));
   await runAtomic(repos.db, statements);
 
   await writeAudit(repos, ctx, {

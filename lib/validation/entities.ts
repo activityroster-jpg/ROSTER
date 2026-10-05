@@ -30,6 +30,7 @@ export const orgSettingsSchema = z.object({
   enforceConflictChecks: z.boolean().optional(),
   enforceAvailabilityChecks: z.boolean().optional(),
   checkEquipmentQuantities: z.boolean().optional(),
+  useKitRules: z.boolean().optional(),
   holidayPayPercent: z.number().min(0).max(50).nullable().optional(),
   privacyNoticeUrl: z.string().trim().url("Enter a full web address, starting with https://").max(500).refine((u) => /^https:\/\//i.test(u), "Use a secure web address, starting with https://").optional().or(z.literal("")),
   dailyDigestEnabled: z.boolean().optional(),

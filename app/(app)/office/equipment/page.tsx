@@ -1,3 +1,4 @@
+import { equipmentSummary } from "@/lib/domain/kit";
 import { requireTenant } from "@/lib/tenant/require";
 import { Card } from "@/components/ui";
 import { AddEquipmentForm } from "@/components/office/AddEquipmentForm";
@@ -19,7 +20,8 @@ export default async function EquipmentPage() {
   ]);
   const typeName = new Map(types.map((t) => [t.id, t.name]));
   const referenced = new Set(courseEquipment.map((ce) => ce.equipmentId).filter((x): x is string => Boolean(x)));
-  const rowOf = (e: (typeof equipment)[number]) => ({ id: e.id, name: e.name, type: typeName.get(e.equipmentTypeId) ?? "—", identifier: e.identifier ?? null, status: e.status, referenced: referenced.has(e.id) });
+  const rowOf = (e: (typeof equipment)[number]) => ({ id: e.id, name: e.name, type: typeName.get(e.equipmentTypeId) ?? "—", identifier: e.identifier ?? null, status: e.status, referenced: referenced.has(e.id), maintenanceNote: e.maintenanceNote ?? null, backOn: e.backOn ?? null });
+  const summary = equipmentSummary(types.filter((t) => t.active), equipment);
   const current = equipment.filter((e) => e.status !== "retired").sort((a, b) => a.name.localeCompare(b.name));
   const retiredUnits = equipment.filter((e) => e.status === "retired").sort((a, b) => a.name.localeCompare(b.name));
   const activeTypes = types.filter((t) => t.active).map((t) => ({ id: t.id, name: t.name }));
@@ -40,6 +42,9 @@ export default async function EquipmentPage() {
       <p className="mb-3 text-xs text-slate-500">Your kinds of kit and how many of each you have. Tracked types are booked unit by unit and clash-checked; bulk types are shared.</p>
       <div className="mb-8"><EquipmentTypeManager rows={typeRows} /></div>
 
+      {summary.length ? (
+        <p className="mb-4 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600">{summary.join(" · ")}</p>
+      ) : null}
       <Card className="mb-6">
         <h2 className="mb-3 font-semibold text-navy">Add equipment</h2>
         <AddEquipmentForm types={activeTypes} />

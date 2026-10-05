@@ -5,6 +5,7 @@ import { getTeachingMatrix } from "@/lib/services/teaching";
 import { Card } from "@/components/ui";
 import { JoinRequests, type JoinRequestRow } from "@/components/office/JoinRequests";
 import { AddInstructorForm } from "@/components/office/AddInstructorForm";
+import { QuickAddStaff } from "@/components/office/QuickAddStaff";
 import { StaffTable, type StaffRow } from "@/components/office/StaffTable";
 import { GuideLink } from "@/components/GuideLink";
 import { OfficeAccess } from "@/components/office/OfficeAccess";
@@ -99,9 +100,13 @@ export default async function StaffPage() {
       </Card>
 
       <Card className="mb-5">
-        <h2 className="mb-1 font-semibold text-navy">Add an instructor</h2>
-        <p className="mb-3 text-xs text-slate-500">Enter their details and what they teach — we email them an invite to set up their account and upload their certs. Or give them your company code (Settings) and they can join from the app.</p>
-        <AddInstructorForm courses={courseChoices} quals={qualChoices} checks={checkChoices} />
+        <div className="mb-1 flex items-center justify-between"><h2 className="font-semibold text-navy">Add instructors</h2><GuideLink topic="staff" className="text-xs" /></div>
+        <p className="mb-3 text-xs text-slate-500">The quickest way: a name and email, and they set up the rest from the invite. Or give them your company code (Settings) and they can join from the app.</p>
+        <QuickAddStaff />
+        <details className="mt-4 border-t border-slate-100 pt-3">
+          <summary className="cursor-pointer text-sm font-medium text-navy">Add with all details (courses, licences, checks)</summary>
+          <div className="mt-3"><AddInstructorForm courses={courseChoices} quals={qualChoices} checks={checkChoices} /></div>
+        </details>
       </Card>
 
       <StaffTable rows={rows} />

@@ -484,6 +484,13 @@
       "when": 1791175000591,
       "tag": "0068_bounded_read_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "6",
+      "when": 1791175512480,
+      "tag": "0069_kit_rules_maintenance",
+      "breakpoints": true
     }
   ]
 }

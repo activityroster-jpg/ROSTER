@@ -1,6 +1,8 @@
 import { requireTenant } from "@/lib/tenant/require";
 import { CourseTypeTable, type CourseTypeRow } from "@/components/office/CourseTypeTable";
 import { OneOffCourseTypes } from "@/components/office/OneOffCourseTypes";
+import { KitRules } from "@/components/office/KitRules";
+import { getKitRules } from "@/lib/services/kit";
 import { eq } from "drizzle-orm";
 import { course as courseTable } from "@/lib/db/schema";
 
@@ -31,6 +33,7 @@ export default async function CourseSetupPage() {
   );
   oneOffs.sort((a, b) => a.name.localeCompare(b.name));
   const listedChoices = rows.filter((r) => r.active).map((r) => ({ id: r.id, name: r.name }));
+  const [kitRules, equipmentTypes, settingsRows] = await Promise.all([getKitRules(repos, ctx), repos.tenant.equipmentType.list(ctx), repos.tenant.orgSettings.list(ctx)]);
 
   return (
     <div>
@@ -42,6 +45,12 @@ export default async function CourseSetupPage() {
       <a href="/learn?topic=courses" target="_blank" rel="noreferrer" className="mb-4 inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-navy hover:bg-slate-50">📖 Read the guide</a>
       <CourseTypeTable rows={rows} />
       <OneOffCourseTypes items={oneOffs} listed={listedChoices} />
+      <KitRules
+        courseTypes={listedChoices}
+        equipmentTypes={equipmentTypes.filter((e) => e.active).map((e) => ({ id: e.id, name: e.name })).sort((a, b) => a.name.localeCompare(b.name))}
+        rules={Object.fromEntries(kitRules)}
+        enabled={Boolean(settingsRows[0]?.useKitRules)}
+      />
     </div>
   );
 }

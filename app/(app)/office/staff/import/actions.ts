@@ -1,5 +1,6 @@
 "use server";
 
+import { z } from "zod";
 import { sendInvite } from "@/lib/auth/invite-link";
 import { revalidatePath } from "next/cache";
 import { requireTenant } from "@/lib/tenant/require";
@@ -109,4 +110,20 @@ export async function importInstructorsAction(rows: ConfirmedStaff[], opts?: { s
   if (skipped) parts.push(`${skipped} skipped`);
   const message = limitReached ? `${parts.join(" · ")} — ${capUpgradeMessage(organisation)}` : parts.join(" · ");
   return { ok: true, created, skipped, invited, qualsLinked, coursesLinked, message };
+}
+
+const quickAddSchema = z.object({
+  people: z.array(z.object({ name: z.string().trim().min(1).max(120), email: z.string().trim().toLowerCase().email().max(200).nullable() })).min(1).max(200),
+  sendInvites: z.boolean(),
+});
+
+/**
+ * Quick add and "Paste a list" (audit follow-up): just names and emails, with
+ * the invite going out by default so people fill in their own details. Same
+ * rules as the spreadsheet import (plan cap, audit, invite only with an email).
+ */
+export async function quickAddStaffAction(input: { people: { name: string; email: string | null }[]; sendInvites: boolean }): Promise<StaffImportResult> {
+  const parsed = quickAddSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, created: 0, skipped: 0, invited: 0, qualsLinked: 0, coursesLinked: 0, error: "Check the names and email addresses" };
+  return importInstructorsAction(parsed.data.people.map((p) => ({ name: p.name, email: p.email ?? "", phone: "", employment: "employed", quals: "", courses: "" })), { sendInvites: parsed.data.sendInvites });
 }

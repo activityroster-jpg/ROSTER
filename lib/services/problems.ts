@@ -200,7 +200,7 @@ export async function findProblems(repos: Repositories, ctx: AnyTenantContext, o
 
   // Equipment: tracked units only.
   if (!opts.instructorId) {
-    const units = new Map(equipment.map((e) => [e.id, { name: e.identifier ? `${e.name} (${e.identifier})` : e.name, status: e.status }]));
+    const units = new Map(equipment.map((e) => [e.id, { name: e.identifier ? `${e.name} (${e.identifier})` : e.name, status: e.status, maintenanceNote: e.maintenanceNote ?? null, backOn: e.backOn ?? null }]));
     problems.push(...equipmentProblems(sessions, courseEquipment, units, courses));
     if (settings?.checkEquipmentQuantities ?? true) {
       problems.push(...equipmentShortfalls(

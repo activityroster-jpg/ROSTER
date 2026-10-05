@@ -2,9 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { deleteOrRetireEquipmentAction, setEquipmentUnitStatusAction } from "@/app/(app)/office/equipment/actions";
+import { deleteOrRetireEquipmentAction, setEquipmentMaintenanceAction, setEquipmentUnitStatusAction } from "@/app/(app)/office/equipment/actions";
 
-export interface EquipmentUnitRow { id: string; name: string; type: string; identifier: string | null; status: string; referenced: boolean }
+export interface EquipmentUnitRow { id: string; name: string; type: string; identifier: string | null; status: string; referenced: boolean; maintenanceNote?: string | null; backOn?: string | null }
 
 /** One unit: available ↔ in maintenance, and Delete (never used) or Retire (used by a course). */
 export function EquipmentRow({ row }: { row: EquipmentUnitRow }) {
@@ -12,6 +12,13 @@ export function EquipmentRow({ row }: { row: EquipmentUnitRow }) {
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
   const retired = row.status === "retired";
+  const [note, setNote] = useState(row.maintenanceNote ?? "");
+  const [backOn, setBackOn] = useState(row.backOn ?? "");
+  const saveMaintenance = () => start(async () => {
+    const r = await setEquipmentMaintenanceAction(row.id, { note, backOn: backOn || null });
+    setMsg(r.ok ? "Saved" : r.error ?? "Failed");
+    router.refresh();
+  });
   const setStatus = (status: "available" | "maintenance") => start(async () => {
     const r = await setEquipmentUnitStatusAction(row.id, status);
     setMsg(r.ok ? null : r.error ?? "Failed");
@@ -36,6 +43,13 @@ export function EquipmentRow({ row }: { row: EquipmentUnitRow }) {
             <option value="maintenance">In maintenance</option>
           </select>
         )}
+        {row.status === "maintenance" ? (
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            <input value={note} onChange={(e) => setNote(e.target.value)} maxLength={120} placeholder="Why? e.g. outboard" aria-label={`Why ${row.name} is in maintenance`} className="w-36 rounded border border-slate-300 px-1.5 py-0.5 text-xs" />
+            <input type="date" value={backOn} onChange={(e) => setBackOn(e.target.value)} aria-label={`When ${row.name} is back`} className="rounded border border-slate-300 px-1.5 py-0.5 text-xs" />
+            <button type="button" disabled={pending || (note === (row.maintenanceNote ?? "") && backOn === (row.backOn ?? ""))} onClick={saveMaintenance} className="rounded border border-slate-300 px-1.5 py-0.5 text-xs font-medium text-navy hover:bg-slate-50 disabled:opacity-40">Save</button>
+          </div>
+        ) : null}
       </td>
       <td className="whitespace-nowrap px-4 py-2.5 text-right">
         {msg ? <span className="mr-2 text-xs text-slate-400">{msg}</span> : null}

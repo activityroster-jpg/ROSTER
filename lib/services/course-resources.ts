@@ -2,7 +2,9 @@ import { eq } from "drizzle-orm";
 import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
 import {
+  course as courseTable,
   courseEquipment as courseEquipmentTable,
+  courseSession as courseSessionTable,
   courseLocation as courseLocationTable,
   courseRoleRequirement as courseRoleRequirementTable,
   courseStaff as courseStaffTable,
@@ -200,4 +202,46 @@ export async function setCourseStaffing(repos: Repositories, ctx: AnyTenantConte
   const audit = auditStatement(repos, ctx, { action: "set_staffing", entity: "course", entityId: courseId, after: { students, roles: lines, staffRequired: derivedStaffRequired(lines) } });
   await runAtomic(repos.db, [...ops, ...(audit ? [audit] : [])]);
   return { ok: true, version };
+}
+
+/**
+ * What else wants the same kit while this course runs (audit follow-up: warn
+ * when picking, not later). `unitBusy`: tracked units already on another course
+ * at an overlapping time, with that course's name. `typeOthers`: for each type,
+ * the most that other overlapping courses need at any one time.
+ */
+export interface EquipmentContext { unitBusy: Record<string, string>; typeOthers: Record<string, number> }
+
+export async function equipmentContextForCourse(repos: Repositories, ctx: AnyTenantContext, courseId: string): Promise<EquipmentContext> {
+  const t = repos.tenant;
+  const own = (await t.courseSession.list(ctx, eq(courseSessionTable.courseId, courseId))).filter((s) => !s.cancelledAt);
+  if (own.length === 0) return { unitBusy: {}, typeOthers: {} };
+  const ms = (v: Date | number) => (v instanceof Date ? v.getTime() : Number(v));
+  const dates = [...new Set(own.map((s) => s.date))];
+  const sameDays = (await t.courseSession.listIn(ctx, courseSessionTable.date, dates)).filter((s) => !s.cancelledAt && s.courseId !== courseId);
+  const overlapping = (a: { startAt: Date | number; endAt: Date | number }, b: { startAt: Date | number; endAt: Date | number }) => ms(a.startAt) < ms(b.endAt) && ms(b.startAt) < ms(a.endAt);
+  const others = sameDays.filter((o) => own.some((s) => overlapping(s, o)));
+  if (others.length === 0) return { unitBusy: {}, typeOthers: {} };
+  const otherCourseIds = [...new Set(others.map((o) => o.courseId))];
+  const [kit, courses, units] = await Promise.all([
+    t.courseEquipment.listIn(ctx, courseEquipmentTable.courseId, otherCourseIds),
+    t.course.listIn(ctx, courseTable.id, otherCourseIds),
+    t.equipment.list(ctx),
+  ]);
+  const courseName = new Map(courses.map((c) => [c.id, c.name ?? "another course"]));
+  const unitType = new Map(units.map((u) => [u.id, u.equipmentTypeId]));
+  const unitBusy: Record<string, string> = {};
+  for (const k of kit) if (k.equipmentId && !unitBusy[k.equipmentId]) unitBusy[k.equipmentId] = courseName.get(k.courseId) ?? "another course";
+  const typeOthers: Record<string, number> = {};
+  for (const s of own) {
+    const during = new Set(others.filter((o) => overlapping(s, o)).map((o) => o.courseId));
+    const need: Record<string, number> = {};
+    for (const k of kit) {
+      if (!during.has(k.courseId)) continue;
+      const typeId = k.equipmentId ? unitType.get(k.equipmentId) : k.equipmentTypeId;
+      if (typeId) need[typeId] = (need[typeId] ?? 0) + (k.equipmentId ? 1 : Math.max(1, k.quantity));
+    }
+    for (const [typeId, n] of Object.entries(need)) typeOthers[typeId] = Math.max(typeOthers[typeId] ?? 0, n);
+  }
+  return { unitBusy, typeOthers };
 }

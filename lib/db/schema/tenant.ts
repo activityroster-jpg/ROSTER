@@ -126,6 +126,8 @@ export const orgSettings = sqliteTable("org_settings", {
   // When on (the default), the problems list flags a date/slot whose courses need
   // more of an equipment type than the centre owns (types with a quantity set).
   checkEquipmentQuantities: boolCol("check_equipment_quantities").default(true),
+  // Kit rules from Course setup (e.g. one Pico per two students) pre-fill a new course's equipment. Off by default.
+  useKitRules: boolCol("use_kit_rules").default(false),
   // Rolled-up holiday pay as a percentage of pay (UK casual workers: 12.07%). Null or 0 = off. Shown as its own figure, never added silently.
   holidayPayPercent: real("holiday_pay_percent"),
   // --- Time clock & pay source -----------------------------------------------
@@ -313,6 +315,8 @@ export const courseTypeEquipment = sqliteTable("course_type_equipment", {
     .notNull()
     .references(() => equipmentType.id, { onDelete: "restrict" }),
   quantity: integer("quantity").notNull().default(1),
+  /** Kit rules (off by default): null = this many whatever the numbers; N = `quantity` for every N students, rounded up. */
+  perStudents: integer("per_students"),
   createdAt: createdAt(),
 }, (t) => [
   index("course_type_equipment_org_idx").on(t.organisationId),
@@ -437,6 +441,10 @@ export const equipment = sqliteTable("equipment", {
   name: text("name").notNull(),
   identifier: text("identifier"),
   status: text("status", { enum: EQUIPMENT_STATUSES }).notNull().default("available"),
+  /** Why it is in maintenance (e.g. "outboard"), shown on the problems list. Plain text, no personal details. */
+  maintenanceNote: text("maintenance_note"),
+  /** When it should be back (YYYY-MM-DD), if known. */
+  backOn: text("back_on"),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 }, (t) => [

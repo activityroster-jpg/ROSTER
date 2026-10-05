@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { setCourseEquipmentAction, setCourseLocationsAction } from "@/app/(app)/office/courses/actions";
-import type { CourseResources as Resources } from "@/lib/services/course-resources";
+import type { CourseResources as Resources, EquipmentContext } from "@/lib/services/course-resources";
 
 export interface ResourceLocation { id: string; name: string; active: boolean }
 export interface ResourceUnit { id: string; name: string; typeId: string; status: string }
@@ -13,8 +13,12 @@ export interface ResourceType { id: string; name: string; quantity: number | nul
  * Where a course happens and what it uses, editable after creation (audit A6-3,
  * A7). Tracked units are ticked one by one; bulk kit is a quantity per type.
  */
-export function CourseResources({ courseId, locations, units, types, initial, showEquipment = true, version: initialVersion = null }: {
+export function CourseResources({ courseId, locations, units, types, initial, showEquipment = true, version: initialVersion = null, context = { unitBusy: {}, typeOthers: {} }, suggestedKit = [] }: {
   courseId: string;
+  /** What other courses at the same time already use, for warnings while picking. */
+  context?: EquipmentContext;
+  /** Kit from the course type's kit rules (only when the centre uses them). */
+  suggestedKit?: { equipmentTypeId: string; quantity: number }[];
   /** The course's last-changed time when the page loaded (epoch ms). */
   version?: number | null;
   locations: ResourceLocation[];
@@ -42,7 +46,7 @@ export function CourseResources({ courseId, locations, units, types, initial, sh
   });
   const saveEquipment = () => start(async () => {
     const r = await setCourseEquipmentAction({ courseId, unitIds, bulk: Object.entries(bulk).filter(([, q]) => q > 0).map(([equipmentTypeId, quantity]) => ({ equipmentTypeId, quantity })), expectedVersion: version });
-    setMsg({ ok: r.ok, text: r.ok ? "Equipment saved" : r.error ?? "Failed" });
+    setMsg({ ok: r.ok && !r.message?.includes("⚠"), text: r.ok ? (r.message?.includes("⚠") ? `Equipment saved. ${r.message.slice(r.message.indexOf("⚠"))}` : "Equipment saved") : r.error ?? "Failed" });
     if (r.ok) { if (r.version) setVersion(r.version); router.refresh(); }
   });
   const toggle = (set: (f: (ids: string[]) => string[]) => void, id: string) => set((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
@@ -85,14 +89,21 @@ export function CourseResources({ courseId, locations, units, types, initial, sh
                   <span className={u.status === "retired" ? "text-slate-400 line-through" : ""}>{u.name}</span>
                   <span className="text-xs text-slate-400">{typeName.get(u.typeId) ?? ""}</span>
                   {u.status === "maintenance" ? <span className="rounded bg-amber/15 px-1 text-[10px] font-semibold text-amber">in maintenance</span> : null}
+                  {context.unitBusy[u.id] ? <span className="rounded bg-amber/15 px-1 text-[10px] font-semibold text-amber">on {context.unitBusy[u.id]} at the same time</span> : null}
                 </label>
               ))}
               {bulkTypes.length ? <p className="pt-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Bulk kit (how many)</p> : null}
+              {suggestedKit.length && !Object.values(bulk).some((q) => q > 0) ? (
+                <p className="text-xs text-slate-500">Kit rules suggest {suggestedKit.map((k) => `${k.quantity} × ${typeName.get(k.equipmentTypeId) ?? "kit"}`).join(", ")}. <button type="button" onClick={() => setBulk(Object.fromEntries(suggestedKit.map((k) => [k.equipmentTypeId, k.quantity])))} className="font-medium text-teal hover:underline">Use these</button></p>
+              ) : null}
               {bulkTypes.map((t) => (
                 <label key={t.id} className="flex items-center gap-2 text-sm text-slate-700">
                   <input type="number" min={0} max={1000} value={bulk[t.id] ?? 0} onChange={(e) => setBulk((b) => ({ ...b, [t.id]: Math.max(0, Number(e.target.value) || 0) }))} aria-label={`${t.name} needed`} className="w-16 rounded border border-slate-300 px-1.5 py-0.5 text-sm outline-none focus:border-teal" />
                   <span>× {t.name}</span>
                   {t.quantity !== null ? <span className="text-xs text-slate-400">of {t.quantity}</span> : null}
+                  {t.quantity !== null && (bulk[t.id] ?? 0) > 0 && (bulk[t.id] ?? 0) + (context.typeOthers[t.id] ?? 0) > t.quantity
+                    ? <span className="rounded bg-amber/15 px-1 text-[10px] font-semibold text-amber">other courses at the same time need {context.typeOthers[t.id] ?? 0}: short by {(bulk[t.id] ?? 0) + (context.typeOthers[t.id] ?? 0) - t.quantity}</span>
+                    : null}
                 </label>
               ))}
             </div>

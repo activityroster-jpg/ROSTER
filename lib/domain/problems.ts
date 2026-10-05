@@ -211,11 +211,17 @@ export function coverageProblems(sessions: readonly ProblemSession[], courses: R
   return out;
 }
 
+/** "Safety boat 2 is in maintenance (outboard), back 14 Oct". */
+export function maintenanceDetail(unit: { name: string; maintenanceNote?: string | null; backOn?: string | null }): string {
+  const back = unit.backOn && /^\d{4}-\d{2}-\d{2}$/.test(unit.backOn) ? new Date(`${unit.backOn}T12:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }) : null;
+  return `${unit.name} is in maintenance${unit.maintenanceNote ? ` (${unit.maintenanceNote})` : ""}${back ? `, back ${back}` : ""}`;
+}
+
 /** Tracked equipment on two overlapping sessions, or booked while in maintenance. */
 export function equipmentProblems(
   sessions: readonly ProblemSession[],
   courseEquipment: readonly { courseId: string; equipmentId: string | null }[],
-  units: ReadonlyMap<string, { name: string; status: string }>,
+  units: ReadonlyMap<string, { name: string; status: string; maintenanceNote?: string | null; backOn?: string | null }>,
   courses: ReadonlyMap<string, ProblemCourse>,
 ): Problem[] {
   const out: Problem[] = [];
@@ -231,7 +237,7 @@ export function equipmentProblems(
     const first = firstSessionOf(ce.courseId, sessions);
     if (unit && unit.status !== "available" && first && !seenMaint.has(`${ce.courseId}|${ce.equipmentId}`)) {
       seenMaint.add(`${ce.courseId}|${ce.equipmentId}`);
-      out.push({ kind: "equipment-maintenance", severity: "warn", date: first.date, slot: first.slot, courseId: ce.courseId, courseName: courses.get(ce.courseId)?.name ?? "Course", sessionId: first.id, instructorId: null, instructorName: null, detail: `${unit.name} is ${unit.status === "retired" ? "retired" : "in maintenance"}` });
+      out.push({ kind: "equipment-maintenance", severity: "warn", date: first.date, slot: first.slot, courseId: ce.courseId, courseName: courses.get(ce.courseId)?.name ?? "Course", sessionId: first.id, instructorId: null, instructorName: null, detail: unit.status === "retired" ? `${unit.name} is retired` : maintenanceDetail(unit) });
     }
   }
   const sessionById = new Map(sessions.map((s) => [s.id, s]));

@@ -13,7 +13,8 @@ import { AssignStaffForm } from "@/components/office/AssignStaffForm";
 import { RemoveStaffButton } from "@/components/office/RemoveStaffButton";
 import { StaffingPanel } from "@/components/office/StaffingPanel";
 import { CourseResources } from "@/components/office/CourseResources";
-import { getCourseResources, staffingViewFrom } from "@/lib/services/course-resources";
+import { equipmentContextForCourse, getCourseResources, staffingViewFrom } from "@/lib/services/course-resources";
+import { suggestedKit } from "@/lib/services/kit";
 import { hasFeature } from "@/lib/features";
 import { getTeachingMatrix } from "@/lib/services/teaching";
 import { qualificationGap } from "@/lib/services/problems";
@@ -66,6 +67,9 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
     };
   }
   const equipmentOn = hasFeature(settings[0]?.enabledFeatures, "equipment");
+  const [equipmentContext, kitSuggestion] = equipmentOn
+    ? await Promise.all([equipmentContextForCourse(repos, ctx, course.id), suggestedKit(repos, ctx, course.courseTypeId, course.capacity)])
+    : [{ unitBusy: {}, typeOthers: {} }, []];
   const holdsAny = new Set(quals.map((q) => q.instructorId));
   const slotStyle = (settings[0]?.slotStyle ?? "slots") as "slots" | "times";
   const nameById = new Map(instructors.map((i) => [i.id, i.name]));
@@ -116,6 +120,8 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
           types={equipmentTypes.map((t) => ({ id: t.id, name: t.name, quantity: t.quantity ?? null, inventoryTracked: Boolean(t.inventoryTracked), active: Boolean(t.active) })).sort((a, b) => a.name.localeCompare(b.name))}
           initial={resources}
           showEquipment={equipmentOn}
+          context={equipmentContext}
+          suggestedKit={kitSuggestion}
           version={course.updatedAt.getTime()}
         />
       </Card>

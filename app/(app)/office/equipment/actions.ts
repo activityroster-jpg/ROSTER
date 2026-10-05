@@ -79,7 +79,8 @@ export async function setEquipmentTypeActiveAction(id: string, active: boolean):
 export async function setEquipmentUnitStatusAction(id: string, status: string): Promise<ActionState> {
   const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   if (!idSchema.safeParse(id).success || !["available", "maintenance"].includes(status)) return { ok: false, error: "Invalid status" };
-  const updated = await repos.tenant.equipment.update(ctx, id, { status: status as "available" | "maintenance" });
+  // Back in service: the maintenance reason and date go with it.
+  const updated = await repos.tenant.equipment.update(ctx, id, status === "available" ? { status: "available", maintenanceNote: null, backOn: null } : { status: "maintenance" });
   if (!updated) return { ok: false, error: "Not found" };
   await writeAudit(repos, ctx, { action: "update_status", entity: "equipment", entityId: id, after: { status } });
   revalidatePath("/office/equipment");
@@ -122,4 +123,23 @@ export async function setEquipmentStatusAction(_prev: ActionState, formData: For
   await writeAudit(repos, ctx, { action: "update_status", entity: "equipment", entityId: id, after: { status } });
   revalidatePath("/office/equipment");
   return { ok: true };
+}
+
+const maintenanceSchema = z.object({
+  note: z.string().trim().max(120, "Keep it short (120 characters)").transform((v) => v || null),
+  backOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().or(z.literal("").transform(() => null)),
+});
+
+/** Why a unit is in maintenance and when it should be back; shown on the problems list. Plain text only. */
+export async function setEquipmentMaintenanceAction(id: string, input: { note: string; backOn: string | null }): Promise<ActionState> {
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
+  const parsed = maintenanceSchema.safeParse(input);
+  if (!idSchema.safeParse(id).success || !parsed.success) return { ok: false, error: parsed.success ? "Invalid request" : parsed.error.issues[0]?.message ?? "Check the details" };
+  const unit = await repos.tenant.equipment.findById(ctx, id);
+  if (!unit || unit.status !== "maintenance") return { ok: false, error: "Only kit in maintenance has a reason" };
+  await repos.tenant.equipment.update(ctx, id, { maintenanceNote: parsed.data.note, backOn: parsed.data.backOn });
+  await writeAudit(repos, ctx, { action: "set_maintenance_note", entity: "equipment", entityId: id, after: parsed.data });
+  revalidatePath("/office/equipment");
+  revalidatePath("/office");
+  return { ok: true, message: "Saved" };
 }

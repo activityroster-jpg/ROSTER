@@ -8,6 +8,7 @@ import { deleteOrRetireCourseType, moveCoursesToType } from "@/lib/services/cour
 import { COURSE_AUDIENCES } from "@/lib/db/schema";
 import { normaliseDefaultSchedule } from "@/lib/domain";
 import { DEFAULT_COURSE_TYPES } from "@/lib/seed/catalogue";
+import { setCourseTypeKit } from "@/lib/services/kit";
 
 export type CourseTypeResult = { ok: boolean; error?: string; message?: string };
 
@@ -145,4 +146,24 @@ export async function setCourseTypeScheduleAction(id: string, sessions: unknown)
   await writeAudit(repos, ctx, { action: "update_schedule", entity: "course_type", entityId: id, after: { sessions: clean } });
   revalidate();
   return { ok: true, message: `Default schedule saved for ${updated.name}` };
+}
+
+const kitRulesSchema = z.object({
+  courseTypeId: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
+  rules: z.array(z.object({
+    equipmentTypeId: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
+    quantity: z.coerce.number().int().min(0).max(100),
+    perStudents: z.coerce.number().int().min(0).max(50).nullable().optional(),
+  })).max(30),
+});
+
+/** Save one course type's kit rules (used only when Settings → "Use kit rules" is on). */
+export async function setKitRulesAction(input: { courseTypeId: string; rules: { equipmentTypeId: string; quantity: number; perStudents?: number | null }[] }): Promise<CourseTypeResult> {
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
+  const parsed = kitRulesSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Check the kit lines" };
+  const r = await setCourseTypeKit(repos, ctx, parsed.data.courseTypeId, parsed.data.rules);
+  if (!r.ok) return { ok: false, error: r.error };
+  revalidate();
+  return { ok: true, message: r.rules.length ? "Kit rules saved" : "Kit rules cleared" };
 }

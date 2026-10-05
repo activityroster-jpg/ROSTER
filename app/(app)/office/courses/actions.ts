@@ -309,10 +309,12 @@ export async function setCourseEquipmentAction(input: { courseId: string; unitId
   if (!parsed.success) return { ok: false, error: firstIssue(parsed.error, "Check the equipment") };
   const r = await setCourseEquipment(repos, ctx, parsed.data.courseId, parsed.data);
   if (!r.ok) return r;
+  // Say straight away if the new kit clashes, is in maintenance or runs short, rather than leaving it for the problems list.
+  const kitProblems = (await problemsForCourse(repos, ctx, parsed.data.courseId)).filter((p) => p.kind.startsWith("equipment"));
   revalidatePath(`/office/courses/${parsed.data.courseId}`);
   revalidatePath("/office/courses");
   revalidatePath("/office/rota");
-  return { ok: true, message: "Saved", version: r.version };
+  return { ok: true, message: kitProblems.length ? `Saved. ⚠ ${[...new Set(kitProblems.map((p) => p.detail))].slice(0, 3).join("; ")}` : "Saved", version: r.version };
 }
 
 /** Edit a single session's date and time inline from the course card. */

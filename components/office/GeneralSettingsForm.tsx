@@ -37,6 +37,7 @@ export function GeneralSettingsForm({
   enforceConflictChecks,
   enforceAvailabilityChecks,
   checkEquipmentQuantities = true,
+  useKitRules = false,
   holidayPayPercent = null,
   privacyNoticeUrl = "",
   dailyDigestEnabled = false,
@@ -56,6 +57,7 @@ export function GeneralSettingsForm({
   enforceConflictChecks: boolean;
   enforceAvailabilityChecks: boolean;
   checkEquipmentQuantities?: boolean;
+  useKitRules?: boolean;
   holidayPayPercent?: number | null;
   privacyNoticeUrl?: string;
   dailyDigestEnabled?: boolean;
@@ -199,6 +201,10 @@ export function GeneralSettingsForm({
           <label className="flex items-start gap-2 text-sm text-slate-600">
             <input type="checkbox" name="checkEquipmentQuantities" defaultChecked={checkEquipmentQuantities} className="mt-0.5 h-4 w-4 rounded border-slate-300" />
             <span>Flag a day when the courses running need more of an equipment type than you own <span className="text-slate-400">(uses the quantity on each equipment type; on by default)</span></span>
+          </label>
+          <label className="flex items-start gap-2 text-sm text-slate-600">
+            <input type="checkbox" name="useKitRules" defaultChecked={useKitRules} className="mt-0.5 h-4 w-4 rounded border-slate-300" />
+            <span>Use kit rules: a new course gets its equipment from its course type&apos;s kit rules (for example one Pico per two students) <span className="text-slate-400">(set the rules under Course setup; off by default)</span> <a href="/learn?topic=equipment" target="_blank" rel="noreferrer" className="text-teal hover:underline">📖 Guide</a></span>
           </label>
         </div>
       </SectionForm>
