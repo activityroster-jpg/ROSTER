@@ -1,5 +1,6 @@
 "use server";
 
+import { codeEmailHtml } from "@/lib/mail/code-email";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getAuth } from "@/lib/auth";
@@ -39,11 +40,14 @@ export async function requestDeviceCodeAction(): Promise<VerifyResult> {
   const recipients = [...new Set([user.email, user.recoveryEmail].filter((e): e is string => Boolean(e)))];
   await Promise.all(recipients.map((to) => sendEmail({
     to,
-    subject: "Your ActivityRoster sign-in code",
-    html: `<p>Someone is signing in to your ActivityRoster account from a device we haven't seen before (${escapeHtml(describeAgent(fp.userAgent))}${fp.country ? `, ${escapeHtml(fp.country)}` : ""}).</p>
-      <p>If that's you, enter this code:</p>
-      <p style="font-size:22px;font-weight:700;letter-spacing:3px">${code}</p>
-      <p style="color:#64748b;font-size:12px">It expires in 10 minutes and works once. If it wasn't you, don't enter it — change your password instead.</p>`,
+    subject: `${code} is your ActivityRoster sign-in code`,
+    code: true,
+    html: codeEmailHtml({
+      label: "sign-in code",
+      code,
+      details: [`Someone is signing in to your ActivityRoster account from a device we haven't seen before (${escapeHtml(describeAgent(fp.userAgent))}${fp.country ? `, ${escapeHtml(fp.country)}` : ""}). If that's you, enter the code.`],
+      footnote: "It expires in 10 minutes and works once. If it wasn't you, don't enter it: change your password instead.",
+    }),
   }).catch(() => {})));
   return { ok: true, message: `Code sent to ${maskEmail(user.email)}${user.recoveryEmail ? " and your recovery email" : ""}.` };
 }

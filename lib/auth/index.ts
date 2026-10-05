@@ -1,3 +1,4 @@
+import { codeEmailHtml } from "@/lib/mail/code-email";
 import { readInviteNote } from "./invite-note";
 import { inviteEmail } from "@/lib/mail/invite-email";
 import { betterAuth } from "better-auth";
@@ -97,11 +98,17 @@ export function createAuth(db: Database, env: CloudflareEnv) {
         otpLength: 6,
         expiresIn: 10 * 60,
         async sendVerificationOTP({ email, otp, type }) {
-          const what = type === "email-verification" ? "Confirm your email" : type === "forget-password" ? "Reset your password" : "Your sign-in code";
+          const kind = type === "email-verification"
+            ? { subject: `${otp} is your ActivityRoster email confirmation code`, label: "email confirmation code" }
+            : type === "forget-password"
+              // Reset codes stay out of the subject (lock screens show subjects); sign-in and verification codes go in it.
+              ? { subject: "Reset your ActivityRoster password", label: "password reset code" }
+              : { subject: `${otp} is your ActivityRoster sign-in code`, label: "sign-in code" };
           await sendEmail({
             to: email,
-            subject: `${what} — ActivityRoster code ${otp}`,
-            html: `<p>${what} in the ActivityRoster app with this code:</p><p style="font-size:26px;font-weight:700;letter-spacing:4px">${otp}</p><p style="color:#64748b;font-size:12px">It expires in 10 minutes. If you didn't request it, you can ignore this email.</p>`,
+            subject: kind.subject,
+            code: true,
+            html: codeEmailHtml({ label: kind.label, code: otp, details: ["Enter it in the ActivityRoster app."], footnote: "It expires in 10 minutes. If you didn't request it, you can ignore this email." }),
           });
         },
       }),
@@ -132,8 +139,9 @@ export function createAuth(db: Database, env: CloudflareEnv) {
           async sendOTP({ user, otp }) {
             await sendEmail({
               to: user.email,
-              subject: "Your ActivityRoster verification code",
-              html: `<p>Your verification code is:</p><p style="font-size:22px;font-weight:700;letter-spacing:3px">${otp}</p><p style="color:#64748b;font-size:12px">It expires shortly. If you didn't request it, you can ignore this email.</p>`,
+              subject: `${otp} is your ActivityRoster verification code`,
+              code: true,
+              html: codeEmailHtml({ label: "verification code", code: otp, footnote: "It expires shortly. If you didn't request it, you can ignore this email." }),
             });
           },
         },

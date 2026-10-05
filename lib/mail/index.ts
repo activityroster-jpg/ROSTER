@@ -17,6 +17,8 @@ export interface EmailMessage {
   from?: string;
   /** Time-limited content (a sign-in code): do not retry past this many minutes; fail instead. */
   expiresInMinutes?: number;
+  /** A one-time-code email: the footer leaves out the copyright year, so the code is the only number that stands out. */
+  code?: boolean;
 }
 
 /**
@@ -24,7 +26,7 @@ export interface EmailMessage {
  * header and a legally-aware footer (sender identity, why they got it, postal
  * address when configured, and privacy/terms links). All emails go through this.
  */
-export function renderEmail(bodyHtml: string): string {
+export function renderEmail(bodyHtml: string, opts: { code?: boolean } = {}): string {
   const env = getEnv();
   const apex = env.APP_APEX_DOMAIN || "activityroster.com";
   const site = `https://${apex}`;
@@ -56,10 +58,24 @@ export function renderEmail(bodyHtml: string): string {
           <a href="mailto:${support}" style="color:#0C6B74;text-decoration:none">${support}</a>
         </div>
         <div style="margin-top:8px">You're receiving this service email because you have an ActivityRoster account or a centre invited you. This is a transactional message about your account, not marketing.</div>
-        <div style="margin-top:6px">© ${year} ${legalName}. All rights reserved.</div>
+        ${opts.code ? "" : `<div style="margin-top:6px">© ${year} ${legalName}. All rights reserved.</div>`}
       </div>
     </div>
   </div>`;
+}
+
+/**
+ * The plain-text copy sent alongside every branded email: the message, then
+ * the sender's identity and address. Mail apps (and Gmail's code detection)
+ * read this more reliably than the designed version.
+ */
+export function renderEmailText(bodyHtml: string): string {
+  const env = getEnv();
+  const apex = env.APP_APEX_DOMAIN || "activityroster.com";
+  const legalName = env.COMPANY_LEGAL_NAME || COMPANY.legalName;
+  const support = env.SUPPORT_EMAIL || `support@${apex}`;
+  const addressText = env.COMPANY_ADDRESS || COMPANY.addressInline;
+  return [htmlToText(bodyHtml), "", "--", legalName, ...(addressText ? [addressText] : []), `https://${apex} · ${support}`].join("\n");
 }
 
 /** Escape user-supplied text before it goes into an email body. */
@@ -115,7 +131,7 @@ export async function readOutbox(): Promise<OutboxEntry[]> {
   try { const raw = await env.TENANT_CACHE.get(OUTBOX_KEY); return raw ? (JSON.parse(raw) as OutboxEntry[]) : []; } catch { return []; }
 }
 
-const htmlToText = (html: string) => html.replace(/<style[\s\S]*?<\/style>/gi, " ").replace(/<br\s*\/?>|<\/(p|div|h[1-6]|li|tr)>/gi, "\n").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/[ \t]+/g, " ").replace(/\n\s*\n+/g, "\n").trim();
+const htmlToText = (html: string) => html.replace(/<style[\s\S]*?<\/style>/gi, " ").replace(/<br\s*\/?>|<\/(p|div|h[1-6]|li|tr)>/gi, "\n").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/[ \t]+/g, " ").split("\n").map((l) => l.trim()).join("\n").replace(/\n\s*\n+/g, "\n").trim();
 
 export async function sendRawEmail(msg: RawEmail): Promise<{ id: string | null; sent: boolean }> {
   const env = getEnv();
@@ -134,12 +150,13 @@ export async function sendRawEmail(msg: RawEmail): Promise<{ id: string | null; 
 export async function sendEmail(msg: EmailMessage): Promise<void> {
   const env = getEnv();
   const from = msg.from ?? env.MAIL_FROM_SYSTEM ?? "ActivityRoster <no-reply@activityroster.com>";
-  const html = renderEmail(msg.html);
+  const html = renderEmail(msg.html, { code: msg.code });
+  const text = renderEmailText(msg.html);
   await captureOutbox(env, { at: new Date().toISOString(), to: msg.to, from, subject: msg.subject, text: htmlToText(msg.html) });
 
   if (!canSend(env)) {
     console.info(`[mail] (not sent: ${env.APP_ENV ?? "unset"}) ${msg.subject}`);
     return;
   }
-  await dispatch(env, { from, to: msg.to, subject: msg.subject, html, expiresAt: msg.expiresInMinutes ? new Date(Date.now() + msg.expiresInMinutes * 60_000) : null }, "system");
+  await dispatch(env, { from, to: msg.to, subject: msg.subject, html, text, expiresAt: msg.expiresInMinutes ? new Date(Date.now() + msg.expiresInMinutes * 60_000) : null }, "system");
 }

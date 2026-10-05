@@ -1,5 +1,6 @@
 "use server";
 
+import { codeEmailHtml } from "@/lib/mail/code-email";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getAuth } from "@/lib/auth";
@@ -42,10 +43,14 @@ export async function sendLoginCodeAction(): Promise<LoginVerifyResult> {
   await sendEmail({
     expiresInMinutes: 15,
     to: who.email,
-    subject: `Your ActivityRoster sign-in code: ${code}`,
-    html: `<p>Here's the code to finish signing in to your centre's office${fp.userAgent ? ` (${escapeHtml(describeAgent(fp.userAgent))}${fp.country ? `, ${escapeHtml(fp.country)}` : ""})` : ""}:</p>
-      <p style="font-size:26px;font-weight:700;letter-spacing:4px">${code}</p>
-      <p style="color:#64748b;font-size:12px">It expires in 10 minutes and works once. If this wasn't you, don't enter it, and change your password.</p>`,
+    subject: `${code} is your ActivityRoster sign-in code`,
+    code: true,
+    html: codeEmailHtml({
+      label: "sign-in code",
+      code,
+      details: [`It finishes signing in to your centre's office${fp.userAgent ? ` (${escapeHtml(describeAgent(fp.userAgent))}${fp.country ? `, ${escapeHtml(fp.country)}` : ""})` : ""}.`],
+      footnote: "It expires in 10 minutes and works once. If this wasn't you, don't enter it, and change your password.",
+    }),
   });
   return { ok: true, message: `Code sent to ${maskEmail(who.email)}.` };
 }

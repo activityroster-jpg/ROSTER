@@ -1,5 +1,6 @@
 "use server";
 
+import { codeEmailHtml } from "@/lib/mail/code-email";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getAuth } from "@/lib/auth";
@@ -107,9 +108,12 @@ export async function requestPinResetCodeAction(): Promise<PinResult> {
   await Promise.all(recipients.map((to) => sendEmail({
     to,
     subject: "Your ActivityRoster PIN reset code",
-    html: `<p>Your code to reset your login PIN is:</p>
-      <p style="font-size:22px;font-weight:700;letter-spacing:3px">${code}</p>
-      <p style="color:#64748b;font-size:12px">It expires in 10 minutes and works once. If you didn't ask to reset your PIN, ignore this email and consider changing your password.</p>`,
+    code: true,
+    html: codeEmailHtml({
+      label: "PIN reset code",
+      code,
+      footnote: "It expires in 10 minutes and works once. If you didn't ask to reset your PIN, ignore this email and consider changing your password.",
+    }),
   }).catch(() => {})));
   await recordSecurityEvent("pin_reset_code_sent", { userId: info.userId });
   return { ok: true, message: `We've emailed a 6-digit code to ${maskEmail(user.email)}${user.recoveryEmail ? " and your recovery email" : ""}.` };
