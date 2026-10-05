@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { NextRequest } from "next/server";
 import { middleware } from "@/middleware";
 import { PREVIEW_COOKIE, isPreviewGated, pinMatches, previewToken, safeNext } from "@/lib/preview/gate";
@@ -7,6 +7,15 @@ const req = (url: string, cookie?: string) => new NextRequest(url, { headers: { 
 const rewrittenTo = (res: Response) => res.headers.get("x-middleware-rewrite");
 
 describe("the Coming soon gate", () => {
+  // The deploy workflows set their own apex (staging uses staging.activityroster.com); pin it here.
+  const saved = { apex: process.env.APP_APEX_DOMAIN, gate: process.env.PREVIEW_GATE, pin: process.env.PREVIEW_PIN_SHA256 };
+  beforeAll(() => { process.env.APP_APEX_DOMAIN = "activityroster.com"; delete process.env.PREVIEW_GATE; delete process.env.PREVIEW_PIN_SHA256; });
+  afterAll(() => {
+    for (const [k, v] of [["APP_APEX_DOMAIN", saved.apex], ["PREVIEW_GATE", saved.gate], ["PREVIEW_PIN_SHA256", saved.pin]] as const) {
+      if (v === undefined) delete process.env[k]; else process.env[k] = v;
+    }
+  });
+
   it("covers the public pages, not the app, sign-in, legal pages or the guides", () => {
     for (const p of ["/", "/pricing", "/compare/rotaready", "/blog/some-post", "/demo", "/contact", "/signup", "/book"]) expect(isPreviewGated(p)).toBe(true);
     for (const p of ["/privacy", "/terms", "/cookies", "/learn", "/login", "/app", "/portal", "/office", "/api/health", "/privacy-request", "/subprocessors", "/coming-soon", "/admin"]) expect(isPreviewGated(p)).toBe(false);
