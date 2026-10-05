@@ -1,6 +1,6 @@
 "use server";
 
-import { sendInvite } from "@/lib/auth/invite-link";
+import { sendInvite, QUEUED_NOTE } from "@/lib/auth/invite-link";
 import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
@@ -25,9 +25,9 @@ export async function inviteOfficeAdminAction(input: { name: string; email: stri
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Check the details" };
   const r = await inviteOfficeAdmin(repos, ctx, parsed.data);
   if (!r.ok) return r;
-  await sendInvite(repos, ctx, { email: r.email, userId: r.userId, kind: "office", centreName: organisation.name, slug: organisation.slug, callbackPath: "/office" });
+  const sent = await sendInvite(repos, ctx, { email: r.email, userId: r.userId, kind: "office", centreName: organisation.name, slug: organisation.slug, callbackPath: "/office" });
   revalidatePath("/office/staff");
-  return { ok: true, message: r.alreadyMember ? `Office access updated for ${r.email}` : `Invite sent to ${r.email}` };
+  return { ok: true, message: r.alreadyMember ? `Office access updated for ${r.email}` : sent === "queued" ? `Invite for ${r.email}: ${QUEUED_NOTE}` : `Invite sent to ${r.email}` };
 }
 
 /** Superadmin only: change what an office admin can reach. */

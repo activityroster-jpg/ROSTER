@@ -12,8 +12,8 @@ export function LegalPage({ title, updated, children }: { title: string; updated
   );
 }
 
-export function H2({ children }: { children: React.ReactNode }) {
-  return <h2 className="pt-3 font-display text-lg font-semibold text-navy">{children}</h2>;
+export function H2({ children, id }: { children: React.ReactNode; id?: string }) {
+  return <h2 id={id} className="scroll-mt-24 pt-3 font-display text-lg font-semibold text-navy">{children}</h2>;
 }
 
 export function P({ children }: { children: React.ReactNode }) {

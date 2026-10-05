@@ -220,6 +220,12 @@ export const platformPricing = sqliteTable("platform_pricing", {
   // `setupEnabled` toggles the offer without deleting the price.
   setupPrice: real("setup_price").notNull().default(850),
   setupEnabled: boolCol("setup_enabled").default(true),
+  // Fair use on unlimited plans (decided 5 Oct): the figure the Terms quote,
+  // the headcount that flags a centre in the Dev Center, and the most
+  // invitation emails one centre sends in a day (the rest go the next day).
+  fairUsePeople: integer("fair_use_people").notNull().default(500),
+  fairUseAlertAt: integer("fair_use_alert_at").notNull().default(300),
+  inviteDailyCap: integer("invite_daily_cap").notNull().default(200),
   updatedAt: updatedAt(),
 });
 
@@ -256,6 +262,8 @@ export const membership = sqliteTable("membership", {
   features: text("features").notNull().default("[]"),
   /** When the latest invitation email went out (null for people who joined another way). */
   inviteSentAt: integer("invite_sent_at", { mode: "timestamp_ms" }),
+  /** Set when the centre's daily invite cap held this invitation back; the hourly tick sends it the next day. */
+  inviteQueuedAt: integer("invite_queued_at", { mode: "timestamp_ms" }),
   /** When the one reminder went out (a day after the invite, if they hadn't signed in). Cleared by a re-send. */
   inviteRemindedAt: integer("invite_reminded_at", { mode: "timestamp_ms" }),
   /** Who sent the invitation, by name, for the reminder email. */

@@ -1,10 +1,16 @@
 import { LegalPage, H2, P, UL } from "@/components/marketing/LegalPage";
+import { getDb } from "@/lib/cf/bindings";
+import { fairUseSettings } from "@/lib/services/fair-use";
+import { DEFAULT_PRICING } from "@/lib/pricing";
 
 export const metadata = { title: "Terms of Service · ActivityRoster" };
+export const dynamic = "force-dynamic";
 
-export default function TermsPage() {
+export default async function TermsPage() {
+  let fairUse: { fairUsePeople: number; inviteDailyCap: number } = DEFAULT_PRICING;
+  try { fairUse = await fairUseSettings(await getDb()); } catch { /* defaults */ }
   return (
-    <LegalPage title="Terms of Service" updated="29 September 2026">
+    <LegalPage title="Terms of Service" updated="5 October 2026">
       <P>These terms govern your use of ActivityRoster, a product operated by <strong>ActiveRoster Ltd</strong>, a company registered in England &amp; Wales with its registered office at 71-75 Shelton Street, London WC2H 9JQ, United Kingdom (&ldquo;we&rdquo;, &ldquo;us&rdquo;). By creating an account or using the service, you agree to them.</P>
 
       <H2>The service</H2>
@@ -16,6 +22,7 @@ export default function TermsPage() {
         "You're responsible for what your centre's admins and staff do in your account.",
         "You must have the right to store the staff and compliance data you enter, and to keep it accurate.",
         "Don't misuse the service, attempt to breach security, or use it unlawfully.",
+        "Only invite people who work or volunteer at your centre, and don't use invitations or notifications to contact anyone else.",
       ]} />
 
       <H2>Free trial &amp; billing</H2>
@@ -25,6 +32,9 @@ export default function TermsPage() {
         "Subscriptions renew automatically until cancelled. You can cancel anytime from Billing; access continues to the end of the paid period.",
         "Payments are handled by Stripe; a VAT invoice is issued for each payment.",
       ]} />
+
+      <H2 id="fair-use">Fair use on unlimited plans</H2>
+      <P>&ldquo;Unlimited&rdquo; means your own centre&apos;s genuine instructors, staff and volunteers, however many you have; we don&apos;t charge per person and we don&apos;t block a centre for its size. If a single centre goes above {fairUse.fairUsePeople.toLocaleString("en-GB")} people, we&apos;ll contact you to agree the right plan together, and we&apos;ll never cut off or limit access without talking to you first. To protect everyone&apos;s email delivery, each centre can send up to {fairUse.inviteDailyCap.toLocaleString("en-GB")} invitation emails a day; any more are sent automatically the next day.</P>
 
       <H2>Your data</H2>
       <P>Your data remains yours. We process it under our Privacy Policy and Data Processing terms. You can export it at any time, and after cancellation we provide a window to export before deletion.</P>

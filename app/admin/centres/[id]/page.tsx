@@ -15,6 +15,7 @@ import { TrialControls } from "@/components/admin/TrialControls";
 import { trialEndsAt, trialState } from "@/lib/billing/trial";
 import { getRepositories } from "@/lib/cf/bindings";
 import { TransferOwner } from "@/components/admin/TransferOwner";
+import { fairUseSettings, headcount } from "@/lib/services/fair-use";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +37,9 @@ export default async function CentreDetailPage({ params }: { params: Promise<{ i
 
   const [usage, members, pricing] = await Promise.all([platform.usageByOrg(), platform.membersFor(id), platform.getPricing()]);
   const { control } = await getRepositories();
+  const fairUse = await fairUseSettings(db);
+  let people: number | null = null;
+  try { people = await headcount(db, org); } catch { /* cosmetic */ }
   const officeMembers = await control.officeMembersForOrg(id);
   const ghostRows = await control.listGhostVisits(id, 10);
   const ghostSessions: GhostSessionRow[] = await Promise.all(ghostRows.map(async (r) => ({
@@ -71,6 +75,7 @@ export default async function CentreDetailPage({ params }: { params: Promise<{ i
         <Card>
           <h2 className="mb-2 font-semibold text-navy">Billing &amp; subscription</h2>
           <Row k="Tier" v={`${tierMeta(org.tier).name}${tierMeta(org.tier).userCap ? ` (≤${tierMeta(org.tier).userCap})` : " (unlimited)"}`} />
+          <Row k="People" v={people == null ? "–" : `${people}${people >= fairUse.fairUsePeople ? ` · over the fair use figure (${fairUse.fairUsePeople})` : people >= fairUse.fairUseAlertAt ? ` · past the alert level (${fairUse.fairUseAlertAt})` : ""}`} />
           <Row k="Plan" v={org.plan} />
           <Row k="Subscription" v={org.subscriptionStatus ?? "—"} />
           <Row k="Centre status" v={org.status} />

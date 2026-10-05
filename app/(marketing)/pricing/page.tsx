@@ -113,6 +113,7 @@ export default async function PricingPage() {
                 <p className="mt-3 inline-flex self-start rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
                   {t.userCap ? `Up to ${t.userCap} people on your team` : "Unlimited instructors & volunteers"}
                 </p>
+                {t.userCap ? null : <Link href="/terms#fair-use" className="mt-1.5 self-start text-xs text-slate-500 underline hover:text-navy">Fair use applies</Link>}
                 <div className="mt-auto pt-6">
                   <a
                     href="/#get-demo"
@@ -147,6 +148,7 @@ export default async function PricingPage() {
               <p className="mt-3 inline-flex self-start rounded-full bg-amber/15 px-3 py-1 text-xs font-semibold text-amber">
                 Unlimited team · set up for you
               </p>
+              <Link href="/terms#fair-use" className="mt-1.5 self-start text-xs text-slate-500 underline hover:text-navy">Fair use applies</Link>
               <div className="mt-auto pt-6">
                 <Link
                   href="/contact"

@@ -72,6 +72,8 @@ export const FAQ: FaqEntry[] = [
     answer: "ActivityRoster is priced per centre, not per user. The Plans & team size guide explains each plan and its limits; change plan from Billing in the office menu." },
   { id: "trial", topic: "billing", ask: ["Is there a free trial?", "free trail", "free trial", "what happens when the trial ends", "card required"],
     answer: "The first month is free with no card. If it ends before you choose a plan, nothing is deleted: the centre goes read-only until you pick one. Answering the short trial-end survey earns another free month." },
+  { id: "fair-use", topic: "plans", ask: ["Is unlimited really unlimited?", "fair use", "is there a limit on staff", "how many people can I add", "invite goes tomorrow", "invite limit"],
+    answer: "On Standard there is no limit: it covers all your own centre's instructors, staff and volunteers, and nothing blocks a centre for its size. Above 500 people we'd get in touch to agree the right plan together. Each centre can send up to 200 invitation emails a day; any more are queued and go out automatically the next day (the staff list shows “Invite goes tomorrow”)." },
   { id: "export", topic: "data", ask: ["How do I export my data?", "export my data", "download everything", "delete my data", "GDPR"],
     answer: "Settings → Data & account → Export all data (JSON) downloads the whole centre (you'll be asked for your PIN). Individuals can be exported, restricted or anonymised from their profile under Data & privacy." },
   { id: "down", topic: "if-the-platform-is-down", ask: ["What if the platform is down?", "platform is down", "no internet", "emergency sheet", "offline"],

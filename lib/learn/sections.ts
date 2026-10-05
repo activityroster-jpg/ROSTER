@@ -567,6 +567,9 @@ export const SECTIONS: Section[] = [
       { kind: "sub", text: "How the Small Club limit works" },
       { kind: "p", text: "On Small Club you can add up to 10 people in total. Everyone counts towards the 10 — paid instructors and volunteers alike. When you try to add the 11th person, we'll let you know you've reached the limit and prompt you to upgrade to Standard for unlimited team members." },
       { kind: "tip", text: "Upgrading is instant and keeps everything you've set up — your courses, staff, certs and roster all stay exactly as they are. Because competitors charge per user, a volunteer-heavy centre usually pays far less with our flat price." },
+      { kind: "sub", text: "Fair use on unlimited plans" },
+      { kind: "p", text: "Unlimited means your own centre's genuine instructors, staff and volunteers, however many you have. Nothing blocks a centre for its size. If one centre grows past 500 people we'll get in touch to agree the right plan together, and we never cut off access without talking to you first. The full wording is in our Terms under “Fair use on unlimited plans”." },
+      { kind: "p", text: "To protect everyone's email delivery, each centre can send up to 200 invitation emails a day. If you invite more in one go (for example a large spreadsheet import), the rest are queued: the staff list shows “Invite goes tomorrow” beside them and they go out automatically the next day. Nothing for you to do." },
     ],
   },
   {

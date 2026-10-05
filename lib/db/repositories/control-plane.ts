@@ -188,8 +188,39 @@ export class ControlPlaneRepository {
 
   /** An invitation email went out (or was re-sent): start the one-day reminder clock again. */
   async noteInviteSent(userId: string, organisationId: string, invitedByName: string | null): Promise<void> {
-    await this.db.update(membership).set({ inviteSentAt: new Date(), inviteRemindedAt: null, invitedByName, updatedAt: new Date() })
+    // A queued invite sent later by the tick has no inviter in hand: keep the name recorded when it was queued.
+    await this.db.update(membership).set({ inviteSentAt: new Date(), inviteRemindedAt: null, inviteQueuedAt: null, ...(invitedByName ? { invitedByName } : {}), updatedAt: new Date() })
       .where(and(eq(membership.userId, userId), eq(membership.organisationId, organisationId)));
+  }
+
+  /** The centre's daily invite cap held this invitation back: remember it for the next day. */
+  async queueInvite(userId: string, organisationId: string, invitedByName: string | null): Promise<void> {
+    await this.db.update(membership).set({ inviteQueuedAt: new Date(), ...(invitedByName ? { invitedByName } : {}), updatedAt: new Date() })
+      .where(and(eq(membership.userId, userId), eq(membership.organisationId, organisationId), isNull(membership.inviteQueuedAt)));
+  }
+
+  /** Invitations waiting on a daily cap, oldest first, at active centres and still unanswered. */
+  async queuedInvites(limit = 500): Promise<{ userId: string; organisationId: string; email: string; role: MembershipRole; invitedByName: string | null; centreName: string; slug: string }[]> {
+    return this.db
+      .select({ userId: membership.userId, organisationId: membership.organisationId, email: user.email, role: membership.role, invitedByName: membership.invitedByName, centreName: organisation.name, slug: organisation.slug })
+      .from(membership)
+      .innerJoin(user, eq(user.id, membership.userId))
+      .innerJoin(organisation, eq(organisation.id, membership.organisationId))
+      .where(and(
+        eq(membership.status, "invited"),
+        inArray(membership.role, ["instructor", "admin"]),
+        isNotNull(membership.inviteQueuedAt),
+        eq(organisation.status, "active"),
+      ))
+      .orderBy(membership.inviteQueuedAt)
+      .limit(limit);
+  }
+
+  /** userIds whose invitation is waiting for tomorrow, for the staff list label. */
+  async inviteQueuedUsers(organisationId: string): Promise<Set<string>> {
+    const rows = await this.db.select({ userId: membership.userId }).from(membership)
+      .where(and(eq(membership.organisationId, organisationId), isNotNull(membership.inviteQueuedAt), eq(membership.status, "invited")));
+    return new Set(rows.map((r) => r.userId));
   }
 
   /** Invitations still unanswered after `olderThan`, never reminded, at active centres: the one reminder is due. */

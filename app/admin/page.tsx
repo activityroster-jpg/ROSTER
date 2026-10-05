@@ -7,6 +7,9 @@ import { getEnv } from "@/lib/cf/bindings";
 import { createStripe } from "@/lib/billing/stripe";
 import { listPromotionCodes, type PromoCodeRow } from "@/lib/billing/coupons";
 import { GlobalPricingForm } from "@/components/admin/GlobalPricingForm";
+import { FairUseForm } from "@/components/admin/FairUseForm";
+import { centresOverAlert } from "@/lib/services/fair-use";
+import { DEFAULT_PRICING } from "@/lib/pricing";
 import { PromoCodes } from "@/components/admin/PromoCodes";
 import { StripePricesPanel, type PriceCheckRow } from "@/components/admin/StripePricesPanel";
 import { PRICE_KINDS, priceLabel, resolvePrices } from "@/lib/billing/prices";
@@ -50,6 +53,9 @@ export default async function AdminOverviewPage({ searchParams }: { searchParams
   const db = await getDb();
   const platform = new PlatformRepository(db);
   const [allOrgs, usage, pricing, owners, lastActivity] = await Promise.all([platform.listOrganisations(), platform.usageByOrg(), platform.getPricing(), platform.ownerEmailByOrg(), platform.lastActivityByOrg()]);
+  const fairUse = { fairUsePeople: pricing.fairUsePeople ?? DEFAULT_PRICING.fairUsePeople, fairUseAlertAt: pricing.fairUseAlertAt ?? DEFAULT_PRICING.fairUseAlertAt, inviteDailyCap: pricing.inviteDailyCap ?? DEFAULT_PRICING.inviteDailyCap };
+  let bigCentres: Awaited<ReturnType<typeof centresOverAlert>> = [];
+  try { bigCentres = await centresOverAlert(db, fairUse.fairUseAlertAt); } catch { /* cosmetic */ }
   const now = Date.now();
   const needsAttention = (o: (typeof allOrgs)[number]) => {
     const tr = trialState(o, pricing.trialDays);
@@ -181,6 +187,22 @@ export default async function AdminOverviewPage({ searchParams }: { searchParams
         <h2 className="mb-1 font-semibold text-navy">Pricing</h2>
         <p className="mb-4 text-xs text-slate-500">The two plans, the free trial and the custom package. Discounts and custom prices live on each centre&apos;s page.</p>
         <GlobalPricingForm currency={pricing.currency} trialDays={pricing.trialDays} freeFirstMonth={Boolean(pricing.freeFirstMonth)} setupPrice={pricing.setupPrice} setupEnabled={Boolean(pricing.setupEnabled)} />
+      </Card>
+
+      <Card className="mb-8">
+        <h2 className="mb-1 font-semibold text-navy">Fair use</h2>
+        <p className="mb-4 text-xs text-slate-500">Standard stays unlimited: nothing blocks a centre for its size. Centres at {fairUse.fairUseAlertAt} people or more are listed so you can get in touch; the Terms say we agree the right plan above {fairUse.fairUsePeople}. <a href="/learn?topic=plans" target="_blank" rel="noreferrer" className="font-medium text-teal hover:underline">📖 Read the guide</a></p>
+        {bigCentres.length > 0 ? (
+          <ul className="mb-4 space-y-1 text-sm">
+            {bigCentres.map((c) => (
+              <li key={c.id} className="flex flex-wrap items-center gap-2">
+                <Link href={`/admin/centres/${c.id}`} className="font-medium text-teal hover:underline">{c.name}</Link>
+                <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${c.people >= fairUse.fairUsePeople ? "bg-port/10 text-port" : "bg-amber-50 text-amber-700"}`}>{c.people} people{c.people >= fairUse.fairUsePeople ? " · over the fair use figure" : ""}</span>
+              </li>
+            ))}
+          </ul>
+        ) : <p className="mb-4 text-sm text-slate-500">No centre has reached {fairUse.fairUseAlertAt} people.</p>}
+        <FairUseForm {...fairUse} />
       </Card>
 
       <Card className="mb-8">

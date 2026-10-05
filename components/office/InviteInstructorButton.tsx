@@ -13,12 +13,14 @@ export function invitedAgo(sentAt: number, now: number = Date.now()): string {
   return days <= 0 ? "today" : days === 1 ? "yesterday" : `${days} days ago`;
 }
 
-export function InviteInstructorButton({ instructorId, status, sentAt = null }: { instructorId: string; status: InviteStatus; sentAt?: number | null }) {
+export function InviteInstructorButton({ instructorId, status, sentAt = null, queued = false }: { instructorId: string; status: InviteStatus; sentAt?: number | null; queued?: boolean }) {
   const [state, action, pending] = useActionState(inviteInstructorAction, initial);
 
   return (
     <form action={action} className="inline">
-      {status === "pending" ? (
+      {status === "pending" && queued ? (
+        <span className="mr-2 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600" title="Your centre reached today's invite limit. This invite goes out automatically tomorrow.">Invite goes tomorrow</span>
+      ) : status === "pending" ? (
         <span suppressHydrationWarning className="mr-2 rounded-full bg-amber/15 px-2 py-0.5 text-[10px] font-semibold text-amber" title="Invite sent — access starts when they open it. One reminder goes a day later.">{sentAt ? `Invited ${invitedAgo(sentAt)}` : "Invite pending"}</span>
       ) : status === "accepted" ? (
         <span className="mr-2 rounded-full bg-starboard/15 px-2 py-0.5 text-[10px] font-semibold text-starboard">Portal access</span>

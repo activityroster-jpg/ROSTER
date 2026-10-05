@@ -1,5 +1,5 @@
 "use server";
-import { sendInvite } from "@/lib/auth/invite-link";
+import { sendInvite, QUEUED_NOTE, type InviteResult } from "@/lib/auth/invite-link";
 import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
 
@@ -83,18 +83,14 @@ export async function setupInstructorAction(_prev: ActionState, formData: FormDa
   await writeAudit(repos, ctx, { action: "setup_instructor", entity: "instructor", entityId: instructor.id, after: { name, courses: courseIds.length, quals: qualIds.length, checks: checkIds.length } });
 
   // Invite: link a user + membership and email a magic sign-in link (best effort).
-  let invited = false;
+  let invite: InviteResult | null = null;
   if (email) {
     const linked = await linkInstructorUser(repos, ctx, instructor.id);
-    if (linked.ok) {
-      if (await sendInvite(repos, ctx, { email: linked.email, userId: linked.userId, kind: "instructor", centreName: organisation.name, slug: organisation.slug, callbackPath: "/portal/welcome" })) {
-        invited = true;
-      }
-    }
+    if (linked.ok) invite = await sendInvite(repos, ctx, { email: linked.email, userId: linked.userId, kind: "instructor", centreName: organisation.name, slug: organisation.slug, callbackPath: "/portal/welcome" });
   }
 
   revalidatePath("/office/staff");
-  return { ok: true, message: invited ? `${name} added — invite emailed to ${email}` : email ? `${name} added — couldn't email the invite, you can resend from their profile` : `${name} added — add an email to invite them to upload documents` };
+  return { ok: true, message: invite === "sent" ? `${name} added — invite emailed to ${email}` : invite === "queued" ? `${name} added — ${QUEUED_NOTE}` : email ? `${name} added — couldn't email the invite, you can resend from their profile` : `${name} added — add an email to invite them to upload documents` };
 }
 
 /** Update a licence/check's expiry, reference or verified flag (admin). */
@@ -217,10 +213,10 @@ export async function inviteInstructorAction(_prev: ActionState, formData: FormD
 
   // Best-effort invitation email so they can sign in and reach the portal.
   const sent = await sendInvite(repos, ctx, { email: linked.email, userId: linked.userId, kind: "instructor", centreName: organisation.name, slug: organisation.slug, callbackPath: "/portal/welcome" });
-  if (!sent) return { ok: false, error: `Couldn't email ${linked.email} just now. Try again in a minute.` };
+  if (sent === "failed") return { ok: false, error: `Couldn't email ${linked.email} just now. Try again in a minute.` };
 
   revalidatePath("/office/staff");
-  return { ok: true, message: `Invite sent to ${linked.email}` };
+  return { ok: true, message: sent === "queued" ? `Invite for ${linked.email}: ${QUEUED_NOTE}` : `Invite sent to ${linked.email}` };
 }
 
 /** Record a grade/qualification for an instructor. */

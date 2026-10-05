@@ -36,6 +36,7 @@ export default async function StaffPage() {
 
   const membershipStatus = await repos.control.membershipStatusByUser(ctx.organisationId);
   const inviteSent = await repos.control.inviteSentByUser(ctx.organisationId);
+  const inviteQueued = await repos.control.inviteQueuedUsers(ctx.organisationId);
   const officeMembers = await listOfficeMembers(repos, ctx);
   const links = await repos.tenant.guardianLink.list(ctx);
   const inviteStatusFor = (userId: string | null): StaffRow["inviteStatus"] => {
@@ -61,6 +62,7 @@ export default async function StaffPage() {
       linked: Boolean(instructor.userId),
       inviteStatus: inviteStatusFor(instructor.userId),
       inviteSentAt: instructor.userId ? (inviteSent.get(instructor.userId)?.getTime() ?? null) : null,
+      inviteQueued: instructor.userId ? inviteQueued.has(instructor.userId) : false,
       hasEmail: Boolean(instructor.email),
       teaches: teach.map((c) => c.name),
       teachesYouth: teach.some((c) => c.audience === "youth" || c.audience === "all"),

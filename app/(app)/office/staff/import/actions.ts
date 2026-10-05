@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { sendInvite } from "@/lib/auth/invite-link";
+import { inviteDailyCap } from "@/lib/services/invite-cap";
 import { revalidatePath } from "next/cache";
 import { requireTenant } from "@/lib/tenant/require";
 import { linkInstructorUser } from "@/lib/services/invite";
@@ -55,7 +56,7 @@ export async function importInstructorsAction(rows: ConfirmedStaff[], opts?: { s
   let remaining = (await instructorCapState(repos, ctx, organisation)).remaining;
   let limitReached = false;
 
-  let created = 0, skipped = 0, invited = 0, qualsLinked = 0, coursesLinked = 0;
+  let created = 0, skipped = 0, invited = 0, queued = 0, qualsLinked = 0, coursesLinked = 0;
 
   for (const raw of rows) {
     const name = (raw.name ?? "").trim();
@@ -96,7 +97,9 @@ export async function importInstructorsAction(rows: ConfirmedStaff[], opts?: { s
     if (opts?.sendInvites && email) {
       const linked = await linkInstructorUser(repos, ctx, instructor.id);
       if (linked.ok) {
-        if (await sendInvite(repos, ctx, { email: linked.email, userId: linked.userId, kind: "instructor", centreName: organisation.name, slug: organisation.slug, callbackPath: "/portal/welcome" })) invited++;
+        const res = await sendInvite(repos, ctx, { email: linked.email, userId: linked.userId, kind: "instructor", centreName: organisation.name, slug: organisation.slug, callbackPath: "/portal/welcome" });
+        if (res === "sent") invited++;
+        else if (res === "queued") queued++;
       }
     }
   }
@@ -105,6 +108,7 @@ export async function importInstructorsAction(rows: ConfirmedStaff[], opts?: { s
   revalidatePath("/office/staff");
   const parts = [`${created} added`];
   if (invited) parts.push(`${invited} invited`);
+  if (queued) parts.push(`${queued} invite${queued === 1 ? "" : "s"} queued for tomorrow (daily limit of ${await inviteDailyCap(repos.db)})`);
   if (qualsLinked) parts.push(`${qualsLinked} tickets matched`);
   if (coursesLinked) parts.push(`${coursesLinked} course approvals`);
   if (skipped) parts.push(`${skipped} skipped`);

@@ -498,6 +498,13 @@
       "when": 1791213868977,
       "tag": "0070_help_question",
       "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "6",
+      "when": 1791217085552,
+      "tag": "0071_fair_use",
+      "breakpoints": true
     }
   ]
 }

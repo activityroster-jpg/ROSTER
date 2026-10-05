@@ -13,6 +13,9 @@ export const DEFAULT_PRICING = {
   trialDays: 30,
   setupPrice: 850,
   setupEnabled: true,
+  fairUsePeople: 500,
+  fairUseAlertAt: 300,
+  inviteDailyCap: 200,
 } as const;
 
 /** The on-site day (travel to work with the team) sold alongside the custom package, GBP. */

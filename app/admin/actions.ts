@@ -23,6 +23,7 @@ import { TIERS } from "@/lib/tiers";
 import { trialEndsAt } from "@/lib/billing/trial";
 import { ORG_STATUSES, SUBSCRIPTION_STATUSES, PLANS, ORG_TIERS, ERROR_REPORT_STATUSES, type OrgStatus, type SubscriptionStatus, type Plan, type OrgTier, type ErrorReportStatus } from "@/lib/db/schema";
 import { writeAudit } from "@/lib/services/audit";
+import { fairUseSchema } from "@/lib/services/fair-use";
 
 type Result = { ok: boolean; error?: string };
 
@@ -61,6 +62,18 @@ export async function setGlobalPricingAction(input: {
   });
   revalidatePath("/admin");
   revalidatePath("/admin/pricing");
+  revalidatePath("/pricing");
+  return { ok: true };
+}
+
+/** Fair use figures: the Terms figure, the Dev Center alert level and the daily invite cap per centre. */
+export async function setFairUseAction(input: { fairUsePeople: number; fairUseAlertAt: number; inviteDailyCap: number }): Promise<Result> {
+  await requirePlatformAdmin();
+  const parsed = fairUseSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Check the figures" };
+  await new PlatformRepository(await getDb()).upsertPricing(parsed.data);
+  revalidatePath("/admin");
+  revalidatePath("/terms");
   revalidatePath("/pricing");
   return { ok: true };
 }

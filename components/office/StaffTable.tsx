@@ -19,6 +19,8 @@ export interface StaffRow {
   inviteStatus: "none" | "pending" | "accepted";
   /** When the latest invitation went out (epoch ms), if we know. */
   inviteSentAt?: number | null;
+  /** Held back by the centre's daily invite limit; goes out tomorrow. */
+  inviteQueued?: boolean;
   /** Under-18s: where the parent's approval stands. */
   parentApproval?: "approved" | "pending" | "declined" | "withdrawn" | "none" | "not-needed";
   hasEmail: boolean;
@@ -162,7 +164,7 @@ export function StaffTable({ rows }: { rows: StaffRow[] }) {
                     {r.status === "inactive" ? (
                       <span className="text-xs text-slate-400">Access ended</span>
                     ) : r.hasEmail ? (
-                      <InviteInstructorButton instructorId={r.id} status={r.inviteStatus} sentAt={r.inviteSentAt ?? null} />
+                      <InviteInstructorButton instructorId={r.id} status={r.inviteStatus} sentAt={r.inviteSentAt ?? null} queued={r.inviteQueued ?? false} />
                     ) : (
                       <span className="text-xs text-slate-400">Add email to invite</span>
                     )}
