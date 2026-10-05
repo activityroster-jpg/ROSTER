@@ -8,6 +8,7 @@ import { sweepLeaving } from "@/lib/services/leaving";
 import { sweepTrialSurvey } from "@/lib/services/trial-survey";
 import { drainEmailQueue } from "@/lib/mail/queue";
 import { sweepRetention } from "@/lib/services/retention";
+import { sweepInviteReminders } from "@/lib/services/invite-reminders";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/security/rate-limit";
 import { checkCronSecret } from "@/lib/security/cron-secret";
 
@@ -36,12 +37,14 @@ async function tick(req: Request) {
   const leaving = await sweepLeaving(db, env).catch((e: Error) => ({ checked: 0, reminded: 0, due: 0, error: e.message }));
   // Trial ended without a plan: invite the admins once to the survey that earns another free month.
   const trialSurvey = await sweepTrialSurvey(db, env).catch((e: Error) => ({ checked: 0, sent: 0, error: e.message }));
+  // Invitations nobody has answered after a day: one reminder each.
+  const inviteReminders = await sweepInviteReminders(db, env).catch((e: Error) => ({ due: 0, sent: 0, error: e.message }));
   // Email retries: anything that failed for a passing reason goes again with backoff.
   const mail = await drainEmailQueue(db, env).catch((e: Error) => ({ due: 0, sent: 0, failed: 0, purged: 0, error: e.message }));
   // Data retention: one sweep per centre per day, with the 14-day notice first.
   const rateLimitsPurged = await new ControlPlaneRepository(db).purgeRateLimits().catch(() => 0);
   const retention = await sweepRetention(db, env).catch((e: Error) => ({ centres: 0, ran: 0, reminded: 0, platform: {}, error: e.message }));
-  return NextResponse.json({ ok: true, campaigns: running.length, research, sends, digests, leaving, trialSurvey, mail, retention, rateLimitsPurged });
+  return NextResponse.json({ ok: true, campaigns: running.length, research, sends, digests, leaving, trialSurvey, inviteReminders, mail, retention, rateLimitsPurged });
 }
 
 export async function POST(req: Request) { return tick(req); }

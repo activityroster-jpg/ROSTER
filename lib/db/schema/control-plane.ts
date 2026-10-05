@@ -254,6 +254,12 @@ export const membership = sqliteTable("membership", {
   status: text("status", { enum: MEMBERSHIP_STATUSES }).notNull().default("active"),
   /** Office admins only: JSON array of OFFICE_FEATURES the owner ticked. Empty = can open the office and nothing else. */
   features: text("features").notNull().default("[]"),
+  /** When the latest invitation email went out (null for people who joined another way). */
+  inviteSentAt: integer("invite_sent_at", { mode: "timestamp_ms" }),
+  /** When the one reminder went out (a day after the invite, if they hadn't signed in). Cleared by a re-send. */
+  inviteRemindedAt: integer("invite_reminded_at", { mode: "timestamp_ms" }),
+  /** Who sent the invitation, by name, for the reminder email. */
+  invitedByName: text("invited_by_name"),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 }, (t) => [

@@ -17,6 +17,8 @@ export interface StaffRow {
   linked: boolean;
   /** Portal access: none yet, invite sent but not accepted, or accepted. */
   inviteStatus: "none" | "pending" | "accepted";
+  /** When the latest invitation went out (epoch ms), if we know. */
+  inviteSentAt?: number | null;
   /** Under-18s: where the parent's approval stands. */
   parentApproval?: "approved" | "pending" | "declined" | "withdrawn" | "none" | "not-needed";
   hasEmail: boolean;
@@ -160,7 +162,7 @@ export function StaffTable({ rows }: { rows: StaffRow[] }) {
                     {r.status === "inactive" ? (
                       <span className="text-xs text-slate-400">Access ended</span>
                     ) : r.hasEmail ? (
-                      <InviteInstructorButton instructorId={r.id} status={r.inviteStatus} />
+                      <InviteInstructorButton instructorId={r.id} status={r.inviteStatus} sentAt={r.inviteSentAt ?? null} />
                     ) : (
                       <span className="text-xs text-slate-400">Add email to invite</span>
                     )}

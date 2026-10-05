@@ -1,12 +1,10 @@
 "use server";
 
+import { sendInvite } from "@/lib/auth/invite-link";
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
 import { requireTenant } from "@/lib/tenant/require";
-import { getAuth } from "@/lib/auth";
 import { linkInstructorUser } from "@/lib/services/invite";
 import { writeAudit } from "@/lib/services/audit";
-import { apexDomain } from "@/lib/config";
 import { EMPLOYMENT_TYPES, type EmploymentType } from "@/lib/db/schema";
 import { splitList } from "@/lib/import/staff";
 import { instructorCapState, capUpgradeMessage } from "@/lib/tenant/limits";
@@ -97,13 +95,7 @@ export async function importInstructorsAction(rows: ConfirmedStaff[], opts?: { s
     if (opts?.sendInvites && email) {
       const linked = await linkInstructorUser(repos, ctx, instructor.id);
       if (linked.ok) {
-        try {
-          const auth = await getAuth();
-          await auth.api.signInMagicLink({ body: { email: linked.email, callbackURL: `https://${organisation.slug}.${apexDomain()}/portal/welcome` }, headers: new Headers(await headers()) });
-          invited++;
-        } catch (err) {
-          console.error("[staff-import] invite failed:", (err as Error).message);
-        }
+        if (await sendInvite(repos, ctx, { email: linked.email, userId: linked.userId, kind: "instructor", centreName: organisation.name, slug: organisation.slug, callbackPath: "/portal/welcome" })) invited++;
       }
     }
   }

@@ -34,6 +34,7 @@ export default async function StaffPage() {
     .map((c) => ({ id: c.id, name: c.name, mandatory: Boolean(c.mandatory) }));
 
   const membershipStatus = await repos.control.membershipStatusByUser(ctx.organisationId);
+  const inviteSent = await repos.control.inviteSentByUser(ctx.organisationId);
   const officeMembers = await listOfficeMembers(repos, ctx);
   const links = await repos.tenant.guardianLink.list(ctx);
   const inviteStatusFor = (userId: string | null): StaffRow["inviteStatus"] => {
@@ -58,6 +59,7 @@ export default async function StaffPage() {
       blockText: fit.blocks.map((b) => (b.kind === "missing" ? `${b.name} missing` : `${b.name} expired`)).join(", "),
       linked: Boolean(instructor.userId),
       inviteStatus: inviteStatusFor(instructor.userId),
+      inviteSentAt: instructor.userId ? (inviteSent.get(instructor.userId)?.getTime() ?? null) : null,
       hasEmail: Boolean(instructor.email),
       teaches: teach.map((c) => c.name),
       teachesYouth: teach.some((c) => c.audience === "youth" || c.audience === "all"),

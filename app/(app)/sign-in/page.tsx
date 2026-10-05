@@ -36,6 +36,9 @@ export default function SignInPage() {
     const n = q.get("next");
     if (n === "/portal" || n === "/office" || n === "/parent" || n === "/go?to=portal" || n === "/go?to=office") setNext(n);
     if (q.get("expired") === "1") setExpired(true);
+    // From an invitation or its reminder: their address filled in, ready for a fresh link.
+    const em = q.get("email");
+    if (em && em.length <= 200 && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) { setEmail(em); setMode("link"); }
   }, []);
   const pickMode = (m: Mode) => { setMode(m); try { window.localStorage.setItem("ar.signin.mode", m); } catch { /* ignore */ } };
 

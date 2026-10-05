@@ -3,7 +3,7 @@ import type { AnyTenantContext } from "@/lib/tenant/context";
 import { writeAudit } from "./audit";
 
 export type InviteResult =
-  | { ok: true; email: string; created: boolean; pending: boolean }
+  | { ok: true; email: string; userId: string; created: boolean; pending: boolean }
   | { ok: false; error: string };
 
 /**
@@ -46,5 +46,5 @@ export async function linkInstructorUser(
     after: { email, userId: user.id },
   });
 
-  return { ok: true, email, created: !existingUser, pending: membership?.status !== "active" };
+  return { ok: true, email, userId: user.id, created: !existingUser, pending: membership?.status !== "active" };
 }

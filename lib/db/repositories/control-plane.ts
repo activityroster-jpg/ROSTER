@@ -1,4 +1,4 @@
-import { and, eq, inArray, lt, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, lt, sql } from "drizzle-orm";
 import type { Database } from "@/lib/db/client";
 import {
   account,
@@ -184,6 +184,42 @@ export class ControlPlaneRepository {
       .where(and(eq(membership.userId, userId), eq(membership.organisationId, organisationId), eq(membership.status, "invited")))
       .returning({ id: membership.id });
     return rows.length > 0;
+  }
+
+  /** An invitation email went out (or was re-sent): start the one-day reminder clock again. */
+  async noteInviteSent(userId: string, organisationId: string, invitedByName: string | null): Promise<void> {
+    await this.db.update(membership).set({ inviteSentAt: new Date(), inviteRemindedAt: null, invitedByName, updatedAt: new Date() })
+      .where(and(eq(membership.userId, userId), eq(membership.organisationId, organisationId)));
+  }
+
+  /** Invitations still unanswered after `olderThan`, never reminded, at active centres: the one reminder is due. */
+  async invitesDueReminder(olderThan: Date, limit = 100): Promise<{ userId: string; organisationId: string; email: string; role: MembershipRole; invitedByName: string | null; centreName: string; slug: string }[]> {
+    return this.db
+      .select({ userId: membership.userId, organisationId: membership.organisationId, email: user.email, role: membership.role, invitedByName: membership.invitedByName, centreName: organisation.name, slug: organisation.slug })
+      .from(membership)
+      .innerJoin(user, eq(user.id, membership.userId))
+      .innerJoin(organisation, eq(organisation.id, membership.organisationId))
+      .where(and(
+        eq(membership.status, "invited"),
+        inArray(membership.role, ["instructor", "admin"]),
+        isNotNull(membership.inviteSentAt),
+        lt(membership.inviteSentAt, olderThan),
+        isNull(membership.inviteRemindedAt),
+        eq(organisation.status, "active"),
+      ))
+      .limit(limit);
+  }
+
+  async markInviteReminded(userId: string, organisationId: string): Promise<void> {
+    await this.db.update(membership).set({ inviteRemindedAt: new Date() })
+      .where(and(eq(membership.userId, userId), eq(membership.organisationId, organisationId)));
+  }
+
+  /** userId → when their invitation went out, for "invited 3 days ago" on the staff list. */
+  async inviteSentByUser(organisationId: string): Promise<Map<string, Date>> {
+    const rows = await this.db.select({ userId: membership.userId, at: membership.inviteSentAt }).from(membership)
+      .where(and(eq(membership.organisationId, organisationId), isNotNull(membership.inviteSentAt)));
+    return new Map(rows.filter((r) => r.at).map((r) => [r.userId, r.at as Date]));
   }
 
   /** userId → membership status for everyone in an org (Staff tab labels). */

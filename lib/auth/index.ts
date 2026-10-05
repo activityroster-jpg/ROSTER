@@ -1,3 +1,5 @@
+import { readInviteNote } from "./invite-note";
+import { inviteEmail } from "@/lib/mail/invite-email";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { emailOTP, magicLink, twoFactor } from "better-auth/plugins";
@@ -105,6 +107,11 @@ export function createAuth(db: Database, env: CloudflareEnv) {
       }),
       magicLink({
         sendMagicLink: async ({ email, url }) => {
+          const invite = await readInviteNote(email);
+          if (invite) {
+            await sendEmail({ to: email, ...inviteEmail({ ...invite, url, email }) });
+            return;
+          }
           await sendEmail({
             to: email,
             subject: "Your ActivityRoster sign-in link",

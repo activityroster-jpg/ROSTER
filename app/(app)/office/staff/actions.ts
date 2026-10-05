@@ -1,4 +1,5 @@
 "use server";
+import { sendInvite } from "@/lib/auth/invite-link";
 import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
 
@@ -86,12 +87,8 @@ export async function setupInstructorAction(_prev: ActionState, formData: FormDa
   if (email) {
     const linked = await linkInstructorUser(repos, ctx, instructor.id);
     if (linked.ok) {
-      try {
-        const auth = await getAuth();
-        await auth.api.signInMagicLink({ body: { email: linked.email, callbackURL: centreUrl(organisation.slug, "/portal/welcome") }, headers: new Headers(await headers()) });
+      if (await sendInvite(repos, ctx, { email: linked.email, userId: linked.userId, kind: "instructor", centreName: organisation.name, slug: organisation.slug, callbackPath: "/portal/welcome" })) {
         invited = true;
-      } catch (err) {
-        console.error("[setup-instructor] invite email failed:", (err as Error).message);
       }
     }
   }
@@ -218,16 +215,9 @@ export async function inviteInstructorAction(_prev: ActionState, formData: FormD
   const linked = await linkInstructorUser(repos, ctx, instructorId);
   if (!linked.ok) return { ok: false, error: linked.error };
 
-  // Best-effort magic-link email so they can sign in and reach the portal.
-  try {
-    const auth = await getAuth();
-    await auth.api.signInMagicLink({
-      body: { email: linked.email, callbackURL: centreUrl(organisation.slug, "/portal/welcome") },
-      headers: new Headers(await headers()),
-    });
-  } catch (err) {
-    console.error("[invite] magic link send failed:", (err as Error).message);
-  }
+  // Best-effort invitation email so they can sign in and reach the portal.
+  const sent = await sendInvite(repos, ctx, { email: linked.email, userId: linked.userId, kind: "instructor", centreName: organisation.name, slug: organisation.slug, callbackPath: "/portal/welcome" });
+  if (!sent) return { ok: false, error: `Couldn't email ${linked.email} just now. Try again in a minute.` };
 
   revalidatePath("/office/staff");
   return { ok: true, message: `Invite sent to ${linked.email}` };

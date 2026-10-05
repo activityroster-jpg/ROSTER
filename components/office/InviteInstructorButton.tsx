@@ -7,13 +7,19 @@ const initial: ActionState = { ok: false };
 
 export type InviteStatus = "none" | "pending" | "accepted";
 
-export function InviteInstructorButton({ instructorId, status }: { instructorId: string; status: InviteStatus }) {
+/** "today", "yesterday", "3 days ago". */
+export function invitedAgo(sentAt: number, now: number = Date.now()): string {
+  const days = Math.floor((now - sentAt) / 86_400_000);
+  return days <= 0 ? "today" : days === 1 ? "yesterday" : `${days} days ago`;
+}
+
+export function InviteInstructorButton({ instructorId, status, sentAt = null }: { instructorId: string; status: InviteStatus; sentAt?: number | null }) {
   const [state, action, pending] = useActionState(inviteInstructorAction, initial);
 
   return (
     <form action={action} className="inline">
       {status === "pending" ? (
-        <span className="mr-2 rounded-full bg-amber/15 px-2 py-0.5 text-[10px] font-semibold text-amber" title="Invite sent — access starts when they open it">Invite pending</span>
+        <span suppressHydrationWarning className="mr-2 rounded-full bg-amber/15 px-2 py-0.5 text-[10px] font-semibold text-amber" title="Invite sent — access starts when they open it. One reminder goes a day later.">{sentAt ? `Invited ${invitedAgo(sentAt)}` : "Invite pending"}</span>
       ) : status === "accepted" ? (
         <span className="mr-2 rounded-full bg-starboard/15 px-2 py-0.5 text-[10px] font-semibold text-starboard">Portal access</span>
       ) : null}

@@ -1,17 +1,14 @@
 "use server";
 
+import { sendInvite } from "@/lib/auth/invite-link";
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { requireTenant } from "@/lib/tenant/require";
-import { getAuth } from "@/lib/auth";
-import { apexDomain } from "@/lib/config";
 import { instructor as instructorTable } from "@/lib/db/schema";
 import { OFFICE_FEATURES } from "@/lib/auth/rbac";
 import { inviteOfficeAdmin, removeOfficeAccess, setOfficeFeatures } from "@/lib/services/office-access";
 
-const centreUrl = (slug: string, path: string) => `https://${slug}.${apexDomain()}${path}`;
 
 export type AccessResult = { ok: boolean; error?: string; message?: string };
 
@@ -28,12 +25,7 @@ export async function inviteOfficeAdminAction(input: { name: string; email: stri
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Check the details" };
   const r = await inviteOfficeAdmin(repos, ctx, parsed.data);
   if (!r.ok) return r;
-  try {
-    const auth = await getAuth();
-    await auth.api.signInMagicLink({ body: { email: r.email, callbackURL: centreUrl(organisation.slug, "/office") }, headers: new Headers(await headers()) });
-  } catch (err) {
-    console.error("[office-access] magic link send failed:", (err as Error).message);
-  }
+  await sendInvite(repos, ctx, { email: r.email, userId: r.userId, kind: "office", centreName: organisation.name, slug: organisation.slug, callbackPath: "/office" });
   revalidatePath("/office/staff");
   return { ok: true, message: r.alreadyMember ? `Office access updated for ${r.email}` : `Invite sent to ${r.email}` };
 }

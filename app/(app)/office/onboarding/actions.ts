@@ -1,9 +1,9 @@
 "use server";
 
-import { cookies, headers } from "next/headers";
+import { sendInvite } from "@/lib/auth/invite-link";
+import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { requireTenant } from "@/lib/tenant/require";
-import { getAuth } from "@/lib/auth";
 import {
   COURSE_AUDIENCES,
   EMPLOYMENT_TYPES,
@@ -15,7 +15,6 @@ import {
 } from "@/lib/db/schema";
 import { writeAudit } from "@/lib/services/audit";
 import { linkInstructorUser } from "@/lib/services/invite";
-import { apexDomain } from "@/lib/config";
 import { serializeFeatures } from "@/lib/features";
 import { DEFAULT_COURSE_TYPES, DEFAULT_GRADES } from "@/lib/seed/catalogue";
 import { ONBOARDED_COOKIE } from "@/lib/onboarding";
@@ -161,13 +160,7 @@ export async function addTeamMemberAction(input: {
   if (email) {
     const linked = await linkInstructorUser(repos, ctx, instructor.id);
     if (linked.ok) {
-      try {
-        const auth = await getAuth();
-        await auth.api.signInMagicLink({ body: { email: linked.email, callbackURL: `https://${organisation.slug}.${apexDomain()}/portal/welcome` }, headers: new Headers(await headers()) });
-        invited = true;
-      } catch (err) {
-        console.error("[onboarding] invite email failed:", (err as Error).message);
-      }
+      invited = await sendInvite(repos, ctx, { email: linked.email, userId: linked.userId, kind: "instructor", centreName: organisation.name, slug: organisation.slug, callbackPath: "/portal/welcome" });
     }
   }
 
