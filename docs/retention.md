@@ -18,7 +18,8 @@ log and security events (database triggers) allows deletion only once a row is o
 | Qualification records | While the person works there + 12 months | RYA recognition audits | |
 | Leave requests | 2 years | HR disputes | |
 | Audit log (centre change log) | 3 years (configurable upwards; the database refuses earlier deletion) | Accountability | Centres can export |
-| Centre export after cancellation | Available 90 days, then everything deleted from live systems | Spec: leaving schools | Written confirmation emailed |
+| Centre export after cancellation | Available 90 days, then everything deleted from live systems, including uploaded files | Spec: leaving schools | Written confirmation emailed |
+| Test centres set up by ActivityRoster | Removed immediately on request from the Dev Center, with their files and the logins that belong only to them | Testing | Never used for customers; see docs/runbooks/remove-test-centre.md |
 | Backups | Daily copies 30 days, monthly copies 12 months | Spec: DR | Deleted data ages out within 12 months; deletion log replayed after any restore |
 | Security events, trusted devices | 12 months | Incident investigation | |
 | Marketing prospects | 24 months since last contact | B2B legitimate interests | Do-not-email list kept indefinitely |

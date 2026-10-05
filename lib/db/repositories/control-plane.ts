@@ -671,6 +671,13 @@ export class ControlPlaneRepository {
   }
 
   /** Emails of a centre's active admins (to tell them about a join request). */
+  /** Every login with a membership in this centre (any role or status), for removing a test centre. */
+  async memberUsers(organisationId: string): Promise<{ userId: string; email: string }[]> {
+    return this.db.select({ userId: membership.userId, email: user.email }).from(membership)
+      .innerJoin(user, eq(user.id, membership.userId))
+      .where(eq(membership.organisationId, organisationId));
+  }
+
   async adminEmailsForOrg(organisationId: string): Promise<string[]> {
     const rows = await this.db
       .select({ email: user.email })

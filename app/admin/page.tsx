@@ -45,7 +45,7 @@ const ago = (d: Date | undefined, now: number) => {
   return days <= 0 ? "today" : days === 1 ? "yesterday" : days < 30 ? `${days}d ago` : days < 365 ? `${Math.floor(days / 30)}mo ago` : `${Math.floor(days / 365)}y ago`;
 };
 
-export default async function AdminOverviewPage({ searchParams }: { searchParams: Promise<{ q?: string; show?: string }> }) {
+export default async function AdminOverviewPage({ searchParams }: { searchParams: Promise<{ q?: string; show?: string; removed?: string; logins?: string }> }) {
   await requirePlatformAdmin();
   const sp = await searchParams;
   const q = (typeof sp.q === "string" ? sp.q : "").trim().toLowerCase();
@@ -118,6 +118,11 @@ export default async function AdminOverviewPage({ searchParams }: { searchParams
     <div>
       <h1 className="mb-1 font-display text-2xl font-bold text-navy">Overview</h1>
       <p className="mb-6 text-sm text-slate-500">Dev Center · all centres on the platform, their billing and usage.</p>
+      {typeof sp.removed === "string" && /^[a-z0-9-]{1,63}$/.test(sp.removed) ? (
+        <p className="mb-6 rounded-lg border border-starboard/30 bg-starboard/10 px-4 py-2 text-sm text-navy">
+          Test centre <strong>{sp.removed}</strong> removed{/^\d{1,4}$/.test(sp.logins ?? "") ? `, with ${sp.logins} login${sp.logins === "1" ? "" : "s"}` : ""}. Its emails can sign up again.
+        </p>
+      ) : null}
 
       <div className="mb-8 grid gap-3 sm:grid-cols-4">
         <Card><p className="text-xs font-semibold text-navy">Centres</p><p className="mt-1 text-2xl font-semibold text-navy">{total}</p></Card>

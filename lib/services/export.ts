@@ -1,5 +1,6 @@
 import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext, TenantContext } from "@/lib/tenant/context";
+import { deleteAllDocuments } from "@/lib/r2";
 
 /**
  * Export ALL of a centre's data as a single JSON object (GDPR data portability).
@@ -48,7 +49,11 @@ export async function eraseOrganisation(
  * The removal itself. Also used by the platform owner from the Dev Center once
  * a leaving centre's 90-day export window has closed (lib/services/leaving).
  */
-export async function eraseOrganisationData(repos: Repositories, ctx: AnyTenantContext): Promise<{ erased: boolean }> {
+export async function eraseOrganisationData(
+  repos: Repositories,
+  ctx: AnyTenantContext,
+  opts: { deleteFiles?: (ctx: AnyTenantContext) => Promise<number> } = {},
+): Promise<{ erased: boolean; files?: number }> {
   const org = await repos.control.organisationById(ctx.organisationId);
   if (!org) return { erased: false };
 
@@ -80,5 +85,14 @@ export async function eraseOrganisationData(repos: Repositories, ctx: AnyTenantC
   // migration 0046). Deleting the organisation cascades to it, which the
   // trigger allows because the parent row is already gone.
   await repos.control.deleteOrganisation(ctx.organisationId);
-  return { erased: true };
+
+  // Uploaded certificates and vetting documents live in R2 under the centre's
+  // prefix, outside the database cascade: remove them too.
+  let files: number | undefined;
+  try {
+    files = await (opts.deleteFiles ?? deleteAllDocuments)(ctx);
+  } catch (err) {
+    console.error(`[erase] ${ctx.slug}: files not removed:`, (err as Error).message);
+  }
+  return { erased: true, files };
 }

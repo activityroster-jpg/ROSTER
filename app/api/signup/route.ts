@@ -46,7 +46,7 @@ export async function POST(req: Request) {
   const existing = await control.userByEmail(ownerEmail);
   if (existing) {
     return NextResponse.json(
-      { error: "An account with that email already exists — please sign in to add a centre." },
+      { error: "An account with that email already exists. Sign in instead, or use a different email." },
       { status: 409 },
     );
   }

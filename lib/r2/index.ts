@@ -50,6 +50,22 @@ export async function deleteDocument(ctx: AnyTenantContext, key: string): Promis
   await getEnv().DOCS.delete(key);
 }
 
+/** Delete every file stored under this centre's prefix (erasure). Returns how many went. */
+export async function deleteAllDocuments(ctx: AnyTenantContext): Promise<number> {
+  if (isGhostContext(ctx)) throw new GhostReadOnlyError();
+  const bucket = getEnv().DOCS;
+  const prefix = tenantKey(ctx, "");
+  let removed = 0;
+  let cursor: string | undefined;
+  do {
+    const page = await bucket.list({ prefix, cursor });
+    const keys = page.objects.map((o) => o.key);
+    if (keys.length) { await bucket.delete(keys); removed += keys.length; }
+    cursor = page.truncated ? page.cursor : undefined;
+  } while (cursor);
+  return removed;
+}
+
 export async function listDocuments(ctx: AnyTenantContext, subPrefix = ""): Promise<R2Objects> {
   return getEnv().DOCS.list({ prefix: tenantKey(ctx, subPrefix) });
 }

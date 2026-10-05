@@ -741,6 +741,7 @@ export const SECURITY_EVENT_KINDS = [
   "two_factor_enabled", "two_factor_disabled", "sessions_revoked",
   "subprocessor_notice", "owner_transferred", "office_access_changed",
   "step_up", "calendar_feed_reset",
+  "test_centre_removed",
 ] as const;
 export type SecurityEventKind = (typeof SECURITY_EVENT_KINDS)[number];
 

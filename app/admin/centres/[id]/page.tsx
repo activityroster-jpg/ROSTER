@@ -7,6 +7,7 @@ import { effectivePricing } from "@/lib/pricing";
 import { tierMeta } from "@/lib/tiers";
 import { CentreControls } from "@/components/admin/CentreControls";
 import { EraseCentre } from "@/components/admin/EraseCentre";
+import { RemoveTestCentre } from "@/components/admin/RemoveTestCentre";
 import { leavingDeadline } from "@/lib/services/leaving";
 import { PricingControls } from "@/components/admin/PricingControls";
 import { Card } from "@/components/ui";
@@ -108,6 +109,9 @@ export default async function CentreDetailPage({ params }: { params: Promise<{ i
         <h2 className="mb-3 font-semibold text-navy">Manage</h2>
         <CentreControls id={org.id} status={org.status} subscriptionStatus={org.subscriptionStatus} plan={org.plan} tier={org.tier} />
         <EraseCentre id={org.id} slug={org.slug} status={org.status} deadline={leavingDeadline(org)?.toISOString() ?? null} />
+        <div className="mt-4">
+          <RemoveTestCentre id={org.id} slug={org.slug} members={members.length} liveSubscription={Boolean(org.stripeSubscriptionId) && ["trialing", "active", "past_due", "unpaid", "incomplete"].includes(org.subscriptionStatus ?? "")} />
+        </div>
       </Card>
 
       <Card className="mt-6">

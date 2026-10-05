@@ -1,8 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { idSchema, isoDateSchema, trialDaysSchema } from "@/lib/validation/actions";
-import { requirePlatformAdmin } from "@/lib/platform/admin";
+import { isPlatformAdminEmail, requirePlatformAdmin } from "@/lib/platform/admin";
 import { resolvePrices, PRICE_KINDS } from "@/lib/billing/prices";
 import { getDb, getEnv, getRepositories } from "@/lib/cf/bindings";
 import { cookies, headers } from "next/headers";
@@ -24,6 +25,7 @@ import { trialEndsAt } from "@/lib/billing/trial";
 import { ORG_STATUSES, SUBSCRIPTION_STATUSES, PLANS, ORG_TIERS, ERROR_REPORT_STATUSES, type OrgStatus, type SubscriptionStatus, type Plan, type OrgTier, type ErrorReportStatus } from "@/lib/db/schema";
 import { writeAudit } from "@/lib/services/audit";
 import { fairUseSchema } from "@/lib/services/fair-use";
+import { removeTestCentre } from "@/lib/services/test-centre";
 
 type Result = { ok: boolean; error?: string };
 
@@ -169,6 +171,31 @@ export async function eraseCentreAction(id: string, confirmSlug: string): Promis
   }
   revalidatePath("/admin");
   return res.erased ? { ok: true } : { ok: false, error: "Nothing to erase" };
+}
+
+const removeTestCentreSchema = z.object({ id: idSchema, confirmSlug: z.string().trim().min(1).max(63), confirmedTest: z.literal(true) });
+
+/**
+ * Remove a centre the platform owner set up to test: straight away, with its
+ * files and the logins that belonged only to it (lib/services/test-centre).
+ * Customers leaving use the 90-day route (eraseCentreAction) instead.
+ */
+export async function removeTestCentreAction(input: { id: string; confirmSlug: string; confirmedTest: boolean }): Promise<Result> {
+  const { email } = await requirePlatformAdmin();
+  const parsed = removeTestCentreSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: input.confirmedTest ? "Type the centre's address exactly to confirm" : "Tick the box to confirm this is a test centre, not a customer" };
+  const repos = await getRepositories();
+  const actor = await repos.control.userByEmail(email);
+  const res = await removeTestCentre(repos, {
+    organisationId: parsed.data.id,
+    confirmSlug: parsed.data.confirmSlug,
+    confirmedTest: parsed.data.confirmedTest,
+    actorUserId: actor?.id ?? null,
+    isProtectedEmail: (e) => isPlatformAdminEmail(e),
+  });
+  if (!res.ok) return { ok: false, error: res.error };
+  revalidatePath("/admin");
+  redirect(`/admin?removed=${encodeURIComponent(res.slug)}&logins=${res.loginsRemoved}`);
 }
 
 /**
