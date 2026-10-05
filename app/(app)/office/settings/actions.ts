@@ -6,13 +6,13 @@ import { requireTenant } from "@/lib/tenant/require";
 import { writeAudit } from "@/lib/services/audit";
 import {
   complianceTypeSchema,
-  orgSettingsSchema,
   qualificationTypeSchema,
   roleTypeSchema,
   sessionSlotSchema,
 } from "@/lib/validation/entities";
 import type { TenantRepositories } from "@/lib/db/repositories";
 import { rotaTemplateSchema } from "@/lib/rota/template";
+import { settingsPatch } from "@/lib/validation/settings-sections";
 import { parseRetention, RETENTION_DEFAULTS } from "@/lib/services/retention";
 import { SLOT_CODES } from "@/lib/db/schema";
 
@@ -44,57 +44,27 @@ function repoFor(t: TenantRepositories, kind: ConfigKind) {
   }
 }
 
-/** The term-dates editor posts a JSON string; anything unreadable becomes "no term dates" and fails validation visibly rather than silently. */
-function parseTermDatesField(v: FormDataEntryValue | null): unknown {
-  if (typeof v !== "string" || !v.trim()) return [];
-  try { return JSON.parse(v); } catch { return "invalid"; }
-}
-
-/** Update the org's general settings (one row per org: upsert). */
+/**
+ * Save one card of the General settings (one row per org). Only the posted
+ * card's columns are written, so two admins saving different cards never
+ * overwrite each other. Audited with the before and after of those columns.
+ */
 export async function updateSettingsAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const { ctx, repos } = await requireTenant({ permission: "settings.edit" });
-  const parsed = orgSettingsSchema.safeParse({
-    schedulingMode: formData.get("schedulingMode"),
-    alertLeadDays: Number(formData.get("alertLeadDays")),
-    availabilityWeeksAhead: Number(formData.get("availabilityWeeksAhead") ?? 4),
-    currency: formData.get("currency"),
-    enforceLicenceChecks: formData.get("enforceLicenceChecks") === "on",
-    enforceRatioChecks: formData.get("enforceRatioChecks") === "on",
-    enforceConflictChecks: formData.get("enforceConflictChecks") === "on",
-    enforceAvailabilityChecks: formData.get("enforceAvailabilityChecks") === "on",
-    checkEquipmentQuantities: formData.get("checkEquipmentQuantities") === "on",
-    holidayPayPercent: String(formData.get("holidayPayPercent") ?? "").trim() === "" ? null : Number(formData.get("holidayPayPercent")),
-    privacyNoticeUrl: String(formData.get("privacyNoticeUrl") ?? "").trim(),
-    dailyDigestEnabled: formData.get("dailyDigestEnabled") === "on",
-    dailyDigestHour: Number(formData.get("dailyDigestHour") ?? 6),
-    workingTimeMode: formData.get("workingTimeMode") ?? "block_override",
-    idleTimeoutMinutes: Number(formData.get("idleTimeoutMinutes") ?? 30),
-    requireParentApproval: formData.get("requireParentApproval") === "on",
-    termDates: parseTermDatesField(formData.get("termDates")),
-  });
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Please check the settings values" };
-
-  const { termDates, ...rest } = parsed.data;
-  const values = {
-    ...rest,
-    privacyNoticeUrl: rest.privacyNoticeUrl || null,
-    dailyDigestEnabled: rest.dailyDigestEnabled ?? false,
-    dailyDigestHour: rest.dailyDigestHour ?? 6,
-    workingTimeMode: rest.workingTimeMode ?? "block_override",
-    idleTimeoutMinutes: rest.idleTimeoutMinutes ?? 30,
-    requireParentApproval: rest.requireParentApproval ?? true,
-    availabilityWeeksAhead: rest.availabilityWeeksAhead ?? 4,
-    termDates: JSON.stringify((termDates ?? []).map((r) => ({ from: r.from, to: r.to, ...(r.label ? { label: r.label } : {}) }))),
-  };
+  const result = settingsPatch(String(formData.get("section") ?? ""), (k) => formData.get(k));
+  if (!result.ok) return { ok: false, error: result.error };
+  const { patch } = result;
   const existing = (await repos.tenant.orgSettings.list(ctx))[0];
+  const before: Record<string, unknown> = {};
   if (existing) {
-    await repos.tenant.orgSettings.update(ctx, existing.id, values);
+    for (const k of Object.keys(patch)) before[k] = (existing as Record<string, unknown>)[k];
+    await repos.tenant.orgSettings.update(ctx, existing.id, patch);
   } else {
-    await repos.tenant.orgSettings.insert(ctx, values);
+    await repos.tenant.orgSettings.insert(ctx, patch);
   }
-  await writeAudit(repos, ctx, { action: "update", entity: "org_settings", after: values });
+  await writeAudit(repos, ctx, { action: "update", entity: "org_settings", before, after: { section: formData.get("section"), ...patch } });
   revalidatePath("/office/settings");
-  return { ok: true, message: "Settings saved" };
+  return { ok: true, message: "Saved" };
 }
 
 /** Add a config item to one of the editable lists. */

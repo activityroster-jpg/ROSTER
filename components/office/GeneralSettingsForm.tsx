@@ -6,6 +6,23 @@ import { ConfirmDialog } from "./ConfirmDialog";
 
 const initial: ActionState = { ok: false };
 
+/** One card of settings with its own Save button: only this card's fields are sent and written. */
+function SectionForm({ section, title, aside, className = "", children }: { section: string; title?: string; aside?: React.ReactNode; className?: string; children: React.ReactNode }) {
+  const [state, action, pending] = useActionState(updateSettingsAction, initial);
+  return (
+    <form action={action} className={`rounded-lg border border-slate-200 p-3 ${className}`}>
+      <input type="hidden" name="section" value={section} />
+      {title ? <div className="mb-2 flex items-center justify-between"><p className="text-xs font-semibold text-slate-500">{title}</p>{aside}</div> : null}
+      {children}
+      <div className="mt-3 flex items-center gap-3">
+        <button disabled={pending} className="rounded-lg bg-teal px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{pending ? "Saving…" : "Save"}</button>
+        {state.error ? <span className="text-xs text-port">{state.error}</span> : null}
+        {state.ok ? <span className="text-xs text-starboard">{state.message}</span> : null}
+      </div>
+    </form>
+  );
+}
+
 export interface TermDate { from: string; to: string; label?: string }
 /** What the centre's jurisdiction gives us: the rule pack in force, or none. */
 export interface PackStatus { name: string; version: string; verified: boolean; unverifiedCount: number; source: "builtin" | "edited" }
@@ -49,7 +66,6 @@ export function GeneralSettingsForm({
   packStatus?: PackStatus | null;
   idleTimeoutMinutes?: number;
 }) {
-  const [state, action, pending] = useActionState(updateSettingsAction, initial);
   const [terms, setTerms] = useState<TermDate[]>(termDates);
   const [checks, setChecks] = useState({ licence: enforceLicenceChecks, ratio: enforceRatioChecks, conflict: enforceConflictChecks, availability: enforceAvailabilityChecks });
   const [askOff, setAskOff] = useState<null | keyof typeof checks>(null);
@@ -63,9 +79,9 @@ export function GeneralSettingsForm({
   const setTerm = (i: number, patch: Partial<TermDate>) => setTerms((t) => t.map((r, j) => (j === i ? { ...r, ...patch } : r)));
 
   return (
-    <form action={action} className="grid gap-3 sm:grid-cols-4 sm:items-end">
-      {/* Kept for the saved record; neither changes anything a centre sees. */}
-      <input type="hidden" name="schedulingMode" value={schedulingMode || "session"} />
+    <div className="space-y-3">
+      <SectionForm section="basics">
+      <div className="grid gap-3 sm:grid-cols-4 sm:items-end">
       <div className="sm:col-span-2">
         <label className="mb-1 block text-xs font-medium text-slate-500">Warn me this many days before a cert or check expires</label>
         <input name="alertLeadDays" type="number" defaultValue={alertLeadDays} min={0} max={365} className="w-28 rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal" />
@@ -93,8 +109,9 @@ export function GeneralSettingsForm({
         <input name="privacyNoticeUrl" type="url" defaultValue={privacyNoticeUrl} placeholder="https://yourclub.org.uk/privacy" className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal" />
         <p className="mt-1 text-xs text-slate-400">Shown to your team beside ActivityRoster&rsquo;s own notice. You are the data controller for your staff&rsquo;s details; we process them for you. Need wording? See the template in the Learning Centre.</p>
       </div>
-      <fieldset className="sm:col-span-4 rounded-lg border border-slate-200 p-3">
-        <legend className="px-1 text-xs font-semibold text-slate-500">If the platform is ever down</legend>
+      </div>
+      </SectionForm>
+      <SectionForm section="digest" title="If the platform is ever down">
         <label className="flex items-start gap-2 text-sm text-slate-600">
           <input type="checkbox" name="dailyDigestEnabled" defaultChecked={dailyDigestEnabled} className="mt-0.5 h-4 w-4 rounded border-slate-300" />
           <span>Email every admin the day&rsquo;s roster each morning at
@@ -104,12 +121,8 @@ export function GeneralSettingsForm({
             UK time, so you always have today&rsquo;s plan in your inbox. <span className="text-slate-400">Recommended in season.</span></span>
         </label>
         <p className="mt-2 text-xs text-slate-400">The <a href="/office/rota/emergency" className="text-teal hover:underline">emergency sheet</a> (today&rsquo;s staff with emergency contacts) is always one click away from the roster and prints to PDF.</p>
-      </fieldset>
-      <fieldset className="sm:col-span-4 rounded-lg border border-slate-200 p-3">
-        <div className="flex items-center justify-between">
-          <legend className="px-1 text-xs font-semibold text-slate-500">Young workers&rsquo; hours (under-18s)</legend>
-          <a href="/learn?topic=young-workers" target="_blank" rel="noreferrer" className="text-xs font-medium text-teal hover:underline">📖 Read the guide</a>
-        </div>
+      </SectionForm>
+      <SectionForm section="young" title="Young workers&rsquo; hours (under-18s)" aside={<a href="/learn?topic=young-workers" target="_blank" rel="noreferrer" className="text-xs font-medium text-teal hover:underline">📖 Read the guide</a>}>
         <input type="hidden" name="termDates" value={JSON.stringify(terms.filter((t) => t.from && t.to))} />
         {packStatus ? (
           <p className="mb-2 text-xs text-slate-500">
@@ -151,9 +164,8 @@ export function GeneralSettingsForm({
           <span>Needs a parent or guardian&rsquo;s approval before an under-18 can be rostered <span className="block text-xs text-slate-500">When a young person signs up they give a parent&rsquo;s email; the parent approves from their own account. Legally required for under-16s in Ireland; good practice everywhere. An admin can still override with a note.</span></span>
         </label>
         <p className="mt-3 text-[11px] leading-snug text-slate-400">ActivityRoster applies the published working-time rules for your jurisdiction as a planning aid. It is not legal advice: the employer remains responsible for complying with child-employment law, local authority permits and the school-leaving rules that apply to each young person.</p>
-      </fieldset>
-      <fieldset className="sm:col-span-4 rounded-lg border border-slate-200 p-3">
-        <legend className="px-1 text-xs font-semibold text-slate-500">Security</legend>
+      </SectionForm>
+      <SectionForm section="security" title="Security">
         <label className="block text-sm text-slate-600">
           <span className="mb-1 block text-xs font-medium text-slate-500">Ask admins for their PIN after this long without activity</span>
           <select name="idleTimeoutMinutes" defaultValue={String(idleTimeoutMinutes)} className="w-full max-w-xs rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal">
@@ -161,9 +173,8 @@ export function GeneralSettingsForm({
           </select>
         </label>
         <p className="mt-1 text-xs text-slate-400">30 minutes suits a shared office computer; shorter for a front desk the public can see. Takes effect the next time each admin enters their PIN. Full sign-in is always required again after 12 hours away.</p>
-      </fieldset>
-      <fieldset className="sm:col-span-4 rounded-lg border border-slate-200 p-3">
-        <legend className="px-1 text-xs font-semibold text-slate-500">Checks when rostering</legend>
+      </SectionForm>
+      <SectionForm section="checks" title="Checks when rostering">
         <p className="mb-2 text-xs text-slate-400">
           Cert expiry is always shown on the Instructors tab. These decide what the Courses tab stops you doing as you roster
           (you can always override with a note).
@@ -190,16 +201,10 @@ export function GeneralSettingsForm({
             <span>Flag a day when the courses running need more of an equipment type than you own <span className="text-slate-400">(uses the quantity on each equipment type; on by default)</span></span>
           </label>
         </div>
-      </fieldset>
+      </SectionForm>
 
       <ConfirmDialog open={askOff !== null} title={askOff ? CHECK_TEXT[askOff].title : ""} consequences={askOff ? CHECK_TEXT[askOff].consequences : []} confirmLabel="Switch it off" onCancel={() => setAskOff(null)} onConfirm={() => { if (askOff) setChecks((c) => ({ ...c, [askOff]: false })); setAskOff(null); }} />
-      <div className="sm:col-span-4 flex items-center gap-3">
-        <button disabled={pending} className="rounded-lg bg-teal px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">
-          {pending ? "Saving…" : "Save settings"}
-        </button>
-        {state.error ? <span className="text-sm text-port">{state.error}</span> : null}
-        {state.ok ? <span className="text-sm text-starboard">{state.message}</span> : null}
-      </div>
-    </form>
+      <p className="text-[11px] text-slate-400">Each card saves on its own, so two people changing different cards never undo each other.</p>
+    </div>
   );
 }
