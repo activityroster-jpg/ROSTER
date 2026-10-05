@@ -9,7 +9,8 @@ export { suggestionsForPage, topicsForPage } from "./pages";
  * answers from what is already written: the Learning Centre sections and the
  * setup FAQ. A plain keyword search (BM25 with simple word stems and a few
  * sailing-school synonyms), nudged towards topics that match the page the
- * person is on. Pure: no I/O, so it is fast, free and fully testable.
+ * person is on. Misspelt words are corrected to the nearest word the guides
+ * actually use (edit distance, swapped letters count as one slip). Pure: no I/O, so it is fast, free and fully testable.
  */
 
 export interface HelpAnswer {
@@ -42,7 +43,7 @@ interface Doc {
   len: number;
 }
 
-const STOP = new Set("a an and are as at be been but by can could do does did for from had has have how i if in into is it its me my of on or our so should that the their them then there these they this to up us was we what when where which who why will with would you your yours about any get got just like need want please tell know make use using".split(" "));
+const STOP = new Set("whats hows wheres whos im ive id a an and are as at be been but by can could do does did for from had has have how i if in into is it its me my of on or our so should that the their them then there these they this to up us was we what when where which who why will with would you your yours about any get got just like need want please tell know make use using".split(" "));
 
 /** Words people use for the same thing, folded to one. */
 const SYNONYMS: Record<string, string> = {
@@ -79,8 +80,37 @@ export function tokens(text: string): string[] {
     .replace(/[^a-z0-9]+/g, " ")
     .split(" ")
     .filter((w) => w && !STOP.has(w))
-    .map((w) => SYNONYMS[w] ?? stem(w));
+    .map(normal);
 }
+
+function normal(w: string): string {
+  return SYNONYMS[w] ?? SYNONYMS[stem(w)] ?? stem(w);
+}
+
+/** Edit distance with adjacent swaps counted as one ("sysmte" → "system" is 2). Stops early past `max`. */
+export function editDistance(a: string, b: string, max = 2): number {
+  if (Math.abs(a.length - b.length) > max) return max + 1;
+  const prev2: number[] = [];
+  let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    let best = i;
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      let v = Math.min(prev[j]! + 1, cur[j - 1]! + 1, prev[j - 1]! + cost);
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) v = Math.min(v, prev2[j - 2]! + 1);
+      cur.push(v);
+      if (v < best) best = v;
+    }
+    if (best > max) return max + 1;
+    prev2.splice(0, prev2.length, ...prev);
+    prev = cur;
+  }
+  return prev[b.length]!;
+}
+
+/** How many slips a word of this length may carry and still be recognised. */
+const slipsAllowed = (len: number) => (len <= 3 ? 0 : len <= 5 ? 1 : 2);
 
 function add(tf: Map<string, number>, text: string, weight: number): number {
   let n = 0;
@@ -117,13 +147,18 @@ function faqDocs(sections: readonly Section[]): Doc[] {
   });
 }
 
-let INDEX: { docs: Doc[]; df: Map<string, number>; avgLen: number } | null = null;
+let INDEX: { docs: Doc[]; df: Map<string, number>; avgLen: number; words: Map<string, string> } | null = null;
 function index() {
   if (INDEX) return INDEX;
   const docs = [...faqDocs(SECTIONS), ...guideDocs(SECTIONS)];
   const df = new Map<string, number>();
   for (const d of docs) for (const t of d.tf.keys()) df.set(t, (df.get(t) ?? 0) + 1);
-  INDEX = { docs, df, avgLen: docs.reduce((n, d) => n + d.len, 0) / docs.length };
+  // Every spelling a correction may land on: the indexed terms themselves and
+  // the everyday words the synonym list folds into them.
+  const words = new Map<string, string>();
+  for (const t of df.keys()) words.set(t, t);
+  for (const [w, t] of Object.entries(SYNONYMS)) if (df.has(t)) words.set(w, t);
+  INDEX = { docs, df, avgLen: docs.reduce((n, d) => n + d.len, 0) / docs.length, words };
   return INDEX;
 }
 
@@ -134,13 +169,42 @@ const SMALLTALK: { test: RegExp; reply: string }[] = [
   { test: /^(thanks|thank you|cheers|ta|great|perfect|brilliant)\b/i, reply: "You're welcome. Ask another question any time." },
 ];
 
+/** The question's terms, with misspelt words corrected to the nearest word in the guides. */
+interface QueryTerm { term: string; corrected: boolean }
+
+function queryTerms(q: string, df: Map<string, number>, words: Map<string, string>): QueryTerm[] {
+  const raw = q.toLowerCase().replace(/[’']/g, "").replace(/[^a-z0-9]+/g, " ").split(" ").filter((w) => w && !STOP.has(w));
+  const out = new Map<string, QueryTerm>();
+  const put = (qt: QueryTerm) => { if (!out.has(qt.term) || !qt.corrected) out.set(qt.term, qt); };
+  for (const w of raw) {
+    const t = normal(w);
+    if (df.has(t)) { put({ term: t, corrected: false }); continue; }
+    // A stray one- or two-letter word ("ad", "u") that the guides don't use is noise, not a miss.
+    if (w.length <= 2) continue;
+    const max = slipsAllowed(w.length);
+    let best: { term: string; d: number; df: number } | null = null;
+    if (max > 0 && !/^\d+$/.test(w)) {
+      for (const [word, term] of words) {
+        if (Math.abs(word.length - w.length) > max) continue;
+        const d = Math.min(editDistance(w, word, max), editDistance(stem(w), word, max));
+        if (d > max) continue;
+        const f = df.get(term) ?? 0;
+        if (!best || d < best.d || (d === best.d && f > best.df)) best = { term, d, df: f };
+      }
+    }
+    // Unknown and nothing close: keep it, so it still counts against the match.
+    put(best ? { term: best.term, corrected: true } : { term: t, corrected: false });
+  }
+  return [...out.values()];
+}
+
 export function answerQuestion(question: string, path?: string | null): HelpReply {
   const q = question.trim().slice(0, 300);
   for (const s of SMALLTALK) if (s.test.test(q)) return { kind: "smalltalk", message: s.reply, related: [] };
-  const terms = [...new Set(tokens(q))];
+  const { docs, df, avgLen, words } = index();
+  const terms = queryTerms(q, df, words);
   if (terms.length === 0) return { kind: "not-found", message: "Ask me a question in a few words, for example “How do I publish the roster?”.", related: [] };
 
-  const { docs, df, avgLen } = index();
   const N = docs.length;
   const pageTopics = new Set(topicsForPage(path));
   const k1 = 1.2;
@@ -148,22 +212,28 @@ export function answerQuestion(question: string, path?: string | null): HelpRepl
   const scored = docs.map((d) => {
     let score = 0;
     let matched = 0;
-    for (const t of terms) {
+    let weight = 0;
+    for (const { term: t, corrected } of terms) {
       const f = d.tf.get(t);
       if (!f) continue;
       matched++;
+      // A corrected spelling is a little less certain than a word typed right.
+      const w = corrected ? 0.75 : 1;
+      weight += w;
       const idf = Math.log(1 + (N - (df.get(t) ?? 0) + 0.5) / ((df.get(t) ?? 0) + 0.5));
-      score += idf * ((f * (k1 + 1)) / (f + k1 * (1 - b + b * (d.len / avgLen))));
+      score += w * idf * ((f * (k1 + 1)) / (f + k1 * (1 - b + b * (d.len / avgLen))));
     }
-    const coverage = matched / terms.length;
+    const coverage = weight / terms.length;
     if (pageTopics.has(d.topic)) score *= 1.25;
     if (d.source === "faq") score *= 1.15;
-    return { d, score: score * (0.5 + coverage), coverage };
+    return { d, score: score * (0.5 + coverage), coverage, matched };
   }).filter((x) => x.score > 0).sort((a, b) => b.score - a.score);
 
   const best = scored[0];
   // Too little of the question matched anything: say so rather than guess.
-  if (!best || best.coverage < (terms.length >= 3 ? 0.4 : terms.length === 2 ? 1 : 0.5)) {
+  // Short questions must match every word (corrected spellings included);
+  // longer ones most of them, with corrected words counting a little less.
+  if (!best || (terms.length <= 2 ? best.matched < terms.length : best.coverage < 0.6)) {
     return {
       kind: "not-found",
       message: "I couldn't find that in the guides. Try different words or browse the Learning Centre, or email us and we'll help:",

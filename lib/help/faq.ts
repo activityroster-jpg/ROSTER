@@ -12,7 +12,7 @@ export interface FaqEntry {
 }
 
 export const FAQ: FaqEntry[] = [
-  { id: "setup", topic: "getting-started", ask: ["How does setup work?", "how do I get started", "set up my centre", "first steps", "onboarding"],
+  { id: "setup", topic: "getting-started", ask: ["How does setup work?", "how do I get started", "set up my account", "first steps", "onboarding"],
     answer: "Sign up and a short wizard sets your centre up in a few minutes: choose the features you want, tick the RYA courses you run, add your team (they get an invite), and pick how your printable roster looks. You can skip any step and finish later from the dashboard checklist." },
   { id: "add-staff", topic: "staff", ask: ["How do I add instructors?", "add staff", "add a new instructor", "invite my team", "invite instructors", "invite new staff"],
     answer: "Go to Instructors → Add instructors. Quick add takes a name and email and sends the invite (tick “Send the invite”), so they fill in their own details and certificates when they accept it. Paste a list adds several people at once (one per line). Open “Add with all details” to set courses, licences and checks yourself." },
@@ -56,7 +56,7 @@ export const FAQ: FaqEntry[] = [
     answer: "Equipment: add your types (e.g. Pico, RIB) with how many you have, and individual units for tracked kit. Attach kit to a course from its page. Clashes, shortages and kit in maintenance show on the problems list." },
   { id: "kit-rules", topic: "equipment", ask: ["What are kit rules?", "kit rules", "automatic equipment for courses", "one boat per two students"],
     answer: "Course setup → Kit rules lets you say what each course type needs (fixed, or per so many students). They're off until you tick Settings → Checks when rostering → “Use kit rules”; then new courses get that kit automatically." },
-  { id: "locations", topic: "locations", ask: ["How do I add locations?", "add locations", "areas", "where courses run"],
+  { id: "locations", topic: "locations", ask: ["How do I add locations?", "set up locations at my centre", "location categories", "add locations", "areas", "where courses run"],
     answer: "Locations: add categories (e.g. Lake, Classroom) and the places within them. Pick locations when creating a course, or change them later on the course page." },
   { id: "cancel", topic: "courses", ask: ["How do I cancel a course?", "cancel a course", "weather cancellation", "cancel a session"],
     answer: "On the course, choose Cancel (the whole course or one day). Say why and pick the pay rule (no pay, paid as rostered, or a cancellation fee). It leaves the roster, PDF and app, and everyone rostered is told. Cancelled days can be restored." },
@@ -70,7 +70,7 @@ export const FAQ: FaqEntry[] = [
     answer: "On the PIN screen, choose “Forgot PIN” and we email a reset code. To change it, go to Settings → Data & account → Change login PIN. Two-step sign-in is under Security & 2FA." },
   { id: "plans", topic: "plans", ask: ["How much does it cost?", "pricing", "how much does it cost", "change plan", "team size limit"],
     answer: "ActivityRoster is priced per centre, not per user. The Plans & team size guide explains each plan and its limits; change plan from Billing in the office menu." },
-  { id: "trial", topic: "billing", ask: ["Is there a free trial?", "free trial", "what happens when the trial ends", "card required"],
+  { id: "trial", topic: "billing", ask: ["Is there a free trial?", "free trail", "free trial", "what happens when the trial ends", "card required"],
     answer: "The first month is free with no card. If it ends before you choose a plan, nothing is deleted: the centre goes read-only until you pick one. Answering the short trial-end survey earns another free month." },
   { id: "export", topic: "data", ask: ["How do I export my data?", "export my data", "download everything", "delete my data", "GDPR"],
     answer: "Settings → Data & account → Export all data (JSON) downloads the whole centre (you'll be asked for your PIN). Individuals can be exported, restricted or anonymised from their profile under Data & privacy." },

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { answerQuestion, suggestionsForPage, tokens } from "@/lib/help/search";
+import { answerQuestion, editDistance, suggestionsForPage, tokens } from "@/lib/help/search";
 import { FAQ } from "@/lib/help/faq";
 import { SECTIONS } from "@/lib/learn/sections";
 import { createTestDb } from "@/tests/helpers/test-db";
@@ -23,6 +23,34 @@ describe("help assistant search (no AI: the guides only)", () => {
     expect(topicOf("who can see payroll")).toBe("roles");
     expect(topicOf("is this AI?")).toBe("help-assistant");
     expect(topicOf("what does it cost", "/pricing")).toBe("plans");
+  });
+
+  it("copes with spelling mistakes and swapped letters", () => {
+    expect(topicOf("inport from booking sysmte")).toBe("integrations");
+    expect(topicOf("booking sysmtem")).toBe("integrations");
+    expect(topicOf("conect my bookng sytem")).toBe("integrations");
+    expect(topicOf("how do i ad instuctors")).toBe("staff");
+    expect(topicOf("pubish the rotta")).toBe("rota");
+    expect(topicOf("forgot my pasword")).toBe("getting-started");
+    expect(topicOf("exprot my data")).toBe("data");
+    expect(topicOf("cancle a course")).toBe("courses");
+    expect(topicOf("how mcuh does it cost")).toBe("plans");
+    expect(topicOf("free trail")).toBe("billing");
+    expect(topicOf("qualifcations")).toBe("licences");
+    expect(topicOf("how do i set up locations for my centre")).toBe("locations");
+  });
+
+  it("corrections don't turn nonsense into an answer", () => {
+    for (const q of ["whats the wether in paris", "pizza delivery", "football scores today", "recipe for cake", "how do i pay my taxes", "sailing lessons for my son", "asdfgh"]) {
+      expect(answerQuestion(q, "/office").kind, q).toBe("not-found");
+    }
+  });
+
+  it("measures slips with swapped letters counted once", () => {
+    expect(editDistance("sysmtem", "system")).toBe(1);
+    expect(editDistance("sysmte", "system")).toBe(2);
+    expect(editDistance("inport", "import")).toBe(1);
+    expect(editDistance("banana", "roster")).toBeGreaterThan(2);
   });
 
   it("says it doesn't know rather than guessing", () => {
