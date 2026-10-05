@@ -1,4 +1,5 @@
 import { PROSPECT_STATUSES, type ProspectStatus } from "@/lib/db/schema";
+import { COMPANY } from "@/lib/config";
 
 /** Labels + pill tones for the outreach pipeline stages. `short` is for the compact checkbox list. */
 export const PROSPECT_STATUS_META: Record<ProspectStatus, { label: string; short: string; tone: "neutral" | "attention" | "teal" | "covered" | "conflict" }> = {
@@ -47,6 +48,20 @@ export function addressComplete(p: { addressLine1?: string | null; city?: string
   return Boolean((p.addressLine1 ?? "").trim() && (p.city ?? "").trim() && (p.postcode ?? "").trim());
 }
 
+/**
+ * The email signature under every outreach draft. Plain text, because a Gmail
+ * compose link or a mailto link can only carry plain text (no logo).
+ */
+const [street, town, postcode, country] = COMPANY.addressLines;
+export const EMAIL_SIGNATURE: readonly string[] = [
+  COMPANY.name,
+  "Compliance-aware rostering for sailing & watersports centres",
+  "activityroster.com · hello@activityroster.com",
+  "",
+  `${COMPANY.name} is a trading name of ${COMPANY.legalName}, registered in England & Wales.`,
+  `Registered office: ${street}, ${town} ${postcode}, ${country}.`,
+];
+
 /** A ready-to-send outreach email draft for a prospect (used for the mailto: button). */
 export function draftProspectEmail(p: { name: string; contactName?: string | null }): { subject: string; body: string } {
   const greeting = p.contactName?.trim() ? p.contactName.trim() : "there";
@@ -64,7 +79,8 @@ export function draftProspectEmail(p: { name: string; contactName?: string | nul
     "",
     "Kind regards,",
     `${LETTER_SENDER.signOffName}`,
-    `${LETTER_SENDER.name} — ${LETTER_SENDER.website}`,
+    "",
+    ...EMAIL_SIGNATURE,
   ].join("\n");
   return { subject, body };
 }
