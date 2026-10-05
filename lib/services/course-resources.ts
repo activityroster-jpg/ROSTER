@@ -16,8 +16,15 @@ type RoleType = typeof roleTypeSchema.$inferSelect;
 import { cleanRoleLines, derivedStaffRequired, staffingShortfallNote, suggestRoles, type RoleLine, type StaffingRole } from "@/lib/domain/staffing";
 import { auditStatement } from "./audit";
 import { runAtomic } from "@/lib/db/batch";
+import { staleEditMessage } from "./concurrency";
 
-type Result = { ok: true } | { ok: false; error: string };
+/** `version` is the course's new last-changed time, for the next save's "changed since you opened it" check. */
+type Result = { ok: true; version?: number } | { ok: false; error: string };
+
+/** Refuse a save when the course changed after the form was opened (lib/services/concurrency). */
+async function staleCourse(repos: Repositories, ctx: AnyTenantContext, course: { id: string; updatedAt: Date }, expected: number | null | undefined): Promise<string | null> {
+  return staleEditMessage(repos, ctx, { entity: "course", id: course.id, updatedAt: course.updatedAt, expected });
+}
 
 /** What a course uses: places, tracked units, and bulk kit by type and quantity. */
 export interface CourseResources {
@@ -39,11 +46,16 @@ export async function getCourseResources(repos: Repositories, ctx: AnyTenantCont
 }
 
 /** Replace a course's locations. Ids must be this centre's (findById is tenant scoped); unknown ones are dropped. Audited. */
-export async function setCourseLocations(repos: Repositories, ctx: AnyTenantContext, courseId: string, locationIds: readonly string[]): Promise<Result> {
+export async function setCourseLocations(repos: Repositories, ctx: AnyTenantContext, courseId: string, locationIds: readonly string[], opts: { expectedVersion?: number | null } = {}): Promise<Result> {
   const t = repos.tenant;
   // Every change and its log entry in one batch: the course never ends up with half the old list and half the new.
   const ops: PromiseLike<unknown>[] = [];
-  if (!(await t.course.findById(ctx, courseId))) return { ok: false, error: "Course not found" };
+  const course = await t.course.findById(ctx, courseId);
+  if (!course) return { ok: false, error: "Course not found" };
+  const stale = await staleCourse(repos, ctx, course, opts.expectedVersion);
+  if (stale) return { ok: false, error: stale };
+  const version = Math.max(Date.now(), course.updatedAt.getTime() + 1);
+  ops.push(t.course.updateStatement(ctx, courseId, { updatedAt: new Date(version) }));
   const wanted: string[] = [];
   for (const id of new Set(locationIds)) if (await t.location.findById(ctx, id)) wanted.push(id);
   const existing = await t.courseLocation.list(ctx, eq(courseLocationTable.courseId, courseId));
@@ -52,15 +64,20 @@ export async function setCourseLocations(repos: Repositories, ctx: AnyTenantCont
   for (const id of wanted) if (!have.has(id)) ops.push(t.courseLocation.insertStatement(ctx, { courseId, locationId: id }));
   const audit = auditStatement(repos, ctx, { action: "set_course_locations", entity: "course", entityId: courseId, after: { locationIds: wanted } });
   await runAtomic(repos.db, [...ops, ...(audit ? [audit] : [])]);
-  return { ok: true };
+  return { ok: true, version };
 }
 
 /** Replace a course's equipment: tracked units one row each, bulk kit as a type + quantity. Audited. */
-export async function setCourseEquipment(repos: Repositories, ctx: AnyTenantContext, courseId: string, input: { unitIds: readonly string[]; bulk: readonly { equipmentTypeId: string; quantity: number }[] }): Promise<Result> {
+export async function setCourseEquipment(repos: Repositories, ctx: AnyTenantContext, courseId: string, input: { unitIds: readonly string[]; bulk: readonly { equipmentTypeId: string; quantity: number }[]; expectedVersion?: number | null }): Promise<Result> {
   const t = repos.tenant;
   // Every change and its log entry in one batch: the course never ends up with half the old list and half the new.
   const ops: PromiseLike<unknown>[] = [];
-  if (!(await t.course.findById(ctx, courseId))) return { ok: false, error: "Course not found" };
+  const course = await t.course.findById(ctx, courseId);
+  if (!course) return { ok: false, error: "Course not found" };
+  const stale = await staleCourse(repos, ctx, course, input.expectedVersion);
+  if (stale) return { ok: false, error: stale };
+  const version = Math.max(Date.now(), course.updatedAt.getTime() + 1);
+  ops.push(t.course.updateStatement(ctx, courseId, { updatedAt: new Date(version) }));
   const units: string[] = [];
   for (const id of new Set(input.unitIds)) if (await t.equipment.findById(ctx, id)) units.push(id);
   const bulk = new Map<string, number>();
@@ -87,7 +104,7 @@ export async function setCourseEquipment(repos: Repositories, ctx: AnyTenantCont
   for (const [typeId, qty] of bulk) if (!keepBulk.has(typeId)) ops.push(t.courseEquipment.insertStatement(ctx, { courseId, equipmentId: null, equipmentTypeId: typeId, quantity: qty }));
   const audit = auditStatement(repos, ctx, { action: "set_course_equipment", entity: "course", entityId: courseId, after: { units, bulk: [...bulk].map(([equipmentTypeId, quantity]) => ({ equipmentTypeId, quantity })) } });
   await runAtomic(repos.db, [...ops, ...(audit ? [audit] : [])]);
-  return { ok: true };
+  return { ok: true, version };
 }
 
 /** The staffing panel's data for one course. */
@@ -99,6 +116,8 @@ export interface StaffingView {
   lines: { roleTypeId: string; roleName: string; count: number; filled: number }[];
   /** Derived: the role lines' total, or what the ratio implies when there are none. */
   required: number;
+  /** The course's last-changed time when this was read, for the "changed since you opened it" check. */
+  version?: number;
   /** True when `required` comes from role lines the admin set. */
   fromRoles: boolean;
   suggested: RoleLine[];
@@ -148,7 +167,7 @@ export async function getCourseStaffing(repos: Repositories, ctx: AnyTenantConte
     t.courseRoleRequirement.list(ctx, eq(courseRoleRequirementTable.courseId, courseId)),
     t.courseStaff.list(ctx, eq(courseStaffTable.courseId, courseId)),
   ]);
-  return staffingViewFrom(course, ct, roles, reqs, staff);
+  return { ...staffingViewFrom(course, ct, roles, reqs, staff), version: course.updatedAt.getTime() };
 }
 
 /**
@@ -156,12 +175,15 @@ export async function getCourseStaffing(repos: Repositories, ctx: AnyTenantConte
  * is derived from the lines (null when there are none, so the ratio decides).
  * Audited.
  */
-export async function setCourseStaffing(repos: Repositories, ctx: AnyTenantContext, courseId: string, input: { students: number; roles: readonly { roleTypeId: string; count: number }[] }): Promise<Result> {
+export async function setCourseStaffing(repos: Repositories, ctx: AnyTenantContext, courseId: string, input: { students: number; roles: readonly { roleTypeId: string; count: number }[]; expectedVersion?: number | null }): Promise<Result> {
   const t = repos.tenant;
   // Every change and its log entry in one batch: the course never ends up with half the old list and half the new.
   const ops: PromiseLike<unknown>[] = [];
   const course = await t.course.findById(ctx, courseId);
   if (!course) return { ok: false, error: "Course not found" };
+  const stale = await staleCourse(repos, ctx, course, input.expectedVersion);
+  if (stale) return { ok: false, error: stale };
+  const version = Math.max(Date.now(), course.updatedAt.getTime() + 1);
   const lines: RoleLine[] = [];
   for (const l of cleanRoleLines(input.roles)) if (await t.roleType.findById(ctx, l.roleTypeId)) lines.push(l);
   const existing = await t.courseRoleRequirement.list(ctx, eq(courseRoleRequirementTable.courseId, courseId));
@@ -174,8 +196,8 @@ export async function setCourseStaffing(repos: Repositories, ctx: AnyTenantConte
   }
   for (const l of lines) if (!seen.has(l.roleTypeId)) ops.push(t.courseRoleRequirement.insertStatement(ctx, { courseId, roleTypeId: l.roleTypeId, count: l.count }));
   const students = Math.max(0, Math.min(500, Math.round(input.students)));
-  ops.push(t.course.updateStatement(ctx, courseId, { capacity: students, staffRequired: derivedStaffRequired(lines) }));
+  ops.push(t.course.updateStatement(ctx, courseId, { capacity: students, staffRequired: derivedStaffRequired(lines), updatedAt: new Date(version) }));
   const audit = auditStatement(repos, ctx, { action: "set_staffing", entity: "course", entityId: courseId, after: { students, roles: lines, staffRequired: derivedStaffRequired(lines) } });
   await runAtomic(repos.db, [...ops, ...(audit ? [audit] : [])]);
-  return { ok: true };
+  return { ok: true, version };
 }

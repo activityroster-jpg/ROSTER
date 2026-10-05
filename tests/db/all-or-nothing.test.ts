@@ -9,9 +9,10 @@ import { createCourseWithSessions } from "@/lib/services/courses";
 import { assignStaff } from "@/lib/services/assignment";
 import { cancelSessions } from "@/lib/services/cancel";
 import { setDayStaff } from "@/lib/services/session-staff";
-import { setCourseEquipment } from "@/lib/services/course-resources";
 import { setPayRate } from "@/lib/services/pay-rates";
 import { setAvailability } from "@/lib/services/availability";
+import { getCourseStaffing, setCourseEquipment, setCourseStaffing } from "@/lib/services/course-resources";
+import { isStale } from "@/lib/services/concurrency";
 import type { Repositories } from "@/lib/db/repositories";
 import type { SystemTenantContext } from "@/lib/tenant/context";
 import type Database from "better-sqlite3";
@@ -22,7 +23,7 @@ import type Database from "better-sqlite3";
  * connection dropped: then nothing from the save may remain.
  */
 function withBatch(db: object, raw: Database.Database) {
-  const state = { failNext: false, batches: 0 };
+  const state: { failNext: boolean; batches: number; afterNext: null | (() => Promise<void>) } = { failNext: false, batches: 0, afterNext: null };
   (db as { batch?: unknown }).batch = async (statements: PromiseLike<unknown>[]) => {
     state.batches++;
     raw.exec("BEGIN");
@@ -30,6 +31,7 @@ function withBatch(db: object, raw: Database.Database) {
       for (const s of statements) await s;
       if (state.failNext) { state.failNext = false; throw new Error("connection dropped"); }
       raw.exec("COMMIT");
+      if (state.afterNext) { const f = state.afterNext; state.afterNext = null; await f(); }
     } catch (e) {
       raw.exec("ROLLBACK");
       throw e;
@@ -41,7 +43,7 @@ function withBatch(db: object, raw: Database.Database) {
 describe("saves are all or nothing", () => {
   let repos: Repositories;
   let ctx: SystemTenantContext;
-  let batch: { failNext: boolean; batches: number };
+  let batch: ReturnType<typeof withBatch>;
   let raw: Database.Database;
   let courseId: string;
   let roleId: string;
@@ -119,5 +121,48 @@ describe("saves are all or nothing", () => {
     expect(await counts()).toEqual(before);
     expect((await setCourseEquipment(repos, ctx, courseId, { unitIds: units, bulk: [] })).ok).toBe(true);
     expect((await counts()).kit - before.kit).toBe(units.length);
+  });
+
+  it("a save is refused when someone else changed the course after the form was opened", async () => {
+    expect(isStale(new Date(2000), 1000)).toBe(true);
+    expect(isStale(new Date(1000), 1000)).toBe(false);
+    expect(isStale(new Date(2000), null)).toBe(false);
+
+    const opened = (await getCourseStaffing(repos, ctx, courseId))!.version!;
+    const first = await setCourseStaffing(repos, ctx, courseId, { students: 8, roles: [{ roleTypeId: roleId, count: 2 }], expectedVersion: opened });
+    expect(first.ok).toBe(true);
+    // The same person saving again with the version they got back: fine.
+    const second = await setCourseStaffing(repos, ctx, courseId, { students: 9, roles: [{ roleTypeId: roleId, count: 2 }], expectedVersion: first.ok ? first.version : null });
+    expect(second.ok).toBe(true);
+    // A second admin still holding the page as it was when first opened: refused, nothing written.
+    const stale = await setCourseStaffing(repos, ctx, courseId, { students: 4, roles: [], expectedVersion: opened });
+    expect(stale.ok).toBe(false);
+    expect(stale.ok ? "" : stale.error).toMatch(/changed this at \d\d:\d\d, after you opened it|changed in another window/);
+    expect((await repos.tenant.course.findById(ctx, courseId))!.capacity).toBe(9);
+    // Locations use the same course version.
+    const loc = (await repos.tenant.location.list(ctx))[0]!;
+    const { setCourseLocations } = await import("@/lib/services/course-resources");
+    expect((await setCourseLocations(repos, ctx, courseId, [loc.id], { expectedVersion: opened })).ok).toBe(false);
+  });
+
+  it("two admins booking the same person at the same moment: the second assignment is taken back out", async () => {
+    const courseTypeId = (await repos.tenant.courseType.list(ctx))[0]!.id;
+    const st = (await repos.tenant.orgSettings.list(ctx))[0]!;
+    await repos.tenant.orgSettings.update(ctx, st.id, { enforceConflictChecks: true });
+    const { courseId: other } = await createCourseWithSessions(repos, ctx, { name: "Taster", courseTypeId, sessions: [{ date: "2027-07-05", slot: "AM", startTime: "10:00", endTime: "11:00" }] });
+    const before = await counts();
+    // While this save is landing, another admin puts Sam on the overlapping taster.
+    batch.afterNext = async () => {
+      await repos.tenant.courseStaff.insert(ctx, { courseId: other, instructorId: samId, roleTypeId: roleId, status: "assigned", isOverride: false, overrideNote: null, overriddenBy: null });
+    };
+    const r = await assignStaff(repos, ctx, { courseId, instructorId: samId, roleTypeId: roleId });
+    expect(r.ok).toBe(false);
+    expect(r.ok ? "" : r.detail).toMatch(/at the same time/);
+    const onStage2 = (await repos.tenant.courseStaff.list(ctx)).filter((a) => a.courseId === courseId && a.instructorId === samId);
+    expect(onStage2).toHaveLength(0);
+    // No pay lines left behind for the undone assignment.
+    const stage2Sessions = (await repos.tenant.courseSession.list(ctx)).filter((s) => s.courseId === courseId).map((s) => s.id);
+    expect((await repos.tenant.hoursRecord.list(ctx)).filter((h) => h.instructorId === samId && stage2Sessions.includes(h.courseSessionId ?? ""))).toHaveLength(0);
+    expect((await counts()).staff - before.staff).toBe(1); // just the other admin's taster booking
   });
 });

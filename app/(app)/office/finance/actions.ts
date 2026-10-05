@@ -1,5 +1,7 @@
 "use server";
 
+import { staleEditMessage } from "@/lib/services/concurrency";
+import { expectedVersionSchema, idSchema } from "@/lib/validation/actions";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireTenant } from "@/lib/tenant/require";
@@ -8,7 +10,7 @@ import { markApproval, rebuildHoursFromRoster } from "@/lib/services/hours";
 import { getPayrollLines } from "@/lib/services/finance";
 import { HOURS_SOURCES, PAY_SOURCES, type HoursSource, type PaySource } from "@/lib/db/schema";
 
-export type PayrollResult = { ok: boolean; error?: string; message?: string };
+export type PayrollResult = { ok: boolean; error?: string; message?: string; /** The line's new last-changed time after an edit. */ version?: number };
 
 const linePatch = z.object({
   source: z.enum(HOURS_SOURCES).optional(),
@@ -25,10 +27,16 @@ function revalidate() {
 }
 
 /** Edit one payroll line during review: which minutes to pay on, overrides, note, approval. */
-export async function updatePayrollLineAction(recordId: string, patch: PayrollLinePatch): Promise<PayrollResult> {
+export async function updatePayrollLineAction(recordId: string, patch: PayrollLinePatch, expectedVersion?: number | null): Promise<PayrollResult> {
   const { ctx, repos } = await requireTenant({ permission: "finance.view" });
   const parsed = linePatch.safeParse(patch);
   if (!parsed.success) return { ok: false, error: "Please check the values" };
+  const version = expectedVersionSchema.safeParse(expectedVersion);
+  if (!idSchema.safeParse(recordId).success || !version.success) return { ok: false, error: "Invalid request" };
+  const current = await repos.tenant.hoursRecord.findById(ctx, recordId);
+  if (!current) return { ok: false, error: "Line not found" };
+  const stale = await staleEditMessage(repos, ctx, { entity: "hours_record", id: recordId, updatedAt: current.updatedAt, expected: version.data });
+  if (stale) return { ok: false, error: stale };
   const clean = Object.fromEntries(Object.entries(parsed.data).filter(([, v]) => v !== undefined));
   if ("note" in clean) clean.note = (clean.note as string | null)?.trim() || null;
   if ("overridePay" in clean) clean.overridePayPence = clean.overridePay == null ? null : Math.round((clean.overridePay as number) * 100);
@@ -43,7 +51,7 @@ export async function updatePayrollLineAction(recordId: string, patch: PayrollLi
   }
   await writeAudit(repos, ctx, { action: "payroll_line_edit", entity: "hours_record", entityId: recordId, after: clean });
   revalidate();
-  return { ok: true };
+  return { ok: true, version: (await repos.tenant.hoursRecord.findById(ctx, recordId))?.updatedAt.getTime() };
 }
 
 /** Approve (or un-approve) a set of lines, e.g. everything shown for the period. */

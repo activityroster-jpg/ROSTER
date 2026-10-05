@@ -243,6 +243,25 @@ export async function assignStaff(
     throw err;
   }
 
+  // Two admins can each pass the clash check in the same second and double-book
+  // someone. Check again now that the write has landed; if a clash appeared in
+  // the meantime, take this assignment back out (with its pay lines) and say why.
+  if (conflictChecksOn && !clashing) {
+    const freshSessions = liveSessions(await t.courseSession.list(ctx));
+    const now = (await sessionsForInstructor(repos, ctx, input.instructorId, freshSessions)).filter((s) => s.courseId !== input.courseId);
+    const late = targetSessions.find((s) => hasConflict(
+      { sessionId: s.id, resourceId: input.instructorId, startAt: toMs(s.startAt), endAt: toMs(s.endAt) },
+      now.map((o) => ({ sessionId: o.id, resourceId: input.instructorId, startAt: toMs(o.startAt), endAt: toMs(o.endAt), courseId: o.courseId })),
+    ));
+    if (late) {
+      const after = await t.courseStaff.list(ctx, eq(courseStaffTable.courseId, input.courseId));
+      const undoHours = await planHoursForCourse(repos, ctx, input.courseId, { staffOverride: after.filter((a) => a.id !== row.id) });
+      const undoAudit = auditStatement(repos, ctx, { action: "assign_staff_undone", entity: "course_staff", entityId: row.id, after: { courseId: input.courseId, instructorId: input.instructorId, reason: "clash appeared while saving" } });
+      await runAtomic(repos.db, [t.courseStaff.deleteStatement(ctx, row.id), ...undoHours.statements, ...(undoAudit ? [undoAudit] : [])]);
+      return { ok: false, reason: "conflict", detail: `Someone else put ${instructorRow.name} on another course at the same time (${late.date} ${late.slot}) while you were saving. Nothing was changed here; check the roster and try again.` };
+    }
+  }
+
   // Tell them — but only once the week is published (publishing itself notifies).
   await notifyRosterChange(repos, ctx, input.instructorId, course.name ?? "a course", targetSessions.map((s) => s.date), "added");
 

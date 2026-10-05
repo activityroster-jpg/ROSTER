@@ -35,16 +35,20 @@ export const availabilityNoteSchema = z.object({
   date: isoDateSchema,
   note: z.string().trim().max(140, "Keep the note under 140 characters"),
 });
-export const courseLocationsSchema = z.object({ courseId: idSchema, locationIds: z.array(idSchema).max(50) });
+/** The record's last-changed time when the form was opened (epoch ms), for the "changed since you opened it" check. */
+export const expectedVersionSchema = z.number().int().nonnegative().nullable().optional();
+export const courseLocationsSchema = z.object({ courseId: idSchema, locationIds: z.array(idSchema).max(50), expectedVersion: expectedVersionSchema });
 export const courseEquipmentSchema = z.object({
   courseId: idSchema,
   unitIds: z.array(idSchema).max(200),
   bulk: z.array(z.object({ equipmentTypeId: idSchema, quantity: z.number().int().min(0).max(1000) })).max(50),
+  expectedVersion: expectedVersionSchema,
 });
 export const courseStaffingSchema = z.object({
   courseId: idSchema,
   students: z.number().int().min(0).max(500),
   roles: z.array(z.object({ roleTypeId: idSchema, count: z.number().int().min(0).max(50) })).max(20),
+  expectedVersion: expectedVersionSchema,
 });
 /** The office setting availability for a staff member: the instructor id comes from the client here, so it is checked. */
 export const availabilityForStaffSchema = availabilityEntrySchema.extend({ instructorId: idSchema });

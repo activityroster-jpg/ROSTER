@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { setCourseEquipmentAction, setCourseLocationsAction } from "@/app/(app)/office/courses/actions";
 import type { CourseResources as Resources } from "@/lib/services/course-resources";
 
@@ -13,8 +13,10 @@ export interface ResourceType { id: string; name: string; quantity: number | nul
  * Where a course happens and what it uses, editable after creation (audit A6-3,
  * A7). Tracked units are ticked one by one; bulk kit is a quantity per type.
  */
-export function CourseResources({ courseId, locations, units, types, initial, showEquipment = true }: {
+export function CourseResources({ courseId, locations, units, types, initial, showEquipment = true, version: initialVersion = null }: {
   courseId: string;
+  /** The course's last-changed time when the page loaded (epoch ms). */
+  version?: number | null;
   locations: ResourceLocation[];
   units: ResourceUnit[];
   types: ResourceType[];
@@ -27,19 +29,21 @@ export function CourseResources({ courseId, locations, units, types, initial, sh
   const [unitIds, setUnitIds] = useState<string[]>(initial.unitIds);
   const [bulk, setBulk] = useState<Record<string, number>>(Object.fromEntries(initial.bulk.map((b) => [b.equipmentTypeId, b.quantity])));
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [version, setVersion] = useState<number | null>(initialVersion);
+  useEffect(() => { setVersion(initialVersion); }, [initialVersion]);
 
   const locDirty = JSON.stringify([...locationIds].sort()) !== JSON.stringify([...initial.locationIds].sort());
   const eqDirty = JSON.stringify([...unitIds].sort()) !== JSON.stringify([...initial.unitIds].sort()) || JSON.stringify(Object.entries(bulk).filter(([, q]) => q > 0).sort()) !== JSON.stringify(initial.bulk.map((b) => [b.equipmentTypeId, b.quantity]).sort());
 
   const saveLocations = () => start(async () => {
-    const r = await setCourseLocationsAction({ courseId, locationIds });
+    const r = await setCourseLocationsAction({ courseId, locationIds, expectedVersion: version });
     setMsg({ ok: r.ok, text: r.ok ? "Locations saved" : r.error ?? "Failed" });
-    if (r.ok) router.refresh();
+    if (r.ok) { if (r.version) setVersion(r.version); router.refresh(); }
   });
   const saveEquipment = () => start(async () => {
-    const r = await setCourseEquipmentAction({ courseId, unitIds, bulk: Object.entries(bulk).filter(([, q]) => q > 0).map(([equipmentTypeId, quantity]) => ({ equipmentTypeId, quantity })) });
+    const r = await setCourseEquipmentAction({ courseId, unitIds, bulk: Object.entries(bulk).filter(([, q]) => q > 0).map(([equipmentTypeId, quantity]) => ({ equipmentTypeId, quantity })), expectedVersion: version });
     setMsg({ ok: r.ok, text: r.ok ? "Equipment saved" : r.error ?? "Failed" });
-    if (r.ok) router.refresh();
+    if (r.ok) { if (r.version) setVersion(r.version); router.refresh(); }
   });
   const toggle = (set: (f: (ids: string[]) => string[]) => void, id: string) => set((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
 

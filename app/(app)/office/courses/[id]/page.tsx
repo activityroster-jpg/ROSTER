@@ -116,6 +116,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
           types={equipmentTypes.map((t) => ({ id: t.id, name: t.name, quantity: t.quantity ?? null, inventoryTracked: Boolean(t.inventoryTracked), active: Boolean(t.active) })).sort((a, b) => a.name.localeCompare(b.name))}
           initial={resources}
           showEquipment={equipmentOn}
+          version={course.updatedAt.getTime()}
         />
       </Card>
 

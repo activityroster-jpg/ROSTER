@@ -23,7 +23,7 @@ import { clearDayStaff, setDayStaff } from "@/lib/services/session-staff";
 import { SESSION_STAFF_MODES, type SessionStaffMode } from "@/lib/db/schema";
 import { courseEquipmentSchema, courseLocationsSchema, courseStaffingSchema } from "@/lib/validation/actions";
 
-export type ActionState = { ok: boolean; error?: string; message?: string };
+export type ActionState = { ok: boolean; error?: string; message?: string; /** New last-changed time after a save, for the next save's check. */ version?: number };
 
 /** Load the editable course box for a calendar tile. Admin, tenant scoped. */
 export async function loadCourseEditorAction(courseId: string): Promise<{ ok: true; data: CourseEditorData } | { ok: false; error: string }> {
@@ -248,7 +248,7 @@ export async function setCourseStudentsAction(courseId: string, students: number
 }
 
 /** The staffing panel: students booked and the role lines; staff required is derived from the lines. */
-export async function setCourseStaffingAction(input: { courseId: string; students: number; roles: { roleTypeId: string; count: number }[] }): Promise<ActionState> {
+export async function setCourseStaffingAction(input: { courseId: string; students: number; roles: { roleTypeId: string; count: number }[]; expectedVersion?: number | null }): Promise<ActionState> {
   const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const parsed = courseStaffingSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: firstIssue(parsed.error, "Check the staffing values") };
@@ -257,7 +257,7 @@ export async function setCourseStaffingAction(input: { courseId: string; student
   revalidatePath("/office/courses");
   revalidatePath(`/office/courses/${parsed.data.courseId}`);
   revalidatePath("/office");
-  return { ok: true, message: "Saved" };
+  return { ok: true, message: "Saved", version: r.version };
 }
 
 /** Put someone on one day only, or take them off one day (the rest of the course stands). */
@@ -290,20 +290,20 @@ export async function clearDayStaffAction(sessionId: string, instructorId: strin
 }
 
 /** Replace a course's locations (editable after creation). */
-export async function setCourseLocationsAction(input: { courseId: string; locationIds: string[] }): Promise<ActionState> {
+export async function setCourseLocationsAction(input: { courseId: string; locationIds: string[]; expectedVersion?: number | null }): Promise<ActionState> {
   const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const parsed = courseLocationsSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: firstIssue(parsed.error, "Check the locations") };
-  const r = await setCourseLocations(repos, ctx, parsed.data.courseId, parsed.data.locationIds);
+  const r = await setCourseLocations(repos, ctx, parsed.data.courseId, parsed.data.locationIds, { expectedVersion: parsed.data.expectedVersion });
   if (!r.ok) return r;
   revalidatePath(`/office/courses/${parsed.data.courseId}`);
   revalidatePath("/office/courses");
   revalidatePath("/office/rota");
-  return { ok: true, message: "Saved" };
+  return { ok: true, message: "Saved", version: r.version };
 }
 
 /** Replace a course's equipment: tracked units and bulk quantities (editable after creation). */
-export async function setCourseEquipmentAction(input: { courseId: string; unitIds: string[]; bulk: { equipmentTypeId: string; quantity: number }[] }): Promise<ActionState> {
+export async function setCourseEquipmentAction(input: { courseId: string; unitIds: string[]; bulk: { equipmentTypeId: string; quantity: number }[]; expectedVersion?: number | null }): Promise<ActionState> {
   const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const parsed = courseEquipmentSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: firstIssue(parsed.error, "Check the equipment") };
@@ -312,7 +312,7 @@ export async function setCourseEquipmentAction(input: { courseId: string; unitId
   revalidatePath(`/office/courses/${parsed.data.courseId}`);
   revalidatePath("/office/courses");
   revalidatePath("/office/rota");
-  return { ok: true, message: "Saved" };
+  return { ok: true, message: "Saved", version: r.version };
 }
 
 /** Edit a single session's date and time inline from the course card. */

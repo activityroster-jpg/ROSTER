@@ -109,6 +109,8 @@ export interface PayrollFilter { from?: string; to?: string; instructorId?: stri
 
 export interface PayrollLine {
   recordId: string;
+  /** The record's last-changed time (epoch ms), for the "changed since you opened it" check. */
+  version: number;
   date: string | null;
   instructorId: string;
   instructorName: string;
@@ -207,6 +209,7 @@ export async function getPayrollLines(
     const worked = r.overrideMinutes ?? (source === "clock" ? clocked ?? r.scheduledMinutes : r.scheduledMinutes);
     partials.push({
       recordId: r.id,
+      version: r.updatedAt.getTime(),
       date,
       instructorId: r.instructorId,
       instructorName: nameById.get(r.instructorId) ?? "Unknown",

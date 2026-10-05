@@ -34,7 +34,13 @@ export function PayrollTable({
       router.refresh();
     });
   };
-  const edit = (l: PayrollLine, patch: Parameters<typeof updatePayrollLineAction>[1]) => run(l.recordId, () => updatePayrollLineAction(l.recordId, patch));
+  // Each line's last-changed time; an edit is refused if someone else changed the line since (lib/services/concurrency).
+  const [versions, setVersions] = useState<Record<string, number>>({});
+  const edit = (l: PayrollLine, patch: Parameters<typeof updatePayrollLineAction>[1]) => run(l.recordId, async () => {
+    const r = await updatePayrollLineAction(l.recordId, patch, Math.max(l.version, versions[l.recordId] ?? 0));
+    if (r.ok && r.version) setVersions((v) => ({ ...v, [l.recordId]: r.version! }));
+    return r;
+  });
 
   const unapproved = useMemo(() => lines.filter((l) => !l.approved).map((l) => l.recordId), [lines]);
   const approvedIds = useMemo(() => lines.filter((l) => l.approved).map((l) => l.recordId), [lines]);

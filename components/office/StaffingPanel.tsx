@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { setCourseStaffingAction } from "@/app/(app)/office/courses/actions";
 import type { StaffingView } from "@/lib/services/course-resources";
 
@@ -16,6 +16,9 @@ export function StaffingPanel({ courseId, staffing, compact = false, onSaved }: 
   const [students, setStudents] = useState(String(staffing.students));
   const [lines, setLines] = useState<{ roleTypeId: string; count: number }[]>(staffing.lines.map((l) => ({ roleTypeId: l.roleTypeId, count: l.count })));
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  // The course's last-changed time: a save is refused if someone else changed it since (lib/services/concurrency).
+  const [version, setVersion] = useState<number | null>(staffing.version ?? null);
+  useEffect(() => { setVersion(staffing.version ?? null); }, [staffing.version]);
 
   const activeRoles = staffing.roles.filter((r) => r.active);
   const unused = activeRoles.filter((r) => !lines.some((l) => l.roleTypeId === r.id));
@@ -24,9 +27,9 @@ export function StaffingPanel({ courseId, staffing, compact = false, onSaved }: 
   const dirty = Number(students) !== staffing.students || JSON.stringify(lines) !== JSON.stringify(staffing.lines.map((l) => ({ roleTypeId: l.roleTypeId, count: l.count })));
 
   const save = () => start(async () => {
-    const r = await setCourseStaffingAction({ courseId, students: Number(students) || 0, roles: lines });
+    const r = await setCourseStaffingAction({ courseId, students: Number(students) || 0, roles: lines, expectedVersion: version });
     setMsg({ ok: r.ok, text: r.ok ? "Staffing saved" : r.error ?? "Failed" });
-    if (r.ok) { router.refresh(); onSaved?.(); }
+    if (r.ok) { if (r.version) setVersion(r.version); router.refresh(); onSaved?.(); }
   });
   const useSuggestion = () => setLines(staffing.suggested.length ? staffing.suggested : lines);
   const setCount = (roleTypeId: string, count: number) => setLines((ls) => ls.map((l) => (l.roleTypeId === roleTypeId ? { ...l, count: Math.max(0, Math.min(50, count)) } : l)).filter((l) => l.count > 0));
