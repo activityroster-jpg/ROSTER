@@ -31,7 +31,7 @@ export default function PrivacyPage() {
       <P>Platform data is stored in the EU (Cloudflare D1 and R2, EU jurisdiction). Payments are processed by Stripe and email by Resend, who may process limited data under their own safeguards. We pin data residency to the EU/UK for GDPR.</P>
 
       <H2>How long we keep it</H2>
-      <P>We keep account and centre data for as long as the centre is active, and for a limited retention window afterwards so a centre can export its data before deletion. Billing records are kept as long as the law requires. You can request earlier deletion (see below).</P>
+      <P>We keep account and centre data for as long as the centre is active, and for a limited retention window afterwards so a centre can export its data before deletion. Billing records are kept as long as the law requires. You can request earlier deletion (see below). Questions typed into the help assistant inside a centre&apos;s office are kept for 30 days so we can improve the guides, without the answers or the name of who asked; questions typed on this website are not stored.</P>
 
       <H2>Sharing</H2>
       <P>We do not sell personal data. We share it only with the sub-processors needed to run the service (hosting, payments, email) and where legally required. The current list, with every change dated, is at <a className="text-teal hover:underline" href="/subprocessors">activityroster.com/subprocessors</a>; centres are told before a new one is added.</P>

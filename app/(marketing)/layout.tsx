@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CookieNotice } from "@/components/marketing/CookieNotice";
 import { SiteHeader } from "@/components/marketing/SiteHeader";
 import { IncidentBanner } from "@/components/IncidentBanner";
+import { HelpAssistant } from "@/components/HelpAssistant";
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -47,6 +48,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
           <p className="mt-1">ActiveRoster Ltd is registered in England &amp; Wales. Registered office: 71-75 Shelton Street, London WC2H 9JQ.</p>
         </div>
       </footer>
+      <HelpAssistant surface="site" />
       <CookieNotice />
     </div>
   );

@@ -24,6 +24,7 @@ log and security events (database triggers) allows deletion only once a row is o
 | Marketing prospects | 24 months since last contact | B2B legitimate interests | Do-not-email list kept indefinitely |
 | Privacy requests | 3 years after closure | Evidence of compliance | |
 | Trial-end survey answers | Until the centre is erased | Product feedback; proves the free month was given once | Contact email stored only if the person said yes to being contacted, with the time they answered |
+| Help assistant questions | 30 days | See which questions the guides don't answer | Office users' questions only, with the page and the guide it matched; no answers, no names. Nothing kept from the public website |
 | Error reports | 12 months | Debugging | Scrubbed of personal data |
 | Finance records (owner's books) | 6 years | Companies House / HMRC | |
 

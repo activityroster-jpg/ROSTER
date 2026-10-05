@@ -14,6 +14,7 @@ import { instructor as instructorTable } from "@/lib/db/schema";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { surveyStatus } from "@/lib/services/trial-survey";
 import { can } from "@/lib/auth/rbac";
+import { HelpAssistant } from "@/components/HelpAssistant";
 
 export default async function OfficeLayout({ children }: { children: React.ReactNode }) {
   const { ctx, organisation, trial, repos } = await requireTenant({ permission: "office.view", allowReadOnly: true });
@@ -104,6 +105,7 @@ export default async function OfficeLayout({ children }: { children: React.React
           {" · "}<a href={`https://${apexDomain()}/privacy-request`} target="_blank" rel="noreferrer" className="hover:text-navy">Data request or complaint</a>
         </footer>
       </div>
+      <HelpAssistant surface="office" />
     </div>
   );
 }

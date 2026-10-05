@@ -972,6 +972,27 @@ export const integration = sqliteTable("integration", {
   updatedAt: updatedAt(),
 }, (t) => [index("integration_org_idx").on(t.organisationId)]);
 
+/**
+ * Questions asked of the help assistant by office users (decided 5 Oct): the
+ * question and the guide it was answered from, never the answer. Kept 30
+ * days so the guides can be improved where people get stuck, then deleted by
+ * the hourly job. Nothing is kept from the public website.
+ */
+export const helpQuestion = sqliteTable("help_question", {
+  id: id(),
+  organisationId: orgFk(),
+  question: text("question").notNull(),
+  /** The Learning Centre section the answer came from; null when nothing matched. */
+  topic: text("topic"),
+  found: boolCol("found").default(false),
+  /** The office page it was asked from (path only). */
+  path: text("path"),
+  createdAt: createdAt(),
+}, (t) => [
+  index("help_question_org_idx").on(t.organisationId),
+  index("help_question_created_idx").on(t.createdAt),
+]);
+
 // Handy inferred types used across the app.
 export type Integration = typeof integration.$inferSelect;
 export type NewIntegration = typeof integration.$inferInsert;

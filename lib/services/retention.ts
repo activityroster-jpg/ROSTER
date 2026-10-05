@@ -16,6 +16,7 @@ import {
 } from "@/lib/db/schema";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { anonymisePerson } from "./person-data";
+import { purgeHelpQuestions } from "./help";
 import { deleteDocument } from "@/lib/r2";
 import { writeAudit } from "./audit";
 import { sendEmail, escapeHtml } from "@/lib/mail";
@@ -208,8 +209,14 @@ export async function sendExpiryDigest(repos: Repositories, ctx: AnyTenantContex
 export async function sweepRetention(db: Database, env: CloudflareEnv, now = new Date()): Promise<{ centres: number; ran: number; reminded: number; platform: Record<string, number> }> {
   const platform = new PlatformRepository(db);
   const repos = createRepositories(db);
-  const orgs = (await platform.listOrganisations()).filter((o) => o.status === "active" || o.status === "pending");
-  let ran = 0, reminded = 0;
+  const allOrgs = await platform.listOrganisations();
+  const orgs = allOrgs.filter((o) => o.status === "active" || o.status === "pending");
+  let ran = 0, reminded = 0, helpQuestions = 0;
+  // Help assistant questions are kept 30 days in every centre, whatever its status.
+  for (const org of allOrgs) {
+    const ctx: AnyTenantContext = { organisationId: org.id, slug: org.slug, system: true, reason: "help question retention" };
+    helpQuestions += await purgeHelpQuestions(repos, ctx, now).catch(() => 0);
+  }
   for (const org of orgs) {
     const ctx: AnyTenantContext = { organisationId: org.id, slug: org.slug, system: true, reason: "retention sweep" };
     const settings = (await repos.tenant.orgSettings.list(ctx))[0];
@@ -229,7 +236,7 @@ export async function sweepRetention(db: Database, env: CloudflareEnv, now = new
   }
   // Platform-side records (docs/retention.md): 12 months for security events, devices and error reports; 3 years after closure for privacy requests.
   const twelve = monthsAgo(now, 12), thirtySix = monthsAgo(now, 36);
-  const platformCounts: Record<string, number> = {};
+  const platformCounts: Record<string, number> = { helpQuestions };
   try {
     const sec = await repos.control.purgeSecurityData(twelve);
     platformCounts.securityEvents = sec.events; platformCounts.trustedDevices = sec.devices;

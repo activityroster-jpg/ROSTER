@@ -141,6 +141,7 @@ export async function seedFullOrg(
     quantity: 1,
   });
   await t.courseLocation.insert(ctx, { courseId: course.id, locationId: location.id });
+  await t.helpQuestion.insert(ctx, { question: `How do I add staff at ${opts.slug}?`, topic: "staff", found: true, path: "/office/staff" });
   await t.courseRoleRequirement.insert(ctx, { courseId: course.id, roleTypeId: role.id, count: 2 });
 
   // Ops
