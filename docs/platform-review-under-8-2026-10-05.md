@@ -204,3 +204,47 @@ The list also doesn't say **how long** an invite has been waiting.
 3. Course-type kit rules (item 9): switch them on, or remove the table?
 4. Location notes shown to instructors in the app (item 9): yes or no?
 5. Invite reminder after 3 days (item 5): yes, a different gap, or none?
+
+---
+
+## What was built (5 October 2026)
+
+Conor's answers: order approved; monthly restore rehearsal yes; kit rules built but off by
+default; no location notes; invite reminder after one day.
+
+1. **Restore rehearsal** (`.github/workflows/restore-rehearsal.yml`, monthly on the 3rd, and run by
+   hand today). It restores last night's backup into a throwaway EU database (not staging,
+   because staging can send email), checks every table's row count against the file, applies
+   newer migrations and an integrity check, then deletes the throwaway database. The first run
+   found that **the raw export could not be loaded** (tables listed alphabetically, so `account`
+   came before `user`). Both the rehearsal and the real restore workflow now re-order the file
+   first (`.github/scripts/order-export.mjs`, with a test). The rehearsal passed and is logged in
+   `docs/restore-tests.md`. All workflows are pinned to Ubuntu 24.04 ahead of GitHub's 19 October
+   change.
+2. **Settings saved per card.** Each card on Settings → General saves only its own fields.
+3. **Who can see this**, with names, on payroll, certs and documents, emergency contacts, the
+   emergency sheet and the whole-centre export. A refused page now says which tick is needed and
+   who to ask. **Found and fixed while doing this:** the emergency sheet showed emergency and
+   guardian contacts to anyone with "Roster & courses". Contacts now need the "Emergency & guardian
+   contacts" tick; without it the sheet shows who is on duty only.
+4. **Invitations:** their own email (centre and inviter named, three steps, an expired-link way
+   in), "Invited 3 days ago" on the staff list, and one reminder a day later (migration 0067).
+5. **All-or-nothing saves** for assigning, cancelling, restoring, per-day staffing and a course's
+   locations, kit and staffing. A test simulates a dropped connection and checks nothing was
+   half-written.
+6. **"Someone else changed this"** on course staffing, locations, kit and pay lines, naming who
+   and when. An assignment re-checks clashes after it is written and undoes a same-moment
+   double-booking.
+7. **Bounded reads** across the board, payroll, the Courses page (upcoming, or the last 12 months
+   of past with "Show older"), assigning, the availability grid, the problems list, the roster
+   range, open shifts, the course editor and the young-worker register. Two indexes (migration
+   0068). A test with about 1,400 sessions checks each page reads a small slice. The dashboard's
+   "Courses to cover" tile now counts upcoming courses only (it counted every under-staffed course
+   ever).
+8. **Quick add and "Paste a list"** on Instructors, with the full form under "Add with all details".
+9. **Equipment:** warnings while picking kit and after saving; a reason and back-on date for kit in
+   maintenance (shown on the problems list); a summary line per type; **kit rules** per course type
+   in Course setup, used only when Settings → "Use kit rules" is ticked (off by default)
+   (migration 0069).
+
+Every question in this review now meets the "after" score in the table above.
