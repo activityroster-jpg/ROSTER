@@ -8,7 +8,11 @@ import { readFileSync, appendFileSync } from "node:fs";
 import { splitStatements } from "./order-export.mjs";
 
 const fail = (msg) => { console.log(`::error::${String(msg).slice(0, 400)}`); process.exit(1); };
-process.on("uncaughtException", (e) => fail(`Row-count check crashed: ${String(e?.stderr ?? "").split("\n").find((l) => /ERROR/.test(l)) ?? e?.message ?? e}`));
+process.on("uncaughtException", (e) => {
+  const text = `${e?.stdout ?? ""}\n${e?.stderr ?? ""}`;
+  const line = text.split("\n").find((l) => /error|ERROR|"text"/.test(l) && !/^\s*$/.test(l));
+  fail(`Row-count check crashed: ${(line ?? e?.message ?? String(e)).replace(/\x1b\[[0-9;]*m/g, "").trim()}`);
+});
 
 const [, , backupFile, scratch, config] = process.argv;
 
