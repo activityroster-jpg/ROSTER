@@ -1,3 +1,4 @@
+import { WhoCanSee } from "@/components/office/WhoCanSee";
 import { requireTenant } from "@/lib/tenant/require";
 import { getPayrollLines, summariseByInstructor } from "@/lib/services/finance";
 import { Card } from "@/components/ui";
@@ -56,6 +57,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
         <div>
           <h1 className="font-display text-2xl font-semibold text-navy">Payroll</h1>
           <p className="text-sm text-slate-500">{organisation.name} · {span}{who ? ` · ${who}` : ""}</p>
+          <WhoCanSee repos={repos} ctx={ctx} feature="payroll" className="mt-0.5" />
         </div>
         <div className="flex flex-wrap items-center gap-2 print:hidden">
           <a href="/learn?topic=time" target="_blank" rel="noreferrer" className="text-sm font-medium text-teal hover:underline">📖 Read the guide</a>

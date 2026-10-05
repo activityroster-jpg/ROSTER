@@ -1,3 +1,6 @@
+import { WhoCanSee } from "@/components/office/WhoCanSee";
+import { ownerName } from "@/lib/auth/rbac";
+import { listOfficeMembers } from "@/lib/services/office-access";
 import Link from "next/link";
 import { requireTenant } from "@/lib/tenant/require";
 import { getDaySheet, londonToday } from "@/lib/services/emergency";
@@ -8,12 +11,13 @@ export const dynamic = "force-dynamic";
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 const SLOT: Record<string, string> = { AM: "Morning", PM: "Afternoon", EV: "Evening" };
 
-/** Printable emergency sheet for one day: who is on duty, where, and who to call. Admin only; every view is logged. */
+/** Printable emergency sheet for one day: who is on duty, where, and who to call. Contacts need the Emergency & guardian contacts tick; every view is logged. */
 export default async function EmergencySheetPage({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
   const { ctx, repos, organisation } = await requireTenant({ permission: "rota.view" });
   const sp = await searchParams;
   const date = typeof sp.date === "string" && ISO.test(sp.date) ? sp.date : londonToday();
   const sheet = await getDaySheet(repos, ctx, date);
+  const owner = sheet.contactsShown ? null : ownerName(await listOfficeMembers(repos, ctx));
   const time = (ms: number) => new Date(ms).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" });
   const nice = new Date(`${date}T12:00:00Z`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
@@ -37,6 +41,9 @@ export default async function EmergencySheetPage({ searchParams }: { searchParam
         <strong>Handle with care.</strong> This sheet contains personal phone numbers and emergency contacts. Keep it with the duty officer or in the safety boat, don&rsquo;t photograph or share it, and shred it at the end of the day. Printing it is recorded in your change log.
       </div>
 
+      {sheet.contactsShown ? <WhoCanSee repos={repos} ctx={ctx} feature="protected" className="-mt-2 mb-4" /> : (
+        <p className="mb-4 rounded-lg border border-amber/40 bg-amber/10 px-4 py-2 text-sm text-navy print:hidden">Emergency and guardian contacts are hidden: they need the <strong>Emergency &amp; guardian contacts</strong> tick. {owner ? `Ask ${owner} (superadmin) to add it under Instructors → Office access.` : "Ask your superadmin."}</p>
+      )}
       {Object.keys(sheet.welfare).length ? (
         <p className="mb-4 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-navy"><span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Welfare on duty</span> {(["AM", "PM", "EV"] as const).filter((s) => sheet.welfare[s]).map((s) => `${SLOT[s] ?? s}: ${sheet.welfare[s]}`).join(" · ")}</p>
       ) : null}
@@ -59,7 +66,7 @@ export default async function EmergencySheetPage({ searchParams }: { searchParam
                       <td className="px-4 py-2 text-slate-600">{p.role}</td>
                       <td className="px-4 py-2 text-slate-600">{p.phone ?? "–"}</td>
                       <td className="px-4 py-2 text-slate-600">
-                        {p.emergencyName || p.emergencyPhone ? <>{p.emergencyName}{p.emergencyRelationship ? ` (${p.emergencyRelationship})` : ""} {p.emergencyPhone}</> : <span className="text-port">none on file</span>}
+                        {!sheet.contactsShown ? <span className="text-slate-400">hidden</span> : p.emergencyName || p.emergencyPhone ? <>{p.emergencyName}{p.emergencyRelationship ? ` (${p.emergencyRelationship})` : ""} {p.emergencyPhone}</> : <span className="text-port">none on file</span>}
                         {p.under18 && (p.guardianName || p.guardianPhone) ? <div className="text-xs text-slate-500">Guardian: {p.guardianName} {p.guardianPhone}</div> : null}
                       </td>
                     </tr>

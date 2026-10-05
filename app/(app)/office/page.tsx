@@ -1,3 +1,5 @@
+import { FEATURE_LABEL, featureForPermission, ownerName } from "@/lib/auth/rbac";
+import { listOfficeMembers } from "@/lib/services/office-access";
 import Link from "next/link";
 import { isUnder18 } from "@/lib/domain/age";
 import { cookies } from "next/headers";
@@ -38,8 +40,10 @@ function Tile({ href, label, value, sub, tone = "navy" }: { href: string; label:
   );
 }
 
-export default async function DashboardPage() {
+export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ denied?: string }> }) {
   const { ctx, repos, organisation } = await requireTenant({ permission: "office.view" });
+  const deniedFeature = featureForPermission(String((await searchParams).denied ?? ""));
+  const deniedOwner = deniedFeature ? ownerName(await listOfficeMembers(repos, ctx)) : null;
   const monday = weekStart(new Date());
   const today = todayIso();
 
@@ -86,6 +90,11 @@ export default async function DashboardPage() {
         </div>
         <GuideLink topic="dashboard" />
       </div>
+      {deniedFeature ? (
+        <p role="alert" className="mb-4 rounded-lg border border-amber/40 bg-amber/10 px-4 py-2 text-sm text-navy">
+          You don&apos;t have <strong>{FEATURE_LABEL[deniedFeature].label}</strong> access, so that page didn&apos;t open. {deniedOwner ? `Ask ${deniedOwner} (superadmin) to tick it under Instructors → Office access.` : "Ask your centre's superadmin to tick it under Instructors → Office access."}
+        </p>
+      ) : null}
 
       {/* Getting started — shown until the checklist is complete */}
       {!setup.complete ? (

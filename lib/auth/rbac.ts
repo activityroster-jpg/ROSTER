@@ -98,3 +98,26 @@ export function cleanFeatures(input: unknown): OfficeFeature[] {
 export function parseFeatures(json: string | null | undefined): OfficeFeature[] {
   try { return cleanFeatures(JSON.parse(json || "[]")); } catch { return []; }
 }
+
+/**
+ * "Who can see this" (audit follow-up, 5 Oct): the actual people who can open a
+ * part of the office, so a centre can spot anyone who shouldn't have access.
+ * The superadmin always can; office admins only with the feature ticked.
+ */
+export function describeAccess(members: readonly { name: string; role: string; features: readonly string[]; status?: string }[], feature: OfficeFeature): { names: string[]; text: string } {
+  const names = members
+    .filter((m) => m.role === "owner" || (m.role === "admin" && m.features.includes(feature)))
+    .map((m) => `${m.name} (${m.role === "owner" ? "superadmin" : FEATURE_LABEL[feature].label}${m.status === "invited" ? ", invited" : ""})`);
+  const list = names.length <= 1 ? (names[0] ?? "nobody yet") : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+  return { names, text: `Visible to ${list}.` };
+}
+
+/** Who to ask for access: the superadmin's name, for the "no access" banner. */
+export function ownerName(members: readonly { name: string; role: string }[]): string | null {
+  return members.find((m) => m.role === "owner")?.name ?? null;
+}
+
+/** The office feature a permission needs, for the "you don't have access" banner (null for the two that need none). */
+export function featureForPermission(permission: string): OfficeFeature | null {
+  return (FEATURE_FOR as Record<string, OfficeFeature | undefined>)[permission] ?? null;
+}

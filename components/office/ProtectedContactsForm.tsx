@@ -7,7 +7,7 @@ import { addParentalPermissionAction, updateProtectedContactsAction } from "@/ap
 export interface ProtectedContactsValues { guardianName: string; guardianPhone: string; guardianEmail: string; emergencyName: string; emergencyPhone: string; emergencyRelationship: string }
 
 /** Admin-only: emergency contact for everyone, parent or guardian for under-18s. Stored encrypted; every view is logged. */
-export function ProtectedContactsForm({ instructorId, initial, under18, hasPermissionSlot }: { instructorId: string; initial: ProtectedContactsValues; under18: boolean; hasPermissionSlot: boolean }) {
+export function ProtectedContactsForm({ instructorId, initial, under18, hasPermissionSlot, visibleTo }: { instructorId: string; initial: ProtectedContactsValues; under18: boolean; hasPermissionSlot: boolean; visibleTo?: string }) {
   const router = useRouter();
   const [v, setV] = useState(initial);
   const [edit, setEdit] = useState(false);
@@ -58,7 +58,7 @@ export function ProtectedContactsForm({ instructorId, initial, under18, hasPermi
         {under18 && !hasPermissionSlot ? <button type="button" disabled={pending} onClick={addSlot} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-navy hover:bg-slate-50 disabled:opacity-50">Add parental permission slot</button> : null}
         {msg ? <span className="text-xs text-slate-500">{msg}</span> : null}
       </div>
-      <p className="mt-2 text-[11px] text-slate-400">Stored encrypted. Visible to centre admins only; each time this card shows a contact it is written to the change log.</p>
+      <p className="mt-2 text-[11px] text-slate-400">Stored encrypted. {visibleTo ?? "Visible to centre admins with contacts access."} Each time this card shows a contact it is written to the change log.</p>
     </div>
   );
 }

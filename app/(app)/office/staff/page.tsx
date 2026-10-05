@@ -91,7 +91,7 @@ export default async function StaffPage() {
       <JoinRequests rows={pendingRequests} />
 
       <Card className="mb-5">
-        <div className="mb-1 flex items-center justify-between"><h2 className="font-semibold text-navy">Office access</h2><GuideLink topic="roles" className="text-xs" /></div>
+        <div id="office-access" className="mb-1 flex scroll-mt-20 items-center justify-between"><h2 className="font-semibold text-navy">Office access</h2><GuideLink topic="roles" className="text-xs" /></div>
         <p className="mb-2 text-xs text-slate-500">Who can open the office, and which parts. {ctx.role === "owner" ? "Tick what each office admin can reach; a new office admin starts with nothing ticked." : "Only the superadmin can change this."}</p>
         <OfficeAccess members={officeMembers.map((m) => ({ userId: m.userId, name: m.name, email: m.email, role: m.role, status: m.status, features: m.features }))} isOwner={ctx.role === "owner"} meId={ctx.userId} />
       </Card>

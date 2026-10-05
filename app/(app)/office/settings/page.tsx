@@ -1,3 +1,4 @@
+import { whoCanSeeText } from "@/components/office/WhoCanSee";
 import { requireTenant } from "@/lib/tenant/require";
 import { Card } from "@/components/ui";
 import { GeneralSettingsForm } from "@/components/office/GeneralSettingsForm";
@@ -225,7 +226,8 @@ export default async function SettingsPage() {
       </div>
 
       <Card className="mt-6">
-        <h2 className="mb-3 font-semibold text-navy">Data &amp; billing</h2>
+        <h2 className="mb-1 font-semibold text-navy">Data &amp; billing</h2>
+        <p className="mb-3 text-xs text-slate-500"><span aria-hidden>👁 </span>Whole-centre export: {await whoCanSeeText(repos, ctx, "exports")}</p>
         <div className="flex flex-wrap gap-3">
           <StepUpButton label="Export all data (JSON)" href="/api/office/export" title="Download the whole centre?" consequences={["One file with every course, roster, person, cert, check, availability answer, hour and pay line.", "It includes personal data about your staff: keep it somewhere safe.", "The download is recorded in the change log. Enter your PIN to continue."]} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-navy hover:bg-slate-50" />
           <a href="/api/billing/portal" className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-navy hover:bg-slate-50">

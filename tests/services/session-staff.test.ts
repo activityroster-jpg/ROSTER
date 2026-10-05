@@ -18,7 +18,7 @@ import { setAvailability } from "@/lib/services/availability";
 import { claimOpenShift, confirmOpenShift, createOpenShift } from "@/lib/services/openshifts";
 import { getDaySheet } from "@/lib/services/emergency";
 import type { Repositories } from "@/lib/db/repositories";
-import type { SystemTenantContext } from "@/lib/tenant/context";
+import type { SystemTenantContext, TenantContext } from "@/lib/tenant/context";
 
 describe("per-day staffing: pure rules", () => {
   const course = [
@@ -96,6 +96,15 @@ describe("per-day staffing against the database", () => {
 
     const sheet = await getDaySheet(repos, ctx, "2027-06-09");
     expect(sheet.sessions[0]!.staff.map((p) => p.name)).toEqual(["Kim"]);
+    expect(sheet.contactsShown).toBe(true);
+    // An office admin with the roster but without "Emergency & guardian contacts" sees who is on duty, not their contacts.
+    const rosterOnly = { organisationId: ctx.organisationId, slug: ctx.slug, userId: "office-1", role: "admin", features: ["roster"] } as unknown as TenantContext;
+    await repos.tenant.instructor.update(ctx, kimId, { emergencyName: "Kim's mum", emergencyPhone: "07700 900000" });
+    const limited = await getDaySheet(repos, rosterOnly, "2027-06-09");
+    expect(limited.contactsShown).toBe(false);
+    expect(limited.sessions[0]!.staff.map((p) => [p.name, p.emergencyName, p.emergencyPhone])).toEqual([["Kim", null, null]]);
+    const withContacts = await getDaySheet(repos, { ...rosterOnly, features: ["roster", "protected"] } as unknown as TenantContext, "2027-06-09");
+    expect(withContacts.sessions[0]!.staff.map((p) => p.emergencyName)).toEqual(["Kim's mum"]);
 
     // Undo the skip: Sam is back on Wednesday beside Kim, and gets paid for it again.
     expect((await clearDayStaff(repos, ctx, wedId, samId)).ok).toBe(true);

@@ -55,7 +55,7 @@ export async function requireTenant(opts?: { role?: "admin"; owner?: boolean; pe
   // Authorisation: "admin" means admin only; a permission consults the matrix (lib/auth/rbac).
   if (opts?.role === "admin" && !isOfficeRole(res.ctx.role)) redirect(landingFor(res.ctx.role));
   if (opts?.owner && res.ctx.role !== "owner") redirect(landingFor(res.ctx.role));
-  if (opts?.permission && !can(res.ctx, opts.permission)) redirect(can(res.ctx, "office.view") ? "/office?denied=1" : landingFor(res.ctx.role));
+  if (opts?.permission && !can(res.ctx, opts.permission)) redirect(can(res.ctx, "office.view") ? `/office?denied=${encodeURIComponent(opts.permission)}` : landingFor(res.ctx.role));
   const landing = landingFor(res.ctx.role);
 
   // Ghost Mode is read-only: server actions (every mutation goes through one)

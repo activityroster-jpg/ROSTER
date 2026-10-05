@@ -1,3 +1,4 @@
+import { can } from "@/lib/auth/rbac";
 import { fmtWallTime } from "@/lib/domain";
 import { and, gte, lt } from "drizzle-orm";
 import type { Repositories } from "@/lib/db/repositories";
@@ -25,7 +26,7 @@ export interface SheetPerson {
   guardianPhone: string | null;
 }
 export interface SheetSession { courseName: string; slot: string; startAt: number; endAt: number; locations: string[]; staff: SheetPerson[] }
-export interface DaySheet { date: string; sessions: SheetSession[]; onDuty: SheetPerson[]; welfare: Partial<Record<string, string>> }
+export interface DaySheet { date: string; sessions: SheetSession[]; onDuty: SheetPerson[]; welfare: Partial<Record<string, string>>; /** False when the viewer lacks "Emergency & guardian contacts": names and roles only. */ contactsShown: boolean }
 
 /**
  * The emergency sheet: everyone on duty today with the contact details the
@@ -35,6 +36,8 @@ export interface DaySheet { date: string; sessions: SheetSession[]; onDuty: Shee
  */
 export async function getDaySheet(repos: Repositories, ctx: AnyTenantContext, dateIso: string): Promise<DaySheet> {
   const t = repos.tenant;
+  // Emergency and guardian contacts need their own office tick; the roster alone shows who is on duty.
+  const contactsShown = "system" in ctx ? true : can(ctx, "protected.view");
   const [sessions, assignments, instructors, roles, courses, courseLocations, locations] = await Promise.all([
     t.courseSession.list(ctx, and(gte(courseSessionTable.date, dateIso), lt(courseSessionTable.date, addDays(dateIso, 1)))).then(liveSessions),
     t.courseStaff.list(ctx),
@@ -54,8 +57,8 @@ export async function getDaySheet(repos: Repositories, ctx: AnyTenantContext, da
     if (!i) return null;
     const p: SheetPerson = {
       instructorId: i.id, name: i.name, role: "", status: "", phone: i.phone, under18: isUnder18(i.dateOfBirth),
-      emergencyName: await openToken(i.emergencyName), emergencyPhone: await openToken(i.emergencyPhone), emergencyRelationship: i.emergencyRelationship,
-      guardianName: i.guardianName, guardianPhone: await openToken(i.guardianPhone),
+      emergencyName: contactsShown ? await openToken(i.emergencyName) : null, emergencyPhone: contactsShown ? await openToken(i.emergencyPhone) : null, emergencyRelationship: contactsShown ? i.emergencyRelationship : null,
+      guardianName: contactsShown ? i.guardianName : null, guardianPhone: contactsShown ? await openToken(i.guardianPhone) : null,
     };
     people.set(id, p);
     return p;
@@ -76,9 +79,9 @@ export async function getDaySheet(repos: Repositories, ctx: AnyTenantContext, da
     });
   }
   const onDuty = [...people.values()].filter((p) => out.some((s) => s.staff.some((x) => x.instructorId === p.instructorId)));
-  await writeAudit(repos, ctx, { action: "view_emergency_sheet", entity: "organisation", entityId: ctx.organisationId, after: { date: dateIso, people: onDuty.length } }).catch(() => {});
+  await writeAudit(repos, ctx, { action: "view_emergency_sheet", entity: "organisation", entityId: ctx.organisationId, after: { date: dateIso, people: onDuty.length, contactsShown } }).catch(() => {});
   const welfare = (await welfareForRange(repos, ctx, dateIso, addDays(dateIso, 1))).byDate.get(dateIso) ?? {};
-  return { date: dateIso, sessions: out, onDuty, welfare };
+  return { date: dateIso, sessions: out, onDuty, welfare, contactsShown };
 }
 
 export function sheetToCsv(sheet: DaySheet): string {

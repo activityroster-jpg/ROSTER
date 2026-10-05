@@ -1,3 +1,4 @@
+import { WhoCanSee, whoCanSeeText } from "@/components/office/WhoCanSee";
 import { RetentionBanner } from "@/components/office/RetentionBanner";
 import { AccessCard } from "@/components/office/AccessCard";
 import { PersonDataTools } from "@/components/office/PersonDataTools";
@@ -81,7 +82,8 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
       <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
         <div className="space-y-6">
           <Card>
-            <h2 className="mb-3 font-semibold text-navy">Certs &amp; documents</h2>
+            <h2 className="mb-1 font-semibold text-navy">Certs &amp; documents</h2>
+            <WhoCanSee repos={repos} ctx={ctx} feature="staff" className="mb-3" />
             <DocumentManager items={docItems} admin />
           </Card>
 
@@ -93,7 +95,7 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
           {canProtected ? (
           <Card>
             <h2 className="mb-1 font-semibold text-navy">Emergency &amp; guardian contacts <span className="text-xs font-normal text-slate-400">logged on every view</span></h2>
-            <ProtectedContactsForm instructorId={instructor.id} initial={contacts} under18={under18} hasPermissionSlot={hasPermissionSlot} />
+            <ProtectedContactsForm instructorId={instructor.id} initial={contacts} under18={under18} hasPermissionSlot={hasPermissionSlot} visibleTo={await whoCanSeeText(repos, ctx, "protected")} />
           </Card>
           ) : null}
 
