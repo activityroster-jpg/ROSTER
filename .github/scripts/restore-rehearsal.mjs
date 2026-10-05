@@ -8,7 +8,7 @@ import { readFileSync, appendFileSync } from "node:fs";
 import { splitStatements } from "./order-export.mjs";
 
 const fail = (msg) => { console.log(`::error::${String(msg).slice(0, 400)}`); process.exit(1); };
-process.on("uncaughtException", (e) => fail(`Row-count check crashed: ${e?.message ?? e}`));
+process.on("uncaughtException", (e) => fail(`Row-count check crashed: ${String(e?.stderr ?? "").split("\n").find((l) => /ERROR/.test(l)) ?? e?.message ?? e}`));
 
 const [, , backupFile, scratch, config] = process.argv;
 
@@ -26,12 +26,18 @@ for (const stmt of splitStatements(readFileSync(backupFile, "utf8"))) {
 
 const tables = query(scratch, "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%' ORDER BY name", ["-c", config]).map((r) => r.name);
 const countSql = (names) => names.map((t) => `SELECT '${t}' AS t, COUNT(*) AS n FROM "${t}"`).join(" UNION ALL ");
-const restored = new Map(query(scratch, countSql(tables), ["-c", config]).map((r) => [r.t, Number(r.n)]));
+/** Row counts, ten tables per query (D1 refuses one very long compound SELECT). */
+function countAll(db, names, extra = []) {
+  const out = new Map();
+  for (let i = 0; i < names.length; i += 10) for (const r of query(db, countSql(names.slice(i, i + 10)), extra)) out.set(r.t, Number(r.n));
+  return out;
+}
+const restored = countAll(scratch, tables, ["-c", config]);
 
 let prod = new Map();
 try {
   const prodTables = new Set(query("activityroster", "SELECT name FROM sqlite_master WHERE type='table'").map((r) => r.name));
-  prod = new Map(query("activityroster", countSql(tables.filter((t) => prodTables.has(t)))).map((r) => [r.t, Number(r.n)]));
+  prod = countAll("activityroster", tables.filter((t) => prodTables.has(t)));
 } catch { /* information only */ }
 
 const mismatches = [];
