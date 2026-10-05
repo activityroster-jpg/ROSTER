@@ -143,22 +143,8 @@ export default function ComparePage() {
         </p>
       </div>
 
-      {/* Positioning cards */}
-      <div className="mt-12 grid gap-4 sm:grid-cols-3">
-        {[
-          { h: "vs general rostering apps", p: "They roster any workforce well, but don't know a Level 2 from a Senior Instructor, a safety-boat ratio, or an expired first-aid ticket. You'd bolt compliance on by hand — the exact thing that goes wrong." },
-          { h: "vs club / membership systems", p: "Great at members, subs and public bookings. Instructor rostering, certs and safety cover are an afterthought, if they're there at all." },
-          { h: "vs spreadsheets", p: "Free and flexible until a tab breaks, an expiry is missed, or two instructors get double-booked. No alerts, no audit trail, no isolation between sites." },
-        ].map((c) => (
-          <div key={c.h} className="rounded-card border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="font-display text-lg font-semibold text-navy">{c.h}</h2>
-            <p className="mt-2 text-sm text-slate-600">{c.p}</p>
-          </div>
-        ))}
-      </div>
-
       {/* Head-to-head links */}
-      <div className="mt-10">
+      <div className="mt-12">
         <p className="mb-2 text-center text-xs font-semibold uppercase tracking-wide text-slate-400">Head-to-head comparisons</p>
         <div className="flex flex-wrap justify-center gap-2">
           {COMPETITORS.map((o) => (
