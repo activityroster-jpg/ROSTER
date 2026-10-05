@@ -5,6 +5,10 @@
 // Prints counts only: never row contents.
 import { execFileSync } from "node:child_process";
 import { readFileSync, appendFileSync } from "node:fs";
+import { splitStatements } from "./order-export.mjs";
+
+const fail = (msg) => { console.log(`::error::${String(msg).slice(0, 400)}`); process.exit(1); };
+process.on("uncaughtException", (e) => fail(`Row-count check crashed: ${e?.message ?? e}`));
 
 const [, , backupFile, scratch, config] = process.argv;
 
@@ -15,9 +19,9 @@ function query(db, sql, extra = []) {
 
 // Rows per table in the backup file: one INSERT statement per row.
 const expected = new Map();
-for (const line of readFileSync(backupFile, "utf8").split("\n")) {
-  const m = /^INSERT INTO "?([A-Za-z0-9_]+)"?/.exec(line);
-  if (m) expected.set(m[1], (expected.get(m[1]) ?? 0) + 1);
+for (const stmt of splitStatements(readFileSync(backupFile, "utf8"))) {
+  const m = /^INSERT\s+(?:OR\s+\w+\s+)?INTO\s+["`[]?([A-Za-z0-9_]+)/i.exec(stmt);
+  if (m && !/^sqlite_|^_cf_/.test(m[1])) expected.set(m[1], (expected.get(m[1]) ?? 0) + 1);
 }
 
 const tables = query(scratch, "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%' ORDER BY name", ["-c", config]).map((r) => r.name);
@@ -46,6 +50,6 @@ if (summary) appendFileSync(summary, `\n#### Row counts\n\n${lines.join("\n")}\n
 if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `tables=${tables.length}\nrows=${rows}\n`);
 console.log(`${tables.length} tables, ${rows} rows restored; ${mismatches.length} mismatch(es).`);
 if (mismatches.length) {
-  console.error(mismatches.join("\n"));
+  for (const m of mismatches.slice(0, 10)) console.log(`::error::Row count differs: ${m}`);
   process.exit(1);
 }
