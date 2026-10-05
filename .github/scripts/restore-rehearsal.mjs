@@ -9,9 +9,14 @@ import { splitStatements } from "./order-export.mjs";
 
 const fail = (msg) => { console.log(`::error::${String(msg).slice(0, 400)}`); process.exit(1); };
 process.on("uncaughtException", (e) => {
-  const text = `${e?.stdout ?? ""}\n${e?.stderr ?? ""}`;
-  const line = text.split("\n").find((l) => /error|ERROR|"text"/.test(l) && !/^\s*$/.test(l));
-  fail(`Row-count check crashed: ${(line ?? e?.message ?? String(e)).replace(/\x1b\[[0-9;]*m/g, "").trim()}`);
+  const out = String(e?.stdout ?? "");
+  let msg = "";
+  try {
+    const j = JSON.parse(out.slice(out.indexOf("{")));
+    msg = [j?.error?.text, ...(j?.error?.notes ?? []).map((n) => n?.text)].filter(Boolean).join(" | ");
+  } catch { /* not JSON */ }
+  if (!msg) msg = `${out}\n${e?.stderr ?? ""}`.split("\n").find((l) => /ERROR|rror/.test(l)) ?? e?.message ?? String(e);
+  fail(`Row-count check crashed: ${msg.replace(/\x1b\[[0-9;]*m/g, "").trim()}`);
 });
 
 const [, , backupFile, scratch, config] = process.argv;
