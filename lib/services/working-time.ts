@@ -1,7 +1,7 @@
-import { eq } from "drizzle-orm";
+import { and, eq, gte, lte } from "drizzle-orm";
 import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
-import { courseStaff as courseStaffTable } from "@/lib/db/schema";
+import { course as courseTable, courseSession as courseSessionTable, courseStaff as courseStaffTable } from "@/lib/db/schema";
 import type { CourseSession, CourseStaff, OrgSettings, WorkingTimeMode } from "@/lib/db/schema";
 import {
   evaluateWorkingTime,
@@ -154,12 +154,15 @@ export interface RegisterRow {
  */
 export async function youngWorkerRegister(repos: Repositories, ctx: AnyTenantContext, from: string, to: string): Promise<RegisterRow[]> {
   const t = repos.tenant;
-  const [instructors, sessions, staff, courses, published] = await Promise.all([
+  const [instructors, sessions, published] = await Promise.all([
     t.instructor.list(ctx),
-    t.courseSession.list(ctx).then(liveSessions),
-    t.courseStaff.list(ctx),
-    t.course.list(ctx),
+    t.courseSession.list(ctx, and(gte(courseSessionTable.date, from), lte(courseSessionTable.date, to))).then(liveSessions),
     publishedWeeks(repos, ctx),
+  ]);
+  const inRange = [...new Set(sessions.map((s) => s.courseId))];
+  const [staff, courses] = await Promise.all([
+    t.courseStaff.listIn(ctx, courseStaffTable.courseId, inRange),
+    t.course.listIn(ctx, courseTable.id, inRange),
   ]);
   const young = new Map(instructors.filter((i) => i.dateOfBirth && (ageOn(i.dateOfBirth, noon(to)) ?? 99) < 18).map((i) => [i.id, i]));
   const courseName = new Map(courses.map((c) => [c.id, c.name ?? c.id]));

@@ -1,4 +1,4 @@
-import { and, eq, type SQL } from "drizzle-orm";
+import { and, eq, inArray, type SQL } from "drizzle-orm";
 import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
 import type { Database } from "@/lib/db/client";
 import { isGhostContext, isReadOnlyContext, type AnyTenantContext } from "@/lib/tenant/context";
@@ -48,6 +48,27 @@ export class TenantRepository<T extends TenantTable> {
   async list(ctx: AnyTenantContext, where?: SQL): Promise<T["$inferSelect"][]> {
     const rows = await this.db.select().from(this.table as SQLiteTable).where(this.scoped(ctx, where));
     return rows as T["$inferSelect"][];
+  }
+
+  /**
+   * Rows whose `column` is one of `values` (optionally further filtered), in
+   * chunks so no query passes D1's limit of 100 bound parameters. Still pinned
+   * to the tenant by {@link list}. For bounded reads: "these courses' sessions".
+   */
+  async listIn(ctx: AnyTenantContext, column: SQLiteColumn, values: readonly string[], where?: SQL): Promise<T["$inferSelect"][]> {
+    const unique = [...new Set(values)];
+    const out: T["$inferSelect"][] = [];
+    for (let i = 0; i < unique.length; i += 80) {
+      const chunk = unique.slice(i, i + 80);
+      out.push(...(await this.list(ctx, where ? (and(inArray(column, chunk), where) as SQL) : inArray(column, chunk))));
+    }
+    return out;
+  }
+
+  /** The distinct values of one column across this tenant's rows (e.g. which courses have sessions). */
+  async distinct(ctx: AnyTenantContext, column: SQLiteColumn, where?: SQL): Promise<unknown[]> {
+    const rows = await this.db.selectDistinct({ v: column }).from(this.table as SQLiteTable).where(this.scoped(ctx, where));
+    return (rows as { v: unknown }[]).map((r) => r.v);
   }
 
   /** Find one row by id, but ONLY if it belongs to the tenant. */

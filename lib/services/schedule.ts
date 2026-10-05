@@ -12,7 +12,8 @@ import { and, gte, lt, courseSessionTable, type CourseAudience, type SlotCode } 
 import { liveSessions } from "@/lib/domain/sessions";
 import { welfareForRange } from "./welfare";
 import { effectiveStaffBySession, coveringStaff } from "@/lib/domain/session-staff";
-import { sessionStaffOverride as overrideTable } from "@/lib/db/schema";
+import { course as courseTable, courseEquipment as courseEquipmentTable, courseLocation as courseLocationTable, courseStaff as courseStaffTable, sessionStaffOverride as overrideTable, type Course, type CourseStaff, type CourseType, roleType as roleTypeSchema } from "@/lib/db/schema";
+type RoleType = typeof roleTypeSchema.$inferSelect;
 import { inArray } from "drizzle-orm";
 
 export interface CourseCoverage {
@@ -125,25 +126,15 @@ export async function getScheduleConflicts(
  * a given week annotated with that coverage. All reads are tenant scoped; the
  * verdict comes from the pure `evaluateRatio`.
  */
-export async function getWeekSchedule(
-  repos: Repositories,
-  ctx: AnyTenantContext,
-  mondayIso: string,
-): Promise<{ sessions: WeekSession[]; coverageByCourse: Map<string, CourseCoverage> }> {
-  const t = repos.tenant;
-  const weekEnd = addDays(mondayIso, 7);
-  const [courses, courseTypes, allSessions, staffAssignments, roleTypes] = await Promise.all([
-    t.course.list(ctx),
-    t.courseType.list(ctx),
-    t.courseSession.list(ctx, and(gte(courseSessionTable.date, mondayIso), lt(courseSessionTable.date, weekEnd))),
-    t.courseStaff.list(ctx),
-    t.roleType.list(ctx),
-  ]);
-  const sessions = liveSessions(allSessions);
-
+/** Whole-course cover (ratio and safety boat) for the given courses. Pure. */
+function coverageOf(
+  courses: readonly Course[],
+  courseTypes: readonly CourseType[],
+  staffAssignments: readonly CourseStaff[],
+  roleTypes: readonly RoleType[],
+): Map<string, CourseCoverage> {
   const courseTypeById = new Map(courseTypes.map((c) => [c.id, c]));
   const roleById = new Map(roleTypes.map((r) => [r.id, r]));
-
   const assignedByCourse = new Map<string, AssignedRole[]>();
   for (const sa of staffAssignments) {
     if (sa.status === "declined") continue; // someone who can't make it doesn't count as cover
@@ -156,7 +147,6 @@ export async function getWeekSchedule(
     });
     assignedByCourse.set(sa.courseId, arr);
   }
-
   const coverageByCourse = new Map<string, CourseCoverage>();
   for (const course of courses) {
     const ct = courseTypeById.get(course.courseTypeId);
@@ -174,6 +164,45 @@ export async function getWeekSchedule(
       ratio,
     });
   }
+  return coverageByCourse;
+}
+
+/** Cover for just these courses (the Courses page's view), reading only their assignments. */
+export async function coverageForCourses(repos: Repositories, ctx: AnyTenantContext, courseIds: readonly string[]): Promise<Map<string, CourseCoverage>> {
+  const t = repos.tenant;
+  const [courses, courseTypes, staffAssignments, roleTypes] = await Promise.all([
+    t.course.listIn(ctx, courseTable.id, courseIds),
+    t.courseType.list(ctx),
+    t.courseStaff.listIn(ctx, courseStaffTable.courseId, courseIds),
+    t.roleType.list(ctx),
+  ]);
+  return coverageOf(courses, courseTypes, staffAssignments, roleTypes);
+}
+
+export async function getWeekSchedule(
+  repos: Repositories,
+  ctx: AnyTenantContext,
+  mondayIso: string,
+): Promise<{ sessions: WeekSession[]; coverageByCourse: Map<string, CourseCoverage> }> {
+  const t = repos.tenant;
+  const weekEnd = addDays(mondayIso, 7);
+  // The week's sessions, and only their courses and assignments.
+  const [courseTypes, allSessions, roleTypes] = await Promise.all([
+    t.courseType.list(ctx),
+    t.courseSession.list(ctx, and(gte(courseSessionTable.date, mondayIso), lt(courseSessionTable.date, weekEnd))),
+    t.roleType.list(ctx),
+  ]);
+  const sessions = liveSessions(allSessions);
+  const weekCourseIds = [...new Set(allSessions.map((s) => s.courseId))];
+  const [courses, staffAssignments] = await Promise.all([
+    t.course.listIn(ctx, courseTable.id, weekCourseIds),
+    t.courseStaff.listIn(ctx, courseStaffTable.courseId, weekCourseIds),
+  ]);
+
+  const courseTypeById = new Map(courseTypes.map((c) => [c.id, c]));
+  const roleById = new Map(roleTypes.map((r) => [r.id, r]));
+
+  const coverageByCourse = coverageOf(courses, courseTypes, staffAssignments, roleTypes);
 
   const sunday = addDays(mondayIso, 7);
   const inWeek = sessions.filter((s) => s.date >= mondayIso && s.date < sunday);
@@ -226,11 +255,11 @@ export async function getSessionEvents(
   toIso: string,
 ): Promise<SessionEvent[]> {
   const t = repos.tenant;
-  const [allSessions, courses, courseTypes] = await Promise.all([
+  const [allSessions, courseTypes] = await Promise.all([
     t.courseSession.list(ctx, and(gte(courseSessionTable.date, fromIso), lt(courseSessionTable.date, toIso))),
-    t.course.list(ctx),
     t.courseType.list(ctx),
   ]);
+  const courses = await t.course.listIn(ctx, courseTable.id, allSessions.map((s) => s.courseId));
   const sessions = liveSessions(allSessions);
   const courseById = new Map(courses.map((c) => [c.id, c]));
   const ctById = new Map(courseTypes.map((c) => [c.id, c]));
@@ -302,27 +331,25 @@ export async function getRotaDays(
 ): Promise<RotaDay[]> {
   const mondayIso = fromIso;
   const t = repos.tenant;
-  const [courses, courseTypes, allSessions, staffAssignments, roleTypes, instructors, courseLocations, locations, courseEquipment, equipment] =
+  const allSessions = await t.courseSession.list(ctx, and(gte(courseSessionTable.date, fromIso), lt(courseSessionTable.date, addDays(fromIso, dayCount))));
+  // Only the courses running in the range, and their people, places and kit.
+  const rangeCourseIds = [...new Set(allSessions.map((s) => s.courseId))];
+  const [courses, courseTypes, staffAssignments, roleTypes, instructors, courseLocations, locations, courseEquipment, equipment] =
     await Promise.all([
-      t.course.list(ctx),
+      t.course.listIn(ctx, courseTable.id, rangeCourseIds),
       t.courseType.list(ctx),
-      t.courseSession.list(ctx, and(gte(courseSessionTable.date, fromIso), lt(courseSessionTable.date, addDays(fromIso, dayCount)))),
-      t.courseStaff.list(ctx),
+      t.courseStaff.listIn(ctx, courseStaffTable.courseId, rangeCourseIds),
       t.roleType.list(ctx),
       t.instructor.list(ctx),
-      t.courseLocation.list(ctx),
+      t.courseLocation.listIn(ctx, courseLocationTable.courseId, rangeCourseIds),
       t.location.list(ctx),
-      t.courseEquipment.list(ctx),
+      t.courseEquipment.listIn(ctx, courseEquipmentTable.courseId, rangeCourseIds),
       t.equipment.list(ctx),
     ]);
   const sessions = liveSessions(allSessions);
 
-  // Coverage is computed per week; merge the weeks the range touches.
-  const coverageByCourse = new Map<string, { ratio: { ok: boolean; understaffed: boolean; missingSafetyCover: boolean } }>();
-  for (let w = weekStart(new Date(`${fromIso}T00:00:00Z`)); w < addDays(fromIso, dayCount); w = addDays(w, 7)) {
-    const { coverageByCourse: cov } = await getWeekSchedule(repos, ctx, w);
-    for (const [k, v] of cov) if (!coverageByCourse.has(k)) coverageByCourse.set(k, v);
-  }
+  // Whole-course cover for the courses in the range (one read, not one per week).
+  const coverageByCourse = coverageOf(courses, courseTypes, staffAssignments, roleTypes);
   const courseById = new Map(courses.map((c) => [c.id, c]));
   const ctById = new Map(courseTypes.map((c) => [c.id, c]));
   const roleName = new Map(roleTypes.map((r) => [r.id, r.name]));

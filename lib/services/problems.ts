@@ -1,7 +1,7 @@
-import { and, eq, gte, lt } from "drizzle-orm";
+import { and, eq, gte, isNull, lt, or } from "drizzle-orm";
 import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
-import { availability as availabilityTable, courseSession as courseSessionTable } from "@/lib/db/schema";
+import { availability as availabilityTable, course as courseTable, courseEquipment as courseEquipmentTable, courseSession as courseSessionTable, courseStaff as courseStaffTable, sessionStaffOverride as overrideTable } from "@/lib/db/schema";
 import { evaluateFit, evaluateRatio, type AssignedRole, type ComplianceRequirement, type HeldCompliance } from "@/lib/domain";
 import { liveSessions } from "@/lib/domain/sessions";
 import { isUnder18 } from "@/lib/domain/age";
@@ -71,22 +71,27 @@ export async function findProblems(repos: Repositories, ctx: AnyTenantContext, o
 
   // Bounded read (audit C2): the range plus a week either side, which is all the
   // weekly young-worker limits and clash checks ever look at.
-  const [allSessions, courseRows, courseTypes, assignmentRows, instructorRows, availRows, complianceTypes, complianceItems, roleTypes, courseEquipment, equipment, teaching, qualifications, equipmentTypes, overrideRows] = await Promise.all([
-    t.courseSession.list(ctx, and(gte(courseSessionTable.date, addDays(from, -7)), lt(courseSessionTable.date, addDays(to, 7)))).then(liveSessions),
-    t.course.list(ctx),
+  const windowFrom = addDays(from, -7);
+  const windowTo = addDays(to, 7);
+  const allSessions = await t.courseSession.list(ctx, and(gte(courseSessionTable.date, windowFrom), lt(courseSessionTable.date, windowTo))).then(liveSessions);
+  // Everything else only for the courses and dates in that window.
+  const windowCourseIds = [...new Set(allSessions.map((x) => x.courseId))];
+  const availInWindow = or(and(gte(availabilityTable.date, windowFrom), lt(availabilityTable.date, windowTo)), isNull(availabilityTable.date));
+  const [courseRows, courseTypes, assignmentRows, instructorRows, availRows, complianceTypes, complianceItems, roleTypes, courseEquipment, equipment, teaching, qualifications, equipmentTypes, overrideRows] = await Promise.all([
+    t.course.listIn(ctx, courseTable.id, windowCourseIds),
     t.courseType.list(ctx),
-    t.courseStaff.list(ctx),
+    t.courseStaff.listIn(ctx, courseStaffTable.courseId, windowCourseIds),
     t.instructor.list(ctx),
-    opts.instructorId ? t.availability.list(ctx, eq(availabilityTable.instructorId, opts.instructorId)) : t.availability.list(ctx),
+    t.availability.list(ctx, opts.instructorId ? and(eq(availabilityTable.instructorId, opts.instructorId), availInWindow) : availInWindow),
     t.complianceType.list(ctx),
     t.complianceItem.list(ctx),
     t.roleType.list(ctx),
-    t.courseEquipment.list(ctx),
+    t.courseEquipment.listIn(ctx, courseEquipmentTable.courseId, windowCourseIds),
     t.equipment.list(ctx),
     getTeachingMatrix(repos, ctx),
     t.qualification.list(ctx),
     t.equipmentType.list(ctx),
-    t.sessionStaffOverride.list(ctx),
+    t.sessionStaffOverride.listIn(ctx, overrideTable.courseSessionId, allSessions.map((x) => x.id)),
   ]);
 
   const cancelled = new Set(courseRows.filter((c) => c.cancelledAt || c.status === "cancelled").map((c) => c.id));
@@ -240,7 +245,7 @@ export async function problemsForInstructor(repos: Repositories, ctx: AnyTenantC
 
 /** The problems one course has right now, for the message after an edit. */
 export async function problemsForCourse(repos: Repositories, ctx: AnyTenantContext, courseId: string): Promise<Problem[]> {
-  const sessions = (await repos.tenant.courseSession.list(ctx)).filter((s) => s.courseId === courseId && !s.cancelledAt);
+  const sessions = (await repos.tenant.courseSession.list(ctx, eq(courseSessionTable.courseId, courseId))).filter((s) => !s.cancelledAt);
   if (sessions.length === 0) return [];
   const dates = sessions.map((s) => s.date).sort();
   return (await findProblems(repos, ctx, { from: dates[0]!, to: addDays(dates[dates.length - 1]!, 1), courseId })).problems;

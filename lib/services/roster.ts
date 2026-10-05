@@ -1,7 +1,7 @@
-import { eq } from "drizzle-orm";
+import { and, eq, gte, lt } from "drizzle-orm";
 import type { Repositories } from "@/lib/db/repositories";
 import { actorUserId, type AnyTenantContext } from "@/lib/tenant/context";
-import { rosterWeek as rosterWeekTable } from "@/lib/db/schema";
+import { courseSession as courseSessionTable, courseStaff as courseStaffTable, rosterWeek as rosterWeekTable } from "@/lib/db/schema";
 import { addDays, weekStart } from "./schedule";
 import { notifyInstructor } from "./notifications";
 import { emailAdmins } from "./admin-mail";
@@ -60,7 +60,7 @@ export async function publishWeek(
   if (existing) await t.rosterWeek.update(ctx, existing.id, { publishedAt: now, publishedByUserId: by });
   else await t.rosterWeek.insert(ctx, { weekStart: monday, publishedAt: now, publishedByUserId: by });
 
-  const sessions = liveSessions(await t.courseSession.list(ctx)).filter((s) => s.date >= monday && s.date < sunday);
+  const sessions = liveSessions(await t.courseSession.list(ctx, and(gte(courseSessionTable.date, monday), lt(courseSessionTable.date, sunday))));
   const courseIds = new Set(sessions.map((s) => s.courseId));
   let instructorsNotified = 0;
   if (opts.notify !== false && courseIds.size > 0) {
@@ -140,10 +140,10 @@ export async function declineAssignment(
   const [instructor, course, sessions] = await Promise.all([
     t.instructor.findById(ctx, instructorId),
     t.course.findById(ctx, row.courseId),
-    t.courseSession.list(ctx),
+    t.courseSession.list(ctx, eq(courseSessionTable.courseId, row.courseId)),
   ]);
   const courseName = course?.name ?? "a course";
-  const dates = sessions.filter((s) => s.courseId === row.courseId).map((s) => s.date).sort();
+  const dates = sessions.map((s) => s.date).sort();
   const when = dates.length ? ` (${dates[0]}${dates.length > 1 ? ` – ${dates[dates.length - 1]}` : ""})` : "";
   const who = instructor?.name ?? "An instructor";
   await emailAdmins(repos, ctx, {
@@ -169,10 +169,10 @@ export interface ConfirmationSummary {
 export async function confirmationSummary(repos: Repositories, ctx: AnyTenantContext, fromIso: string): Promise<ConfirmationSummary> {
   const published = await publishedWeeks(repos, ctx);
   if (published.size === 0) return { awaiting: 0, declined: 0, confirmed: 0 };
-  const sessions = liveSessions(await repos.tenant.courseSession.list(ctx)).filter((s) => s.date >= fromIso && published.has(weekOf(s.date)));
+  const sessions = liveSessions(await repos.tenant.courseSession.list(ctx, gte(courseSessionTable.date, fromIso))).filter((s) => published.has(weekOf(s.date)));
   const courseIds = new Set(sessions.map((s) => s.courseId));
   if (courseIds.size === 0) return { awaiting: 0, declined: 0, confirmed: 0 };
-  const staff = (await repos.tenant.courseStaff.list(ctx)).filter((r) => courseIds.has(r.courseId));
+  const staff = await repos.tenant.courseStaff.listIn(ctx, courseStaffTable.courseId, [...courseIds]);
   return {
     awaiting: staff.filter((r) => r.status === "assigned").length,
     declined: staff.filter((r) => r.status === "declined").length,

@@ -1,6 +1,6 @@
 import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
-import type { OpenShift, OpenShiftStatus } from "@/lib/db/schema";
+import { course as courseTable, courseSession as courseSessionTable, type OpenShift, type OpenShiftStatus } from "@/lib/db/schema";
 import { writeAudit } from "./audit";
 import { notifyInstructor } from "./notifications";
 import { setDayStaff } from "./session-staff";
@@ -123,10 +123,11 @@ export async function listOpenShifts(
   ctx: AnyTenantContext,
   onlyClaimable = false,
 ): Promise<OpenShiftRow[]> {
-  const [shifts, sessions, courses, roles, instructors] = await Promise.all([
-    repos.tenant.openShift.list(ctx),
-    repos.tenant.courseSession.list(ctx),
-    repos.tenant.course.list(ctx),
+  const shifts = await repos.tenant.openShift.list(ctx);
+  // Only the sessions and courses these shifts are about.
+  const sessions = await repos.tenant.courseSession.listIn(ctx, courseSessionTable.id, shifts.map((s) => s.courseSessionId));
+  const [courses, roles, instructors] = await Promise.all([
+    repos.tenant.course.listIn(ctx, courseTable.id, sessions.map((s) => s.courseId)),
     repos.tenant.roleType.list(ctx),
     repos.tenant.instructor.list(ctx),
   ]);

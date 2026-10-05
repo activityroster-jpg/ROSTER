@@ -1,6 +1,9 @@
+import { coursePageScope } from "@/lib/services/course-list";
+import { coverageForCourses } from "@/lib/services/schedule";
+import { course as courseTable, courseRoleRequirement as courseRoleRequirementTable, courseSession as courseSessionTable, courseStaff as courseStaffTable } from "@/lib/db/schema";
 import Link from "next/link";
 import { requireTenant } from "@/lib/tenant/require";
-import { addDays, getSessionEvents, getWeekSchedule, weekStart } from "@/lib/services/schedule";
+import { addDays, getSessionEvents, weekStart } from "@/lib/services/schedule";
 import { fitReason, listStaffWithFit } from "@/lib/services/staff";
 import { getCourseAvailabilityStates } from "@/lib/services/availability";
 import { Card } from "@/components/ui";
@@ -17,7 +20,7 @@ import { qualificationGap } from "@/lib/services/problems";
 
 export const dynamic = "force-dynamic";
 
-export default async function CoursesPage({ searchParams }: { searchParams: Promise<{ view?: string; q?: string }> }) {
+export default async function CoursesPage({ searchParams }: { searchParams: Promise<{ view?: string; q?: string; all?: string }> }) {
   const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const sp = await searchParams;
   const view: "upcoming" | "past" = sp.view === "past" ? "past" : "upcoming";
@@ -25,12 +28,14 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
   const qLower = q.toLowerCase();
   const qs = (v: "upcoming" | "past") => `/office/courses?${v === "past" ? "view=past" : ""}${q ? `${v === "past" ? "&" : ""}q=${encodeURIComponent(q)}` : ""}`.replace(/\?$/, "");
   const monday = weekStart(new Date());
-  const [{ coverageByCourse }, courseTypes, staff, roles, assignments, instructors, settings, events, locationRows, equipmentRows, teaching, quals] = await Promise.all([
-    getWeekSchedule(repos, ctx, monday),
+  // Only the courses in this view (upcoming, or the last 12 months of past), never the whole history.
+  const scope = await coursePageScope(repos, ctx, { view, today: new Date().toISOString().slice(0, 10), pastMonths: sp.all === "1" ? null : 12 });
+  const [coverageByCourse, courseTypes, staff, roles, assignments, instructors, settings, events, locationRows, equipmentRows, teaching, quals] = await Promise.all([
+    coverageForCourses(repos, ctx, scope.ids),
     repos.tenant.courseType.list(ctx),
     listStaffWithFit(repos, ctx),
     repos.tenant.roleType.list(ctx),
-    repos.tenant.courseStaff.list(ctx),
+    repos.tenant.courseStaff.listIn(ctx, courseStaffTable.courseId, scope.ids),
     repos.tenant.instructor.list(ctx),
     repos.tenant.orgSettings.list(ctx),
     getSessionEvents(repos, ctx, addDays(monday, -28), addDays(monday, 7 * 26)),
@@ -48,7 +53,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
   const conflictOn = Boolean(settings[0]?.enforceConflictChecks);
   const courses = [...coverageByCourse.values()];
   const activeTypes = courseTypes.filter((c) => c.active && c.listed).map((c) => ({ id: c.id, name: c.name, audience: c.audience, schedule: parseDefaultSchedule(c.defaultSchedule) }));
-  const courseRows = await repos.tenant.course.list(ctx);
+  const courseRows = await repos.tenant.course.listIn(ctx, courseTable.id, scope.ids);
   const audienceByCourse = new Map(courseRows.map((c) => [c.id, courseTypes.find((t) => t.id === c.courseTypeId)?.audience ?? "all"]));
   const staffReqByCourse = new Map(courseRows.map((c) => [c.id, c.staffRequired ?? null]));
   const typeByCourse = new Map(courseRows.map((c) => [c.id, c.courseTypeId]));
@@ -65,15 +70,15 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
   const nameById = new Map(instructors.map((i) => [i.id, i.name]));
   const roleName = new Map(roles.map((r) => [r.id, r.name]));
 
-  const courseAvail = await getCourseAvailabilityStates(repos, ctx);
-  const roleNeeds = roleNeedsByCourse(await repos.tenant.courseRoleRequirement.list(ctx), assignments, (id) => roleName.get(id) ?? "Role");
+  const allSessions = await repos.tenant.courseSession.listIn(ctx, courseSessionTable.courseId, scope.ids);
+  const courseAvail = await getCourseAvailabilityStates(repos, ctx, allSessions);
+  const roleNeeds = roleNeedsByCourse(await repos.tenant.courseRoleRequirement.listIn(ctx, courseRoleRequirementTable.courseId, scope.ids), assignments, (id) => roleName.get(id) ?? "Role");
 
   // Connected booking systems — so "Check for updates" lives next to the calendar.
   const integrationRows = await repos.tenant.integration.list(ctx);
   const connectedIntegrations = integrationRows.map((r) => ({ id: r.id, provider: r.provider, name: providerName(r.provider), color: providerColor(r.provider) }));
 
   // Sessions per course (with ids), so the card can edit date/time inline.
-  const allSessions = await repos.tenant.courseSession.list(ctx);
   const sessionsFullByCourse = new Map<string, { id: string; date: string; startMs: number; endMs: number }[]>();
   for (const s of allSessions) {
     if (s.cancelledAt) continue; // cancelled days are not planned work
@@ -112,7 +117,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
   const undated: Course[] = sortedCourses.filter((c) => earliest(c.courseId) == null);
   const pastCourses = sortedCourses.filter((c) => { const l = lastMsOf(c.courseId); return l != null && l < now; });
   const upcomingCourses = sortedCourses.filter((c) => { const l = lastMsOf(c.courseId); return l != null && l >= now; });
-  const upcomingCount = upcomingCourses.length + undated.length;
+  const upcomingCount = scope.upcomingCount;
 
   // Group the active view by week. Past is shown newest-first.
   const activeList = view === "past" ? [...pastCourses].reverse() : upcomingCourses;
@@ -210,7 +215,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
         <h2 className="font-display text-lg font-semibold text-navy">Courses</h2>
         <div className="ml-2 flex rounded-lg border border-slate-200 p-0.5 text-sm">
           <a href={qs("upcoming")} className={`rounded-md px-3 py-1 font-medium ${view === "upcoming" ? "bg-navy text-white" : "text-slate-500 hover:text-navy"}`}>Upcoming ({upcomingCount})</a>
-          <a href={qs("past")} className={`rounded-md px-3 py-1 font-medium ${view === "past" ? "bg-navy text-white" : "text-slate-500 hover:text-navy"}`}>Past ({pastCourses.length})</a>
+          <a href={qs("past")} className={`rounded-md px-3 py-1 font-medium ${view === "past" ? "bg-navy text-white" : "text-slate-500 hover:text-navy"}`}>Past ({scope.pastCount})</a>
         </div>
         <form method="get" className="ml-auto flex items-center gap-2">
           {view === "past" ? <input type="hidden" name="view" value="past" /> : null}
@@ -227,6 +232,11 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
         />
       ) : null}
 
+      {view === "past" && (scope.olderHidden || sp.all === "1") ? (
+        <p className="mb-3 text-xs text-slate-500">
+          {sp.all === "1" ? <>Showing every past course. <a href={`/office/courses?view=past${q ? `&q=${encodeURIComponent(q)}` : ""}`} className="text-teal hover:underline">Just the last 12 months</a></> : <>Showing courses from the last 12 months. <a href={`/office/courses?view=past&all=1${q ? `&q=${encodeURIComponent(q)}` : ""}`} className="text-teal hover:underline">Show older courses too</a></>}
+        </p>
+      ) : null}
       <div className="scroll-smooth lg:grid lg:grid-cols-[1fr_11rem] lg:gap-6">
         <div className="space-y-8">
           {monthSections.length === 0 && (view === "past" || undated.length === 0) ? (

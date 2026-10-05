@@ -1,3 +1,5 @@
+import { coursePageScope } from "@/lib/services/course-list";
+import { coverageForCourses } from "@/lib/services/schedule";
 import { FEATURE_LABEL, featureForPermission, ownerName } from "@/lib/auth/rbac";
 import { listOfficeMembers } from "@/lib/services/office-access";
 import Link from "next/link";
@@ -58,7 +60,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     getSessionEvents(repos, ctx, addDays(monday, -7), addDays(monday, 7 * 12)),
     repos.tenant.orgSettings.list(ctx),
   ]);
-  const { sessions, coverageByCourse } = schedule;
+  const { sessions } = schedule;
   const [confirmations, problems] = await Promise.all([confirmationSummary(repos, ctx, today), findProblems(repos, ctx, { from: today, to: addDays(today, 28) })]);
   const licenceOn = Boolean(settingsRows[0]?.enforceLicenceChecks);
   const ratioOn = Boolean(settingsRows[0]?.enforceRatioChecks);
@@ -72,7 +74,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
   const blocked = staff.filter((s) => !s.fit.fit).length;
   const expiring = staff.filter((s) => s.fit.warnings.length > 0).length;
-  const uncovered = [...coverageByCourse.values()].filter((c) => !c.ratio.ok).length;
+  // Upcoming courses short of cover (past courses no longer count).
+  const uncovered = ratioOn ? [...(await coverageForCourses(repos, ctx, (await coursePageScope(repos, ctx, { view: "upcoming", today })).ids)).values()].filter((c) => !c.ratio.ok).length : 0;
   const pendingLeave = leave.filter((l) => l.status === "pending").length;
   const openShifts = shifts.filter((s) => s.status === "open" || s.status === "offered").length;
 

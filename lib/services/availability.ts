@@ -1,11 +1,15 @@
-import { and, eq, isNotNull } from "drizzle-orm";
+import { and, eq, gte, isNotNull, isNull, lt, lte, or } from "drizzle-orm";
 import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
 import {
   availability as availabilityTable,
   availabilityNote as availabilityNoteTable,
+  course as courseTable,
+  courseSession as courseSessionTable,
+  courseStaff as courseStaffTable,
   SLOT_CODES,
   type AvailabilitySetBy,
+  type CourseSession,
   type OrgSettings,
   type SlotCode,
 } from "@/lib/db/schema";
@@ -210,17 +214,21 @@ export interface AvailabilityMatrix {
  * slot and what each person is already rostered on. Tenant scoped.
  */
 export async function getWeekAvailabilityMatrix(repos: Repositories, ctx: AnyTenantContext, mondayIso: string): Promise<AvailabilityMatrix> {
-  const [instructors, rows, noteRows, sessions, staff, courses, courseTypes, horizon] = await Promise.all([
+  const sunday = addDays(mondayIso, 7);
+  // One week's answers, notes and sessions (plus everyone's usual week): never the whole history.
+  const [instructors, rows, noteRows, sessions, courseTypes, horizon] = await Promise.all([
     repos.tenant.instructor.list(ctx),
-    repos.tenant.availability.list(ctx),
-    repos.tenant.availabilityNote.list(ctx),
-    repos.tenant.courseSession.list(ctx).then(liveSessions),
-    repos.tenant.courseStaff.list(ctx),
-    repos.tenant.course.list(ctx),
+    repos.tenant.availability.list(ctx, or(and(gte(availabilityTable.date, mondayIso), lt(availabilityTable.date, sunday)), isNull(availabilityTable.date))),
+    repos.tenant.availabilityNote.list(ctx, and(gte(availabilityNoteTable.date, mondayIso), lt(availabilityNoteTable.date, sunday))),
+    repos.tenant.courseSession.list(ctx, and(gte(courseSessionTable.date, mondayIso), lt(courseSessionTable.date, sunday))).then(liveSessions),
     repos.tenant.courseType.list(ctx),
     horizonOf(repos, ctx),
   ]);
-  const sunday = addDays(mondayIso, 7);
+  const weekCourseIds = [...new Set(sessions.map((s) => s.courseId))];
+  const [staff, courses] = await Promise.all([
+    repos.tenant.courseStaff.listIn(ctx, courseStaffTable.courseId, weekCourseIds),
+    repos.tenant.course.listIn(ctx, courseTable.id, weekCourseIds),
+  ]);
   const days: string[] = [];
   for (let i = 0; i < 7; i++) days.push(addDays(mondayIso, i));
 
@@ -277,10 +285,16 @@ export async function getWeekAvailabilityMatrix(repos: Repositories, ctx: AnyTen
  * dates/slots (see {@link CourseAvailState}). Rostering is never blocked by this
  * view — the assignment check does that — it just makes the picker honest.
  */
-export async function getCourseAvailabilityStates(repos: Repositories, ctx: AnyTenantContext): Promise<Map<string, Map<string, CourseAvailState>>> {
+export async function getCourseAvailabilityStates(repos: Repositories, ctx: AnyTenantContext, only?: readonly CourseSession[]): Promise<Map<string, Map<string, CourseAvailState>>> {
+  // Given the sessions in view, read only the answers for their dates (plus everyone's usual week).
+  const live = only ? liveSessions([...only]) : null;
+  const dates = live?.map((s) => s.date).sort() ?? [];
+  const availWhere = live
+    ? (dates.length ? or(and(gte(availabilityTable.date, dates[0]!), lte(availabilityTable.date, dates[dates.length - 1]!)), isNull(availabilityTable.date)) : isNull(availabilityTable.date))
+    : undefined;
   const [sessions, availRows, instructors, horizon] = await Promise.all([
-    repos.tenant.courseSession.list(ctx).then(liveSessions),
-    repos.tenant.availability.list(ctx),
+    live ? Promise.resolve(live) : repos.tenant.courseSession.list(ctx).then(liveSessions),
+    repos.tenant.availability.list(ctx, availWhere),
     repos.tenant.instructor.list(ctx),
     horizonOf(repos, ctx),
   ]);

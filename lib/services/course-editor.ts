@@ -1,3 +1,5 @@
+import { eq } from "drizzle-orm";
+import { courseRoleRequirement as courseRoleRequirementTable, courseSession as courseSessionTable, courseStaff as courseStaffTable } from "@/lib/db/schema";
 import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
 import { evaluateRatio, type AssignedRole } from "@/lib/domain";
@@ -58,14 +60,14 @@ export async function getCourseEditorData(
 
   const [courseTypes, sessions, assignments, instructors, roles, settingsRows, staff, availStates, requirements, teaching, quals] = await Promise.all([
     t.courseType.list(ctx),
-    t.courseSession.list(ctx).then(liveSessions),
-    t.courseStaff.list(ctx),
+    t.courseSession.list(ctx, eq(courseSessionTable.courseId, courseId)).then(liveSessions),
+    t.courseStaff.list(ctx, eq(courseStaffTable.courseId, courseId)),
     t.instructor.list(ctx),
     t.roleType.list(ctx),
     t.orgSettings.list(ctx),
     listStaffWithFit(repos, ctx),
-    getCourseAvailabilityStates(repos, ctx),
-    t.courseRoleRequirement.list(ctx),
+    t.courseSession.list(ctx, eq(courseSessionTable.courseId, courseId)).then((own) => getCourseAvailabilityStates(repos, ctx, own)),
+    t.courseRoleRequirement.list(ctx, eq(courseRoleRequirementTable.courseId, courseId)),
     getTeachingMatrix(repos, ctx),
     t.qualification.list(ctx),
   ]);

@@ -1,7 +1,7 @@
 import { eq, inArray } from "drizzle-orm";
 import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
-import { courseStaff as courseStaffTable, sessionStaffOverride as overrideTable, type CourseSession, type CourseStaff, type SessionStaffMode, type SessionStaffOverride } from "@/lib/db/schema";
+import { courseSession as courseSessionTable, courseStaff as courseStaffTable, sessionStaffOverride as overrideTable, type CourseSession, type CourseStaff, type SessionStaffMode, type SessionStaffOverride } from "@/lib/db/schema";
 import { effectiveStaffBySession, type EffectiveStaffMember } from "@/lib/domain/session-staff";
 import { hasConflict, type ResourceBooking } from "@/lib/domain";
 import { effectiveAvailability, blocksRostering, describeBusy } from "@/lib/domain/availability";
@@ -42,11 +42,16 @@ export async function staffBySession(
 
 /** The live sessions one instructor is actually on, across the centre. */
 export async function sessionsForInstructor(repos: Repositories, ctx: AnyTenantContext, instructorId: string, sessions?: readonly CourseSession[]): Promise<CourseSession[]> {
-  const all = liveSessions(sessions ?? (await repos.tenant.courseSession.list(ctx)));
   const [mine, overrides] = await Promise.all([
     repos.tenant.courseStaff.list(ctx, eq(courseStaffTable.instructorId, instructorId)),
     repos.tenant.sessionStaffOverride.list(ctx, eq(overrideTable.instructorId, instructorId)),
   ]);
+  // Without a list to look in, read only the sessions this person could be on: their courses' and their day adds'.
+  const candidates = sessions ?? [
+    ...(await repos.tenant.courseSession.listIn(ctx, courseSessionTable.courseId, mine.map((a) => a.courseId))),
+    ...(await repos.tenant.courseSession.listIn(ctx, courseSessionTable.id, overrides.filter((o) => o.mode === "add").map((o) => o.courseSessionId))),
+  ];
+  const all = liveSessions([...new Map(candidates.map((s) => [s.id, s])).values()]);
   const by = effectiveStaffBySession(all, mine, overrides);
   return all.filter((s) => (by.get(s.id) ?? []).some((m) => m.instructorId === instructorId && m.status !== "declined"));
 }

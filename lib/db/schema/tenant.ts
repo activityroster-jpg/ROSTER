@@ -654,6 +654,7 @@ export const availability = sqliteTable("availability", {
 }, (t) => [
   index("availability_org_idx").on(t.organisationId),
   index("availability_instructor_idx").on(t.instructorId),
+  index("availability_org_date_idx").on(t.organisationId, t.date),
   // One answer per instructor, date and slot; one per instructor, weekday and slot. Two
   // quick taps on a fresh cell used to leave two rows (audit A4-5).
   uniqueIndex("availability_instructor_date_slot_uq").on(t.instructorId, t.date, t.slot).where(sql`"date" IS NOT NULL`),
@@ -725,6 +726,7 @@ export const hoursRecord = sqliteTable("hours_record", {
 }, (t) => [
   index("hours_record_org_idx").on(t.organisationId),
   index("hours_record_instructor_idx").on(t.instructorId),
+  index("hours_record_session_idx").on(t.courseSessionId),
   // One line per person per session (audit A3-6).
   uniqueIndex("hours_record_instructor_session_uq").on(t.instructorId, t.courseSessionId).where(sql`"course_session_id" IS NOT NULL`),
 ]);

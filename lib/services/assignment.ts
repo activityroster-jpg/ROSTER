@@ -1,5 +1,5 @@
 import { runAtomic } from "@/lib/db/batch";
-import { eq } from "drizzle-orm";
+import { and, eq, gte, lte } from "drizzle-orm";
 import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
 import { actorUserId } from "@/lib/tenant/context";
@@ -10,7 +10,7 @@ import {
   type HeldCompliance,
   type ResourceBooking,
 } from "@/lib/domain";
-import { courseStaff as courseStaffTable } from "@/lib/db/schema";
+import { complianceItem as complianceItemTable, courseSession as courseSessionTable, courseStaff as courseStaffTable } from "@/lib/db/schema";
 import { availabilityHorizon, loadInstructorAvailability } from "./availability";
 import { blocksRostering, describeBusy, effectiveAvailability } from "@/lib/domain/availability";
 import { auditStatement } from "./audit";
@@ -68,6 +68,19 @@ export function assignBlockMessage(reason: AssignBlockReason, detail: string): s
  * centre has chosen "block". Ratio/safety-cover is a course-level flag surfaced
  * elsewhere, not a hard block here.
  */
+/** A course's own sessions plus every session from 14 days before its first to 14 days after its last. */
+export async function sessionsAround(repos: Repositories, ctx: AnyTenantContext, courseId: string, days = 14) {
+  const t = repos.tenant;
+  const own = await t.courseSession.list(ctx, eq(courseSessionTable.courseId, courseId));
+  if (own.length === 0) return own;
+  const dates = own.map((s) => s.date).sort();
+  const nearby = await t.courseSession.list(ctx, and(gte(courseSessionTable.date, addDaysIso(dates[0]!, -days)), lte(courseSessionTable.date, addDaysIso(dates[dates.length - 1]!, days))));
+  const byId = new Map([...own, ...nearby].map((s) => [s.id, s]));
+  return [...byId.values()];
+}
+
+const addDaysIso = (iso: string, n: number) => new Date(Date.parse(`${iso}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
+
 export async function assignStaff(
   repos: Repositories,
   ctx: AnyTenantContext,
@@ -77,8 +90,10 @@ export async function assignStaff(
 
   const [course, everySession] = await Promise.all([
     t.course.findById(ctx, input.courseId),
-    t.courseSession.list(ctx),
+    sessionsAround(repos, ctx, input.courseId),
   ]);
+  // This course's sessions plus everything a fortnight either side: enough for
+  // clashes, rest periods and weekly hours, without reading the whole history.
   const thisCourseSessions = liveSessions(everySession);
   if (!course) return { ok: false, reason: "invalid", detail: "Course not found" };
   // Both ids must belong to this centre (findById is tenant scoped).
@@ -95,7 +110,7 @@ export async function assignStaff(
   // --- 1. Fit check (only when the centre has opted into licence checks) ----
   const [complianceTypes, complianceItems, settingsRows] = await Promise.all([
     t.complianceType.list(ctx),
-    t.complianceItem.list(ctx),
+    t.complianceItem.list(ctx, eq(complianceItemTable.instructorId, input.instructorId)),
     t.orgSettings.list(ctx),
   ]);
   const settings = settingsRows[0];
@@ -247,7 +262,7 @@ export async function assignStaff(
   // someone. Check again now that the write has landed; if a clash appeared in
   // the meantime, take this assignment back out (with its pay lines) and say why.
   if (conflictChecksOn && !clashing) {
-    const freshSessions = liveSessions(await t.courseSession.list(ctx));
+    const freshSessions = liveSessions(await sessionsAround(repos, ctx, input.courseId));
     const now = (await sessionsForInstructor(repos, ctx, input.instructorId, freshSessions)).filter((s) => s.courseId !== input.courseId);
     const late = targetSessions.find((s) => hasConflict(
       { sessionId: s.id, resourceId: input.instructorId, startAt: toMs(s.startAt), endAt: toMs(s.endAt) },

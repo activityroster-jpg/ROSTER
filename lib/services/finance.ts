@@ -1,7 +1,7 @@
-import { eq } from "drizzle-orm";
+import { and, eq, gte, isNull, lte } from "drizzle-orm";
 import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
-import { hoursRecord as hoursRecordTable, type HoursSource, type PayUnit } from "@/lib/db/schema";
+import { course as courseTable, courseSession as courseSessionTable, hoursRecord as hoursRecordTable, timeEntry as timeEntryTable, type HoursSource, type PayUnit } from "@/lib/db/schema";
 import { applyBreak, fmtClockTime, linePay, markFirstOfDay, type BreakPolicy } from "@/lib/domain";
 
 export interface HoursRow {
@@ -164,6 +164,34 @@ const toMs = (v: Date | number | string | null | undefined): number | null =>
 // Session times are wall-clock values stored as UTC — shown as stored.
 const hhmm = (ms: number | null) => (ms == null || Number.isNaN(ms) ? null : new Date(ms).toISOString().slice(11, 16));
 
+/**
+ * The rows payroll needs. With a period (the page always has one) only that
+ * period's sessions, their pay lines, courses and clock entries are read, plus
+ * the few lines with no session; never the whole history. Without one, all.
+ */
+async function payrollSource(repos: Repositories, ctx: AnyTenantContext, filter: PayrollFilter) {
+  const t = repos.tenant;
+  const byInstructor = filter.instructorId ? eq(hoursRecordTable.instructorId, filter.instructorId) : undefined;
+  if (!filter.from || !filter.to) {
+    const [records, sessions, courses, entries] = await Promise.all([
+      byInstructor ? t.hoursRecord.list(ctx, byInstructor) : t.hoursRecord.list(ctx),
+      t.courseSession.list(ctx),
+      t.course.list(ctx),
+      t.timeEntry.list(ctx),
+    ]);
+    return { records, sessions, courses, entries };
+  }
+  const sessions = await t.courseSession.list(ctx, and(gte(courseSessionTable.date, filter.from), lte(courseSessionTable.date, filter.to)));
+  const ids = sessions.map((x) => x.id);
+  const [withSession, withoutSession, courses, entries] = await Promise.all([
+    t.hoursRecord.listIn(ctx, hoursRecordTable.courseSessionId, ids, byInstructor),
+    t.hoursRecord.list(ctx, byInstructor ? and(isNull(hoursRecordTable.courseSessionId), byInstructor) : isNull(hoursRecordTable.courseSessionId)),
+    t.course.listIn(ctx, courseTable.id, sessions.map((x) => x.courseId)),
+    t.timeEntry.listIn(ctx, timeEntryTable.courseSessionId, ids),
+  ]);
+  return { records: [...withSession, ...withoutSession], sessions, courses, entries };
+}
+
 /** Every hours record as a payroll line, filtered, with the pay rules applied. Tenant scoped. */
 export async function getPayrollLines(
   repos: Repositories,
@@ -171,12 +199,9 @@ export async function getPayrollLines(
   filter: PayrollFilter = {},
 ): Promise<{ lines: PayrollLine[]; policy: BreakPolicy }> {
   const t = repos.tenant;
-  const [records, instructors, sessions, courses, entries, settings] = await Promise.all([
-    filter.instructorId ? t.hoursRecord.list(ctx, eq(hoursRecordTable.instructorId, filter.instructorId)) : t.hoursRecord.list(ctx),
+  const [{ records, sessions, courses, entries }, instructors, settings] = await Promise.all([
+    payrollSource(repos, ctx, filter),
     t.instructor.list(ctx),
-    t.courseSession.list(ctx),
-    t.course.list(ctx),
-    t.timeEntry.list(ctx),
     t.orgSettings.list(ctx),
   ]);
   const s = settings[0];

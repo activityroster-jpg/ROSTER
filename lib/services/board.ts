@@ -1,3 +1,4 @@
+import { course as courseTable, courseRoleRequirement as courseRoleRequirementTable, courseSession as courseSessionTable } from "@/lib/db/schema";
 import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
 import { getWeekRota, type RotaDay } from "./schedule";
@@ -50,18 +51,22 @@ export interface BoardData {
  */
 export async function getBoard(repos: Repositories, ctx: AnyTenantContext, mondayIso: string): Promise<BoardData> {
   const t = repos.tenant;
-  const [days, matrix, staff, teaching, problems, roles, courses, courseTypes, requirements, allSessions, settingsRows] = await Promise.all([
+  const [days, matrix, staff, teaching, problems, roles, courseTypes, settingsRows] = await Promise.all([
     getWeekRota(repos, ctx, mondayIso),
     getWeekAvailabilityMatrix(repos, ctx, mondayIso),
     listStaffWithFit(repos, ctx),
     getTeachingMatrix(repos, ctx),
     findProblems(repos, ctx, { from: mondayIso, to: addDays(mondayIso, 7) }),
     t.roleType.list(ctx),
-    t.course.list(ctx),
     t.courseType.list(ctx),
-    t.courseRoleRequirement.list(ctx),
-    t.courseSession.list(ctx),
     t.orgSettings.list(ctx),
+  ]);
+  // Only this week's courses (and all their sessions, to know which are multi-day): never the whole history.
+  const weekCourseIds = [...new Set(days.flatMap((d) => d.sessions.map((s) => s.courseId)))];
+  const [courses, requirements, allSessions] = await Promise.all([
+    t.course.listIn(ctx, courseTable.id, weekCourseIds),
+    t.courseRoleRequirement.listIn(ctx, courseRoleRequirementTable.courseId, weekCourseIds),
+    t.courseSession.listIn(ctx, courseSessionTable.courseId, weekCourseIds),
   ]);
   const licenceOn = Boolean(settingsRows[0]?.enforceLicenceChecks);
   const roleById = new Map(roles.map((r) => [r.id, r]));
