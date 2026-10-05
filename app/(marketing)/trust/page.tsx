@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PRIVACY_CONTACT, SECURITY_CONTACT } from "@/lib/legal";
+import { statusPageUrl } from "@/lib/config";
 
 export const metadata: Metadata = {
   title: "Security and privacy",
@@ -35,7 +36,7 @@ export default function SecurityPage() {
       <P>Each centre sets how long it keeps each kind of record (12 months for people who have left unless it chooses otherwise) and gets 14 days&rsquo; notice before anything is removed, with a one-click &ldquo;keep&rdquo;. Anyone can be given a copy of everything held about them, have their record restricted while a question is settled, or be anonymised, from their profile. Young workers&rsquo; hours are checked against the legal limits for their age on every shift; adults get a warning when a week looks over the working-time limits.</P>
 
       <H>Backups and resilience</H>
-      <P>The database keeps point-in-time history for 30 days, with nightly encrypted exports kept in the EU and a second copy outside Cloudflare. Restores are tested each quarter. The platform is watched from outside Cloudflare around the clock; live status and any incidents are on our <a href="https://activity-roster.betteruptime.com" className="font-semibold text-teal hover:underline" rel="noreferrer">status page</a>. If the platform is ever down, centres can still print the day&rsquo;s roster and emergency sheet in advance, or have the day&rsquo;s roster emailed each morning.</P>
+      <P>The database keeps point-in-time history for 30 days, with nightly encrypted exports kept in the EU and a second copy outside Cloudflare. Restores are tested each quarter. The platform is watched from outside Cloudflare around the clock{statusPageUrl() ? <>; live status and any incidents are on our <a href={statusPageUrl()!} className="font-semibold text-teal hover:underline" rel="noreferrer">status page</a></> : null}. If the platform is ever down, centres can still print the day&rsquo;s roster and emergency sheet in advance, or have the day&rsquo;s roster emailed each morning.</P>
 
       <H>Your rights and complaints</H>
       <P>Anyone can ask for, correct or delete their data, or complain, through our <Link href="/privacy-request" className="font-semibold text-teal hover:underline">data request form</Link> or by emailing {PRIVACY_CONTACT}. We acknowledge within 30 days. Centres can export all their data at any time from Settings.</P>

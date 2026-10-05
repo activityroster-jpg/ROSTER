@@ -5,4 +5,5 @@
  */
 export const TERMS_VERSION = "2026-09-29";
 export const PRIVACY_CONTACT = "privacy@activityroster.com";
-export const SECURITY_CONTACT = "security@activityroster.com";
+/** Security reports go to the privacy inbox (decided 5 Oct): one monitored address. */
+export const SECURITY_CONTACT = PRIVACY_CONTACT;

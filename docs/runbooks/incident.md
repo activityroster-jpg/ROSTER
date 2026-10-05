@@ -16,7 +16,7 @@ Keep a printed copy and one in Google Drive. Severity decides the clock.
    token (Cloudflare secrets, Stripe, Resend), suspend a centre (Dev Center), or put the
    site in maintenance (Phase 2 flag).
 3. Preserve evidence: do not delete logs, rows or emails. Note the Time Travel bookmark.
-4. Post on the status page: https://activity-roster.betteruptime.com (Better Stack → Status pages → Create incident). "We're aware of a problem with …, investigating".
+4. Post on the status page (Better Stack → Status pages → Create incident; its address is the STATUS_PAGE_URL Worker variable). "We're aware of a problem with …, investigating".
 
 ## Assess (within the first hours)
 
@@ -54,7 +54,7 @@ help with the wording. Contact: privacy@activityroster.com."
 
 ## Contacts
 
-- Status page: https://activity-roster.betteruptime.com · Better Stack alerts go to Conor by SMS and email
+- Status page: Better Stack → Status pages (address in the STATUS_PAGE_URL Worker variable; links on the site are hidden until it is set) · Better Stack alerts go to Conor by SMS and email
 - Cloudflare support: dashboard → Support (Paid plan: email/chat)
 - Resend: support@resend.com · Postmark: support@postmarkapp.com
 - Tell everyone: Dev Center → Overview → Operations → Incident banner (one line, shows on the website, office and app with the status-page link). Pause editing while repairing data: the same card → Maintenance mode (office and app show “Back shortly” to everyone except platform admins; website and status page stay up). Switch both off when done.

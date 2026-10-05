@@ -13,5 +13,5 @@ Keep the two in step; the page is the plain-English version.
 - **Logging:** centre change log; owner-side security events with IP/country/agent; Sentry (EU) with scrubbing.
 - **Backups:** D1 Time Travel 30 days; nightly encrypted export to EU R2 (30 daily, 12 monthly); off-site copy; quarterly restore test; runbooks.
 - **Privacy:** data-request form with 30-day acknowledgement; whole-centre export; deactivate-never-delete config; privacy notices linked in-app; terms version recorded per centre.
-- **Disclosure:** security.txt, security@ address, good-faith safe harbour.
+- **Disclosure:** security.txt pointing at privacy@activityroster.com (one monitored inbox), good-faith safe harbour.
 - **Public pages:** `/trust`, `/subprocessors` (from `lib/legal/subprocessors.ts`), `/accessibility`, `/privacy/young-people`.

@@ -24,3 +24,14 @@ export const COMPANY = {
     return this.addressLines.join(", ");
   },
 };
+
+/**
+ * The public status page (Better Stack). Null hides every "status page" link,
+ * so nobody lands on Better Stack's own home page; set the Worker variable
+ * STATUS_PAGE_URL (or the constant below) to the page's real address.
+ */
+const STATUS_PAGE_DEFAULT: string | null = null;
+export function statusPageUrl(): string | null {
+  const v = (process.env.STATUS_PAGE_URL ?? "").trim() || STATUS_PAGE_DEFAULT;
+  return v && /^https:\/\/[^\s"'<>]+$/.test(v) ? v : null;
+}

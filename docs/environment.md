@@ -21,6 +21,7 @@ Three environments. Names only here, never values.
 | `TOKEN_ENCRYPTION_KEY` | AES-GCM key for stored integration tokens | Generated | Rotating it invalidates stored integration tokens; reconnect integrations afterwards |
 | `BETTER_AUTH_URL` | Base URL for auth links | `https://activityroster.com` / `https://staging.activityroster.com` | Edit if the domain changes |
 | `PLATFORM_ADMIN_EMAILS` | Comma-separated emails allowed into the Dev Center | Conor | Edit the list |
+| `STATUS_PAGE_URL` (optional) | The public status page's address (Better Stack → Status pages → your page). Unset hides every status-page link | Better Stack | Edit the address |
 | `PREVIEW_GATE` (optional) | Coming soon page on the public site: anything but `off` keeps it on (on by default) | Set to `off` to open the website | Remove or set `on` to close it again |
 | `PREVIEW_PIN_SHA256` (optional) | Changes the Coming soon PIN: the SHA-256 of the new PIN, in hex. Unset = the PIN agreed on 5 Oct | Ask Claude Code for the value for a new PIN | Set a new value; everyone needs the new PIN |
 | `STRIPE_SECRET_KEY` | Stripe API key (restricted) | Stripe → Developers → API keys | Create a new restricted key, set it, delete the old one |
