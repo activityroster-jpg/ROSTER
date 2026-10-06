@@ -464,7 +464,7 @@ export const blogPost = sqliteTable("blog_post", {
 
 // --- Platform owner's task planner (control-plane, admin-only) --------------
 
-export const TASK_STATUSES = ["upcoming", "working", "complete"] as const;
+export const TASK_STATUSES = ["upcoming", "working", "testing", "complete"] as const;
 export type TaskStatus = (typeof TASK_STATUSES)[number];
 export const TASK_PRIORITIES = ["low", "medium", "high", "urgent"] as const;
 export type TaskPriority = (typeof TASK_PRIORITIES)[number];
