@@ -1,6 +1,8 @@
 import type { MetadataRoute } from "next";
 import { apexDomain } from "@/lib/config";
 import { COMPETITORS } from "@/lib/marketing/competitors";
+import { LANDINGS } from "@/lib/seo/landings";
+import { GUIDES } from "@/lib/seo/guides";
 import { getDb } from "@/lib/cf/bindings";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
 
@@ -15,6 +17,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${site}/pricing`, lastModified: now, changeFrequency: "monthly", priority: 0.9 },
     { url: `${site}/compare`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${site}/learn`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
+    { url: `${site}/guides`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${site}/blog`, lastModified: now, changeFrequency: "daily", priority: 0.8 },
     { url: `${site}/demo`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },
     { url: `${site}/contact`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
@@ -32,6 +35,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }));
 
+  // Pages written for what RYA centres search for, and the guides that answer their questions.
+  const landingRoutes: MetadataRoute.Sitemap = LANDINGS.map((l, i) => ({
+    url: `${site}/${l.slug}`,
+    lastModified: now,
+    changeFrequency: "monthly",
+    priority: i < 2 ? 0.95 : 0.85,
+  }));
+  const guideRoutes: MetadataRoute.Sitemap = GUIDES.map((g) => ({
+    url: `${site}/guides/${g.slug}`,
+    lastModified: new Date(`${g.updated}T00:00:00Z`),
+    changeFrequency: "monthly",
+    priority: 0.75,
+  }));
+
   // Blog posts (published & live). Best-effort — never fail the sitemap.
   let blogRoutes: MetadataRoute.Sitemap = [];
   try {
@@ -47,5 +64,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // table may not exist yet / no binding at build — omit blog URLs
   }
 
-  return [...staticRoutes, ...competitorRoutes, ...blogRoutes];
+  return [...staticRoutes, ...landingRoutes, ...guideRoutes, ...competitorRoutes, ...blogRoutes];
 }

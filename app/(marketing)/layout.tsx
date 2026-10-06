@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LANDINGS } from "@/lib/seo/landings";
 import { CookieNotice } from "@/components/marketing/CookieNotice";
 import { SiteHeader } from "@/components/marketing/SiteHeader";
 import { IncidentBanner } from "@/components/IncidentBanner";
@@ -12,6 +13,13 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
       <main id="main">{children}</main>
       <footer className="border-t border-slate-200 bg-white">
         <div className="mx-auto max-w-6xl px-4 py-8 text-sm text-slate-500">
+          <nav aria-label="Software for RYA centres" className="mb-5 border-b border-slate-100 pb-5">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Software for RYA centres</p>
+            <div className="grid gap-x-6 gap-y-1.5 sm:grid-cols-2 lg:grid-cols-4">
+              {LANDINGS.map((l) => <Link key={l.slug} href={`/${l.slug}`} className="hover:text-navy">{l.navLabel}</Link>)}
+              <Link href="/guides" className="font-medium text-slate-600 hover:text-navy">Sailing school guides</Link>
+            </div>
+          </nav>
           <nav className="mb-3 flex flex-wrap gap-x-5 gap-y-2 font-medium text-slate-600">
             <Link href="/pricing" className="hover:text-navy">Pricing</Link>
             <Link href="/compare" className="hover:text-navy">Compare</Link>
