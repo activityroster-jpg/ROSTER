@@ -12,6 +12,8 @@ export interface Screen {
   height: number;
   /** "desktop" shots are the office at 1360px wide; "phone" shots are the instructor app. */
   device: "desktop" | "phone";
+  /** Full-resolution copy (2720px, straight from the 2x capture) for places shown large, like the homepage hero. */
+  src2x?: string;
   title: string;
   /** One plain sentence for the tour and as the image's alt text. */
   caption: string;
@@ -29,7 +31,7 @@ export const SCREENS = {
   board: desktop("board", "Roster board", "The week as courses by day, with everyone's availability alongside, so you can drag people onto sessions.", "board"),
   boardPeople: desktop("board-people", "People × days", "The same week turned round: a row per instructor, free slots in green, so gaps and double-bookings stand out.", "board"),
   rota: desktop("rota", "Printable roster", "The published week ready to print or send as a PDF, with locations, kit and this week's problems on top.", "rota"),
-  courses: desktop("courses", "Courses", "Every course this week on one calendar, colour-coded youth and adult, with a quick way to add more.", "courses"),
+  courses: { ...desktop("courses", "Courses", "Every course this week on one calendar, colour-coded youth and adult, with a quick way to add more.", "courses"), src2x: "/screens/courses@2x.webp" },
   courseSetup: desktop("course-setup", "Course setup", "Your course catalogue: RYA courses and your own, with audience, capacity and ratio for each.", "courses"),
   courseDetail: desktop("course-detail", "A course", "One course: staffing worked out from the RYA ratio, plus where it runs and the boats it takes.", "rostering"),
   courseDays: desktop("course-detail-staff", "Who's on each day", "A five-day camp, day by day: who is on each session, and a different person for a single day if needed.", "rostering"),

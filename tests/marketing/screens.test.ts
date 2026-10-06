@@ -23,6 +23,7 @@ describe("platform screenshots", () => {
       else if (chunk === "VP8 ") { w = v.getUint16(26, true) & 0x3fff; h = v.getUint16(28, true) & 0x3fff; }
       else { const bits = v.getUint32(21, true); w = (bits & 0x3fff) + 1; h = ((bits >> 14) & 0x3fff) + 1; }
       expect([w, h], s.src).toEqual([s.width, s.height]);
+      if (s.src2x) expect(existsSync(join(process.cwd(), "public", s.src2x)), s.src2x).toBe(true);
     }
   });
 

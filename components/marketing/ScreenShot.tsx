@@ -8,6 +8,8 @@ export function ScreenShot({ screen, eager = false, className = "" }: { screen: 
   const img = (
     <img
       src={screen.src}
+      srcSet={screen.src2x ? `${screen.src} ${screen.width}w, ${screen.src2x} 2720w` : undefined}
+      sizes={screen.src2x ? "(min-width: 768px) 1360px, 100vw" : undefined}
       width={screen.width}
       height={screen.height}
       alt={`${screen.title}: ${screen.caption}`}
@@ -24,7 +26,7 @@ export function ScreenShot({ screen, eager = false, className = "" }: { screen: 
     );
   }
   return (
-    <a href={screen.src} target="_blank" rel="noreferrer" className={`block overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm ${className}`} title="Open full size">
+    <a href={screen.src2x ?? screen.src} target="_blank" rel="noreferrer" className={`block overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm ${className}`} title="Open full size">
       <div className="flex items-center gap-1.5 border-b border-slate-200 bg-slate-50 px-3 py-2" aria-hidden="true">
         <span className="h-2.5 w-2.5 rounded-full bg-port/60" />
         <span className="h-2.5 w-2.5 rounded-full bg-amber/60" />

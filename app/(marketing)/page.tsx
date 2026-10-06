@@ -170,8 +170,8 @@ export default function MarketingHome() {
             </p>
           </div>
           <div>
-            <ScreenShot screen={SCREENS.board} eager className="ring-1 ring-white/20" />
-            <p className="mt-2 text-center text-xs text-white/60">The roster board at a busy centre in July. <Link href="/demo" className="underline underline-offset-2 hover:text-white">See every screen →</Link></p>
+            <ScreenShot screen={SCREENS.courses} eager className="ring-1 ring-white/20" />
+            <p className="mt-2 text-center text-xs text-white/60">The courses calendar at a busy centre in July. <Link href="/demo" className="underline underline-offset-2 hover:text-white">See every screen →</Link></p>
           </div>
         </div>
       </section>
@@ -222,8 +222,8 @@ export default function MarketingHome() {
       {/* Full platform grid */}
       <section id="features" className="border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-6xl px-4 py-12 md:py-16">
-          <h2 className="font-display text-2xl font-semibold text-navy">The whole staff platform, built for the water</h2>
-          <p className="mt-2 max-w-2xl text-slate-600">Everything you stitch together today — spreadsheets, WhatsApp, a folder of certificates — in one place.</p>
+          <h2 className="font-display text-2xl font-semibold text-navy">The whole staff platform, built for RYA centres and clubs</h2>
+          <p className="mt-2 max-w-2xl text-slate-600">Everything an RYA centre or club stitches together today — spreadsheets, WhatsApp, a folder of certificates — in one place.</p>
           <div className="mt-8 grid gap-3 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
             {PLATFORM.map((f) => (
               <div key={f.title} className="flex gap-3 rounded-card border border-slate-200 p-4">
