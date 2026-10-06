@@ -57,6 +57,9 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
   const staffing = staffingViewFrom(course, ct, roles, requirements.filter((r) => r.courseId === id), assignments);
   const membersBySession = await staffBySession(repos, ctx, sessions, assignments);
   const roleNameOf = (rid: string) => roles.find((r) => r.id === rid)?.name ?? "Role";
+  // Declared before the per-day loop below uses it: declaring it later threw
+  // "Cannot access 'nameById' before initialization" on any course with sessions.
+  const nameById = new Map(instructors.map((i) => [i.id, i.name]));
   const dayStaffBySession: Record<string, { members: { instructorId: string; name: string; role: string; roleTypeId: string; status: string; source: "course" | "day" }[]; skipped: { instructorId: string; name: string }[] }> = {};
   for (const s of sessions) {
     const members = membersBySession.get(s.id) ?? [];
@@ -72,7 +75,6 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
     : [{ unitBusy: {}, typeOthers: {} }, []];
   const holdsAny = new Set(quals.map((q) => q.instructorId));
   const slotStyle = (settings[0]?.slotStyle ?? "slots") as "slots" | "times";
-  const nameById = new Map(instructors.map((i) => [i.id, i.name]));
   const roleName = new Map(roles.map((r) => [r.id, r.name]));
   const licenceOn = Boolean(settings[0]?.enforceLicenceChecks);
   const fitObjById = new Map(staffFit.map((s) => [s.instructor.id, s.fit]));
