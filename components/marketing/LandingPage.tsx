@@ -3,6 +3,7 @@ import { ArrowRight, Check, ShieldCheck } from "lucide-react";
 import { ComplianceFlow } from "./ComplianceFlow";
 import { ScreenShot } from "./ScreenShot";
 import { LeadCapture } from "./LeadCapture";
+import { BuiltWithCentres } from "./BuiltWithCentres";
 import { SCREENS } from "@/lib/screens";
 import { landingBySlug, type Landing } from "@/lib/seo/landings";
 import { guideBySlug } from "@/lib/seo/guides";
@@ -126,6 +127,8 @@ export function LandingPage({ slug }: { slug: string }) {
           </div>
         </section>
       ) : null}
+
+      <BuiltWithCentres compact />
 
       {/* Questions */}
       <section className="bg-white">

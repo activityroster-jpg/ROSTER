@@ -18,6 +18,7 @@ export function adminSections(opts: { staging: boolean }): NavSection[] {
       { href: "/admin", label: "Centres", hint: "every centre, its plan and status" },
       { href: "/admin/finance", label: "Finance", hint: "revenue, pricing and discounts" },
       { href: "/admin/tasks", label: "Tasks", hint: "the build and launch planner" },
+      { href: "/admin/requests", label: "Requests", hint: "feature requests and problem reports from centres" },
     ] },
     { id: "growth", label: "Growth", pages: [
       { href: "/admin/marketing", label: "Prospects", hint: "the outreach list and lawful basis" },

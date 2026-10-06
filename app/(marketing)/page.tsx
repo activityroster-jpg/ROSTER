@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BuiltWithCentres } from "@/components/marketing/BuiltWithCentres";
 import {
   AlertTriangle, Anchor, CalendarCheck, LifeBuoy, ShieldCheck, Ship, Users, Waves, Wallet, FileCheck,
   Clock, CalendarOff, Smartphone, ClipboardCheck,
@@ -289,6 +290,8 @@ export default function MarketingHome() {
         </div>
       </section>
 
+      <BuiltWithCentres />
+
       <PhotoBand src={PHOTOS.instructors} alt="Instructors briefing on the shore" caption="Every session safely staffed" />
 
       {/* Demo band */}
@@ -369,6 +372,7 @@ export default function MarketingHome() {
               ["Do our instructors need to install anything?", "They get the instructor app on their phone for shifts, availability, swaps, hours and documents. It also works in any phone browser, so nobody is left out."],
               ["We have under-18 assistants. Is that covered?", "Yes. Their hours are checked against the legal limits for their age, their contact details stay private, and a parent or guardian can be given a read-only view of their roster."],
               ["Can we bring our existing schedule across?", "Yes. Import courses and staff from a spreadsheet or calendar, check what was read, then save. Most centres are set up in an afternoon."],
+              ["Will the platform keep improving?", "Yes. ActivityRoster is a live platform, updated continuously with nothing to install. Centres request features from inside the platform and vote for each other's ideas, and we build around what centres vote for."],
               ["What does it cost after the free month?", "£35 a month for up to 10 people or £65 a month for unlimited instructors and volunteers (fair use applies, see our terms). No per-user fees, and annual billing gives you months free."],
             ].map(([q, a]) => (
               <div key={q}>

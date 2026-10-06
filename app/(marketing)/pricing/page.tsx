@@ -295,6 +295,16 @@ export default async function PricingPage() {
         </div>
       ) : null}
 
+      <div className="mt-10 rounded-card border border-teal/30 bg-teal/5 p-6 md:flex md:items-center md:gap-6">
+        <span className="mb-3 flex h-11 w-11 flex-none items-center justify-center rounded-full bg-white text-xl shadow-sm md:mb-0" aria-hidden="true">👍</span>
+        <div>
+          <h2 className="font-display text-xl font-bold text-navy">Every plan gets every improvement</h2>
+          <p className="mt-1 text-slate-600">
+            ActivityRoster is a live platform, updated continuously at no extra cost. Centres request features from inside the platform and vote for each other&rsquo;s ideas, and we build around what centres vote for.
+          </p>
+        </div>
+      </div>
+
       <p className="mt-8 text-center text-sm text-slate-500">
         Prefer to set things up yourself? The platform is designed to be quick to get going, and{" "}
         <Link href="/learn" className="font-semibold text-teal hover:underline">the Learning Centre</Link> walks you

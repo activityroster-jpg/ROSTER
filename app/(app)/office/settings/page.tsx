@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { whoCanSeeText } from "@/components/office/WhoCanSee";
 import { requireTenant } from "@/lib/tenant/require";
 import { Card } from "@/components/ui";
@@ -57,6 +58,15 @@ export default async function SettingsPage() {
         Shape ActivityRoster to how your centre runs — courses, certs, roles, checks and slots are all yours to edit.
         Retiring an item hides it from new records but keeps your history intact (nothing is deleted).
       </p>
+
+      <Link href="/office/requests" className="group mb-6 flex items-center gap-4 rounded-card border border-teal/30 bg-teal/5 p-4 transition hover:border-teal hover:bg-teal/10">
+        <span className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-teal/15 text-xl" aria-hidden="true">💡</span>
+        <span className="flex-1">
+          <span className="block font-semibold text-navy group-hover:text-teal">Request a feature or report a problem</span>
+          <span className="block text-sm text-slate-600">Tell us what would make ActivityRoster work better for your centre, follow your requests from Submitted to Live, and back what other centres have asked for.</span>
+        </span>
+        <span className="text-sm font-semibold text-teal" aria-hidden="true">→</span>
+      </Link>
 
       <SettingsTabs
         tabs={[

@@ -915,3 +915,71 @@ export type TrialFeedback = typeof trialFeedback.$inferSelect;
 export type NewTrialFeedback = typeof trialFeedback.$inferInsert;
 
 export const _sql = sql;
+
+// --- Feature requests (centres → ActivityRoster) ----------------------------
+
+/**
+ * The stages a feature request moves through, in board order. "submitted" is
+ * private to the centre that sent it and the Dev Center; from "in_review" on,
+ * its public title shows on the board every signed-in centre can see.
+ */
+export const FEATURE_REQUEST_STATUSES = ["submitted", "in_review", "approved", "in_development", "testing", "live", "not_possible"] as const;
+export type FeatureRequestStatus = (typeof FEATURE_REQUEST_STATUSES)[number];
+export const FEATURE_REQUEST_KINDS = ["feature", "problem"] as const;
+export type FeatureRequestKind = (typeof FEATURE_REQUEST_KINDS)[number];
+export const FEATURE_REQUEST_IMPORTANCE = ["nice", "important", "blocking"] as const;
+export type FeatureRequestImportance = (typeof FEATURE_REQUEST_IMPORTANCE)[number];
+
+/**
+ * A request for a new feature, or a problem to fix, sent by a centre from
+ * Settings → Requests. Feedback to ActivityRoster rather than centre data, so
+ * it is read across centres in the Dev Center (like trial_feedback) and goes
+ * when the centre is erased (cascade). The full brief and the screenshot are
+ * private to the centre and the platform; other centres only ever see
+ * `publicTitle`, the status and the vote count, never which centre sent it.
+ */
+export const featureRequest = sqliteTable("feature_request", {
+  id: id(),
+  organisationId: text("organisation_id").notNull().references(() => organisation.id, { onDelete: "cascade" }),
+  submittedByUserId: text("submitted_by_user_id"),
+  submitterName: text("submitter_name"),
+  kind: text("kind", { enum: FEATURE_REQUEST_KINDS }).notNull(),
+  /** The centre's own short title. */
+  title: text("title").notNull(),
+  /** What the board shows: the centre's title until the platform rewords it. */
+  publicTitle: text("public_title").notNull(),
+  problem: text("problem").notNull(),
+  change: text("change").notNull(),
+  whoAffected: text("who_affected"),
+  frequency: text("frequency"),
+  workaround: text("workaround"),
+  importance: text("importance", { enum: FEATURE_REQUEST_IMPORTANCE }).notNull().default("important"),
+  details: text("details"),
+  /** Private R2 key under the centre's prefix (org_{id}/feature-requests/…). */
+  screenshotKey: text("screenshot_key"),
+  consentPublic: boolCol("consent_public").notNull().default(false),
+  status: text("status", { enum: FEATURE_REQUEST_STATUSES }).notNull().default("submitted"),
+  /** Kept off the public board even once reviewed (e.g. a duplicate or something sensitive). */
+  hidden: boolCol("hidden").notNull().default(false),
+  /** A note from ActivityRoster that only the requesting centre sees. */
+  responseToCentre: text("response_to_centre"),
+  statusChangedAt: integer("status_changed_at", { mode: "timestamp_ms" }),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, (t) => [
+  index("feature_request_org_idx").on(t.organisationId, t.createdAt),
+  index("feature_request_status_idx").on(t.status),
+]);
+export type FeatureRequest = typeof featureRequest.$inferSelect;
+export type NewFeatureRequest = typeof featureRequest.$inferInsert;
+
+/** "We need this too": one per centre per request, counted on the board and never shown by name. */
+export const featureRequestVote = sqliteTable("feature_request_vote", {
+  id: id(),
+  requestId: text("request_id").notNull().references(() => featureRequest.id, { onDelete: "cascade" }),
+  organisationId: text("organisation_id").notNull().references(() => organisation.id, { onDelete: "cascade" }),
+  createdAt: createdAt(),
+}, (t) => [
+  uniqueIndex("feature_request_vote_uq").on(t.requestId, t.organisationId),
+  index("feature_request_vote_org_idx").on(t.organisationId),
+]);

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
-  CalendarDays, CalendarOff, ClipboardList, Clock, CreditCard, History, LayoutDashboard, LifeBuoy, MapPin, Menu, Settings, Ship, Users, Wallet, X,
+  CalendarDays, CalendarOff, ClipboardList, Clock, CreditCard, History, LayoutDashboard, LifeBuoy, Lightbulb, MapPin, Menu, Settings, Ship, Users, Wallet, X,
  LogOut } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { signOut } from "@/lib/auth/client";
@@ -15,6 +15,7 @@ const NEEDS: Record<string, Permission> = {
   "/office": "office.view", "/office/courses": "roster.edit", "/office/rota": "rota.view", "/office/availability": "roster.edit", "/office/timeclock": "finance.view", "/office/leave": "roster.edit",
   "/office/staff": "staff.view", "/office/equipment": "roster.edit", "/office/locations": "roster.edit", "/office/finance": "finance.view",
   "/office/settings": "settings.edit", "/office/billing": "billing.manage", "/office/course-setup": "roster.edit", "/office/change-log": "settings.edit",
+  "/office/requests": "office.view",
 };
 
 const NAV = [
@@ -45,6 +46,7 @@ const NAV = [
       { href: "/office/settings", label: "Settings", icon: Settings },
       { href: "/office/billing", label: "Billing", icon: CreditCard },
       { href: "/office/change-log", label: "Change log", icon: History },
+      { href: "/office/requests", label: "Requests & ideas", icon: Lightbulb },
     ],
   },
 ];

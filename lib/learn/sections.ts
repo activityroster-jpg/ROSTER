@@ -697,6 +697,41 @@ export const SECTIONS: Section[] = [
     ],
   },
   {
+    id: "feature-requests",
+    icon: "💡",
+    label: "Requests & ideas",
+    blurb: "Ask for a feature or report a problem, follow it to Live, and back what other centres need.",
+    blocks: [
+      { kind: "p", text: "ActivityRoster is a live platform that keeps improving, and what we build next comes from centres. Open Requests & ideas from the sidebar (or the tile at the top of Settings) to ask for a new feature, suggest a change or tell us about something that isn't working." },
+      { kind: "sub", text: "Sending a request" },
+      { kind: "steps", items: [
+        "Choose whether it's a new feature or something not working right.",
+        "Say what problem you're trying to solve: what happens now, and what it stops you doing. For a fault, say what you did, what you expected and what happened instead.",
+        "Say what you'd like us to add or change, and how it would work for you.",
+        "If you can, add who it affects, how often it comes up, how you get round it today and how much it matters. The more detail, the quicker we can understand and build it.",
+        "Sum it up in a short title, add a screenshot if it helps, tick the box to agree the title can be shown to other centres, and press Send request.",
+      ] },
+      { kind: "tip", text: "Write it as you'd explain it to a new member of staff. A clear brief is far more likely to be built quickly than a one-liner." },
+      { kind: "sub", text: "What other centres see" },
+      { kind: "bullets", items: [
+        "Only the title, its stage and how many centres need it. Never the details, the screenshot, who sent it or which centre it came from.",
+        "Nothing at all until we've read it: a new request stays in Submitted, visible only to your centre and the ActivityRoster team. We may tidy the title before it goes on the board.",
+        "Screenshots stay private to your centre and us. Before attaching one, crop or cover anything personal: names, phone numbers, emails, addresses, and especially anything about children or young staff.",
+      ] },
+      { kind: "sub", text: "The stages" },
+      { kind: "bullets", items: [
+        "Submitted: we have it, and nobody else can see it yet.",
+        "In review: we're working out whether and how it can be done. It's on the shared board now.",
+        "Approved, In development, Testing: we're building it.",
+        "Live: the change is in the platform.",
+        "Not possible: we looked and can't do it, at least for now. We'll leave a note under My requests saying why where we can.",
+      ] },
+      { kind: "p", text: "We read every request and look into whether the change is possible. We can't promise to build everything, but if it's possible and it helps centres, we'll do it. Each time a request moves on, the person who sent it gets an email." },
+      { kind: "sub", text: "We need this too" },
+      { kind: "p", text: "Below your own requests is the board of everything centres have asked for. Press We need this too on the ones that would help your centre (press again to take it back). Only the count is shown, never which centres voted, and the most-needed requests go to the top of each stage. We build around what centres vote for." },
+    ],
+  },
+  {
     id: "if-the-platform-is-down",
     icon: "🛟",
     label: "If the platform is down",
@@ -725,5 +760,5 @@ export const GUIDE_STAGES: { label: string; ids: string[] }[] = [
   { label: "Build the roster", ids: ["availability", "dashboard", "board", "rostering", "bulk", "problems", "rota"] },
   { label: "Run the season", ids: ["young-workers", "leave", "time", "notifications"] },
   { label: "Account, billing & data", ids: ["plans", "billing", "trial-survey", "admin-security", "data", "retention"] },
-  { label: "Help & troubleshooting", ids: ["help-assistant", "if-the-platform-is-down"] },
+  { label: "Help & troubleshooting", ids: ["help-assistant", "feature-requests", "if-the-platform-is-down"] },
 ];
