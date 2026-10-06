@@ -38,9 +38,10 @@ describe("pipeline stages", () => {
 });
 
 describe("Gmail drafts", () => {
-  it("leave the text signature off so Gmail's own image signature is not doubled", () => {
+  it("leave the sign-off and signature off so Gmail's own signature is not doubled", () => {
     const { body } = draftProspectEmail({ name: "Yeadon Sailing Club" }, { signature: false });
-    expect(body.endsWith("Kind regards,\nConor")).toBe(true);
+    expect(body.endsWith("shall I send over a link to look around?")).toBe(true);
+    expect(body).not.toContain("Kind regards");
     expect(body).not.toContain("Registered office");
   });
 });

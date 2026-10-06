@@ -116,8 +116,9 @@ export function addressComplete(p: { addressLine1?: string | null; city?: string
 
 /**
  * The plain-text signature for drafts opened in a mail app (a mailto link can
- * only carry plain text). Gmail drafts leave it off: Gmail adds Conor's saved
- * signature (the logo image, public/brand/email-signature.png) by itself.
+ * only carry plain text). Gmail drafts leave it off, and the "Kind regards,
+ * Conor" sign-off with it: Gmail adds Conor's saved signature (sign-off and
+ * the logo image, public/brand/email-signature.png) by itself.
  */
 const [street, town, postcode, country] = COMPANY.addressLines;
 export const EMAIL_SIGNATURE: readonly string[] = [
@@ -143,10 +144,9 @@ export function draftProspectEmail(p: { name: string; contactName?: string | nul
     `No two centres run quite the same way, so we're happy to tailor it to how ${p.name} works. The first month is completely free, with no card required, so you can set it up and run a real week before deciding.`,
     "",
     "Would you be open to a short call, or shall I send over a link to look around?",
-    "",
-    "Kind regards,",
-    `${LETTER_SENDER.signOffName}`,
-    ...(opts.signature === false ? [] : ["", ...EMAIL_SIGNATURE]),
+    // Gmail drafts stop here: Conor's Gmail signature already carries the
+    // sign-off and the logo, so adding them again would double them up.
+    ...(opts.signature === false ? [] : ["", "Kind regards,", LETTER_SENDER.signOffName, "", ...EMAIL_SIGNATURE]),
   ].join("\n");
   return { subject, body };
 }
