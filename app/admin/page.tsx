@@ -5,7 +5,7 @@ import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { effectivePricing, fmtMoney } from "@/lib/pricing";
 import { getEnv } from "@/lib/cf/bindings";
 import { createStripe } from "@/lib/billing/stripe";
-import { listPromotionCodes, type PromoCodeRow } from "@/lib/billing/coupons";
+import { cachedPromotionCodes, type PromoCodeRow } from "@/lib/billing/coupons";
 import { GlobalPricingForm } from "@/components/admin/GlobalPricingForm";
 import { FairUseForm } from "@/components/admin/FairUseForm";
 import { centresOverAlert } from "@/lib/services/fair-use";
@@ -45,6 +45,11 @@ const ago = (d: Date | undefined, now: number) => {
   return days <= 0 ? "today" : days === 1 ? "yesterday" : days < 30 ? `${days}d ago` : days < 365 ? `${Math.floor(days / 30)}mo ago` : `${Math.floor(days / 365)}y ago`;
 };
 
+/** Settle with `fallback` if `p` fails or takes longer than `ms`. */
+function within<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return Promise.race([p.catch(() => fallback), new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms))]);
+}
+
 export default async function AdminOverviewPage({ searchParams }: { searchParams: Promise<{ q?: string; show?: string; removed?: string; logins?: string }> }) {
   await requirePlatformAdmin();
   const sp = await searchParams;
@@ -52,7 +57,17 @@ export default async function AdminOverviewPage({ searchParams }: { searchParams
   const show = sp.show === "attention" ? "attention" : sp.show === "trial" ? "trial" : sp.show === "quiet" ? "quiet" : "all";
   const db = await getDb();
   const platform = new PlatformRepository(db);
-  const [allOrgs, usage, pricing, owners, lastActivity] = await Promise.all([platform.listOrganisations(), platform.usageByOrg(), platform.getPricing(), platform.ownerEmailByOrg(), platform.lastActivityByOrg()]);
+  const env = getEnv();
+  // Stripe is best-effort here: the page never waits more than a few seconds for it.
+  let stripeReady = false;
+  let stripe: ReturnType<typeof createStripe> | null = null;
+  try { stripe = createStripe(env); stripeReady = true; } catch { stripeReady = false; }
+  const [[allOrgs, usage, pricing, owners, lastActivity], promoCodes, resolved, [lastBackup, lastRehearsal, mailFailover, incident, maintenance]] = await Promise.all([
+    Promise.all([platform.listOrganisations(), platform.usageByOrg(), platform.getPricing(), platform.ownerEmailByOrg(), platform.lastActivityByOrg()]),
+    stripe ? within(cachedPromotionCodes(stripe, env), 4000, [] as PromoCodeRow[]) : Promise.resolve([] as PromoCodeRow[]),
+    within(resolvePrices(env), 4000, Object.fromEntries(PRICE_KINDS.map((k) => [k, null])) as Awaited<ReturnType<typeof resolvePrices>>),
+    Promise.all([readLastBackup(), readLastRehearsal(), readMailFailover(), readIncident(), readMaintenance()]),
+  ]);
   const fairUse = { fairUsePeople: pricing.fairUsePeople ?? DEFAULT_PRICING.fairUsePeople, fairUseAlertAt: pricing.fairUseAlertAt ?? DEFAULT_PRICING.fairUseAlertAt, inviteDailyCap: pricing.inviteDailyCap ?? DEFAULT_PRICING.inviteDailyCap };
   let bigCentres: Awaited<ReturnType<typeof centresOverAlert>> = [];
   try { bigCentres = await centresOverAlert(db, fairUse.fairUseAlertAt); } catch { /* cosmetic */ }
@@ -70,17 +85,7 @@ export default async function AdminOverviewPage({ searchParams }: { searchParams
     return true;
   });
 
-  // Marketing promo codes (best-effort; needs Stripe configured).
-  let promoCodes: PromoCodeRow[] = [];
-  let stripeReady = false;
-  try {
-    const stripe = createStripe(getEnv());
-    stripeReady = true;
-    promoCodes = await listPromotionCodes(stripe);
-  } catch { stripeReady = false; }
-
   // What each plan/add-on resolves to in Stripe vs what we advertise.
-  const resolved = await resolvePrices(getEnv());
   const advertised: Record<string, number | null> = {
     small_club_monthly: TIERS.small_club.monthlyPrice,
     small_club_annual: TIERS.small_club.annualPrice,
@@ -112,7 +117,6 @@ export default async function AdminOverviewPage({ searchParams }: { searchParams
     .filter((o) => o.subscriptionStatus === "active")
     .reduce((sum, o) => sum + effectivePricing(o, pricing).monthly, 0);
 
-  const [lastBackup, lastRehearsal, mailFailover, incident, maintenance] = await Promise.all([readLastBackup(), readLastRehearsal(), readMailFailover(), readIncident(), readMaintenance()]);
   const mailOrder = mailProviderOrder();
   return (
     <div>

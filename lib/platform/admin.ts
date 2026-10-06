@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getAuth } from "@/lib/auth";
@@ -23,8 +24,12 @@ export async function isPlatformAdminEmail(email: string | null | undefined): Pr
   return platformAdminEmails().has(email.toLowerCase());
 }
 
-/** Resolve the signed-in user and require they be a platform admin, else deny. */
-export async function requirePlatformAdmin(): Promise<{ email: string }> {
+/**
+ * Resolve the signed-in user and require they be a platform admin, else deny.
+ * Memoised per request: the Dev Center layout and the page both call it, and
+ * the session lookup and three gates used to run twice on every page load.
+ */
+export const requirePlatformAdmin = cache(async function requirePlatformAdmin(): Promise<{ email: string }> {
   const h = new Headers(await headers());
   const auth = await getAuth();
   const session = await auth.api.getSession({ headers: h });
@@ -38,4 +43,4 @@ export async function requirePlatformAdmin(): Promise<{ email: string }> {
   const path = h.get(PATH_HEADER) || "/admin";
   await enforceTotpGate(session!.user.id, session!.session?.id, path.startsWith("/admin") ? path : "/admin");
   return { email: email! };
-}
+});

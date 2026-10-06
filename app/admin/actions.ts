@@ -19,7 +19,7 @@ import { writeIncident, writeMaintenance } from "@/lib/ops/incident";
 import { escapeHtml, sendEmail } from "@/lib/mail";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { createStripe } from "@/lib/billing/stripe";
-import { createPromotionCode, type CouponSpec } from "@/lib/billing/coupons";
+import { createPromotionCode, forgetPromotionCodes, type CouponSpec } from "@/lib/billing/coupons";
 import { TIERS } from "@/lib/tiers";
 import { trialEndsAt } from "@/lib/billing/trial";
 import { ORG_STATUSES, SUBSCRIPTION_STATUSES, PLANS, ORG_TIERS, ERROR_REPORT_STATUSES, type OrgStatus, type SubscriptionStatus, type Plan, type OrgTier, type ErrorReportStatus } from "@/lib/db/schema";
@@ -114,6 +114,7 @@ export async function createPromoCodeAction(input: {
   try {
     const stripe = createStripe(getEnv());
     const res = await createPromotionCode(stripe, { spec, code, maxRedemptions: input.maxRedemptions && input.maxRedemptions > 0 ? Math.round(input.maxRedemptions) : undefined });
+    await forgetPromotionCodes(getEnv());
     revalidatePath("/admin");
     return { ok: true, code: res.code };
   } catch (err) {

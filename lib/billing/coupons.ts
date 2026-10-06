@@ -1,4 +1,5 @@
 import type Stripe from "stripe";
+import type { CloudflareEnv } from "@/lib/cf/bindings";
 
 /**
  * Stripe coupons & promotion codes.
@@ -96,4 +97,26 @@ export async function listPromotionCodes(stripe: Stripe, limit = 50): Promise<Pr
       coupon: c?.name ?? c?.id ?? "",
     };
   });
+}
+
+const PROMO_CACHE_KEY = "stripe:promotion-codes:v1";
+const PROMO_CACHE_TTL_S = 300;
+
+/**
+ * The promo-code list for the Dev Center overview, kept in KV for five minutes
+ * so the page does not wait on Stripe every time it opens. Creating a code
+ * clears it (forgetPromotionCodes).
+ */
+export async function cachedPromotionCodes(stripe: Stripe, env: CloudflareEnv): Promise<PromoCodeRow[]> {
+  const kv = env.TENANT_CACHE;
+  if (kv) {
+    try { const raw = await kv.get(PROMO_CACHE_KEY); if (raw) return JSON.parse(raw) as PromoCodeRow[]; } catch { /* fall through to Stripe */ }
+  }
+  const rows = await listPromotionCodes(stripe);
+  if (kv) await kv.put(PROMO_CACHE_KEY, JSON.stringify(rows), { expirationTtl: PROMO_CACHE_TTL_S }).catch(() => {});
+  return rows;
+}
+
+export async function forgetPromotionCodes(env: CloudflareEnv): Promise<void> {
+  await env.TENANT_CACHE?.delete(PROMO_CACHE_KEY).catch(() => {});
 }
