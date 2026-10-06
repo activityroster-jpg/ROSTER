@@ -7,8 +7,9 @@ import { SmartImg } from "@/components/blog/SmartImg";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Blog — Running an RYA Centre or Club | ActivityRoster",
+  title: "Blog — Running an RYA Centre or Club",
   description: "Practical guides on running RYA sailing schools and clubs: courses, safety, staff, marketing and growth.",
+  alternates: { canonical: "/blog" },
 };
 
 const fmtDate = (v: Date | number | null) => {

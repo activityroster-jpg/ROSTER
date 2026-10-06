@@ -1,6 +1,6 @@
 import { LegalPage, H2, P, UL } from "@/components/marketing/LegalPage";
 
-export const metadata = { title: "Privacy Policy · ActivityRoster" };
+export const metadata = { title: "Privacy Policy" };
 
 export default function PrivacyPage() {
   return (

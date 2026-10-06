@@ -3,7 +3,7 @@ import { Calendar, Mail, MapPin, Rocket } from "lucide-react";
 import { COMPANY } from "@/lib/config";
 
 export const metadata = {
-  title: "Contact us — ActivityRoster",
+  title: "Contact us",
   description:
     "Get in touch with ActivityRoster — book a free 30-minute call, email us, start a free month, or find us on LinkedIn. Built for UK & Irish RYA sailing and watersports centres.",
   alternates: { canonical: "/contact" },

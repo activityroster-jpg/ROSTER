@@ -1,6 +1,6 @@
 import { LegalPage, H2, P, UL } from "@/components/marketing/LegalPage";
 
-export const metadata = { title: "Cookie Notice · ActivityRoster" };
+export const metadata = { title: "Cookie Notice" };
 
 /**
  * Keep this list in step with the cookies the code sets: the *_COOKIE constants

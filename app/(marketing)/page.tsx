@@ -5,7 +5,17 @@ import {
   GitCompare, BookOpen, Newspaper, Tag, ArrowRight, Baby, KeyRound, FileText, Upload,
 } from "lucide-react";
 import { LeadCapture } from "@/components/marketing/LeadCapture";
+import { ComplianceFlow } from "@/components/marketing/ComplianceFlow";
+import { ScreenShot } from "@/components/marketing/ScreenShot";
+import { SCREENS } from "@/lib/screens";
 import { apexDomain } from "@/lib/config";
+
+export const metadata = {
+  title: { absolute: "RYA Sailing School Software & Staff Rostering | ActivityRoster" },
+  description:
+    "The operating system for RYA sailing centres. Build rotas that are ready to run: instructor qualifications, availability, course ratios and safety-boat cover checked as you schedule. Free for a month.",
+  alternates: { canonical: "/" },
+};
 
 // The full platform, one line each, in the order a centre manager cares about.
 // Keep this in step with what is built (and with INCLUDED on the pricing page).
@@ -92,17 +102,6 @@ function DisciplineGallery() {
   );
 }
 
-/** Phones only: a photo strip straight under the hero, in place of the demo. */
-function MobilePhotoStrip() {
-  return (
-    <div className="grid grid-cols-3 gap-1 md:hidden" aria-hidden>
-      {[PHOTOS.catamarans, PHOTOS.instructors, PHOTOS.kayaks].map((src) => (
-        <img key={src} src={src} alt="" loading="lazy" className="aspect-[3/4] w-full object-cover" />
-      ))}
-    </div>
-  );
-}
-
 export default function MarketingHome() {
   const apex = apexDomain();
   const site = `https://${apex}`;
@@ -114,7 +113,7 @@ export default function MarketingHome() {
         "@id": `${site}/#organization`,
         name: "ActivityRoster",
         url: site,
-        description: "Compliance-aware staff rostering and course administration for RYA sailing and watersports centres, schools and clubs.",
+        description: "RYA sailing school software: compliance-aware staff rostering, qualification tracking and course administration for RYA sailing and watersports centres, schools and clubs.",
         areaServed: "GB",
       },
       {
@@ -130,39 +129,39 @@ export default function MarketingHome() {
         applicationCategory: "BusinessApplication",
         operatingSystem: "Web",
         offers: { "@type": "Offer", price: "35", priceCurrency: "GBP" },
-        description: "Flat per-centre pricing (from £35/mo) for instructor rostering, certs and safety-cover compliance at RYA centres.",
+        description: "RYA sailing school software. Instructor qualifications, availability, course ratios and safety-boat cover checked as you schedule. Flat per-centre pricing from £35/month.",
       },
     ],
   };
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      {/* Hero — the photo shows through more on phones, where there's no demo */}
+      {/* Hero: the story on the left, the product itself on the right (under the text on phones) */}
       <section className="relative overflow-hidden bg-navy text-white">
         <div
-          className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-55 md:opacity-30"
+          className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-25"
           style={{ backgroundImage: `url('${PHOTOS.hero}')` }}
           aria-hidden
         />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-navy/60 via-navy/75 to-navy md:bg-[linear-gradient(90deg,#0A2E52_30%,rgba(10,46,82,0.6)_100%)]" aria-hidden />
-        <div className="relative mx-auto grid max-w-6xl items-center gap-8 px-4 py-14 md:grid-cols-2 md:py-20">
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-navy/70 via-navy/85 to-navy md:bg-[linear-gradient(90deg,#0A2E52_35%,rgba(10,46,82,0.75)_100%)]" aria-hidden />
+        <div className="relative mx-auto grid max-w-6xl items-center gap-8 px-4 py-12 md:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] md:py-16">
           <div>
             <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-[#4fd1c5]">
-              For RYA clubs, schools &amp; activity centres
+              RYA sailing school software
             </p>
             <h1 className="font-display text-4xl font-bold leading-tight md:text-5xl" style={{ textWrap: "balance" }}>
-              Staff rostering that knows the RYA rules.
+              The operating system for RYA sailing centres.
             </h1>
-            <p className="mt-4 max-w-xl text-lg text-white/80">
-              Roster, certificates, hours and leave in one place, with an app for your instructors. It won&apos;t let an
-              under-qualified instructor, an over-ratio course or a boat without safety cover slip through.
+            <p className="mt-4 max-w-xl text-lg text-white/85">
+              Build rotas that are actually ready to run. ActivityRoster checks instructor qualifications, availability,
+              course ratios and safety-boat cover as you schedule.
             </p>
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
               <a href="#get-demo" className="rounded-lg bg-[#0C6B74] px-6 py-3.5 text-center font-semibold text-white shadow-lg transition hover:bg-teal-700">
                 Start my free month →
               </a>
-              <Link href="/book" className="rounded-lg border border-white/30 px-6 py-3.5 text-center font-semibold text-white hover:bg-white/10">
-                Book a 30-minute call
+              <Link href="/demo" className="rounded-lg border border-white/30 px-6 py-3.5 text-center font-semibold text-white hover:bg-white/10">
+                Take the tour
               </Link>
             </div>
             <p className="mt-3 text-sm text-white/70">
@@ -170,29 +169,12 @@ export default function MarketingHome() {
               <Link href="/pricing" className="font-semibold text-white underline decoration-white/40 underline-offset-2 hover:decoration-white">from £35/month</Link>
             </p>
           </div>
-          <div className="hidden justify-end md:flex">
-            <div className="w-full max-w-md rounded-card bg-white/5 p-8 ring-1 ring-white/15 backdrop-blur">
-              <p className="font-display text-2xl font-bold text-white">What you get on day one</p>
-              <ul className="mt-4 space-y-2.5 text-sm text-white/85">
-                {[
-                  "RYA course types, roles and checks already set up",
-                  "A guided set-up that imports your courses and staff",
-                  "The instructor app for your whole team",
-                  "Young workers' hours and safety cover checked as you build",
-                ].map((x) => (
-                  <li key={x} className="flex gap-2"><ShieldCheck className="mt-0.5 h-4 w-4 flex-none text-[#4fd1c5]" />{x}</li>
-                ))}
-              </ul>
-              <a href="#get-demo" className="mt-6 inline-flex w-full items-center justify-center rounded-lg bg-[#0C6B74] px-6 py-3 font-semibold text-white shadow-lg transition hover:bg-teal-700">
-                Start my free month →
-              </a>
-              <Link href="/demo" className="mt-3 block text-center text-sm font-semibold text-white/80 hover:text-white">or take the tour first</Link>
-            </div>
+          <div>
+            <ScreenShot screen={SCREENS.board} eager className="ring-1 ring-white/20" />
+            <p className="mt-2 text-center text-xs text-white/60">The roster board at a busy centre in July. <Link href="/demo" className="underline underline-offset-2 hover:text-white">See every screen →</Link></p>
           </div>
         </div>
       </section>
-
-      <MobilePhotoStrip />
 
       {/* Trust strip */}
       <section className="border-b border-slate-200 bg-white">
@@ -208,6 +190,32 @@ export default function MarketingHome() {
               <p className="mt-0.5 text-xs text-slate-500">{s}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* The compliance engine: the product in one picture */}
+      <section id="how-it-checks" className="border-b border-slate-200 bg-canvas">
+        <div className="mx-auto max-w-6xl px-4 py-12 md:py-16">
+          <p className="text-sm font-semibold uppercase tracking-wide text-teal">RYA staff rostering software</p>
+          <h2 className="mt-1 font-display text-2xl font-semibold text-navy md:text-3xl" style={{ textWrap: "balance" }}>Every assignment is checked before it reaches the water</h2>
+          <p className="mt-2 max-w-2xl text-slate-600">Not a checklist someone has to remember at 07:30 on a Saturday. The checks run the moment you put someone on a session.</p>
+          <div className="mt-8"><ComplianceFlow /></div>
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 md:gap-6">
+            {SAFETY.map((f) => (
+              <div key={f.title} className="flex gap-4 rounded-card border border-slate-200 bg-white p-4 md:block md:p-5">
+                <f.icon className="h-7 w-7 flex-none text-teal md:h-8 md:w-8" />
+                <div>
+                  <h3 className="font-semibold text-navy md:mt-3">{f.title}</h3>
+                  <p className="mt-1 text-sm text-slate-600">{f.body}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="mt-8 text-sm text-slate-600">
+            <Link href="/learn?topic=rostering" className="font-semibold text-teal hover:underline">See each check in the Learning Centre →</Link>
+            <span className="mx-2 text-slate-300">·</span>
+            <Link href="/sailing-school-compliance-software" className="font-semibold text-teal hover:underline">Sailing school compliance software →</Link>
+          </p>
         </div>
       </section>
 
@@ -283,28 +291,6 @@ export default function MarketingHome() {
 
       <PhotoBand src={PHOTOS.instructors} alt="Instructors briefing on the shore" caption="Every session safely staffed" />
 
-      {/* The compliance safety net */}
-      <section className="border-b border-slate-200 bg-white">
-        <div className="mx-auto max-w-6xl px-4 py-12 md:py-16">
-          <h2 className="font-display text-2xl font-semibold text-navy">The safety net, built in</h2>
-          <p className="mt-2 max-w-2xl text-slate-600">Not a checklist someone has to remember at 07:30 on a Saturday.</p>
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 md:gap-6">
-            {SAFETY.map((f) => (
-              <div key={f.title} className="flex gap-4 rounded-card border border-slate-200 p-4 md:block md:p-5">
-                <f.icon className="h-7 w-7 flex-none text-teal md:h-8 md:w-8" />
-                <div>
-                  <h3 className="font-semibold text-navy md:mt-3">{f.title}</h3>
-                  <p className="mt-1 text-sm text-slate-600">{f.body}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-          <p className="mt-8 text-sm text-slate-600">
-            <Link href="/learn?topic=rostering" className="font-semibold text-teal hover:underline">See each check in the Learning Centre →</Link>
-          </p>
-        </div>
-      </section>
-
       {/* Demo band */}
       <section className="bg-canvas">
         <div className="mx-auto max-w-6xl px-4 py-16 text-center">
@@ -334,7 +320,7 @@ export default function MarketingHome() {
             {[
               { href: "/compare", icon: GitCompare, title: "Compare", body: "Against the tools centres use today." },
               { href: "/learn", icon: BookOpen, title: "Learning Centre", body: "Guides to every part of the platform." },
-              { href: "/blog", icon: Newspaper, title: "Blog", body: "Running and filling RYA courses." },
+              { href: "/guides", icon: Newspaper, title: "Sailing school guides", body: "Ratios, safety cover, qualifications and a free rota template." },
               { href: "/pricing", icon: Tag, title: "Pricing", body: "Two flat plans, nothing per user. First month free." },
             ].map((c) => (
               <Link key={c.href} href={c.href} className="group rounded-card border border-slate-200 bg-white p-4 transition hover:border-teal hover:shadow-md md:p-5">

@@ -15,32 +15,34 @@ const fira = Fira_Sans({
 });
 
 const DESCRIPTION =
-  "Staff rostering and course administration for RYA sailing, watersports schools, clubs and activity centres. It won't let a session run under-qualified, over-ratio, or without safety-boat cover.";
+  "RYA sailing school software: staff rostering, instructor qualifications, availability and safety-boat cover checked as you schedule, with an app for your instructors. For RYA sailing schools, clubs and watersports centres.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),
   title: {
-    default: "ActivityRoster — compliance-aware rostering for RYA centres",
+    default: "ActivityRoster — RYA sailing school software",
     template: "%s | ActivityRoster",
   },
   description: DESCRIPTION,
   applicationName: "ActivityRoster",
   keywords: [
-    "RYA rostering", "sailing school software", "watersports centre management",
-    "instructor scheduling", "safety boat cover", "RYA training centre", "sailing club software",
+    "RYA sailing school software", "RYA staff rostering software", "sailing school rostering software",
+    "sailing instructor scheduling software", "RYA qualification tracking", "sailing centre management software",
+    "watersports staff scheduling", "safety boat cover", "RYA training centre",
   ],
-  alternates: { canonical: "/" },
+  // No site-wide canonical: each page sets its own. (A canonical of "/" here
+  // told search engines every page was a copy of the homepage; fixed 6 Oct.)
   openGraph: {
     type: "website",
     siteName: "ActivityRoster",
-    title: "ActivityRoster — compliance-aware rostering for RYA centres",
+    title: "ActivityRoster — RYA sailing school software",
     description: DESCRIPTION,
     url: SITE,
     locale: "en_GB",
   },
   twitter: {
     card: "summary_large_image",
-    title: "ActivityRoster — rostering for RYA centres",
+    title: "ActivityRoster — RYA sailing school software",
     description: DESCRIPTION,
   },
   robots: {

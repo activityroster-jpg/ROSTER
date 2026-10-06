@@ -27,7 +27,7 @@ async function load(slug: string) {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const post = await load(slug);
-  if (!post) return { title: "Blog — ActivityRoster" };
+  if (!post) return { title: "Blog" };
   const published = post.publishAt ? new Date(post.publishAt instanceof Date ? post.publishAt.getTime() : Number(post.publishAt)).toISOString() : undefined;
   return {
     title: post.seoTitle || post.title,

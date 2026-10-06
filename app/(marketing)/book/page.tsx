@@ -6,7 +6,7 @@ import { BookCall } from "@/components/marketing/BookCall";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Book a call — ActivityRoster",
+  title: "Book a call",
   description: "Book a free 30-minute call to see how ActivityRoster can handle rostering, certs and safety-cover compliance for your RYA centre.",
   alternates: { canonical: "/book" },
 };

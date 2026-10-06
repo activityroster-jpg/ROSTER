@@ -6,6 +6,7 @@ export const metadata = {
   title: "ActivityRoster vs the alternatives",
   description:
     "How ActivityRoster compares with general staff-rostering apps, club/membership systems and spreadsheets for RYA sailing and watersports centres.",
+  alternates: { canonical: "/compare" },
 };
 
 type Cell = "yes" | "partial" | "no";

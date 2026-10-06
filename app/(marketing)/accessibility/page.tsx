@@ -3,7 +3,7 @@ import Link from "next/link";
 import { LegalPage, H2, P, UL } from "@/components/marketing/LegalPage";
 
 export const metadata: Metadata = {
-  title: "Accessibility statement · ActivityRoster",
+  title: "Accessibility statement",
   description: "How accessible ActivityRoster is, what we know does not yet meet WCAG 2.2 AA, and how to tell us about a problem.",
 };
 

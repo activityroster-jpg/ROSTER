@@ -4,7 +4,7 @@ import { LegalPage, H2, P, UL } from "@/components/marketing/LegalPage";
 import { PRIVACY_CONTACT } from "@/lib/legal";
 
 export const metadata: Metadata = {
-  title: "Your information if you are under 18 · ActivityRoster",
+  title: "Your information if you are under 18",
   description: "A plain-English explanation for young instructors, assistants and their parents of what ActivityRoster holds, who can see it and what you can ask for.",
 };
 

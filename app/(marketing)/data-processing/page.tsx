@@ -1,6 +1,6 @@
 import { LegalPage, H2, P, UL } from "@/components/marketing/LegalPage";
 
-export const metadata = { title: "Data Processing · ActivityRoster" };
+export const metadata = { title: "Data Processing" };
 
 export default function DataProcessingPage() {
   return (

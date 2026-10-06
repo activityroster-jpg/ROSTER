@@ -5,7 +5,7 @@ import { SUBPROCESSORS, SUBPROCESSOR_CHANGES } from "@/lib/legal/subprocessors";
 import { PRIVACY_CONTACT } from "@/lib/legal";
 
 export const metadata: Metadata = {
-  title: "Sub-processors · ActivityRoster",
+  title: "Sub-processors",
   description: "The companies that handle personal data on ActivityRoster's behalf, what each does, where it runs, and a dated record of every change.",
 };
 

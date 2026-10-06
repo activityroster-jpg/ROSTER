@@ -3,7 +3,7 @@ import { getDb } from "@/lib/cf/bindings";
 import { fairUseSettings } from "@/lib/services/fair-use";
 import { DEFAULT_PRICING } from "@/lib/pricing";
 
-export const metadata = { title: "Terms of Service · ActivityRoster" };
+export const metadata = { title: "Terms of Service" };
 export const dynamic = "force-dynamic";
 
 export default async function TermsPage() {

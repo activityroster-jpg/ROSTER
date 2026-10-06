@@ -10,10 +10,11 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const c = competitorBySlug(slug);
-  if (!c) return { title: "Compare — ActivityRoster" };
+  if (!c) return { title: "Compare" };
   return {
     title: `ActivityRoster vs ${c.name}`,
     description: `How ActivityRoster compares with ${c.name} for RYA sailing and watersports centres.`,
+    alternates: { canonical: `/compare/${c.slug}` },
   };
 }
 

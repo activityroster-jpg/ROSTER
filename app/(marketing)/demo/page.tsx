@@ -4,8 +4,9 @@ import { LeadCapture } from "@/components/marketing/LeadCapture";
 import { apexDomain } from "@/lib/config";
 
 export const metadata = {
-  title: "Demo — ActivityRoster",
+  title: "Demo — a week at a busy sailing centre",
   description: "A tour of ActivityRoster at a busy sailing centre: the office, the roster board, payroll and the instructor app. Real screens, made-up centre.",
+  alternates: { canonical: "/demo" },
 };
 
 export default function DemoPage() {
