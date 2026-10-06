@@ -4,17 +4,19 @@ import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { Card } from "@/components/ui";
 import { ProspectsTable, type ProspectRow } from "@/components/admin/ProspectsTable";
 import { ProspectTools } from "@/components/admin/ProspectTools";
-import { PROSPECT_STATUS_META, PROSPECT_STATUS_ORDER, parseProspectStatuses } from "@/lib/marketing";
+import Link from "next/link";
+import { PIPELINE_META, PIPELINE_STAGES, parseProspectStatuses, stageOf } from "@/lib/marketing";
 import { addressComplete } from "@/lib/marketing";
 
 export const dynamic = "force-dynamic";
 
-const TONE: Record<string, string> = {
-  neutral: "border-l-slate-300",
-  attention: "border-l-amber",
-  teal: "border-l-teal",
-  covered: "border-l-starboard",
-  conflict: "border-l-port",
+/** Left border per stage on the pipeline strip (the board's column colours). */
+const STRIP: Record<string, string> = {
+  rejected: "border-l-port",
+  none: "border-l-slate-300",
+  letter: "border-l-amber",
+  linkedin: "border-l-teal",
+  signed_up: "border-l-starboard",
 };
 
 /**
@@ -28,7 +30,9 @@ export default async function AdminMarketingPage() {
   const prospects = await platform.listProspects(10_000, 0);
   const total = prospects.length;
 
-  const rows: ProspectRow[] = prospects.map((p) => ({
+  const rows: ProspectRow[] = prospects.map((p) => {
+    const statuses = parseProspectStatuses(p.statuses, p.status);
+    return {
     id: p.id,
     name: p.name,
     region: p.region ?? "",
@@ -40,16 +44,20 @@ export default async function AdminMarketingPage() {
     linkedinUrl: p.linkedinUrl ?? "",
     contactName: p.contactName ?? "",
     contactRole: p.contactRole ?? "",
-    statuses: parseProspectStatuses(p.statuses, p.status),
+    statuses,
+    stage: stageOf(statuses),
+    engaged: Boolean(p.engagedAt),
     source: p.source,
     soleTrader: Boolean(p.soleTrader),
     lawfulBasis: p.lawfulBasis ?? "legitimate_interests",
     createdAt: p.createdAt instanceof Date ? p.createdAt.getTime() : Number(p.createdAt),
-  }));
+    };
+  });
 
-  const counts = PROSPECT_STATUS_ORDER.map((s) => ({ s, n: rows.filter((r) => r.statuses.includes(s)).length }));
+  const counts = PIPELINE_STAGES.map((s) => ({ s, n: rows.filter((r) => r.stage === s).length }));
   const contacted = rows.filter((r) => r.statuses.some((s) => s === "letter_sent" || s === "email_sent" || s === "linkedin_contacted" || s === "called")).length;
-  const purchased = rows.filter((r) => r.statuses.includes("purchased")).length;
+  const engaged = rows.filter((r) => r.engaged && r.stage !== "signed_up" && r.stage !== "rejected").length;
+  const signedUp = rows.filter((r) => r.stage === "signed_up").length;
   const incomplete = rows.filter((r) => !addressComplete(r)).length;
 
   const kpi = (label: string, value: number | string, sub?: string) => (
@@ -70,24 +78,28 @@ export default async function AdminMarketingPage() {
             <h1 className="font-display text-2xl font-bold">Marketing outreach</h1>
             <p className="mt-2 text-sm text-white/80">
               Your prospect list of RYA centres &amp; clubs — track every touchpoint, generate window-envelope letters,
-              draft emails and LinkedIn messages, and filter any column. Import the RYA &ldquo;Find a Training Centre&rdquo; directory as CSV.
+              draft emails and LinkedIn messages, and filter any column. Click a centre to open its page and log what happened.
             </p>
+            <Link href="/admin/marketing/pipeline" className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-white/15 px-3 py-1.5 text-sm font-semibold text-white ring-1 ring-white/25 hover:bg-white/25">
+              Open the pipeline board →
+            </Link>
           </div>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {kpi("Prospects", total)}
             {kpi("Contacted", contacted)}
-            {kpi("Purchased", purchased)}
+            {kpi("Engaged", engaged, "orange vibe")}
+            {kpi("Signed up", signedUp)}
           </div>
         </div>
       </div>
 
-      {/* Pipeline strip */}
-      <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+      {/* Pipeline strip: the five stages, in board order */}
+      <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-5">
         {counts.map(({ s, n }) => (
-          <div key={s} className={`rounded-lg border border-slate-200 border-l-4 bg-white px-3 py-2 shadow-sm ${TONE[PROSPECT_STATUS_META[s].tone]}`}>
-            <p className="text-[11px] font-medium text-slate-500">{PROSPECT_STATUS_META[s].label}</p>
+          <Link key={s} href={`/admin/marketing/pipeline#${s}`} className={`rounded-lg border border-slate-200 border-l-4 bg-white px-3 py-2 shadow-sm hover:border-teal ${STRIP[s]}`} title="Open this column on the board">
+            <p className="text-[11px] font-medium text-slate-500">{PIPELINE_META[s].label}</p>
             <p className="mt-0.5 text-xl font-semibold text-navy">{n}</p>
-          </div>
+          </Link>
         ))}
       </div>
 

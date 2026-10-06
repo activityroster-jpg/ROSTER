@@ -386,12 +386,33 @@ export const marketingProspect = sqliteTable("marketing_prospect", {
   basisNote: text("basis_note"),
   /** Sole traders and partnerships count as individuals under PECR: no marketing email without consent. */
   soleTrader: boolCol("sole_trader").default(false),
+  /** When they first showed interest (replied, met, asked for more): the orange "engaged" vibe. */
+  engagedAt: integer("engaged_at", { mode: "timestamp_ms" }),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 }, (t) => [
   index("marketing_prospect_status_idx").on(t.status),
   index("marketing_prospect_region_idx").on(t.region),
 ]);
+
+/** What kind of contact an interaction records. "stage" entries are written automatically when the pipeline stage changes. */
+export const PROSPECT_INTERACTION_KINDS = [
+  "letter_sent", "email_out", "email_in", "linkedin_out", "linkedin_in", "call", "meeting", "note", "stage",
+] as const;
+export type ProspectInteractionKind = (typeof PROSPECT_INTERACTION_KINDS)[number];
+
+/** The outreach log for one prospect: letters, emails, LinkedIn messages, calls and notes, newest first. */
+export const marketingInteraction = sqliteTable("marketing_interaction", {
+  id: id(),
+  prospectId: text("prospect_id").notNull().references(() => marketingProspect.id, { onDelete: "cascade" }),
+  kind: text("kind", { enum: PROSPECT_INTERACTION_KINDS }).notNull(),
+  /** The day it happened ("YYYY-MM-DD"), which may be earlier than when it was logged. */
+  occurredOn: text("occurred_on").notNull(),
+  summary: text("summary"),
+  /** Who logged it (platform admin email), or null for automatic entries. */
+  author: text("author"),
+  createdAt: createdAt(),
+}, (t) => [index("marketing_interaction_prospect_idx").on(t.prospectId, t.occurredOn)]);
 
 // --- Error reports (user-reported issues, bucketed by centre) ---------------
 
@@ -527,6 +548,7 @@ export type Membership = typeof membership.$inferSelect;
 export type User = typeof user.$inferSelect;
 export type Lead = typeof lead.$inferSelect;
 export type MarketingProspect = typeof marketingProspect.$inferSelect;
+export type MarketingInteraction = typeof marketingInteraction.$inferSelect;
 export type NewMarketingProspect = typeof marketingProspect.$inferInsert;
 export type PlatformPricing = typeof platformPricing.$inferSelect;
 export type ErrorReport = typeof errorReport.$inferSelect;

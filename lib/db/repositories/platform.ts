@@ -9,6 +9,7 @@ import {
   courseSession,
   auditLog,
   marketingProspect,
+  marketingInteraction,
   platformPricing,
   blogPost,
   integration,
@@ -35,6 +36,8 @@ import {
   type BlogPost,
   type NewBlogPost,
   type MarketingProspect,
+  type MarketingInteraction,
+  type ProspectInteractionKind,
   type NewMarketingProspect,
   type Organisation,
   type PlatformPricing,
@@ -296,6 +299,27 @@ export class PlatformRepository {
 
   async setProspectStatus(id: string, status: ProspectStatus): Promise<MarketingProspect | null> {
     return this.updateProspect(id, { status });
+  }
+
+  /** The outreach log for one prospect, newest first. */
+  async listInteractions(prospectId: string): Promise<MarketingInteraction[]> {
+    return this.db.select().from(marketingInteraction).where(eq(marketingInteraction.prospectId, prospectId))
+      .orderBy(desc(marketingInteraction.occurredOn), desc(marketingInteraction.createdAt));
+  }
+
+  async addInteraction(values: { prospectId: string; kind: ProspectInteractionKind; occurredOn: string; summary: string | null; author: string | null }): Promise<MarketingInteraction> {
+    const rows = await this.db.insert(marketingInteraction).values(values).returning();
+    return rows[0]!;
+  }
+
+  /** Several log entries at once (the letter batch). D1 allows 100 bound parameters per statement. */
+  async addInteractions(rows: { prospectId: string; kind: ProspectInteractionKind; occurredOn: string; summary: string | null; author: string | null }[]): Promise<void> {
+    for (let i = 0; i < rows.length; i += 10) await this.db.insert(marketingInteraction).values(rows.slice(i, i + 10));
+  }
+
+  async deleteInteraction(id: string): Promise<boolean> {
+    const rows = await this.db.delete(marketingInteraction).where(eq(marketingInteraction.id, id)).returning({ id: marketingInteraction.id });
+    return rows.length > 0;
   }
 
   /** Set the multi-select outreach statuses; keeps the single `status` column in sync as the primary. */

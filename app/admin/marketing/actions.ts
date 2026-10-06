@@ -4,8 +4,9 @@ import { revalidatePath } from "next/cache";
 import { requirePlatformAdmin } from "@/lib/platform/admin";
 import { getDb } from "@/lib/cf/bindings";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
-import { PROSPECT_STATUSES, type NewMarketingProspect, type ProspectStatus } from "@/lib/db/schema";
-import { primaryProspectStatus } from "@/lib/marketing";
+import { z } from "zod";
+import { PROSPECT_INTERACTION_KINDS, PROSPECT_STATUSES, type NewMarketingProspect, type ProspectStatus } from "@/lib/db/schema";
+import { PIPELINE_META, PIPELINE_STAGES, primaryProspectStatus, stageOf, statusesForStage, type PipelineStage } from "@/lib/marketing";
 import { parseCsv } from "@/lib/import/parse";
 import { addressComplete, parseProspectStatuses, primaryProspectStatus as primaryOf } from "@/lib/marketing";
 import RYA_DIRECTORY from "@/lib/marketing/rya-directory.json";
@@ -15,6 +16,21 @@ export type ProspectResult = { ok: boolean; error?: string; message?: string; co
 async function platform() {
   await requirePlatformAdmin();
   return new PlatformRepository(await getDb());
+}
+
+/** The repository plus who is acting, for entries written to a prospect's log. */
+async function platformAs() {
+  const { email } = await requirePlatformAdmin();
+  return { repo: new PlatformRepository(await getDb()), email };
+}
+
+const today = () => new Date().toISOString().slice(0, 10);
+
+/** Every page that shows a prospect's stage: the list, the board and its own page. */
+function revalidateProspects(id?: string) {
+  revalidatePath("/admin/marketing");
+  revalidatePath("/admin/marketing/pipeline");
+  if (id) revalidatePath(`/admin/marketing/${id}`);
 }
 
 const str = (fd: FormData, k: string) => (String(fd.get(k) ?? "").trim() || null);
@@ -66,7 +82,121 @@ export async function setProspectStatusesAction(id: string, statuses: string[]):
   const clean = (statuses ?? []).filter((s): s is ProspectStatus => (PROSPECT_STATUSES as readonly string[]).includes(s));
   const updated = await repo.setProspectStatuses(id, clean, primaryProspectStatus(clean));
   if (!updated) return { ok: false, error: "Not found" };
-  revalidatePath("/admin/marketing");
+  revalidateProspects(id);
+  return { ok: true };
+}
+
+/**
+ * Move a prospect to one of the five pipeline stages: the Status dropdown on
+ * the list and a drag on the board both land here, so the two always agree.
+ * The move is written to the prospect's log.
+ */
+export async function setProspectStageAction(id: string, stage: string): Promise<ProspectResult> {
+  const { repo, email } = await platformAs();
+  if (!(PIPELINE_STAGES as readonly string[]).includes(stage)) return { ok: false, error: "Unknown stage" };
+  const to = stage as PipelineStage;
+  const p = await repo.prospectById(id);
+  if (!p) return { ok: false, error: "Not found" };
+  const current = parseProspectStatuses(p.statuses, p.status);
+  const from = stageOf(current);
+  if (from === to) return { ok: true };
+  const next = statusesForStage(current, to);
+  await repo.setProspectStatuses(id, next, primaryProspectStatus(next));
+  await repo.addInteraction({ prospectId: id, kind: "stage", occurredOn: today(), summary: `${PIPELINE_META[from].label} → ${PIPELINE_META[to].label}`, author: email });
+  revalidateProspects(id);
+  return { ok: true };
+}
+
+/** The orange "engaged" vibe: they replied, met us or asked for more. */
+export async function setEngagedAction(id: string, engaged: boolean): Promise<ProspectResult> {
+  const repo = await platform();
+  const updated = await repo.updateProspect(id, { engagedAt: engaged ? new Date() : null });
+  if (!updated) return { ok: false, error: "Not found" };
+  revalidateProspects(id);
+  return { ok: true };
+}
+
+const text = (max: number) => z.string().trim().max(max);
+const ProspectEdit = z.object({
+  name: text(200).min(1, "Name is required"),
+  region: text(120),
+  addressLine1: text(200),
+  addressLine2: text(200),
+  city: text(120),
+  postcode: text(20),
+  country: text(80),
+  email: z.union([z.literal(""), z.string().trim().email("That email address doesn't look right")]),
+  website: text(300),
+  linkedinUrl: text(300),
+  contactName: text(120),
+  contactRole: text(120),
+  notes: text(5000),
+}).partial();
+
+/** Save the details edited on a prospect's page. Empty fields are cleared (country falls back to the UK). */
+export async function updateProspectAction(id: string, input: unknown): Promise<ProspectResult> {
+  const repo = await platform();
+  const parsed = ProspectEdit.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Check the details" };
+  const patch: Partial<Omit<NewMarketingProspect, "id" | "createdAt">> = {};
+  for (const [k, v] of Object.entries(parsed.data) as [keyof z.infer<typeof ProspectEdit>, string | undefined][]) {
+    if (v === undefined) continue;
+    if (k === "name") patch.name = v;
+    else if (k === "country") patch.country = v || "United Kingdom";
+    else patch[k] = v || null;
+  }
+  const updated = await repo.updateProspect(id, patch);
+  if (!updated) return { ok: false, error: "Not found" };
+  revalidateProspects(id);
+  return { ok: true, message: "Saved" };
+}
+
+const InteractionInput = z.object({
+  kind: z.enum(PROSPECT_INTERACTION_KINDS).refine((k) => k !== "stage", "Stage changes are logged automatically"),
+  occurredOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a date"),
+  summary: text(2000),
+});
+
+/** Which touchpoint an outgoing contact also ticks, so the stage follows what was logged. */
+const TOUCHPOINT_FOR: Partial<Record<(typeof PROSPECT_INTERACTION_KINDS)[number], ProspectStatus>> = {
+  letter_sent: "letter_sent",
+  email_out: "email_sent",
+  linkedin_out: "linkedin_contacted",
+  call: "called",
+};
+const ENGAGING = new Set<(typeof PROSPECT_INTERACTION_KINDS)[number]>(["email_in", "linkedin_in", "meeting"]);
+
+/**
+ * Add an entry to a prospect's log. Logging a letter, an outgoing email, a
+ * LinkedIn message or a call also ticks that touchpoint; a reply or a meeting
+ * marks them engaged (orange).
+ */
+export async function addInteractionAction(prospectId: string, input: unknown): Promise<ProspectResult> {
+  const { repo, email } = await platformAs();
+  const parsed = InteractionInput.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Check the entry" };
+  const p = await repo.prospectById(prospectId);
+  if (!p) return { ok: false, error: "Not found" };
+  const { kind, occurredOn, summary } = parsed.data;
+  await repo.addInteraction({ prospectId, kind, occurredOn, summary: summary || null, author: email });
+  const touch = TOUCHPOINT_FOR[kind];
+  if (touch) {
+    const current = parseProspectStatuses(p.statuses, p.status);
+    if (!current.includes(touch) && !current.includes("purchased") && !current.includes("rejected")) {
+      const next = Array.from(new Set([...current.filter((s) => s !== "new"), touch]));
+      await repo.setProspectStatuses(prospectId, next, primaryProspectStatus(next));
+    }
+  }
+  if (ENGAGING.has(kind) && !p.engagedAt) await repo.updateProspect(prospectId, { engagedAt: new Date() });
+  revalidateProspects(prospectId);
+  return { ok: true };
+}
+
+export async function deleteInteractionAction(prospectId: string, interactionId: string): Promise<ProspectResult> {
+  const repo = await platform();
+  const removed = await repo.deleteInteraction(interactionId);
+  if (!removed) return { ok: false, error: "Already removed" };
+  revalidateProspects(prospectId);
   return { ok: true };
 }
 
@@ -103,7 +233,7 @@ export async function bulkStatusByNameAction(
 export async function deleteProspectAction(id: string): Promise<ProspectResult> {
   const repo = await platform();
   await repo.deleteProspect(id);
-  revalidatePath("/admin/marketing");
+  revalidateProspects();
   return { ok: true };
 }
 
@@ -222,7 +352,7 @@ export async function loadRyaDirectoryAction(): Promise<ProspectResult> {
  * ids for the printable batch page.
  */
 export async function prepareNextLettersAction(count = 10): Promise<{ ok: boolean; ids?: string[]; error?: string }> {
-  const repo = await platform();
+  const { repo, email } = await platformAs();
   const n = Math.max(1, Math.min(50, Math.round(Number(count) || 10)));
   const all = await repo.listProspects(10_000, 0);
   // Centres that already had a letter — by row AND by name, so a duplicate row
@@ -239,7 +369,8 @@ export async function prepareNextLettersAction(count = 10): Promise<{ ok: boolea
     const statuses = Array.from(new Set([...parseProspectStatuses(p.statuses, p.status), "letter_sent" as const]));
     await repo.setProspectStatuses(p.id, statuses, primaryOf(statuses));
   }
-  revalidatePath("/admin/marketing");
+  await repo.addInteractions(next.map((p) => ({ prospectId: p.id, kind: "letter_sent" as const, occurredOn: today(), summary: "Letter prepared in a batch of next letters", author: email })));
+  revalidateProspects();
   return { ok: true, ids: next.map((p) => p.id) };
 }
 
@@ -248,6 +379,6 @@ export async function setProspectBasisAction(id: string, input: { soleTrader: bo
   const repo = await platform();
   const basis = (["legitimate_interests", "consent", "existing_customer"] as const).find((b) => b === input.lawfulBasis) ?? "legitimate_interests";
   await repo.updateProspect(id, { soleTrader: Boolean(input.soleTrader), lawfulBasis: basis, basisNote: (input.basisNote ?? "").trim().slice(0, 200) || null });
-  revalidatePath("/admin/marketing");
+  revalidateProspects(id);
   return { ok: true };
 }

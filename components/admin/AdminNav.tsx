@@ -21,6 +21,7 @@ export function adminSections(opts: { staging: boolean }): NavSection[] {
     ] },
     { id: "growth", label: "Growth", pages: [
       { href: "/admin/marketing", label: "Prospects", hint: "the outreach list and lawful basis" },
+      { href: "/admin/marketing/pipeline", label: "Pipeline", hint: "drag centres between the five outreach stages" },
       { href: "/admin/outreach", label: "Outreach agent", hint: "automated sequences and the daily tick" },
       { href: "/admin/calls", label: "Discovery calls", hint: "call notes and follow-ups" },
       { href: "/admin/trial-feedback", label: "Trial feedback", hint: "trial-end survey answers and who is happy to be contacted" },
