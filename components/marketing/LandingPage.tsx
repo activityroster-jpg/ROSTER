@@ -81,7 +81,7 @@ export function LandingPage({ slug }: { slug: string }) {
       {l.showFlow ? (
         <section className="border-b border-slate-200 bg-canvas">
           <div className="mx-auto max-w-6xl px-4 py-12">
-            <h2 className="font-display text-2xl font-semibold text-navy">Every assignment, checked as you schedule</h2>
+            <h2 className="font-display text-2xl font-semibold text-navy">Your week, in three steps</h2>
             <div className="mt-6"><ComplianceFlow /></div>
           </div>
         </section>

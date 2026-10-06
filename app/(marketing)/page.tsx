@@ -198,8 +198,8 @@ export default function MarketingHome() {
       <section id="how-it-checks" className="border-b border-slate-200 bg-canvas">
         <div className="mx-auto max-w-6xl px-4 py-12 md:py-16">
           <p className="text-sm font-semibold uppercase tracking-wide text-teal">RYA staff rostering software</p>
-          <h2 className="mt-1 font-display text-2xl font-semibold text-navy md:text-3xl" style={{ textWrap: "balance" }}>Every assignment is checked before it reaches the water</h2>
-          <p className="mt-2 max-w-2xl text-slate-600">Not a checklist someone has to remember at 07:30 on a Saturday. The checks run the moment you put someone on a session.</p>
+          <h2 className="mt-1 font-display text-2xl font-semibold text-navy md:text-3xl" style={{ textWrap: "balance" }}>Your week, in three steps</h2>
+          <p className="mt-2 max-w-2xl text-slate-600">No training course needed. Add your courses, select your staff and publish. The checking happens along the way, not from memory at 07:30 on a Saturday.</p>
           <div className="mt-8"><ComplianceFlow /></div>
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 md:gap-6">
             {SAFETY.map((f) => (
