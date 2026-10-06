@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Download, Lightbulb } from "lucide-react";
-import { GUIDES, guideBySlug, type GuideBlock } from "@/lib/seo/guides";
+import { guideBySlug, type GuideBlock } from "@/lib/seo/guides";
 import { landingBySlug } from "@/lib/seo/landings";
 import { apexDomain } from "@/lib/config";
 
-export const dynamicParams = false;
-export function generateStaticParams() {
-  return GUIDES.map((g) => ({ slug: g.slug }));
-}
+// Rendered on request: pages pre-built from generateStaticParams need an
+// incremental cache on Cloudflare, which this deployment doesn't have, so they
+// 404'd in production (6 Oct). Unknown slugs still 404 via notFound().
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
