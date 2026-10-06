@@ -1,11 +1,11 @@
 /**
- * "Coming soon" gate for the public website (decided 5 Oct). The marketing
- * pages on the apex (home, pricing, compare, blog, demo, contact, sign-up)
- * show a Coming soon page until the visitor enters the preview PIN. The app,
- * sign-in, legal and privacy pages, the Learning Centre (the app links to it)
- * and every centre subdomain stay open. Only a SHA-256 of the PIN is kept here;
- * set PREVIEW_PIN_SHA256 on the Worker to change it, or PREVIEW_GATE=off to open
- * the site.
+ * "Coming soon" gate for the public website (added 5 Oct, switched off
+ * 6 Oct when the site opened). With PREVIEW_GATE=on on the Worker, the
+ * marketing pages on the apex (home, pricing, compare, blog, demo, contact,
+ * sign-up) show a Coming soon page until the visitor enters the preview PIN.
+ * The app, sign-in, legal and privacy pages, the Learning Centre and every
+ * centre subdomain always stay open. Only a SHA-256 of the PIN is kept here;
+ * set PREVIEW_PIN_SHA256 on the Worker to change it.
  */
 
 export const PREVIEW_COOKIE = "ar_preview";
@@ -15,7 +15,7 @@ const DEFAULT_PIN_SHA256 = "96cae35ce8a9b0244178bf28e4966c2ce1b8385723a96a6b8388
 const GATED = ["/", "/pricing", "/compare", "/blog", "/book", "/demo", "/contact", "/signup"];
 
 export function previewGateOn(): boolean {
-  return (process.env.PREVIEW_GATE ?? "on").toLowerCase() !== "off";
+  return (process.env.PREVIEW_GATE ?? "off").toLowerCase() === "on";
 }
 
 /** Is this public page behind the Coming soon gate? */

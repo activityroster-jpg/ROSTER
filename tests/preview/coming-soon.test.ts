@@ -9,7 +9,7 @@ const rewrittenTo = (res: Response) => res.headers.get("x-middleware-rewrite");
 describe("the Coming soon gate", () => {
   // The deploy workflows set their own apex (staging uses staging.activityroster.com); pin it here.
   const saved = { apex: process.env.APP_APEX_DOMAIN, gate: process.env.PREVIEW_GATE, pin: process.env.PREVIEW_PIN_SHA256 };
-  beforeAll(() => { process.env.APP_APEX_DOMAIN = "activityroster.com"; delete process.env.PREVIEW_GATE; delete process.env.PREVIEW_PIN_SHA256; });
+  beforeAll(() => { process.env.APP_APEX_DOMAIN = "activityroster.com"; process.env.PREVIEW_GATE = "on"; delete process.env.PREVIEW_PIN_SHA256; });
   afterAll(() => {
     for (const [k, v] of [["APP_APEX_DOMAIN", saved.apex], ["PREVIEW_GATE", saved.gate], ["PREVIEW_PIN_SHA256", saved.pin]] as const) {
       if (v === undefined) delete process.env[k]; else process.env[k] = v;
@@ -40,6 +40,16 @@ describe("the Coming soon gate", () => {
     expect(rewrittenTo(open)).toBeNull();
     const wrongCookie = await middleware(req("https://activityroster.com/", `${PREVIEW_COOKIE}=nope`));
     expect(rewrittenTo(wrongCookie)).toContain("/coming-soon");
+  });
+
+  it("is off unless PREVIEW_GATE=on: the home page is open to everyone (site opened 6 Oct)", async () => {
+    delete process.env.PREVIEW_GATE;
+    try {
+      expect(rewrittenTo(await middleware(req("https://activityroster.com/")))).toBeNull();
+      expect(rewrittenTo(await middleware(req("https://www.activityroster.com/pricing")))).toBeNull();
+    } finally {
+      process.env.PREVIEW_GATE = "on";
+    }
   });
 
   it("leaves legal pages and centre subdomains alone", async () => {
