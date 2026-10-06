@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { LearnMockup, MOCKUP_IDS } from "./LearnMockup";
+import { ScreenShot } from "./ScreenShot";
+import { GUIDE_SCREENS, SCREENS } from "@/lib/screens";
 import { PROVIDERS } from "@/lib/integrations/catalogue";
 import { GUIDE_STAGES, SECTIONS, type Block } from "@/lib/learn/sections";
 
@@ -59,6 +60,38 @@ function BlockView({ b }: { b: Block }) {
   }
 }
 
+/** The screenshots for a guide: office shots full width, app shots side by side underneath. */
+function GuideScreens({ sectionId }: { sectionId: string }) {
+  const screens = (GUIDE_SCREENS[sectionId] ?? []).map((id) => SCREENS[id]);
+  if (screens.length === 0) return null;
+  const desktops = screens.filter((s) => s.device === "desktop");
+  const phones = screens.filter((s) => s.device === "phone");
+  return (
+    <div className="mt-6">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">What it looks like</p>
+      <div className="space-y-4">
+        {desktops.map((s) => (
+          <figure key={s.src}>
+            <ScreenShot screen={s} />
+            <figcaption className="mt-1.5 text-xs text-slate-500">{s.caption}</figcaption>
+          </figure>
+        ))}
+        {phones.length ? (
+          <div className="flex flex-wrap justify-center gap-6">
+            {phones.map((s) => (
+              <figure key={s.src} className="w-[220px]">
+                <ScreenShot screen={s} />
+                <figcaption className="mt-1.5 text-center text-xs text-slate-500">{s.title} · in the instructor app</figcaption>
+              </figure>
+            ))}
+          </div>
+        ) : null}
+      </div>
+      <p className="mt-2 text-[11px] text-slate-400">Screens from a made-up centre. Click any screen to see it full size.</p>
+    </div>
+  );
+}
+
 export function LearningCenter({ initialTopic }: { initialTopic?: string }) {
   const startId = initialTopic && SECTIONS.some((s) => s.id === initialTopic) ? initialTopic : SECTIONS[0]!.id;
   const [active, setActive] = useState(startId);
@@ -114,12 +147,7 @@ export function LearningCenter({ initialTopic }: { initialTopic?: string }) {
               <p className="mt-1 text-sm text-slate-500">{section.blurb}</p>
             </div>
           </div>
-          {MOCKUP_IDS.has(section.id) ? (
-            <div className="mt-6">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">What it looks like</p>
-              <LearnMockup id={section.id} />
-            </div>
-          ) : null}
+          <GuideScreens sectionId={section.id} />
 
           <div className="mt-6 space-y-3">
             {section.blocks.map((b, i) => <BlockView key={i} b={b} />)}

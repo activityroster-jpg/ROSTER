@@ -186,7 +186,7 @@ export default function MarketingHome() {
               <a href="#get-demo" className="mt-6 inline-flex w-full items-center justify-center rounded-lg bg-[#0C6B74] px-6 py-3 font-semibold text-white shadow-lg transition hover:bg-teal-700">
                 Start my free month →
               </a>
-              <Link href="/demo" className="mt-3 block text-center text-sm font-semibold text-white/80 hover:text-white">or explore the live demo</Link>
+              <Link href="/demo" className="mt-3 block text-center text-sm font-semibold text-white/80 hover:text-white">or take the tour first</Link>
             </div>
           </div>
         </div>
@@ -305,13 +305,13 @@ export default function MarketingHome() {
         </div>
       </section>
 
-      {/* Demo band — desktop only; the demo is a desktop experience */}
-      <section className="hidden bg-canvas md:block">
+      {/* Demo band */}
+      <section className="bg-canvas">
         <div className="mx-auto max-w-6xl px-4 py-16 text-center">
           <h2 className="font-display text-2xl font-semibold text-navy">See it before you speak to anyone</h2>
-          <p className="mx-auto mt-2 max-w-2xl text-slate-600">Click around the office admin and the instructor app, with example data.</p>
+          <p className="mx-auto mt-2 max-w-2xl text-slate-600">Step through the office and the instructor app at a busy centre in mid-July. Real screens, made-up centre.</p>
           <Link href="/demo" className="mt-6 inline-block rounded-lg bg-navy px-6 py-3 font-semibold text-white hover:bg-navy-700">
-            Open the live demo
+            Take the tour
           </Link>
         </div>
       </section>
