@@ -34,6 +34,9 @@ export async function POST(req: Request) {
     for (const v of reports) {
       let path: string | null = null;
       try { path = v.documentUri ? new URL(v.documentUri).pathname : null; } catch { path = null; }
+      // One line per distinct report per day: the same page reloading must not
+      // fill the log (and Conor's inbox) with copies of the same finding.
+      if (await control.hasRecentErrorReport(describeViolation(v), path, 24 * 60 * 60 * 1000)) continue;
       await control.createErrorReport({
         organisationId: org?.id ?? null,
         organisationSlug: slug,

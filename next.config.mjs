@@ -1,31 +1,10 @@
 /** @type {import('next').NextConfig} */
 
-// Security headers applied to every response. The CSP is deliberately pragmatic:
-// it locks the dangerous vectors (framing, object/embed, base-uri, external
-// script origins) while allowing the inline script/style Next.js and Tailwind
-// emit. Stripe Checkout/Portal are full-page redirects, so no embedding is needed.
-const csp = [
-  "default-src 'self'",
-  "base-uri 'self'",
-  "object-src 'none'",
-  "frame-ancestors 'none'",
-  "img-src 'self' data: https:",
-  "font-src 'self' https://fonts.gstatic.com data:",
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  // Inline scripts are still allowed here because the marketing pages are
-  // prerendered. The signed-in app also receives a nonce policy (report-only)
-  // from middleware — see lib/security/csp.ts for how to enforce it.
-  "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com",
-  // Only the hosts the browser actually talks to: our own origin, Stripe.js (if
-  // ever embedded) and Sentry's EU/US ingest. Everything else is server-side.
-  "connect-src 'self' https://api.stripe.com https://*.ingest.sentry.io https://*.ingest.de.sentry.io https://challenges.cloudflare.com",
-  "form-action 'self' https://checkout.stripe.com https://billing.stripe.com",
-  "frame-src https://js.stripe.com https://hooks.stripe.com https://challenges.cloudflare.com",
-  "upgrade-insecure-requests",
-].join("; ");
-
+// Security headers applied to every response. The Content-Security-Policy is
+// NOT here: middleware sets it (lib/security/csp.ts). On Workers, OpenNext
+// copies these response headers onto the request too, and a static CSP there
+// hid the per-request nonce from Next.
 const securityHeaders = [
-  { key: "Content-Security-Policy", value: csp },
   { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "SAMEORIGIN" },

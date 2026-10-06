@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNotNull, isNull, lt, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, isNotNull, isNull, lt, ne, sql } from "drizzle-orm";
 import type { Database } from "@/lib/db/client";
 import {
   account,
@@ -402,6 +402,30 @@ export class ControlPlaneRepository {
 
   async setErrorReportStatus(id: string, status: ErrorReportStatus): Promise<void> {
     await this.db.update(errorReport).set({ status }).where(eq(errorReport.id, id));
+  }
+
+  /**
+   * True when the same message was already logged for the same path recently.
+   * Keeps one line per distinct browser CSP report instead of one per page load.
+   */
+  async hasRecentErrorReport(message: string, path: string | null, withinMs: number): Promise<boolean> {
+    const since = new Date(Date.now() - withinMs);
+    const rows = await this.db
+      .select({ id: errorReport.id })
+      .from(errorReport)
+      .where(and(eq(errorReport.message, message.slice(0, 2000)), path == null ? isNull(errorReport.path) : eq(errorReport.path, path), gte(errorReport.createdAt, since)))
+      .limit(1);
+    return rows.length > 0;
+  }
+
+  /** Resolve every open report with this reference (e.g. all browser CSP reports) in one go. Returns how many changed. */
+  async resolveErrorReportsByDigest(digest: string): Promise<number> {
+    const rows = await this.db
+      .update(errorReport)
+      .set({ status: "resolved" })
+      .where(and(eq(errorReport.digest, digest), ne(errorReport.status, "resolved")))
+      .returning({ id: errorReport.id });
+    return rows.length;
   }
 
   async markWebhookProcessed(stripeEventId: string): Promise<void> {

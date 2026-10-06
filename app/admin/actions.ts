@@ -90,6 +90,15 @@ export async function setErrorStatusAction(id: string, status: string): Promise<
   return { ok: true };
 }
 
+/** Resolve every open browser CSP report at once (they are findings about the policy, not faults in a centre). */
+export async function resolveCspReportsAction(): Promise<Result & { count?: number }> {
+  await requirePlatformAdmin();
+  const { control } = await getRepositories();
+  const count = await control.resolveErrorReportsByDigest("csp-report-only");
+  revalidatePath("/admin/errors");
+  return { ok: true, count };
+}
+
 /** Create a shareable marketing promo code (percentage off, or N months free). */
 export async function createPromoCodeAction(input: {
   code: string; kind: string; value: number; maxRedemptions?: number;

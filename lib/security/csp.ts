@@ -1,16 +1,56 @@
 /**
- * Nonce-based Content-Security-Policy for the signed-in app surfaces.
+ * Content-Security-Policy for every response, set by middleware.
  *
- * Today it ships REPORT-ONLY: the enforced policy (next.config) still allows
- * inline scripts, while this stricter one is evaluated alongside it and any
- * would-be violation is posted to /api/csp-report and shown in the Dev Center
- * error log. Once a quiet week has passed, enforce it by moving `noncePolicy`
- * into the enforced header in middleware and dropping 'unsafe-inline' from
- * script-src in next.config.
+ * `STATIC_POLICY` is enforced everywhere. It is deliberately pragmatic: it
+ * locks the dangerous vectors (framing, object/embed, base-uri, external
+ * script origins) while allowing the inline script/style Next.js and Tailwind
+ * emit. Stripe Checkout/Portal are full-page redirects, so no embedding is
+ * needed.
  *
- * Marketing pages are prerendered, so they cannot carry a per-request nonce;
- * they keep the static policy and are not covered here.
+ * `noncePolicy` is the stricter per-request policy for the signed-in app
+ * surfaces. Today it ships REPORT-ONLY: it is evaluated alongside the enforced
+ * one and any would-be violation is posted to /api/csp-report and shown in the
+ * Dev Center error log. Once a quiet week has passed, enforce it by moving
+ * `noncePolicy` into the enforced header in middleware for the app paths.
+ *
+ * Both headers are set in middleware. On Workers, OpenNext copies every
+ * middleware and next.config response header onto the request as well, and
+ * Next takes the nonce from the request's `content-security-policy` header
+ * before the report-only one, so the enforced policy must carry the nonce or
+ * Next never stamps it and every script is reported (6 Oct). `enforcedPolicy`
+ * therefore adds the nonce in a `script-src-attr` directive, listed first:
+ * Next's parser takes the first directive starting with "script-src", while
+ * browsers read `script-src-attr` as governing inline event-handler attributes
+ * only (React emits none), so script elements stay governed by the unchanged
+ * `script-src`. tests/security/csp.test.ts checks this against Next's own
+ * parser, so a Next upgrade that changes it fails CI rather than silently
+ * dropping the nonce. Marketing pages are prerendered, so they cannot carry a
+ * per-request nonce; they get the static policy only.
  */
+export const STATIC_POLICY = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+  "frame-ancestors 'none'",
+  "img-src 'self' data: https:",
+  "font-src 'self' https://fonts.gstatic.com data:",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  // Inline scripts are still allowed here because the marketing pages are
+  // prerendered; the signed-in app also receives the nonce policy above.
+  "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com",
+  // Only the hosts the browser actually talks to: our own origin, Stripe.js (if
+  // ever embedded) and Sentry's EU/US ingest. Everything else is server-side.
+  "connect-src 'self' https://api.stripe.com https://*.ingest.sentry.io https://*.ingest.de.sentry.io https://challenges.cloudflare.com",
+  "form-action 'self' https://checkout.stripe.com https://billing.stripe.com",
+  "frame-src https://js.stripe.com https://hooks.stripe.com https://challenges.cloudflare.com",
+  "upgrade-insecure-requests",
+].join("; ");
+
+/** The enforced policy; with a nonce (app paths) it also carries the `script-src-attr` nonce described above. */
+export function enforcedPolicy(nonce?: string): string {
+  return nonce ? `script-src-attr 'nonce-${nonce}'; ${STATIC_POLICY}` : STATIC_POLICY;
+}
+
 const APP_PREFIXES = ["/office", "/portal", "/admin", "/app", "/sign-in", "/two-factor", "/pin", "/set-pin", "/security", "/verify-device", "/reset-password"];
 
 export const isNonceCspPath = (path: string): boolean => APP_PREFIXES.some((p) => path === p || path.startsWith(`${p}/`) || path.startsWith(`${p}?`));

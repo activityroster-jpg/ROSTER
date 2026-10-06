@@ -1,7 +1,30 @@
 import { describe, expect, it } from "vitest";
-import { describeViolation, isNonceCspPath, makeNonce, noncePolicy, parseCspReports } from "@/lib/security/csp";
+import { getScriptNonceFromHeader } from "next/dist/server/app-render/get-script-nonce-from-header";
+import { STATIC_POLICY, describeViolation, enforcedPolicy, isNonceCspPath, makeNonce, noncePolicy, parseCspReports } from "@/lib/security/csp";
 
 describe("nonce CSP", () => {
+  it("keeps the enforced static policy pragmatic and framing-proof", () => {
+    expect(STATIC_POLICY).toContain("frame-ancestors 'none'");
+    expect(STATIC_POLICY).toContain("script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com");
+    expect(STATIC_POLICY).toContain("object-src 'none'");
+    expect(STATIC_POLICY).not.toContain("nonce-");
+    expect(enforcedPolicy()).toBe(STATIC_POLICY);
+  });
+
+  it("hands Next the nonce through the enforced header without changing script-src", () => {
+    // OpenNext copies response headers onto the request and Next reads the
+    // enforced header first (lib/security/csp.ts), so the nonce must be found
+    // there by Next's own parser, and only in a directive browsers do not
+    // apply to script elements.
+    const n = makeNonce();
+    const p = enforcedPolicy(n);
+    expect(getScriptNonceFromHeader(p)).toBe(n);
+    expect(getScriptNonceFromHeader(STATIC_POLICY)).toBeUndefined();
+    expect(p.startsWith(`script-src-attr 'nonce-${n}'; `)).toBe(true);
+    expect(p).toContain("script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com");
+    expect(p.split("'nonce-").length).toBe(2);
+  });
+
   it("covers the signed-in surfaces and not the marketing site", () => {
     for (const p of ["/office", "/office/courses", "/portal/leave", "/admin/security", "/app/join", "/sign-in", "/two-factor"]) expect(isNonceCspPath(p)).toBe(true);
     for (const p of ["/", "/pricing", "/learn", "/blog/x", "/api/auth/x", "/.well-known/assetlinks.json", "/applications"]) expect(isNonceCspPath(p)).toBe(false);

@@ -4,7 +4,7 @@ import { PIN_COOKIE, pinIdleSecondsFrom } from "@/lib/auth/pin";
 import { LV_COOKIE, LV_DEVICE_COOKIE, LV_IDLE_MAX_AGE_S, LV_SESSION_COOKIE } from "@/lib/auth/login-verify";
 import { DEVICE_COOKIE, DEVICE_HEADER, DEVICE_MAX_AGE_S, PATH_HEADER, isDeviceId } from "@/lib/auth/device";
 import { CENTRE_COOKIE } from "@/lib/auth/centre-cookie";
-import { isNonceCspPath, makeNonce, noncePolicy } from "@/lib/security/csp";
+import { enforcedPolicy, isNonceCspPath, makeNonce, noncePolicy } from "@/lib/security/csp";
 import { PREVIEW_COOKIE, isPreviewGated, previewGateOn, previewToken } from "@/lib/preview/gate";
 
 /**
@@ -69,14 +69,20 @@ export async function middleware(req: NextRequest) {
   const fwd = new Headers(req.headers);
   fwd.set(DEVICE_HEADER, deviceId);
   fwd.set(PATH_HEADER, path);
-  // Nonce CSP for the signed-in surfaces, report-only for now (lib/security/csp).
-  // The request header lets Next stamp the nonce on its own inline scripts; the
-  // response header has the browser evaluate the policy and report violations.
-  const cspReportOnly = isNonceCspPath(path) ? noncePolicy(makeNonce()) : null;
+  // Content-Security-Policy (lib/security/csp): the static policy is enforced on
+  // every page; the signed-in surfaces also get the nonce policy, report-only
+  // for now. The request header lets Next stamp the nonce on its own scripts;
+  // the response headers have the browser evaluate the policies.
+  const nonce = isNonceCspPath(path) ? makeNonce() : undefined;
+  const cspReportOnly = nonce ? noncePolicy(nonce) : null;
   if (cspReportOnly) fwd.set("content-security-policy-report-only", cspReportOnly);
-  const next = () => {
-    const res = NextResponse.next({ request: { headers: fwd } });
+  const withCsp = <T extends NextResponse>(res: T): T => {
+    res.headers.set("Content-Security-Policy", enforcedPolicy(nonce));
     if (cspReportOnly) res.headers.set("Content-Security-Policy-Report-Only", cspReportOnly);
+    return res;
+  };
+  const next = () => {
+    const res = withCsp(NextResponse.next({ request: { headers: fwd } }));
     if (deviceId !== existing) {
       res.cookies.set(DEVICE_COOKIE, deviceId, { httpOnly: true, secure: true, sameSite: "lax", path: "/", domain: `.${APEX}`, maxAge: DEVICE_MAX_AGE_S });
     }
@@ -110,7 +116,7 @@ export async function middleware(req: NextRequest) {
       const to = url.clone();
       to.pathname = "/coming-soon";
       to.search = `?next=${encodeURIComponent(path + url.search)}`;
-      const res = NextResponse.rewrite(to, { request: { headers: fwd } });
+      const res = withCsp(NextResponse.rewrite(to, { request: { headers: fwd } }));
       res.headers.set("X-Robots-Tag", "noindex");
       if (deviceId !== existing) res.cookies.set(DEVICE_COOKIE, deviceId, { httpOnly: true, secure: true, sameSite: "lax", path: "/", domain: `.${APEX}`, maxAge: DEVICE_MAX_AGE_S });
       return res;
