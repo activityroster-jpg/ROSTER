@@ -162,3 +162,13 @@ describe("help assistant suggestions read as questions", () => {
     expect(suggestionsForPage("/")).toEqual(["How does setup work?", "How much does it cost?", "Is there a free trial?"]);
   });
 });
+
+describe("Learning Centre order", () => {
+  it("puts every guide in exactly one stage, in the same order as the sections", async () => {
+    const { GUIDE_STAGES } = await import("@/lib/learn/sections");
+    const staged = GUIDE_STAGES.flatMap((g) => g.ids);
+    expect(staged).toEqual(SECTIONS.map((s) => s.id));
+    expect(SECTIONS[0]!.id).toBe("getting-started");
+    expect(SECTIONS.at(-1)!.id).toBe("if-the-platform-is-down");
+  });
+});

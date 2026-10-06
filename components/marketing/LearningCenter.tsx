@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { LearnMockup, MOCKUP_IDS } from "./LearnMockup";
 import { PROVIDERS } from "@/lib/integrations/catalogue";
-import { SECTIONS, type Block } from "@/lib/learn/sections";
+import { GUIDE_STAGES, SECTIONS, type Block } from "@/lib/learn/sections";
 
 function BlockView({ b }: { b: Block }) {
   switch (b.kind) {
@@ -70,8 +70,8 @@ export function LearningCenter({ initialTopic }: { initialTopic?: string }) {
         <p className="text-sm font-semibold uppercase tracking-wide text-teal">Learning Centre</p>
         <h1 className="mt-1 font-display text-3xl font-bold text-navy sm:text-4xl">How to use ActivityRoster</h1>
         <p className="mx-auto mt-3 max-w-2xl text-slate-600">
-          A step-by-step guide to every part of the platform — from first setup to rostering, certs, billing and
-          data. Pick a topic to jump in.
+          A step-by-step guide to every part of the platform, in the order you&apos;ll need it: set up your centre,
+          add courses and instructors, build the roster, then run the season. Help and troubleshooting are at the end.
         </p>
       </div>
 
@@ -81,8 +81,15 @@ export function LearningCenter({ initialTopic }: { initialTopic?: string }) {
           <ul className="flex gap-2 overflow-x-auto pb-2 lg:flex-col lg:gap-1 lg:overflow-visible lg:pb-0">
             {SECTIONS.map((s) => {
               const on = s.id === active;
+              const stageIndex = GUIDE_STAGES.findIndex((g) => g.ids[0] === s.id);
+              const stage = stageIndex >= 0 ? GUIDE_STAGES[stageIndex] : undefined;
               return (
                 <li key={s.id} className="flex-none lg:flex-auto">
+                  {stage ? (
+                    <p className={`hidden px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400 lg:block ${stageIndex > 0 ? "pt-4" : ""}`}>
+                      {stageIndex + 1}. {stage.label}
+                    </p>
+                  ) : null}
                   <button
                     type="button"
                     onClick={() => setActive(s.id)}
