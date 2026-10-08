@@ -23,6 +23,9 @@ import { ageOn, isUnder18 } from "@/lib/domain/age";
 import { readProtectedContacts } from "@/lib/services/protected-contacts";
 import { ProtectedContactsForm } from "@/components/office/ProtectedContactsForm";
 import { parentApprovalFromLinks } from "@/lib/services/guardians";
+import { StaffAvailabilityCard } from "@/components/office/StaffAvailabilityCard";
+import { staffAvailabilityView } from "@/lib/services/availability";
+import { weekStart } from "@/lib/services/schedule";
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +53,8 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
   const left = instructor.status === "inactive";
   const membership = instructor.userId ? await repos.control.membershipFor(instructor.userId, ctx.organisationId) : null;
   const inviteStatus = !instructor.userId ? "none" : membership?.status === "active" ? "accepted" : "pending";
+  const availability = await staffAvailabilityView(repos, ctx, instructor.id, weekStart(new Date()));
+  const centreMode = settings[0]?.staffManagedBy ?? "staff";
   const under18 = isUnder18(instructor.dateOfBirth);
   const age = ageOn(instructor.dateOfBirth);
   const canEdit = can(ctx, "staff.edit");
@@ -72,6 +77,7 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
           <p className="text-sm text-slate-500"><span className="capitalize">{instructor.employmentType}</span> · {instructor.email ?? "no email"}{instructor.phone ? ` · ${instructor.phone}` : ""}{age !== null ? ` · ${age} years old` : " · no date of birth yet"}</p>
         </div>
         <div className="flex items-center gap-3">
+          {availability.officeManaged && !instructor.userId && !left ? <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600" title="The office keeps their availability; they don't need the app">Office-managed · no sign-up needed</span> : null}
           {instructor.email && !left ? <InviteInstructorButton instructorId={instructor.id} status={inviteStatus} /> : null}
           {left ? null : fit.fit ? <StatusPill tone="covered">Fit to roster</StatusPill> : <StatusPill tone="conflict">{fitReason(fit) || "Not cleared"}</StatusPill>}
         </div>
@@ -119,6 +125,23 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
         </div>
 
         <div className="space-y-6">
+          {!left && can(ctx, "roster.edit") ? (
+            <Card>
+              <div id="availability" className="mb-2 flex items-center justify-between"><h2 className="font-semibold text-navy">Availability</h2><a href="/office/availability" className="text-xs text-teal hover:underline">Everyone&rsquo;s week →</a></div>
+              <StaffAvailabilityCard
+                instructorId={instructor.id}
+                name={instructor.name.split(" ")[0] ?? instructor.name}
+                managedBy={instructor.managedBy ?? null}
+                centreMode={centreMode}
+                officeManaged={availability.officeManaged}
+                hasLogin={Boolean(instructor.userId)}
+                pattern={availability.pattern}
+                days={availability.days}
+                cells={availability.cells}
+                canEditStaff={canEdit}
+              />
+            </Card>
+          ) : null}
           {payOn && can(ctx, "finance.view") ? (
             <Card>
               <h2 className="mb-1 font-semibold text-navy">Pay</h2>

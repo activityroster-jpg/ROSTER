@@ -7,13 +7,17 @@
  * the window nobody has been asked yet, so a slot there is "unasked" and never
  * blocks rostering.
  *
+ * Office-managed people (no sign-up needed; the office keeps their availability)
+ * are the other way round: a slot nobody has answered counts as Free
+ * ("assumed"), and the office only marks the days they can't work.
+ *
  * Pure functions only: no DB, no framework, no clock. Callers pass today's date.
  */
 
 export type AvailabilityAnswer = "available" | "tentative" | "unavailable";
 export type EffectiveStatus = AvailabilityAnswer | "unasked";
-/** Where an effective status came from: a dated answer, the usual week, the Busy default, or outside the window. */
-export type AvailabilitySource = "set" | "pattern" | "default" | "unasked";
+/** Where an effective status came from: a dated answer, the usual week, the Busy default, outside the window, or assumed Free (office-managed). */
+export type AvailabilitySource = "set" | "pattern" | "default" | "unasked" | "assumed";
 
 export interface EffectiveAvailability {
   status: EffectiveStatus;
@@ -32,6 +36,13 @@ export interface AvailabilityIndex {
   dated: Record<string, AvailabilityAnswer>;
   /** `${weekday}|${slot}` (weekday 0 = Sunday … 6 = Saturday) → the usual-week answer. */
   pattern: Record<string, AvailabilityAnswer>;
+  /** Office-managed: an unanswered slot counts as Free instead of Busy. */
+  assumeFree?: boolean;
+}
+
+/** Whether the office keeps this person's availability: their own setting, else the centre's. */
+export function managedByOffice(person: { managedBy?: string | null }, centre: { staffManagedBy?: string | null } | null | undefined): boolean {
+  return (person.managedBy ?? centre?.staffManagedBy ?? "staff") === "office";
 }
 
 export const SLOT_ORDER = ["AM", "PM", "EV"] as const;
@@ -69,6 +80,7 @@ export const inHorizon = (h: AvailabilityHorizon, isoDate: string): boolean => i
 /** Build the lookup index from raw rows (dated and weekday rows mixed, as stored). */
 export function indexAvailability(
   rows: readonly { date: string | null; weekday: number | null; slot: string; status: string }[],
+  opts: { assumeFree?: boolean } = {},
 ): AvailabilityIndex {
   const dated: Record<string, AvailabilityAnswer> = {};
   const pattern: Record<string, AvailabilityAnswer> = {};
@@ -77,7 +89,7 @@ export function indexAvailability(
     if (r.date) dated[keyOf(r.date, r.slot)] = status;
     else if (r.weekday !== null && r.weekday !== undefined) pattern[patternKeyOf(r.weekday, r.slot)] = status;
   }
-  return { dated, pattern };
+  return { dated, pattern, ...(opts.assumeFree ? { assumeFree: true } : {}) };
 }
 
 /** The status that applies to one date and slot, and why. */
@@ -86,6 +98,7 @@ export function effectiveAvailability(index: AvailabilityIndex, horizon: Availab
   if (set) return { status: set, source: "set" };
   const usual = index.pattern[patternKeyOf(weekdayOf(date), slot)];
   if (usual) return { status: usual, source: "pattern" };
+  if (index.assumeFree) return { status: "available", source: "assumed" };
   if (!inHorizon(horizon, date)) return { status: "unasked", source: "unasked" };
   return { status: "unavailable", source: "default" };
 }

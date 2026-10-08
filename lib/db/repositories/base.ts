@@ -1,4 +1,4 @@
-import { and, eq, type SQL } from "drizzle-orm";
+import { and, eq, getTableColumns, getTableName, sql, type SQL } from "drizzle-orm";
 import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
 import type { Database } from "@/lib/db/client";
 import { inList, rowsPerInsert } from "@/lib/db/params";
@@ -165,6 +165,63 @@ export class TenantRepository<T extends TenantTable> {
       })
       .returning();
     return (out as T["$inferSelect"][])[0]!;
+  }
+
+  /**
+   * Many upserts at once (bulk availability): up to 2,000 rows per statement,
+   * sent as ONE bound parameter (a JSON array unpacked with json_each), so the
+   * cost stays tiny however many people a centre has. On a key clash the named
+   * `columns` take the incoming row's values. As {@link upsert}, the org id is
+   * forced on insert and the update is pinned to this tenant. Defaults made in
+   * code (ids, timestamps) are filled in here. Returns rows written.
+   */
+  async upsertMany(
+    ctx: AnyTenantContext,
+    rows: Omit<T["$inferInsert"], "organisationId">[],
+    conflict: { target: SQLiteColumn[]; targetWhere?: SQL },
+    columns: (keyof Omit<T["$inferInsert"], "organisationId" | "id">)[],
+  ): Promise<number> {
+    this.assertWritable(ctx);
+    if (rows.length === 0) return 0;
+    type Col = SQLiteColumn & { defaultFn?: () => unknown; mapToDriverValue: (v: unknown) => unknown };
+    const cols = getTableColumns(this.table as SQLiteTable) as unknown as Record<string, Col>;
+    const given = rows as Record<string, unknown>[];
+    // The org id always; any column a row sets; and columns whose default is made in code.
+    const keys = Object.keys(cols).filter((k) => k === "organisationId" || given.some((r) => r[k] !== undefined) || cols[k]!.defaultFn);
+    const encode = (r: Record<string, unknown>) => keys.map((k) => {
+      const c = cols[k]!;
+      const v = k === "organisationId" ? ctx.organisationId : r[k] !== undefined ? r[k] : c.defaultFn ? c.defaultFn() : null;
+      return v === null || v === undefined ? null : c.mapToDriverValue(v);
+    });
+    const table = sql.identifier(getTableName(this.table as SQLiteTable));
+    const names = keys.map((k) => cols[k]!.name);
+    const insertCols = sql.join(names.map((n) => sql.identifier(n)), sql`, `);
+    const picks = sql.raw(names.map((_, i) => `json_extract(value, '$[${i}]')`).join(", "));
+    const target = sql.join(conflict.target.map((c) => sql.identifier(c.name)), sql`, `);
+    const targetWhere = conflict.targetWhere ? sql` where ${conflict.targetWhere}` : sql``;
+    const set = sql.join(columns.map((k) => { const n = sql.identifier(cols[k as string]!.name); return sql`${n} = excluded.${n}`; }), sql`, `);
+    for (let i = 0; i < given.length; i += 2000) {
+      const payload = JSON.stringify(given.slice(i, i + 2000).map(encode));
+      await this.db.run(sql`insert into ${table} (${insertCols}) select ${picks} from json_each(${payload}) where true on conflict (${target})${targetWhere} do update set ${set} where ${table}.${sql.identifier("organisation_id")} = ${ctx.organisationId}`);
+    }
+    return rows.length;
+  }
+
+  /** Update every row of this tenant matching `where`, in one statement. Returns rows changed. */
+  async updateWhere(ctx: AnyTenantContext, where: SQL, patch: Partial<Omit<T["$inferInsert"], "organisationId" | "id">>): Promise<number> {
+    this.assertWritable(ctx);
+    const { organisationId: _drop, id: _dropId, ...safe } = patch as Record<string, unknown>;
+    void _drop;
+    void _dropId;
+    const changed = await this.db.update(this.table).set(safe as Partial<T["$inferInsert"]>).where(this.scoped(ctx, where)).returning({ id: this.table.id });
+    return (changed as unknown[]).length;
+  }
+
+  /** Delete every row of this tenant matching `where`, in one statement. Returns rows removed. */
+  async deleteWhere(ctx: AnyTenantContext, where: SQL): Promise<number> {
+    this.assertWritable(ctx);
+    const removed = await this.db.delete(this.table).where(this.scoped(ctx, where)).returning({ id: this.table.id });
+    return (removed as unknown[]).length;
   }
 
   /**

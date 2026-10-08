@@ -31,6 +31,7 @@ export async function setSetupPreferencesAction(input: {
   features: string[];
   slotStyle: string;
   availabilityWeeksAhead?: number;
+  staffManagedBy?: string;
 }): Promise<Result> {
   const { ctx, repos } = await requireTenant({ permission: "settings.edit" });
   const features = serializeFeatures(input.features as OptionalFeature[]);
@@ -38,14 +39,15 @@ export async function setSetupPreferencesAction(input: {
     ? (input.slotStyle as SlotStyle)
     : "slots";
   const availabilityWeeksAhead = Math.max(1, Math.min(26, Math.round(Number(input.availabilityWeeksAhead) || 4)));
+  const staffManagedBy = input.staffManagedBy === "office" ? "office" : "staff";
 
   const existing = (await repos.tenant.orgSettings.list(ctx))[0];
   if (existing) {
-    await repos.tenant.orgSettings.update(ctx, existing.id, { enabledFeatures: features, slotStyle, availabilityWeeksAhead });
+    await repos.tenant.orgSettings.update(ctx, existing.id, { enabledFeatures: features, slotStyle, availabilityWeeksAhead, staffManagedBy });
   } else {
-    await repos.tenant.orgSettings.insert(ctx, { enabledFeatures: features, slotStyle, availabilityWeeksAhead });
+    await repos.tenant.orgSettings.insert(ctx, { enabledFeatures: features, slotStyle, availabilityWeeksAhead, staffManagedBy });
   }
-  await writeAudit(repos, ctx, { action: "onboarding_set_preferences", entity: "org_settings", after: { features: input.features, slotStyle, availabilityWeeksAhead } });
+  await writeAudit(repos, ctx, { action: "onboarding_set_preferences", entity: "org_settings", after: { features: input.features, slotStyle, availabilityWeeksAhead, staffManagedBy } });
   revalidatePath("/office");
   revalidatePath("/office/onboarding");
   return { ok: true };

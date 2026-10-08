@@ -31,6 +31,7 @@ export function GeneralSettingsForm({
   schedulingMode,
   alertLeadDays,
   availabilityWeeksAhead = 4,
+  staffManagedBy = "staff",
   currency,
   enforceLicenceChecks,
   enforceRatioChecks,
@@ -51,6 +52,7 @@ export function GeneralSettingsForm({
   schedulingMode: string;
   alertLeadDays: number;
   availabilityWeeksAhead?: number;
+  staffManagedBy?: "staff" | "office";
   currency: string;
   enforceLicenceChecks: boolean;
   enforceRatioChecks: boolean;
@@ -93,10 +95,22 @@ export function GeneralSettingsForm({
         <input name="holidayPayPercent" type="number" step={0.01} min={0} max={50} defaultValue={holidayPayPercent ?? ""} placeholder="e.g. 12.07" className="w-28 rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal" />
         <p className="mt-1 text-[11px] text-slate-400">Rolled-up holiday pay for casual workers (UK: 12.07%). Shown as its own column and total for employed and freelance staff; never for volunteers. Check the rule for your staff with your payroll provider.</p>
       </div>
+      <fieldset id="staff-managed-by" className="sm:col-span-4 rounded-lg border border-slate-200 p-3">
+        <legend className="px-1 text-xs font-medium text-slate-500">Who keeps staff availability up to date?</legend>
+        <label className="flex items-start gap-2 py-1 text-sm text-navy">
+          <input type="radio" name="staffManagedBy" value="staff" defaultChecked={staffManagedBy !== "office"} className="mt-1" />
+          <span><span className="font-medium">Each instructor, in the app.</span> <span className="text-slate-500">They sign up, mark when they&rsquo;re free and confirm their sessions. A slot counts as Busy until they answer.</span></span>
+        </label>
+        <label className="flex items-start gap-2 py-1 text-sm text-navy">
+          <input type="radio" name="staffManagedBy" value="office" defaultChecked={staffManagedBy === "office"} className="mt-1" />
+          <span><span className="font-medium">The office. Staff don&rsquo;t need to sign up.</span> <span className="text-slate-500">Everyone counts as free unless you mark them busy, nobody is asked to confirm, and published rosters go out by email. You can still invite anyone to the app.</span></span>
+        </label>
+        <p className="mt-1 text-[11px] text-slate-400">You can choose differently for one person on their page in Staff. <a href="/learn?topic=office-managed" target="_blank" rel="noreferrer" className="text-teal hover:underline">📖 Read the guide</a></p>
+      </fieldset>
       <div id="availability-window" className="sm:col-span-2">
         <label className="mb-1 block text-xs font-medium text-slate-500">Ask instructors for availability this many weeks ahead</label>
         <input name="availabilityWeeksAhead" type="number" defaultValue={availabilityWeeksAhead} min={1} max={26} className="w-28 rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal" />
-        <p className="mt-1 text-[11px] text-slate-400">Inside this window a slot counts as Busy until the instructor marks it Free or Maybe. Beyond it nobody has been asked yet, so nothing blocks.</p>
+        <p className="mt-1 text-[11px] text-slate-400">For instructors who keep their own availability: inside this window a slot counts as Busy until they mark it Free or Maybe. Beyond it nobody has been asked yet, so nothing blocks.</p>
       </div>
       <div>
         <label className="mb-1 block text-xs font-medium text-slate-500">Currency</label>

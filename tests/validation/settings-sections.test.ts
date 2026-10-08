@@ -16,8 +16,12 @@ describe("settings saved one card at a time", () => {
 
   it("basics validates and normalises", () => {
     const r = settingsPatch("basics", form({ alertLeadDays: "30", availabilityWeeksAhead: "6", currency: "GBP", holidayPayPercent: "", privacyNoticeUrl: "" }));
-    expect(r).toEqual({ ok: true, patch: { alertLeadDays: 30, availabilityWeeksAhead: 6, currency: "GBP", holidayPayPercent: null, privacyNoticeUrl: null } });
+    expect(r).toEqual({ ok: true, patch: { alertLeadDays: 30, availabilityWeeksAhead: 6, currency: "GBP", holidayPayPercent: null, privacyNoticeUrl: null, staffManagedBy: "staff" } });
     expect(settingsPatch("basics", form({ alertLeadDays: "30", currency: "GBP", privacyNoticeUrl: "http://x.org" })).ok).toBe(false);
+    // Who keeps availability: the office (no staff sign-up), or a made-up value refused.
+    const office = settingsPatch("basics", form({ alertLeadDays: "30", currency: "GBP", staffManagedBy: "office" }));
+    expect(office.ok && office.patch.staffManagedBy).toBe("office");
+    expect(settingsPatch("basics", form({ alertLeadDays: "30", currency: "GBP", staffManagedBy: "parents" })).ok).toBe(false);
   });
 
   it("term dates are stored as JSON and bad dates are refused", () => {

@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 export interface SettingsTab { id: string; label: string; hint?: string }
 
 /** Anchors other pages link to, mapped to the tab that holds them. */
-const HASH_TO_TAB: Record<string, string> = { "availability-window": "general", "rota-pdf": "roster", retention: "data", welfare: "roster" };
+const HASH_TO_TAB: Record<string, string> = { "availability-window": "general", "staff-managed-by": "general", "rota-pdf": "roster", retention: "data", welfare: "roster" };
 
 /**
  * Settings as tabs (audit Part E phase 3). Every panel is rendered on the

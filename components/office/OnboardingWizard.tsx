@@ -44,6 +44,7 @@ export function OnboardingWizard({
   initialFeatures,
   initialSlotStyle,
   initialWeeksAhead,
+  initialStaffManagedBy = "staff",
 }: {
   centreName: string;
   courseTypes: CourseTypeOpt[];
@@ -52,6 +53,7 @@ export function OnboardingWizard({
   initialFeatures: OptionalFeature[];
   initialSlotStyle: string;
   initialWeeksAhead?: number;
+  initialStaffManagedBy?: "staff" | "office";
 }) {
   const [quals, setQuals] = useState<QualOpt[]>(initialQuals);
   const router = useRouter();
@@ -63,6 +65,7 @@ export function OnboardingWizard({
   const [features, setFeatures] = useState<Set<OptionalFeature>>(new Set(initialFeatures));
   const [slotStyle, setSlotStyle] = useState(initialSlotStyle || "slots");
   const [weeksAhead, setWeeksAhead] = useState(initialWeeksAhead ?? 4);
+  const [managedBy, setManagedBy] = useState<"staff" | "office">(initialStaffManagedBy);
   const toggleFeature = (f: OptionalFeature) => setFeatures((s) => { const n = new Set(s); n.has(f) ? n.delete(f) : n.add(f); return n; });
 
   // Step 2 — courses (local list so custom additions appear immediately)
@@ -152,7 +155,7 @@ export function OnboardingWizard({
   const savePrefsThenNext = () => {
     setMsg(null);
     startTransition(async () => {
-      const res = await setSetupPreferencesAction({ features: [...features], slotStyle, availabilityWeeksAhead: weeksAhead });
+      const res = await setSetupPreferencesAction({ features: [...features], slotStyle, availabilityWeeksAhead: weeksAhead, staffManagedBy: managedBy });
       if (res.ok) setStep(2); else setMsg(res.error ?? "Could not save");
     });
   };
@@ -264,6 +267,23 @@ export function OnboardingWizard({
           </div>
 
           <div className="rounded-card border border-slate-200 bg-white p-6">
+            <h2 className="font-display text-lg font-semibold text-navy">Do your staff need to sign up?</h2>
+            <p className="mt-1 text-sm text-slate-500">Choose who keeps availability up to date. You can change this in Settings, or for one person on their page.</p>
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              {([
+                { v: "staff", title: "Yes, they use the app", hint: "Each instructor marks when they're free and confirms their sessions. A slot counts as busy until they answer." },
+                { v: "office", title: "No, the office runs it", hint: "Nobody signs up. Everyone counts as free unless you mark them busy, and published rosters go out by email." },
+              ] as const).map((o) => (
+                <button key={o.v} type="button" onClick={() => setManagedBy(o.v)} aria-pressed={managedBy === o.v}
+                  className={`rounded-lg border p-3 text-left transition ${managedBy === o.v ? "border-teal bg-teal/5" : "border-slate-200 hover:border-slate-300"}`}>
+                  <span className="block text-sm font-semibold text-navy">{o.title}</span>
+                  <span className="text-xs text-slate-500">{o.hint}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className={`rounded-card border border-slate-200 bg-white p-6 ${managedBy === "office" ? "hidden" : ""}`}>
             <h2 className="font-display text-lg font-semibold text-navy">How far ahead can instructors set availability?</h2>
             <p className="mt-1 text-sm text-slate-500">Instructors can submit availability from now up to this many weeks ahead. You can change this in Settings.</p>
             <div className="mt-4 flex flex-wrap gap-2">

@@ -13,7 +13,7 @@ import { requireTenant } from "@/lib/tenant/require";
 import { getAuth } from "@/lib/auth";
 import { dobSchema, protectedContactsSchema, instructorSchema, complianceItemSchema, qualificationSchema } from "@/lib/validation/entities";
 import { writeAudit } from "@/lib/services/audit";
-import { idSchema } from "@/lib/validation/actions";
+import { idSchema, managedBySchema } from "@/lib/validation/actions";
 import { hasFreshStepUp } from "@/lib/auth/step-up-server";
 import { deleteInstructorIfUnreferenced } from "@/lib/services/retire";
 import { linkInstructorUser } from "@/lib/services/invite";
@@ -490,4 +490,23 @@ export async function revokeGuardianAction(instructorId: string, linkId: string)
   const ok = await revokeGuardian(repos, ctx, linkId);
   revalidatePath(`/office/staff/${instructorId}`);
   return ok ? { ok: true, message: "Guardian access removed" } : { ok: false, error: "Not found" };
+}
+
+/**
+ * Who keeps one person's availability: the person in the app, the office (no
+ * sign-up needed; free unless marked busy, not asked to confirm), or the
+ * centre's setting (null). Audited.
+ */
+export async function setManagedByAction(input: unknown): Promise<{ ok: boolean; error?: string }> {
+  const { ctx, repos } = await requireTenant({ permission: "staff.edit" });
+  const parsed = managedBySchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Pick an option" };
+  const before = await repos.tenant.instructor.findById(ctx, parsed.data.instructorId);
+  if (!before) return { ok: false, error: "Staff member not found" };
+  await repos.tenant.instructor.update(ctx, before.id, { managedBy: parsed.data.managedBy });
+  await writeAudit(repos, ctx, { action: "set_managed_by", entity: "instructor", entityId: before.id, before: { managedBy: before.managedBy ?? null }, after: { managedBy: parsed.data.managedBy } });
+  revalidatePath(`/office/staff/${before.id}`);
+  revalidatePath("/office/staff");
+  revalidatePath("/office/availability");
+  return { ok: true };
 }

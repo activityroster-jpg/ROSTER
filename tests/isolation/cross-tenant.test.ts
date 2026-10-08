@@ -6,7 +6,8 @@ import { seedFullOrg } from "@/tests/helpers/seed-fixtures";
 import { TENANT_TABLES, TenantRepository } from "@/lib/db/repositories";
 import type { Database as DrizzleDatabase } from "@/lib/db/client";
 import type { TenantContext } from "@/lib/tenant/context";
-import { instructor } from "@/lib/db/schema";
+import { availability, instructor } from "@/lib/db/schema";
+import { isNotNull, sql } from "drizzle-orm";
 
 /**
  * THE cross-tenant isolation test (Phase 0, before features). It seeds two
@@ -134,5 +135,39 @@ describe("cross-tenant isolation", () => {
     for (const r of created) expect(await repo.findById(ctxB, r.id)).toBeNull();
     const seenByB = await repo.list(ctxB);
     expect(seenByB.some((r) => r.name.startsWith("Bulk "))).toBe(false);
+  });
+
+  it("updateWhere() and deleteWhere() only ever touch the caller's rows, for every table", async () => {
+    for (const table of TENANT_TABLES) {
+      const name = getTableName(table);
+      const repo = new TenantRepository(db, table as never);
+      const before = (raw.prepare(`SELECT COUNT(*) AS n FROM "${name}" WHERE organisation_id = ?`).get(orgB.organisationId) as { n: number }).n;
+      // A condition that matches every row in the table, both orgs.
+      await repo.updateWhere(ctxA, sql`1 = 1`, {} as never).catch(() => 0);
+      const removed = await repo.deleteWhere(ctxA, sql`1 = 1`).catch(() => -1);
+      const after = (raw.prepare(`SELECT COUNT(*) AS n FROM "${name}" WHERE organisation_id = ?`).get(orgB.organisationId) as { n: number }).n;
+      expect(after, `${name}: deleteWhere() removed another org's rows (removed ${removed})`).toBe(before);
+    }
+  });
+
+  it("updateWhere() cannot change another org's row", async () => {
+    const repo = new TenantRepository(db, instructor);
+    const bInstructor = raw.prepare(`SELECT id, name FROM instructor WHERE organisation_id = ? LIMIT 1`).get(orgB.organisationId) as { id: string; name: string };
+    const n = await repo.updateWhere(ctxA, sql`${instructor.id} = ${bInstructor.id}`, { name: "HACKED" });
+    expect(n).toBe(0);
+    expect((raw.prepare(`SELECT name FROM instructor WHERE id = ?`).get(bInstructor.id) as { name: string }).name).toBe(bInstructor.name);
+  });
+
+  it("upsertMany() forces the caller's org id and never updates another org's row on a key clash", async () => {
+    const repo = new TenantRepository(db, availability);
+    const bRow = raw.prepare(`SELECT instructor_id AS instructorId, date, slot, status FROM availability WHERE organisation_id = ? AND date IS NOT NULL LIMIT 1`).get(orgB.organisationId) as { instructorId: string; date: string; slot: string; status: string };
+    const key = { target: [availability.instructorId, availability.date, availability.slot], targetWhere: isNotNull(availability.date) };
+    // Same key as org B's row, smuggled org id: must not overwrite B's row.
+    await repo.upsertMany(ctxA, [{ organisationId: orgB.organisationId, instructorId: bRow.instructorId, date: bRow.date, weekday: null, slot: bRow.slot, status: "tentative", setBy: "office" }] as never, key, ["status", "setBy"]);
+    const after = raw.prepare(`SELECT status, organisation_id AS org FROM availability WHERE instructor_id = ? AND date = ? AND slot = ?`).all(bRow.instructorId, bRow.date, bRow.slot) as { status: string; org: string }[];
+    expect(after.find((r) => r.org === orgB.organisationId)!.status).toBe(bRow.status);
+    expect(after.every((r) => r.org === orgB.organisationId || r.org === orgA.organisationId)).toBe(true);
+    const aRows = await repo.list(ctxA);
+    expect(aRows.every((r) => r.organisationId === orgA.organisationId)).toBe(true);
   });
 });

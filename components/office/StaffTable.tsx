@@ -17,6 +17,8 @@ export interface StaffRow {
   linked: boolean;
   /** Portal access: none yet, invite sent but not accepted, or accepted. */
   inviteStatus: "none" | "pending" | "accepted";
+  /** The office keeps their availability; they don't need to sign up. */
+  officeManaged?: boolean;
   /** When the latest invitation went out (epoch ms), if we know. */
   inviteSentAt?: number | null;
   /** Held back by the centre's daily invite limit; goes out tomorrow. */
@@ -163,6 +165,11 @@ export function StaffTable({ rows }: { rows: StaffRow[] }) {
                   <td className="px-4 py-3">
                     {r.status === "inactive" ? (
                       <span className="text-xs text-slate-400">Access ended</span>
+                    ) : r.officeManaged && r.inviteStatus === "none" ? (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600" title="The office keeps their availability; they don't need the app">No sign-up needed</span>
+                        {r.hasEmail ? <InviteInstructorButton instructorId={r.id} status={r.inviteStatus} sentAt={r.inviteSentAt ?? null} queued={r.inviteQueued ?? false} /> : null}
+                      </div>
                     ) : r.hasEmail ? (
                       <InviteInstructorButton instructorId={r.id} status={r.inviteStatus} sentAt={r.inviteSentAt ?? null} queued={r.inviteQueued ?? false} />
                     ) : (

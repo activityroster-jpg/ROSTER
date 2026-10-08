@@ -1,7 +1,10 @@
 import { and, eq, gte, lt } from "drizzle-orm";
 import type { Repositories } from "@/lib/db/repositories";
 import { actorUserId, type AnyTenantContext } from "@/lib/tenant/context";
-import { courseSession as courseSessionTable, courseStaff as courseStaffTable, rosterWeek as rosterWeekTable, sessionStaffOverride as overrideTable } from "@/lib/db/schema";
+import { course as courseTable, courseSession as courseSessionTable, courseStaff as courseStaffTable, instructor as instructorTable, rosterWeek as rosterWeekTable, sessionStaffOverride as overrideTable } from "@/lib/db/schema";
+import { inList } from "@/lib/db/params";
+import { managedByOffice } from "@/lib/domain/availability";
+import { fmtWallTime } from "@/lib/domain/time";
 import { addDays, weekStart } from "./schedule";
 import { notifyInstructors } from "./notifications";
 import { emailAdmins } from "./admin-mail";
@@ -34,9 +37,15 @@ export interface PublishWeekResult {
   sessions: number;
   /** Distinct instructors told about it. */
   instructorsNotified: number;
+  /** Of those, how many were asked to confirm (office-managed people aren't). */
+  askedToConfirm: number;
+  /** Office-managed people on the week with neither the app nor an email address: the office tells them. */
+  unreachable: string[];
   /** True when the week had been published before (a re-publish). */
   republished: boolean;
 }
+
+const fmtDay = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 
 /**
  * Publish (or re-publish) the roster for the week containing `dateIso`.
@@ -63,36 +72,64 @@ export async function publishWeek(
 
   const sessions = liveSessions(await t.courseSession.list(ctx, and(gte(courseSessionTable.date, monday), lt(courseSessionTable.date, sunday))));
   const courseIds = new Set(sessions.map((s) => s.courseId));
-  let instructorsNotified = 0;
-  if (opts.notify !== false && courseIds.size > 0) {
+  let instructorsNotified = 0, askedToConfirm = 0, autoConfirmed = 0;
+  const unreachable: string[] = [];
+  if (courseIds.size > 0) {
     // Who is on each session, per-day staffing included (a day-only add is
     // told, someone skipped for a day isn't counted for it).
-    const [staff, overrides] = await Promise.all([
+    const [staff, overrides, courses, settingsRows] = await Promise.all([
       t.courseStaff.listIn(ctx, courseStaffTable.courseId, [...courseIds]),
       t.sessionStaffOverride.listIn(ctx, overrideTable.courseSessionId, sessions.map((s) => s.id)),
+      t.course.listIn(ctx, courseTable.id, [...courseIds]),
+      t.orgSettings.list(ctx),
     ]);
-    const onSessions = new Map<string, number>();
-    for (const members of effectiveStaffBySession(sessions, staff, overrides).values()) {
-      for (const m of members) if (m.status !== "declined") onSessions.set(m.instructorId, (onSessions.get(m.instructorId) ?? 0) + 1);
+    const settings = settingsRows[0];
+    const people = new Map((await t.instructor.listIn(ctx, instructorTable.id, [...new Set([...staff.map((a) => a.instructorId), ...overrides.map((o) => o.instructorId)])])).map((p) => [p.id, p]));
+    const officeManaged = (id: string) => { const p = people.get(id); return p ? managedByOffice(p, settings) : false; };
+
+    // Office-managed people aren't asked to confirm: the office speaks for them.
+    const toConfirm = staff.filter((a) => a.status === "assigned" && officeManaged(a.instructorId)).map((a) => a.id);
+    if (toConfirm.length) autoConfirmed = await t.courseStaff.updateWhere(ctx, inList(courseStaffTable.id, toConfirm), { status: "confirmed", confirmedAt: now });
+
+    if (opts.notify !== false) {
+      const courseName = new Map(courses.map((c) => [c.id, c.name ?? "Course"]));
+      const sessionById = new Map(sessions.map((s) => [s.id, s]));
+      const mine = new Map<string, typeof sessions>();
+      for (const [sessionId, members] of effectiveStaffBySession(sessions, staff, overrides)) {
+        const s = sessionById.get(sessionId)!;
+        for (const m of members) if (m.status !== "declined") mine.set(m.instructorId, [...(mine.get(m.instructorId) ?? []), s]);
+      }
+      const label = fmtMonday(monday);
+      const items = [...mine].map(([instructorId, list]) => {
+        const p = people.get(instructorId);
+        const office = officeManaged(instructorId);
+        const n = list.length;
+        if (office && p && !p.userId && (!p.email || p.notifyEmail === false)) unreachable.push(p.name);
+        if (!office) askedToConfirm++;
+        const lines = [...list].sort((a, b) => Number(a.startAt) - Number(b.startAt)).map((s) => `${fmtDay(s.date)} · ${fmtWallTime(s.startAt)}–${fmtWallTime(s.endAt)} · ${courseName.get(s.courseId) ?? "Course"}`);
+        return {
+          instructorId,
+          input: {
+            title: `Roster published — week of ${label}`,
+            body: office
+              ? `You're on ${n} session${n === 1 ? "" : "s"} that week.${p?.userId ? " Open the app to see them." : ""}`
+              : `You're on ${n} session${n === 1 ? "" : "s"} that week. Open the app to see them and confirm.`,
+            email: true,
+            detailLines: lines,
+          },
+        };
+      });
+      instructorsNotified = await notifyInstructors(repos, ctx, items);
     }
-    const label = fmtMonday(monday);
-    instructorsNotified = await notifyInstructors(repos, ctx, [...onSessions].map(([instructorId, n]) => ({
-      instructorId,
-      input: {
-        title: `Roster published — week of ${label}`,
-        body: `You're on ${n} session${n === 1 ? "" : "s"} that week. Open the app to see them and confirm.`,
-        email: true,
-      },
-    })));
   }
 
   await writeAudit(repos, ctx, {
     action: republished ? "republish_week" : "publish_week",
     entity: "roster_week",
     entityId: monday,
-    after: { weekStart: monday, sessions: sessions.length, instructorsNotified },
+    after: { weekStart: monday, sessions: sessions.length, instructorsNotified, ...(autoConfirmed ? { confirmedForOfficeManaged: autoConfirmed } : {}) },
   });
-  return { weekStart: monday, publishedAt: now, sessions: sessions.length, instructorsNotified, republished };
+  return { weekStart: monday, publishedAt: now, sessions: sessions.length, instructorsNotified, askedToConfirm, unreachable: unreachable.sort(), republished };
 }
 
 export type ConfirmResult = { ok: true } | { ok: false; error: string };

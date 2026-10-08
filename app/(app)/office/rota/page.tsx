@@ -32,7 +32,8 @@ export default async function RotaPage({ searchParams }: { searchParams: Promise
   const welfare = parseWelfareSettings(settingsRows[0]?.welfareOfficers, settingsRows[0]?.welfareDuty);
   const publishedAt = published.get(monday) ?? null;
   const horizon = availabilityHorizon(settingsRows[0]);
-  const beyondWindow = monday >= horizon.to;
+  // Nobody is "asked" when the office keeps availability, so there's no window to warn about.
+  const beyondWindow = monday >= horizon.to && settingsRows[0]?.staffManagedBy !== "office";
   // One assignment per course, however many sessions it has.
   const perCourse = new Map<string, { status: string }[]>();
   for (const d of rota) for (const s of d.sessions) if (!perCourse.has(s.courseId)) perCourse.set(s.courseId, s.staff);

@@ -75,6 +75,14 @@ export type CancelPayRule = (typeof CANCEL_PAY_RULES)[number];
 export const AVAILABILITY_STATUSES = ["available", "unavailable", "tentative"] as const;
 /** Who wrote an availability row: the instructor, the office on their behalf, or approved leave. */
 export const AVAILABILITY_SET_BY = ["self", "office", "leave"] as const;
+/**
+ * Who keeps a person's availability and confirmations up to date: the person
+ * themselves in the app ("staff"), or the office ("office", no sign-up needed:
+ * they count as free unless the office marks them busy, and are not asked to
+ * confirm). Centre-wide default in org_settings, overridable per person.
+ */
+export const MANAGED_BY = ["staff", "office"] as const;
+export type ManagedBy = (typeof MANAGED_BY)[number];
 export type AvailabilitySetBy = (typeof AVAILABILITY_SET_BY)[number];
 export const PAY_UNITS = ["hour", "day", "session"] as const;
 export type PayUnit = (typeof PAY_UNITS)[number];
@@ -109,6 +117,8 @@ export const orgSettings = sqliteTable("org_settings", {
   alertLeadDays: integer("alert_lead_days").notNull().default(30),
   /** How many weeks ahead (incl. this week) instructors may set availability. */
   availabilityWeeksAhead: integer("availability_weeks_ahead").notNull().default(4),
+  /** Who keeps staff availability (see MANAGED_BY): "staff" in the app, or "office" with no sign-up needed. */
+  staffManagedBy: text("staff_managed_by", { enum: MANAGED_BY }).notNull().default("staff"),
   // --- Optional compliance checks (opt-in; OFF by default to keep it simple) ---
   // When on, rostering blocks an instructor with a missing/expired mandatory
   // licence/vetting check (override allowed). Licence expiry is always shown on
@@ -337,6 +347,8 @@ export const instructor = sqliteTable("instructor", {
   status: text("status", { enum: INSTRUCTOR_STATUSES }).notNull().default("active"),
   /** Whether to also email this instructor when they're notified (in-app is always on). */
   notifyEmail: boolCol("notify_email").default(true),
+  /** Who keeps this person's availability (see MANAGED_BY); null follows the centre's setting. */
+  managedBy: text("managed_by", { enum: MANAGED_BY }),
   /** YYYY-MM-DD. Drives the under-18 flag (computed on read, lifts at 18) and the working-time rules. */
   dateOfBirth: text("date_of_birth"),
   /** Parent or guardian for under-18s. Phone and email are sealed (AES-GCM) at rest. */

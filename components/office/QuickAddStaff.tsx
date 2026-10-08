@@ -10,14 +10,15 @@ import { parsePastedStaff } from "@/lib/domain/paste-staff";
  * pasted list for the start of the season. People then fill in their own
  * details, date of birth and certificates from the invite.
  */
-export function QuickAddStaff() {
+export function QuickAddStaff({ officeMode = false }: { officeMode?: boolean }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [mode, setMode] = useState<"one" | "list">("one");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [list, setList] = useState("");
-  const [invite, setInvite] = useState(true);
+  // When the office keeps availability, nobody needs the app, so no invite by default.
+  const [invite, setInvite] = useState(!officeMode);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const preview = mode === "list" ? parsePastedStaff(list) : null;
   const field = "rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal";
@@ -52,7 +53,9 @@ export function QuickAddStaff() {
         <button type="button" disabled={pending} onClick={submit} className="rounded-lg bg-teal px-3 py-1.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{pending ? "Adding…" : mode === "one" ? "Add" : "Add everyone"}</button>
         {msg ? <span className={`text-sm ${msg.ok ? "text-starboard" : "text-port"}`}>{msg.text}</span> : null}
       </div>
-      <p className="mt-1 text-[11px] text-slate-400">They fill in their own phone, date of birth and certificates from the invite. Add courses and checks later from their profile.</p>
+      <p className="mt-1 text-[11px] text-slate-400">{officeMode
+        ? "Staff don't need to sign up: the office keeps their availability. Add their courses, certificates and date of birth from their profile; email is optional (published rosters go out by email)."
+        : "They fill in their own phone, date of birth and certificates from the invite. Add courses and checks later from their profile."}</p>
     </div>
   );
 }

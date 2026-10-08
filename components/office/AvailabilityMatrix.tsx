@@ -1,15 +1,19 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { assignableForCellAction, assignFromAvailabilityAction, setAvailabilityForStaffAction, type CellCandidate } from "@/app/(app)/office/availability/actions";
+import { assignableForCellAction, assignFromAvailabilityAction, setAvailabilityBulkAction, setAvailabilityForStaffAction, type CellCandidate } from "@/app/(app)/office/availability/actions";
 
 export interface MatrixRow {
   instructorId: string;
   name: string;
+  /** The office keeps their availability: unanswered slots count as Free. */
+  officeManaged?: boolean;
+  /** Has signed up to the app. */
+  hasLogin?: boolean;
   /** Effective status per `${date}|${slot}`: available, tentative, unavailable or unasked. */
   cells: Record<string, string>;
-  /** set | pattern | default | unasked. */
+  /** set | pattern | default | unasked | assumed. */
   sources: Record<string, string>;
   /** self | office | leave for dated answers. */
   setBy: Record<string, string>;
@@ -26,14 +30,70 @@ const CELL: Record<string, { label: string; word: string; cls: string }> = {
   unavailable: { label: "✕", word: "Busy", cls: "bg-port/15 text-port hover:bg-port/25" },
   default: { label: "·", word: "Busy (not answered yet)", cls: "bg-slate-100 text-slate-400 hover:bg-slate-200" },
   unasked: { label: "?", word: "Not asked yet", cls: "bg-white text-slate-300 hover:bg-slate-50" },
+  assumed: { label: "✓", word: "Free (the office keeps their availability)", cls: "bg-starboard/[0.06] text-starboard/50 hover:bg-starboard/15" },
 };
+type Brush = "available" | "tentative" | "unavailable" | "clear";
+const BRUSHES: { value: Brush; label: string; cls: string }[] = [
+  { value: "available", label: "✓ Free", cls: "bg-starboard/15 text-starboard" },
+  { value: "tentative", label: "~ Maybe", cls: "bg-amber/15 text-amber" },
+  { value: "unavailable", label: "✕ Busy", cls: "bg-port/15 text-port" },
+  { value: "clear", label: "Clear answer", cls: "bg-slate-100 text-slate-600" },
+];
+/** What a quick-set applies to: one person's week, everyone on a day or one slot, or everyone all week. */
+type Quick = { kind: "row"; instructorId: string; name: string } | { kind: "day"; date: string; label: string } | { kind: "slot"; date: string; slot: string; label: string } | { kind: "week" };
 const SET_BY: Record<string, string> = { office: "set by the office", leave: "approved leave", self: "" };
 
 interface Selected { instructorId: string; name: string; date: string; slot: string; dayLabel: string }
 
-export function AvailabilityMatrix({ days, rows, availableCounts }: { days: string[]; rows: MatrixRow[]; availableCounts: Record<string, number> }) {
+export function AvailabilityMatrix({ days, rows, availableCounts, staffManagedBy = "staff" }: { days: string[]; rows: MatrixRow[]; availableCounts: Record<string, number>; staffManagedBy?: "staff" | "office" }) {
   const router = useRouter();
   const [pending, start] = useTransition();
+  const [brush, setBrush] = useState<Brush | null>(null);
+  const [painted, setPainted] = useState<Record<string, Brush>>({});
+  const stroke = useRef<{ instructorId: string; date: string; slot: string }[] | null>(null);
+  const [quick, setQuick] = useState<Quick | null>(null);
+  const [quickMsg, setQuickMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  useEffect(() => setPainted({}), [rows]);
+
+  const runBulk = (input: Record<string, unknown>, done?: () => void) => {
+    setQuickMsg(null);
+    start(async () => {
+      const res = await setAvailabilityBulkAction(input);
+      setQuickMsg({ ok: res.ok, text: res.ok ? res.message ?? "Saved" : res.error ?? "That didn't save" });
+      if (res.ok) { done?.(); router.refresh(); } else setPainted({});
+    });
+  };
+  const statusOf = (b: Brush) => (b === "clear" ? null : b);
+
+  // Brush: press on a cell and drag across others; one save per stroke.
+  const paint = (instructorId: string, date: string, slot: string) => {
+    if (!brush || !stroke.current) return;
+    const key = `${instructorId}|${date}|${slot}`;
+    if (stroke.current.some((c) => `${c.instructorId}|${c.date}|${c.slot}` === key)) return;
+    stroke.current.push({ instructorId, date, slot });
+    setPainted((p) => ({ ...p, [key]: brush }));
+  };
+  useEffect(() => {
+    const finish = () => {
+      const cells = stroke.current;
+      stroke.current = null;
+      if (cells?.length && brush) runBulk({ cells, status: statusOf(brush) });
+    };
+    window.addEventListener("pointerup", finish);
+    return () => window.removeEventListener("pointerup", finish);
+    // runBulk is stable enough for this listener; brush is the only input that changes it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [brush]);
+
+  const applyQuick = (b: Brush) => {
+    if (!quick) return;
+    const status = statusOf(b);
+    if (quick.kind === "row") runBulk({ instructorIds: [quick.instructorId], dates: days, slots: [...SLOTS], status });
+    else if (quick.kind === "day") runBulk({ everyone: true, dates: [quick.date], slots: [...SLOTS], status });
+    else if (quick.kind === "slot") runBulk({ everyone: true, dates: [quick.date], slots: [quick.slot], status });
+    else runBulk({ everyone: true, dates: days, slots: [...SLOTS], status });
+  };
+  const quickTitle = !quick ? "" : quick.kind === "row" ? `${quick.name}, this whole week` : quick.kind === "day" ? `Everyone, ${quick.label} (all day)` : quick.kind === "slot" ? `Everyone, ${quick.label}` : "Everyone, this whole week";
   const [sel, setSel] = useState<Selected | null>(null);
   const [cands, setCands] = useState<CellCandidate[] | null>(null);
   const [roles, setRoles] = useState<{ id: string; name: string }[]>([]);
@@ -81,18 +141,46 @@ export function AvailabilityMatrix({ days, rows, availableCounts }: { days: stri
 
   return (
     <div>
+      <div className="mb-3 flex flex-wrap items-center gap-2 rounded-card border border-slate-200 bg-white px-3 py-2 text-xs">
+        <span className="font-semibold text-navy">Quick set:</span>
+        <button type="button" onClick={() => { setQuick({ kind: "week" }); setQuickMsg(null); }} className="rounded-full border border-slate-300 px-2.5 py-1 font-medium text-navy hover:bg-slate-50">Everyone, this week…</button>
+        <span className="text-slate-300">|</span>
+        <span className="text-slate-500">Brush:</span>
+        {BRUSHES.map((b) => (
+          <button key={b.value} type="button" aria-pressed={brush === b.value} onClick={() => setBrush(brush === b.value ? null : b.value)} className={`rounded-full px-2.5 py-1 font-semibold ${b.cls} ${brush === b.value ? "ring-2 ring-navy" : "opacity-80 hover:opacity-100"}`}>{b.label}</button>
+        ))}
+        <span className="text-slate-400">{brush ? "Click or drag across slots to paint them. Click the brush again to stop." : "Pick a brush to paint many slots, or click a name, a day or a slot heading."}</span>
+      </div>
+
+      {quick ? (
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-card border border-navy/20 bg-white px-3 py-2 text-xs shadow-sm">
+          <span className="font-semibold text-navy">{quickTitle}:</span>
+          {BRUSHES.map((b) => (
+            <button key={b.value} type="button" disabled={pending} onClick={() => applyQuick(b.value)} className={`rounded-full px-2.5 py-1 font-semibold disabled:opacity-50 ${b.cls}`}>{b.label}</button>
+          ))}
+          {quick.kind === "row" ? <a href={`/office/staff/${quick.instructorId}#availability`} className="text-teal hover:underline">Usual week and more →</a> : null}
+          <button type="button" onClick={() => { setQuick(null); setQuickMsg(null); }} className="ml-auto text-slate-400 hover:text-navy">✕ Close</button>
+          <p className="basis-full text-[11px] text-slate-400">Saved as set by the office. Approved leave is left as it is. &ldquo;Clear answer&rdquo; goes back to their usual week, or to {staffManagedBy === "office" ? "free for office-managed people (busy for anyone who keeps their own)" : "busy until they answer (free for office-managed people)"}.</p>
+        </div>
+      ) : null}
+      {quickMsg ? <p className={`mb-2 text-sm ${quickMsg.ok ? "text-starboard" : "text-port"}`}>{quickMsg.text}</p> : null}
+
       <div className="overflow-x-auto rounded-card border border-slate-200 bg-white">
         <table className="border-collapse text-center text-sm">
           <thead>
             <tr className="bg-slate-50 text-slate-600">
               <th rowSpan={3} className="sticky left-0 z-10 border-r border-slate-200 bg-slate-50 px-4 text-left text-sm font-semibold">Instructor</th>
               {DAY_LABELS.map((d, i) => (
-                <th key={d} colSpan={3} className="border-l border-slate-200 px-1 py-2 text-sm font-bold text-navy">{d} <span className="font-normal text-slate-400">{days[i]?.slice(8)}</span></th>
+                <th key={d} colSpan={3} className="border-l border-slate-200 p-0 text-sm font-bold text-navy">
+                  <button type="button" onClick={() => { setQuick({ kind: "day", date: days[i]!, label: `${d} ${days[i]?.slice(8)}` }); setQuickMsg(null); }} className="w-full px-1 py-2 hover:bg-slate-100" title={`Set everyone's availability for ${d}`}>{d} <span className="font-normal text-slate-400">{days[i]?.slice(8)}</span></button>
+                </th>
               ))}
             </tr>
             <tr className="bg-slate-50 text-xs text-slate-400">
-              {days.map((_, di) => SLOTS.map((s, si) => (
-                <th key={`${di}-${s}`} className={`w-12 px-1 py-1 font-semibold ${si === 0 ? "border-l border-slate-200" : ""}`}>{s}</th>
+              {days.map((d, di) => SLOTS.map((s, si) => (
+                <th key={`${di}-${s}`} className={`w-12 p-0 font-semibold ${si === 0 ? "border-l border-slate-200" : ""}`}>
+                  <button type="button" onClick={() => { setQuick({ kind: "slot", date: d, slot: s, label: `${DAY_LABELS[di]} ${d.slice(8)} ${s}` }); setQuickMsg(null); }} className="w-full px-1 py-1 hover:bg-slate-100 hover:text-navy" title={`Set everyone's availability for ${DAY_LABELS[di]} ${s}`}>{s}</button>
+                </th>
               )))}
             </tr>
             <tr className="bg-slate-50">
@@ -105,12 +193,18 @@ export function AvailabilityMatrix({ days, rows, availableCounts }: { days: stri
           <tbody className="divide-y divide-slate-100">
             {rows.map((r) => (
               <tr key={r.instructorId} className="hover:bg-slate-50/40">
-                <td className="sticky left-0 z-10 whitespace-nowrap border-r border-slate-200 bg-white px-4 py-1.5 text-left text-sm font-semibold text-navy">{r.name}</td>
+                <td className="sticky left-0 z-10 whitespace-nowrap border-r border-slate-200 bg-white p-0 text-left text-sm font-semibold text-navy">
+                  <button type="button" onClick={() => { setQuick({ kind: "row", instructorId: r.instructorId, name: r.name }); setQuickMsg(null); }} className="flex w-full items-center gap-1.5 px-4 py-1.5 text-left hover:bg-slate-50" title={`Set ${r.name}'s whole week`}>
+                    {r.name}
+                    {r.officeManaged ? <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-slate-500" title="The office keeps their availability">office</span> : null}
+                  </button>
+                </td>
                 {days.map((d, di) => SLOTS.map((s, si) => {
                   const key = `${d}|${s}`;
                   const status = r.cells[key] ?? "unavailable";
                   const source = r.sources[key] ?? "default";
-                  const cfg = (source === "default" ? CELL.default : source === "unasked" ? CELL.unasked : CELL[status]) ?? CELL.default!;
+                  const paintedAs = painted[`${r.instructorId}|${d}|${s}`];
+                  const cfg = (paintedAs ? (paintedAs === "clear" ? CELL.unasked : CELL[paintedAs]) : source === "default" ? CELL.default : source === "unasked" ? CELL.unasked : source === "assumed" ? CELL.assumed : CELL[status]) ?? CELL.default!;
                   const rostered = r.assigned[key];
                   const rosterLabel = rostered?.length ? `Rostered: ${rostered.join(" · ")}` : "";
                   const note = si === 0 ? r.notes[d] : undefined;
@@ -121,10 +215,12 @@ export function AvailabilityMatrix({ days, rows, availableCounts }: { days: stri
                     <td key={`${r.instructorId}-${di}-${s}`} className={`p-0 ${si === 0 ? "border-l border-slate-200" : ""}`}>
                       <button
                         type="button"
-                        onClick={() => openCell(r.instructorId, r.name, d, s, `${DAY_LABELS[di]} ${days[di]?.slice(8) ?? ""}`)}
+                        onClick={() => { if (!brush) openCell(r.instructorId, r.name, d, s, `${DAY_LABELS[di]} ${days[di]?.slice(8) ?? ""}`); }}
+                        onPointerDown={(e) => { if (!brush) return; e.preventDefault(); stroke.current = []; paint(r.instructorId, d, s); }}
+                        onPointerEnter={() => paint(r.instructorId, d, s)}
                         title={cellLabel}
                         aria-label={cellLabel}
-                        className={`relative flex h-10 w-12 items-center justify-center text-base font-semibold transition ${cfg.cls} ${isSel ? "ring-2 ring-inset ring-navy" : ""}`}
+                        className={`relative flex h-10 w-12 items-center justify-center text-base font-semibold transition ${cfg.cls} ${isSel ? "ring-2 ring-inset ring-navy" : ""} ${brush ? "cursor-crosshair select-none" : ""}`}
                       >
                         <span aria-hidden="true">{cfg.label}</span>
                         {source === "pattern" ? <span aria-hidden="true" className="absolute right-0.5 top-0.5 text-[7px] font-bold uppercase leading-none opacity-60">usual</span> : null}
@@ -153,7 +249,7 @@ export function AvailabilityMatrix({ days, rows, availableCounts }: { days: stri
           <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
             <span className="text-xs font-medium text-slate-500">Availability:</span>
             <span className="text-xs text-slate-600">
-              {selSource === "unasked" ? "not asked yet (beyond the window)" : selSource === "default" ? "Busy, not answered yet" : `${CELL[selStatus]?.word ?? selStatus}${selSource === "pattern" ? " from their usual week" : ""}${SET_BY[selRow?.setBy[selKey] ?? "self"] ? ` (${SET_BY[selRow?.setBy[selKey] ?? "self"]})` : ""}`}
+              {selSource === "unasked" ? "not asked yet (beyond the window)" : selSource === "default" ? "Busy, not answered yet" : selSource === "assumed" ? "Free (the office keeps their availability; mark Busy when they can't work)" : `${CELL[selStatus]?.word ?? selStatus}${selSource === "pattern" ? " from their usual week" : ""}${SET_BY[selRow?.setBy[selKey] ?? "self"] ? ` (${SET_BY[selRow?.setBy[selKey] ?? "self"]})` : ""}`}
             </span>
             <span className="mx-1 text-slate-300">|</span>
             <span className="text-xs font-medium text-slate-500">Set for them:</span>

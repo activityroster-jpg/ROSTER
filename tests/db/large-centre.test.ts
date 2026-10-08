@@ -10,7 +10,7 @@ import { seedFullOrg } from "@/tests/helpers/seed-fixtures";
 import { addDays, coverageForCourses, getRotaDays, getSessionEvents, getWeekRota, getWeekSchedule } from "@/lib/services/schedule";
 import { getBoard } from "@/lib/services/board";
 import { findProblems, problemsForInstructor } from "@/lib/services/problems";
-import { getCourseAvailabilityStates, getWeekAvailabilityMatrix, loadInstructorAvailability } from "@/lib/services/availability";
+import { getCourseAvailabilityStates, getWeekAvailabilityMatrix, loadInstructorAvailability, setAvailabilityBulk } from "@/lib/services/availability";
 import { coursePageScope } from "@/lib/services/course-list";
 import { listStaffWithFit } from "@/lib/services/staff";
 import { getTeachingMatrix } from "@/lib/services/teaching";
@@ -269,5 +269,15 @@ describe("a large centre: every page loads within Cloudflare's limits", () => {
       await syncHoursForCourse(repos, ctx, courseIds[41]!);
     });
     expect(n).toBeLessThan(QUERY_BUDGET);
+  });
+
+  it("The office marks everyone busy for a whole week in one go", async () => {
+    const days = [0, 1, 2, 3, 4, 5, 6].map((d) => addDays(week(), d));
+    const entries = instructorIds.flatMap((instructorId) => days.flatMap((date) => (["AM", "PM", "EV"] as const).map((slot) => ({ instructorId, date, slot, status: "unavailable" as const }))));
+    const n = await page(async () => {
+      const r = await setAvailabilityBulk(repos, ctx, entries);
+      expect(r.set + r.keptLeave).toBe(entries.length);
+    });
+    expect(n).toBeLessThan(20);
   });
 });

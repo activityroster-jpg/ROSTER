@@ -12,7 +12,7 @@ import {
 } from "@/lib/domain";
 import { complianceItem as complianceItemTable, courseSession as courseSessionTable, courseStaff as courseStaffTable } from "@/lib/db/schema";
 import { availabilityHorizon, loadInstructorAvailability } from "./availability";
-import { blocksRostering, describeBusy, effectiveAvailability } from "@/lib/domain/availability";
+import { blocksRostering, describeBusy, effectiveAvailability, managedByOffice } from "@/lib/domain/availability";
 import { auditStatement } from "./audit";
 import { planHoursForCourse } from "./hours";
 import { notifyInstructor } from "./notifications";
@@ -235,7 +235,9 @@ export async function assignStaff(
     courseId: input.courseId,
     instructorId: input.instructorId,
     roleTypeId: input.roleTypeId,
-    status: "assigned" as const,
+    // Office-managed people aren't asked to confirm: the office speaks for them.
+    status: (managedByOffice(instructorRow, settings) ? "confirmed" : "assigned") as "confirmed" | "assigned",
+    confirmedAt: managedByOffice(instructorRow, settings) ? new Date() : null,
     isOverride: overridden,
     overrideNote: overridden ? input.overrideNote ?? null : null,
     overriddenBy: overridden ? actorUserId(ctx) : null,

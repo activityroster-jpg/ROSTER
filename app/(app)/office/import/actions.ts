@@ -7,6 +7,7 @@ import { writeAudit } from "@/lib/services/audit";
 import { timeToSlot, toEpochMs } from "@/lib/import/parse";
 import { createCourseTypeResolver } from "@/lib/services/course-type-resolve";
 import { syncHoursForCourse } from "@/lib/services/hours";
+import { managedByOffice } from "@/lib/domain/availability";
 
 export interface ConfirmedRow {
   name: string;
@@ -46,10 +47,11 @@ export async function importCoursesAction(rows: ConfirmedRow[]): Promise<ImportR
 
   const t = repos.tenant;
   const resolver = await createCourseTypeResolver(repos, ctx);
-  const [existingLocations, instructors, roles] = await Promise.all([
+  const [existingLocations, instructors, roles, settingsRows] = await Promise.all([
     t.location.list(ctx),
     t.instructor.list(ctx),
     t.roleType.list(ctx),
+    t.orgSettings.list(ctx),
   ]);
 
   const locByName = new Map(existingLocations.map((l) => [l.name.trim().toLowerCase(), l]));
@@ -112,7 +114,8 @@ export async function importCoursesAction(rows: ConfirmedRow[]): Promise<ImportR
     if (staffName && defaultRole) {
       const ins = instructorByName.get(staffName);
       if (ins) {
-        await t.courseStaff.insert(ctx, { courseId: course.id, instructorId: ins.id, roleTypeId: defaultRole.id, status: "assigned" });
+        const office = managedByOffice(ins, settingsRows[0]);
+        await t.courseStaff.insert(ctx, { courseId: course.id, instructorId: ins.id, roleTypeId: defaultRole.id, status: office ? "confirmed" : "assigned", confirmedAt: office ? new Date() : null });
         await syncHoursForCourse(repos, ctx, course.id);
       }
     }

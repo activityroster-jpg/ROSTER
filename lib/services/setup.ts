@@ -38,7 +38,8 @@ export async function getSetupStatus(repos: Repositories, ctx: AnyTenantContext)
     { label: "Create your first course", href: "/office/courses", done: courses > 0 },
     { label: "Roster staff onto a course", href: "/office/courses", done: assignments > 0 },
     { label: "Set pay rates", href: "/office/finance", done: payRates > 0 },
-    { label: "Invite an instructor to the app", href: "/office/staff", done: linked > 0 },
+    // When the office keeps availability nobody needs the app, so this step isn't asked of them.
+    ...(settings[0]?.staffManagedBy === "office" ? [] : [{ label: "Invite an instructor to the app", href: "/office/staff", done: linked > 0 }]),
   ];
 
   const doneCount = steps.filter((s) => s.done).length;

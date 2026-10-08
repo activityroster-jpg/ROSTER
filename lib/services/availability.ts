@@ -1,9 +1,11 @@
-import { and, eq, gte, isNotNull, isNull, lt, lte, or } from "drizzle-orm";
+import { and, eq, gte, isNotNull, isNull, lt, lte, or, sql } from "drizzle-orm";
 import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
+import { inList } from "@/lib/db/params";
 import {
   availability as availabilityTable,
   availabilityNote as availabilityNoteTable,
+  instructor as instructorTable,
   course as courseTable,
   courseSession as courseSessionTable,
   courseStaff as courseStaffTable,
@@ -24,6 +26,7 @@ import {
   horizonFor,
   indexAvailability,
   keyOf,
+  managedByOffice,
   patternKeyOf,
   type AvailabilityAnswer,
   type AvailabilityHorizon,
@@ -46,15 +49,22 @@ async function horizonOf(repos: Repositories, ctx: AnyTenantContext): Promise<Av
   return availabilityHorizon(settings);
 }
 
-/** Everything one instructor has said: dated answers, their usual week, and day notes. */
-export async function loadInstructorAvailability(repos: Repositories, ctx: AnyTenantContext, instructorId: string): Promise<{ index: AvailabilityIndex; notes: Record<string, string>; setBy: Record<string, AvailabilitySetBy> }> {
-  const [rows, noteRows] = await Promise.all([
+/**
+ * Everything one instructor has said: dated answers, their usual week, and day
+ * notes; and whether the office keeps their availability (then an unanswered
+ * slot counts as Free, not Busy).
+ */
+export async function loadInstructorAvailability(repos: Repositories, ctx: AnyTenantContext, instructorId: string): Promise<{ index: AvailabilityIndex; notes: Record<string, string>; setBy: Record<string, AvailabilitySetBy>; officeManaged: boolean }> {
+  const [rows, noteRows, person, settingsRows] = await Promise.all([
     repos.tenant.availability.list(ctx, eq(availabilityTable.instructorId, instructorId)),
     repos.tenant.availabilityNote.list(ctx, eq(availabilityNoteTable.instructorId, instructorId)),
+    repos.tenant.instructor.findById(ctx, instructorId),
+    repos.tenant.orgSettings.list(ctx),
   ]);
+  const officeManaged = person ? managedByOffice(person, settingsRows[0]) : false;
   const setBy: Record<string, AvailabilitySetBy> = {};
   for (const r of rows) if (r.date) setBy[keyOf(r.date, r.slot)] = r.setBy;
-  return { index: indexAvailability(rows), notes: Object.fromEntries(noteRows.map((n) => [n.date, n.note])), setBy };
+  return { index: indexAvailability(rows, { assumeFree: officeManaged }), notes: Object.fromEntries(noteRows.map((n) => [n.date, n.note])), setBy, officeManaged };
 }
 
 /** Map of "date|slot" → dated answer for a week, for one instructor (answers only, no defaults). */
@@ -137,6 +147,72 @@ export async function setAvailabilityMany(
   }
 }
 
+/** One slot for one person: a date, or a weekday of their usual week (0 = Sunday … 6 = Saturday). */
+export interface BulkAvailabilityEntry {
+  instructorId: string;
+  date?: string | null;
+  weekday?: number | null;
+  slot: SlotCode;
+  /** null clears the answer (then the usual week, or the default, applies). */
+  status: AvailabilityStatus | null;
+}
+
+/** The most slots one request may change: well inside Cloudflare's per-request query limit. */
+export const BULK_AVAILABILITY_MAX = 8000;
+
+/**
+ * The office sets many slots at once (a person's whole week, everyone on a
+ * day, a brush stroke across the grid, everyone's usual week) in a handful of
+ * statements, never one per slot. Only this centre's staff are touched, and
+ * slots on approved leave stay as they are. One change-log row covers it.
+ */
+export async function setAvailabilityBulk(
+  repos: Repositories,
+  ctx: AnyTenantContext,
+  entries: readonly BulkAvailabilityEntry[],
+  opts: { setBy?: AvailabilitySetBy } = {},
+): Promise<{ set: number; cleared: number; keptLeave: number }> {
+  if (entries.length > BULK_AVAILABILITY_MAX) throw new Error(`Too many slots at once (${entries.length}); set a week at a time`);
+  const setBy = opts.setBy ?? "office";
+  const ours = new Set((await repos.tenant.instructor.listIn(ctx, instructorTable.id, [...new Set(entries.map((e) => e.instructorId))])).map((i) => i.id));
+  const mine = entries.filter((e) => ours.has(e.instructorId));
+  const dated = mine.filter((e) => e.date);
+  const pattern = mine.filter((e) => !e.date && e.weekday != null && Number.isInteger(e.weekday) && e.weekday! >= 0 && e.weekday! <= 6);
+
+  // Approved leave is never overwritten from the grid.
+  const dates = dated.map((e) => e.date!).sort();
+  const leave = dated.length
+    ? await repos.tenant.availability.list(ctx, and(eq(availabilityTable.setBy, "leave"), inList(availabilityTable.instructorId, [...new Set(dated.map((e) => e.instructorId))]), gte(availabilityTable.date, dates[0]!), lte(availabilityTable.date, dates[dates.length - 1]!)))
+    : [];
+  const onLeave = new Set(leave.map((r) => `${r.instructorId}|${r.date}|${r.slot}`));
+  const keep = dated.filter((e) => !onLeave.has(`${e.instructorId}|${e.date}|${e.slot}`));
+
+  const now = new Date();
+  let set = 0, cleared = 0;
+  const datedSet = keep.filter((e) => e.status);
+  set += await repos.tenant.availability.upsertMany(ctx, datedSet.map((e) => ({ instructorId: e.instructorId, date: e.date!, weekday: null, slot: e.slot, status: e.status!, setBy, updatedAt: now })), DATED_KEY, ["status", "setBy", "updatedAt"]);
+  const datedClear = keep.filter((e) => !e.status).map((e) => `${e.instructorId}|${e.date}|${e.slot}`);
+  if (datedClear.length) {
+    cleared += await repos.tenant.availability.deleteWhere(ctx, and(isNotNull(availabilityTable.date), sql`(${availabilityTable.instructorId} || '|' || ${availabilityTable.date} || '|' || ${availabilityTable.slot}) in (select value from json_each(${JSON.stringify(datedClear)}))`)!);
+  }
+  const patternSet = pattern.filter((e) => e.status);
+  set += await repos.tenant.availability.upsertMany(ctx, patternSet.map((e) => ({ instructorId: e.instructorId, date: null, weekday: e.weekday!, slot: e.slot, status: e.status!, setBy, updatedAt: now })), WEEKDAY_KEY, ["status", "setBy", "updatedAt"]);
+  const patternClear = pattern.filter((e) => !e.status).map((e) => `${e.instructorId}|${e.weekday}|${e.slot}`);
+  if (patternClear.length) {
+    cleared += await repos.tenant.availability.deleteWhere(ctx, and(isNotNull(availabilityTable.weekday), sql`(${availabilityTable.instructorId} || '|' || ${availabilityTable.weekday} || '|' || ${availabilityTable.slot}) in (select value from json_each(${JSON.stringify(patternClear)}))`)!);
+  }
+
+  if (set || cleared) {
+    await writeAudit(repos, ctx, {
+      action: setBy === "office" ? "set_availability_office" : "set_availability",
+      entity: "availability",
+      entityId: null,
+      after: { people: new Set(mine.map((e) => e.instructorId)).size, set, cleared, from: dates[0] ?? null, to: dates[dates.length - 1] ?? null, usualWeek: pattern.length > 0, setBy },
+    });
+  }
+  return { set, cleared, keptLeave: dated.length - keep.length };
+}
+
 /** Set (or clear) one slot of the instructor's usual week. `weekday` is 0 = Sunday … 6 = Saturday. */
 export async function setAvailabilityPattern(
   repos: Repositories,
@@ -189,6 +265,10 @@ export async function effectiveFor(repos: Repositories, ctx: AnyTenantContext, i
 export interface AvailabilityMatrixRow {
   instructorId: string;
   name: string;
+  /** The office keeps their availability: unanswered slots count as Free. */
+  officeManaged: boolean;
+  /** Has signed up (can answer in the app). */
+  hasLogin: boolean;
   /** Effective status for every `${dateIso}|${slot}` of the week. */
   cells: Record<string, EffectiveStatus>;
   /** Where each cell's status came from. */
@@ -206,6 +286,8 @@ export interface AvailabilityMatrix {
   /** Count of instructors Free per `${dateIso}|${slot}` (dated or usual week). */
   availableCounts: Record<string, number>;
   horizon: AvailabilityHorizon;
+  /** The centre's setting: who keeps availability by default. */
+  staffManagedBy: "staff" | "office";
 }
 
 /**
@@ -216,14 +298,16 @@ export interface AvailabilityMatrix {
 export async function getWeekAvailabilityMatrix(repos: Repositories, ctx: AnyTenantContext, mondayIso: string): Promise<AvailabilityMatrix> {
   const sunday = addDays(mondayIso, 7);
   // One week's answers, notes and sessions (plus everyone's usual week): never the whole history.
-  const [instructors, rows, noteRows, sessions, courseTypes, horizon] = await Promise.all([
+  const [instructors, rows, noteRows, sessions, courseTypes, settingsRows] = await Promise.all([
     repos.tenant.instructor.list(ctx),
     repos.tenant.availability.list(ctx, or(and(gte(availabilityTable.date, mondayIso), lt(availabilityTable.date, sunday)), isNull(availabilityTable.date))),
     repos.tenant.availabilityNote.list(ctx, and(gte(availabilityNoteTable.date, mondayIso), lt(availabilityNoteTable.date, sunday))),
     repos.tenant.courseSession.list(ctx, and(gte(courseSessionTable.date, mondayIso), lt(courseSessionTable.date, sunday))).then(liveSessions),
     repos.tenant.courseType.list(ctx),
-    horizonOf(repos, ctx),
+    repos.tenant.orgSettings.list(ctx),
   ]);
+  const settings = settingsRows[0];
+  const horizon = availabilityHorizon(settings);
   const weekCourseIds = [...new Set(sessions.map((s) => s.courseId))];
   const [staff, courses] = await Promise.all([
     repos.tenant.courseStaff.listIn(ctx, courseStaffTable.courseId, weekCourseIds),
@@ -263,7 +347,8 @@ export async function getWeekAvailabilityMatrix(repos: Repositories, ctx: AnyTen
   const active = instructors.filter((i) => i.status === "active").sort((a, b) => a.name.localeCompare(b.name));
   const out: AvailabilityMatrixRow[] = active.map((i) => {
     const mine = rowsByInstructor.get(i.id) ?? [];
-    const index = indexAvailability(mine);
+    const officeManaged = managedByOffice(i, settings);
+    const index = indexAvailability(mine, { assumeFree: officeManaged });
     const cells: Record<string, EffectiveStatus> = {};
     const sources: Record<string, AvailabilitySource> = {};
     const setBy: Record<string, AvailabilitySetBy> = {};
@@ -275,9 +360,9 @@ export async function getWeekAvailabilityMatrix(repos: Repositories, ctx: AnyTen
       sources[k] = e.source;
       if (e.status === "available") availableCounts[k] = (availableCounts[k] ?? 0) + 1;
     }
-    return { instructorId: i.id, name: i.name, cells, sources, setBy, notes: notesByInstructor.get(i.id) ?? {}, assigned: assignedByInstructor.get(i.id) ?? {} };
+    return { instructorId: i.id, name: i.name, officeManaged, hasLogin: Boolean(i.userId), cells, sources, setBy, notes: notesByInstructor.get(i.id) ?? {}, assigned: assignedByInstructor.get(i.id) ?? {} };
   });
-  return { days, rows: out, availableCounts, horizon };
+  return { days, rows: out, availableCounts, horizon, staffManagedBy: settings?.staffManagedBy ?? "staff" };
 }
 
 /**
@@ -292,15 +377,16 @@ export async function getCourseAvailabilityStates(repos: Repositories, ctx: AnyT
   const availWhere = live
     ? (dates.length ? or(and(gte(availabilityTable.date, dates[0]!), lte(availabilityTable.date, dates[dates.length - 1]!)), isNull(availabilityTable.date)) : isNull(availabilityTable.date))
     : undefined;
-  const [sessions, availRows, instructors, horizon] = await Promise.all([
+  const [sessions, availRows, instructors, settingsRows] = await Promise.all([
     live ? Promise.resolve(live) : repos.tenant.courseSession.list(ctx).then(liveSessions),
     repos.tenant.availability.list(ctx, availWhere),
     repos.tenant.instructor.list(ctx),
-    horizonOf(repos, ctx),
+    repos.tenant.orgSettings.list(ctx),
   ]);
+  const horizon = availabilityHorizon(settingsRows[0]);
   const rowsByInstructor = new Map<string, typeof availRows>();
   for (const r of availRows) rowsByInstructor.set(r.instructorId, [...(rowsByInstructor.get(r.instructorId) ?? []), r]);
-  const indexes = new Map(instructors.map((i) => [i.id, indexAvailability(rowsByInstructor.get(i.id) ?? [])]));
+  const indexes = new Map(instructors.map((i) => [i.id, indexAvailability(rowsByInstructor.get(i.id) ?? [], { assumeFree: managedByOffice(i, settingsRows[0]) })]));
 
   const slotsByCourse = new Map<string, string[]>();
   for (const s of sessions) slotsByCourse.set(s.courseId, [...(slotsByCourse.get(s.courseId) ?? []), keyOf(s.date, s.slot)]);
@@ -312,6 +398,25 @@ export async function getCourseAvailabilityStates(repos: Repositories, ctx: AnyT
     out.set(courseId, perInstructor);
   }
   return out;
+}
+
+/**
+ * One person's availability for their staff page: their usual week, and the
+ * effective status of every slot for `dayCount` days from `fromIso`, with
+ * where each came from (their answer, usual week, approved leave, assumed free
+ * for office-managed people, or the busy default).
+ */
+export async function staffAvailabilityView(repos: Repositories, ctx: AnyTenantContext, instructorId: string, fromIso: string, dayCount = 28) {
+  const [{ index, setBy, officeManaged }, horizon] = await Promise.all([loadInstructorAvailability(repos, ctx, instructorId), horizonOf(repos, ctx)]);
+  const days: string[] = [];
+  for (let i = 0; i < dayCount; i++) days.push(addDaysIso(fromIso, i));
+  const cells: Record<string, { status: EffectiveStatus; source: AvailabilitySource; setBy?: AvailabilitySetBy }> = {};
+  for (const d of days) for (const slot of SLOT_CODES) {
+    const k = keyOf(d, slot);
+    const e = effectiveAvailability(index, horizon, d, slot);
+    cells[k] = { status: e.status, source: e.source, ...(setBy[k] ? { setBy: setBy[k] } : {}) };
+  }
+  return { pattern: patternOf(index), days, cells, officeManaged };
 }
 
 /** The usual-week pattern as `${weekday}|${slot}` → status, for one instructor. */

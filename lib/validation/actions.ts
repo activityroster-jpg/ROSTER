@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { AVAILABILITY_STATUSES, SLOT_CODES, TWO_FACTOR_METHODS } from "@/lib/db/schema";
+import { AVAILABILITY_STATUSES, MANAGED_BY, SLOT_CODES, TWO_FACTOR_METHODS } from "@/lib/db/schema";
 
 /**
  * Small Zod schemas shared by server actions that take plain arguments rather
@@ -26,6 +26,25 @@ export const availabilityEntrySchema = z.object({
   status: z.enum(AVAILABILITY_STATUSES).nullable(),
 });
 export const availabilityBulkSchema = z.array(availabilityEntrySchema).min(1, "Nothing to set").max(50);
+/**
+ * The office sets many people's availability at once: explicit cells (a brush
+ * stroke), or people × dates × slots (a row, a day, the week), or people ×
+ * weekdays × slots (their usual week). `everyone` means every active person.
+ */
+export const officeAvailabilitySchema = z.object({
+  cells: z.array(z.object({ instructorId: idSchema, date: isoDateSchema, slot: z.enum(SLOT_CODES) })).max(2000).optional(),
+  everyone: z.boolean().optional(),
+  instructorIds: z.array(idSchema).max(2000).optional(),
+  dates: z.array(isoDateSchema).max(31).optional(),
+  weekdays: z.array(z.number().int().min(0).max(6)).max(7).optional(),
+  slots: z.array(z.enum(SLOT_CODES)).max(3).optional(),
+  status: z.enum(AVAILABILITY_STATUSES).nullable(),
+}).refine(
+  (v) => (v.cells?.length ?? 0) > 0 || ((v.everyone || (v.instructorIds?.length ?? 0) > 0) && ((v.dates?.length ?? 0) + (v.weekdays?.length ?? 0)) > 0 && (v.slots?.length ?? 0) > 0),
+  "Nothing to set",
+);
+/** Who keeps one person's availability; null follows the centre's setting. */
+export const managedBySchema = z.object({ instructorId: idSchema, managedBy: z.enum(MANAGED_BY).nullable() });
 export const availabilityPatternSchema = z.object({
   weekday: z.number().int().min(0).max(6),
   slot: z.enum(SLOT_CODES),

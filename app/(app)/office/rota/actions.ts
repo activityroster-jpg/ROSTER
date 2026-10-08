@@ -32,10 +32,13 @@ export async function publishWeekAction(weekStart: string): Promise<Result> {
   revalidatePath("/office");
   revalidatePath("/portal");
   const n = r.instructorsNotified;
+  const verb = r.republished ? "Re-published" : "Published";
+  const asked = r.askedToConfirm ? ` (${r.askedToConfirm} asked to confirm)` : "";
+  const unreachable = r.unreachable.length ? ` No app or email for ${r.unreachable.join(", ")}: give them the printed roster.` : "";
   return {
     ok: true,
     message: n
-      ? `${r.republished ? "Re-published" : "Published"} — ${n} instructor${n === 1 ? "" : "s"} asked to confirm`
-      : `${r.republished ? "Re-published" : "Published"} — nobody is rostered this week yet`,
+      ? `${verb} — ${n} ${n === 1 ? "person" : "people"} told${asked}.${unreachable}`
+      : `${verb} — nobody is rostered this week yet`,
   };
 }

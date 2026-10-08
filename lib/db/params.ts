@@ -17,7 +17,11 @@ export function inList(column: SQLiteColumn, values: readonly string[]): SQL {
   return sql`${column} in (select value from json_each(${JSON.stringify([...new Set(values)])}))`;
 }
 
-/** How many rows of `table` fit in one INSERT: every column of every row is one parameter. */
+/**
+ * How many rows of `table` fit in one INSERT: every column of every row is one
+ * parameter, and a few are kept back for the statement itself (an upsert's
+ * ON CONFLICT clause binds the org id).
+ */
 export function rowsPerInsert(table: SQLiteTable): number {
-  return Math.max(1, Math.floor(D1_MAX_PARAMS / Object.keys(getTableColumns(table)).length));
+  return Math.max(1, Math.floor((D1_MAX_PARAMS - 5) / Object.keys(getTableColumns(table)).length));
 }

@@ -21,16 +21,21 @@ const STYLE: Record<Status, string> = {
 };
 /** Busy nobody chose (the default) is quieter than a Busy someone tapped. */
 const DEFAULT_STYLE = "bg-slate-100 text-slate-400";
+/** Office-managed: free nobody chose is quieter than a Free someone tapped. */
+const ASSUMED_STYLE = "bg-starboard/[0.06] text-starboard/60";
 
 const fmtDate = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
 const fmtRange = (iso: string) => `${fmtDate(iso)} – ${fmtDate(addDaysIso(iso, 6))}`;
 
-export function AvailabilityWeeks({ horizon, dated: initialDated, pattern: initialPattern, notes: initialNotes }: {
+export function AvailabilityWeeks({ horizon, dated: initialDated, pattern: initialPattern, notes: initialNotes, assumeFree = false }: {
   horizon: AvailabilityHorizon;
   dated: Record<string, Status>;
   pattern: Record<string, Status>;
   notes: Record<string, string>;
+  /** The office keeps this person's availability: an unanswered slot counts as Free. */
+  assumeFree?: boolean;
 }) {
+  const fallback: Status = assumeFree ? "available" : "unavailable";
   const mondays = useMemo(() => Array.from({ length: horizon.weeksAhead }, (_, i) => addDaysIso(horizon.from, i * 7)), [horizon]);
   const [tab, setTab] = useState<"weeks" | "usual">("weeks");
   const [idx, setIdx] = useState(0);
@@ -50,7 +55,7 @@ export function AvailabilityWeeks({ horizon, dated: initialDated, pattern: initi
     if (set) return { status: set, source: "set" };
     const usual = pattern[patternKeyOf(weekdayOf(date), slot)];
     if (usual) return { status: usual, source: "pattern" };
-    return { status: "unavailable", source: "default" };
+    return { status: fallback, source: "default" };
   };
 
   const run = (work: () => Promise<{ ok: boolean; error?: string }>, rollback: () => void) => {
@@ -64,7 +69,9 @@ export function AvailabilityWeeks({ horizon, dated: initialDated, pattern: initi
   const cycle = (date: string, slot: SlotCode) => {
     const key = keyOf(date, slot);
     const before = dated[key];
-    const next = NEXT[effective(date, slot).status];
+    const now = effective(date, slot);
+    // Office-managed: the first tap on an unanswered (free) slot marks it Busy.
+    const next = assumeFree && now.source === "default" ? "unavailable" : NEXT[now.status];
     setDated((s) => ({ ...s, [key]: next }));
     run(() => setAvailabilityAction({ date, slot, status: next }), () => setDated((s) => ({ ...s, [key]: before })));
   };
@@ -88,7 +95,7 @@ export function AvailabilityWeeks({ horizon, dated: initialDated, pattern: initi
   const cyclePattern = (weekday: number, slot: SlotCode) => {
     const key = patternKeyOf(weekday, slot);
     const before = pattern[key];
-    const next = NEXT[before ?? "unavailable"];
+    const next = before ? NEXT[before] : assumeFree ? "unavailable" : NEXT.unavailable;
     setPattern((s) => ({ ...s, [key]: next }));
     run(() => setAvailabilityPatternAction({ weekday, slot, status: next }), () => setPattern((s) => ({ ...s, [key]: before })));
   };
@@ -104,7 +111,7 @@ export function AvailabilityWeeks({ horizon, dated: initialDated, pattern: initi
 
   const cellButton = (status: Status, source: "set" | "pattern" | "default", slot: SlotCode, onClick: () => void, title: string) => (
     <button type="button" onClick={onClick} disabled={pending} title={title} aria-label={title}
-      className={`relative rounded-lg px-2 py-3 text-xs font-medium transition disabled:opacity-60 ${source === "default" ? DEFAULT_STYLE : STYLE[status]}`}>
+      className={`relative rounded-lg px-2 py-3 text-xs font-medium transition disabled:opacity-60 ${source === "default" ? (assumeFree ? ASSUMED_STYLE : DEFAULT_STYLE) : STYLE[status]}`}>
       <span className="block text-[10px] uppercase opacity-70">{slot}</span>
       {LABEL[status]}
       {source === "pattern" ? <span className="absolute right-1 top-1 text-[9px] font-semibold uppercase tracking-wide opacity-60">usual</span> : null}
@@ -129,7 +136,7 @@ export function AvailabilityWeeks({ horizon, dated: initialDated, pattern: initi
                 <div className="grid flex-1 grid-cols-3 gap-2">
                   {SLOTS.map((slot) => {
                     const st = pattern[patternKeyOf(ROW_WEEKDAY[i]!, slot)];
-                    return <span key={slot}>{cellButton(st ?? "unavailable", st ? "set" : "default", slot, () => cyclePattern(ROW_WEEKDAY[i]!, slot), `Usual ${label} ${slot}: ${LABEL[st ?? "unavailable"]}`)}</span>;
+                    return <span key={slot}>{cellButton(st ?? fallback, st ? "set" : "default", slot, () => cyclePattern(ROW_WEEKDAY[i]!, slot), `Usual ${label} ${slot}: ${LABEL[st ?? fallback]}`)}</span>;
                   })}
                 </div>
               </div>
@@ -202,7 +209,9 @@ export function AvailabilityWeeks({ horizon, dated: initialDated, pattern: initi
               </div>
             ))}
           </div>
-          <p className="pt-3 text-center text-xs text-slate-400">Tap to cycle: Busy → Free → Maybe · grey Busy means you haven&apos;t answered yet · your centre asks {horizon.weeksAhead} week{horizon.weeksAhead === 1 ? "" : "s"} ahead</p>
+          <p className="pt-3 text-center text-xs text-slate-400">{assumeFree
+            ? "Tap a slot to mark it Busy · faint Free means your centre counts you as free there"
+            : <>Tap to cycle: Busy → Free → Maybe · grey Busy means you haven&apos;t answered yet · your centre asks {horizon.weeksAhead} week{horizon.weeksAhead === 1 ? "" : "s"} ahead</>}</p>
         </>
       )}
       {error ? <p className="mt-2 text-center text-xs text-port">{error}</p> : null}

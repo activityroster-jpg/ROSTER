@@ -93,6 +93,7 @@ export default async function SettingsPage() {
           schedulingMode={s?.schedulingMode ?? "session"}
           alertLeadDays={s?.alertLeadDays ?? 30}
           availabilityWeeksAhead={s?.availabilityWeeksAhead ?? 4}
+          staffManagedBy={s?.staffManagedBy ?? "staff"}
           currency={s?.currency ?? "GBP"}
           privacyNoticeUrl={s?.privacyNoticeUrl ?? ""}
           dailyDigestEnabled={Boolean(s?.dailyDigestEnabled)}

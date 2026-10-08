@@ -5,7 +5,7 @@ import { availability as availabilityTable, course as courseTable, courseEquipme
 import { evaluateFit, evaluateRatio, type AssignedRole, type ComplianceRequirement, type HeldCompliance } from "@/lib/domain";
 import { liveSessions } from "@/lib/domain/sessions";
 import { isUnder18 } from "@/lib/domain/age";
-import { indexAvailability, keyOf } from "@/lib/domain/availability";
+import { indexAvailability, keyOf, managedByOffice } from "@/lib/domain/availability";
 import {
   availabilityProblems,
   coverageProblems,
@@ -126,10 +126,12 @@ export async function findProblems(repos: Repositories, ctx: AnyTenantContext, o
     const perInstructor = new Map<string, { index: ReturnType<typeof indexAvailability>; setBy: Record<string, string> }>();
     const rowsBy = new Map<string, typeof availRows>();
     for (const r of availRows) rowsBy.set(r.instructorId, [...(rowsBy.get(r.instructorId) ?? []), r]);
-    for (const [id, rows] of rowsBy) {
+    // Everyone, so office-managed people with no answers still count as Free.
+    for (const person of instructorRows) {
+      const rows = rowsBy.get(person.id) ?? [];
       const setBy: Record<string, string> = {};
       for (const r of rows) if (r.date) setBy[keyOf(r.date, r.slot)] = r.setBy;
-      perInstructor.set(id, { index: indexAvailability(rows), setBy });
+      perInstructor.set(person.id, { index: indexAvailability(rows, { assumeFree: managedByOffice(person, settings) }), setBy });
     }
     problems.push(...availabilityProblems(sessions, assignments, courses, instructors, perInstructor, horizon));
   }

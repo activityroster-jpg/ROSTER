@@ -1,3 +1,4 @@
+import { managedByOffice } from "@/lib/domain/availability";
 import { requireTenant } from "@/lib/tenant/require";
 import { isUnder18 } from "@/lib/domain/age";
 import { listStaffWithFit } from "@/lib/services/staff";
@@ -39,6 +40,7 @@ export default async function StaffPage() {
   const inviteQueued = await repos.control.inviteQueuedUsers(ctx.organisationId);
   const officeMembers = await listOfficeMembers(repos, ctx);
   const links = await repos.tenant.guardianLink.list(ctx);
+  const settingsRow = (await repos.tenant.orgSettings.list(ctx))[0];
   const inviteStatusFor = (userId: string | null): StaffRow["inviteStatus"] => {
     if (!userId) return "none";
     return membershipStatus.get(userId) === "active" ? "accepted" : "pending";
@@ -61,6 +63,7 @@ export default async function StaffPage() {
       blockText: fit.blocks.map((b) => (b.kind === "missing" ? `${b.name} missing` : `${b.name} expired`)).join(", "),
       linked: Boolean(instructor.userId),
       inviteStatus: inviteStatusFor(instructor.userId),
+      officeManaged: managedByOffice(instructor, settingsRow),
       inviteSentAt: instructor.userId ? (inviteSent.get(instructor.userId)?.getTime() ?? null) : null,
       inviteQueued: instructor.userId ? inviteQueued.has(instructor.userId) : false,
       hasEmail: Boolean(instructor.email),
@@ -103,8 +106,10 @@ export default async function StaffPage() {
 
       <Card className="mb-5">
         <div className="mb-1 flex items-center justify-between"><h2 className="font-semibold text-navy">Add instructors</h2><GuideLink topic="staff" className="text-xs" /></div>
-        <p className="mb-3 text-xs text-slate-500">The quickest way: a name and email, and they set up the rest from the invite. Or give them your company code (Settings) and they can join from the app.</p>
-        <QuickAddStaff />
+        <p className="mb-3 text-xs text-slate-500">{settingsRow?.staffManagedBy === "office"
+          ? <>The office keeps availability here, so a name is enough: staff don&rsquo;t need to sign up. You can still invite anyone who wants the app. <a href="/learn?topic=office-managed" target="_blank" rel="noreferrer" className="text-teal hover:underline">📖 Read the guide</a></>
+          : "The quickest way: a name and email, and they set up the rest from the invite. Or give them your company code (Settings) and they can join from the app."}</p>
+        <QuickAddStaff officeMode={settingsRow?.staffManagedBy === "office"} />
         <details className="mt-4 border-t border-slate-100 pt-3">
           <summary className="cursor-pointer text-sm font-medium text-navy">Add with all details (courses, licences, checks)</summary>
           <div className="mt-3"><AddInstructorForm courses={courseChoices} quals={qualChoices} checks={checkChoices} /></div>

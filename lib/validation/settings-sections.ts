@@ -28,6 +28,7 @@ function rawFor(section: SettingsSection, get: Get): Record<string, unknown> {
       return {
         alertLeadDays: num(get("alertLeadDays")),
         availabilityWeeksAhead: num(get("availabilityWeeksAhead"), 4),
+        staffManagedBy: get("staffManagedBy") ?? "staff",
         currency: get("currency"),
         holidayPayPercent: String(get("holidayPayPercent") ?? "").trim() === "" ? null : Number(get("holidayPayPercent")),
         privacyNoticeUrl: String(get("privacyNoticeUrl") ?? "").trim(),

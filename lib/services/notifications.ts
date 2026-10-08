@@ -12,6 +12,8 @@ export interface NotifyInput {
   body?: string | null;
   /** Also send an email to the instructor if they have an address. */
   email?: boolean;
+  /** Extra lines listed in the email only (their sessions that week), for people without the app. */
+  detailLines?: string[];
 }
 
 /**
@@ -67,7 +69,7 @@ export async function notifyInstructor(
   return row;
 }
 
-const noticeHtml = (input: NotifyInput) => `<p>${escapeHtml(input.title)}</p>${input.body ? `<p>${escapeHtml(input.body)}</p>` : ""}<p style="color:#64748b;font-size:12px">Sent by ActivityRoster</p>`;
+const noticeHtml = (input: NotifyInput) => `<p>${escapeHtml(input.title)}</p>${input.body ? `<p>${escapeHtml(input.body)}</p>` : ""}${input.detailLines?.length ? `<ul>${input.detailLines.map((l) => `<li>${escapeHtml(l)}</li>`).join("")}</ul>` : ""}<p style="color:#64748b;font-size:12px">Sent by ActivityRoster</p>`;
 
 /**
  * Notify many instructors at once (publishing a week), each with their own

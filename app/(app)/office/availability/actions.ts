@@ -7,8 +7,9 @@ import { getWeekSchedule, weekStart } from "@/lib/services/schedule";
 import { getTeachingMatrix } from "@/lib/services/teaching";
 import { assignStaff, assignBlockMessage } from "@/lib/services/assignment";
 import { courseStaff as courseStaffTable } from "@/lib/db/schema";
-import { setAvailability } from "@/lib/services/availability";
-import { availabilityForStaffSchema, firstIssue } from "@/lib/validation/actions";
+import { BULK_AVAILABILITY_MAX, setAvailability, setAvailabilityBulk, type BulkAvailabilityEntry } from "@/lib/services/availability";
+import { availabilityForStaffSchema, firstIssue, officeAvailabilitySchema } from "@/lib/validation/actions";
+import { instructor as instructorTable } from "@/lib/db/schema";
 
 export interface CellCandidate {
   courseId: string;
@@ -101,4 +102,36 @@ export async function assignFromAvailabilityAction(courseId: string, instructorI
   revalidatePath("/office/courses");
   revalidatePath("/office");
   return { ok: true, message: res.warnings.length ? `Assigned — ⚠ ${res.warnings.join("; ")}` : "Assigned" };
+}
+
+/**
+ * The office sets many slots in one go from the grid or a staff member's page:
+ * a person's whole week, everyone on a day, a brush stroke, or usual weeks.
+ * Saved as set by the office, in a handful of queries however many people.
+ */
+export async function setAvailabilityBulkAction(input: unknown): Promise<{ ok: boolean; error?: string; message?: string }> {
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
+  const parsed = officeAvailabilitySchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: firstIssue(parsed.error, "Nothing to set") };
+  const v = parsed.data;
+  const entries: BulkAvailabilityEntry[] = [];
+  for (const c of v.cells ?? []) entries.push({ instructorId: c.instructorId, date: c.date, slot: c.slot, status: v.status });
+  if (v.everyone || v.instructorIds?.length) {
+    const people = v.everyone
+      ? (await repos.tenant.instructor.list(ctx, eq(instructorTable.status, "active"))).map((i) => i.id)
+      : v.instructorIds!;
+    const slots = v.slots ?? [];
+    for (const id of people) {
+      for (const date of v.dates ?? []) for (const slot of slots) entries.push({ instructorId: id, date, slot, status: v.status });
+      for (const weekday of v.weekdays ?? []) for (const slot of slots) entries.push({ instructorId: id, weekday, slot, status: v.status });
+    }
+  }
+  if (entries.length > BULK_AVAILABILITY_MAX) return { ok: false, error: "That's too many slots at once. Set one week at a time." };
+  const r = await setAvailabilityBulk(repos, ctx, entries, { setBy: "office" });
+  revalidatePath("/office/availability");
+  revalidatePath("/office/courses");
+  revalidatePath("/office/rota");
+  revalidatePath("/office/staff");
+  const changed = r.set + r.cleared;
+  return { ok: true, message: `${changed} slot${changed === 1 ? "" : "s"} updated${r.keptLeave ? ` (${r.keptLeave} on approved leave left as they are)` : ""}` };
 }
