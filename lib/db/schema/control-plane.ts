@@ -878,6 +878,27 @@ export const emailOutbox = sqliteTable("email_outbox", {
 export type EmailOutbox = typeof emailOutbox.$inferSelect;
 export type NewEmailOutbox = typeof emailOutbox.$inferInsert;
 
+// --- Push outbox (bulk phone notifications) ----------------------------------
+/**
+ * Phone notifications sent to many people at once (publishing a week). The
+ * request writes one row per person in a few batched statements and returns;
+ * the delivery job sends them every couple of minutes, so a centre of any size
+ * publishes inside Cloudflare's per-request limits. The in-app notification is
+ * written straight away; this row only carries the push. Purged after a week.
+ */
+export const pushOutbox = sqliteTable("push_outbox", {
+  id: id(),
+  userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  body: text("body"),
+  url: text("url"),
+  status: text("status", { enum: EMAIL_OUTBOX_STATUSES }).notNull().default("queued"),
+  sentAt: integer("sent_at", { mode: "timestamp_ms" }),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, (t) => [index("push_outbox_status_idx").on(t.status, t.createdAt)]);
+export type PushOutbox = typeof pushOutbox.$inferSelect;
+
 // --- Trial-end survey ----------------------------------------------------------
 
 /**

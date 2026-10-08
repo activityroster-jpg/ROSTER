@@ -57,16 +57,22 @@ async function attempt(p: PlatformRepository, env: CloudflareEnv, row: EmailOutb
   }
 }
 
-/** Hourly: retry what is due, then purge old rows. */
-export async function drainEmailQueue(db: Database, env: CloudflareEnv, now = new Date(), limit = 50, fetchImpl?: typeof fetch): Promise<{ due: number; sent: number; failed: number; purged: number }> {
+/**
+ * Send what is due (first sends of bulk notices, and retries), a few at a time,
+ * then purge old rows. Run by the delivery job every couple of minutes and by
+ * the hourly tick as a backup.
+ */
+export async function drainEmailQueue(db: Database, env: CloudflareEnv, now = new Date(), limit = 50, fetchImpl?: typeof fetch, opts: { concurrency?: number; purge?: boolean } = {}): Promise<{ due: number; sent: number; failed: number; purged: number }> {
   const p = new PlatformRepository(db);
   const due = await p.dueEmails(now, limit);
+  const step = Math.max(1, opts.concurrency ?? 1);
   let sent = 0, failed = 0;
-  for (const row of due) {
-    const r = await attempt(p, env, row, fetchImpl);
-    if (r.sent) sent++; else failed++;
+  for (let i = 0; i < due.length; i += step) {
+    for (const r of await Promise.all(due.slice(i, i + step).map((row) => attempt(p, env, row, fetchImpl)))) {
+      if (r.sent) sent++; else failed++;
+    }
   }
-  const purged = await p.purgeEmailOutbox(now);
+  const purged = opts.purge === false ? 0 : await p.purgeEmailOutbox(now);
   return { due: due.length, sent, failed, purged };
 }
 

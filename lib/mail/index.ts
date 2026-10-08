@@ -3,6 +3,7 @@ import { COMPANY } from "@/lib/config";
 import { providersFor, type MailStream } from "./providers";
 import { queueAndSend } from "./queue";
 import { getDb } from "@/lib/cf/bindings";
+import { PlatformRepository } from "@/lib/db/repositories/platform";
 
 /**
  * Minimal transactional mailer. Delivery goes through lib/mail/providers
@@ -160,4 +161,32 @@ export async function sendEmail(msg: EmailMessage): Promise<void> {
     return;
   }
   await dispatch(env, { from, to: msg.to, subject: msg.subject, html, text, expiresAt: msg.expiresInMinutes ? new Date(Date.now() + msg.expiresInMinutes * 60_000) : null }, "system");
+}
+
+/**
+ * Many emails at once (a published week): each is built exactly like
+ * {@link sendEmail}, then queued in a few batched statements instead of sent
+ * one by one, so a centre of any size stays inside Cloudflare's per-request
+ * limits. The delivery job (/api/mail/drain, every two minutes) sends them,
+ * with the usual retries. Suppressed addresses are left out.
+ */
+export async function queueEmails(msgs: EmailMessage[]): Promise<{ queued: number }> {
+  if (msgs.length === 0) return { queued: 0 };
+  const env = getEnv();
+  const from = env.MAIL_FROM_SYSTEM ?? "ActivityRoster <no-reply@activityroster.com>";
+  const built = msgs.map((m) => ({ to: m.to, from: m.from ?? from, subject: m.subject, html: renderEmail(m.html, { code: m.code }), text: renderEmailText(m.html), plain: htmlToText(m.html) }));
+  if (env.APP_ENV === "staging") {
+    for (const b of built.slice(0, 20)) await captureOutbox(env, { at: new Date().toISOString(), to: b.to, from: b.from, subject: b.subject, text: b.plain });
+  }
+  if (!canSend(env)) {
+    console.info(`[mail] (not sent: ${env.APP_ENV ?? "unset"}) ${built.length} × ${built[0]!.subject}`);
+    return { queued: 0 };
+  }
+  const p = new PlatformRepository(await getDb());
+  const suppressed = await p.suppressedAmong(built.map((b) => b.to));
+  const rows = built.filter((b) => !suppressed.has(b.to.toLowerCase())).map((b) => ({
+    stream: "system" as const, toEmail: b.to, fromAddr: b.from, subject: b.subject, html: b.html, text: b.text, replyTo: null, headers: null, tags: null,
+    status: "queued" as const, attempts: 0, nextAttemptAt: new Date(), expiresAt: null,
+  }));
+  return { queued: await p.enqueueEmails(rows) };
 }

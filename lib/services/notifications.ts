@@ -1,8 +1,9 @@
 import { and, eq, isNull } from "drizzle-orm";
 import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
-import { notification as notificationTable, type Notification } from "@/lib/db/schema";
-import { sendEmail } from "@/lib/mail";
+import { instructor as instructorTable, notification as notificationTable, type Notification } from "@/lib/db/schema";
+import { queueEmails, sendEmail } from "@/lib/mail";
+import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { getEnv } from "@/lib/cf/bindings";
 import { sendPush } from "@/lib/push/fcm";
 
@@ -57,13 +58,53 @@ export async function notifyInstructor(
       await sendEmail({
         to: instructor.email,
         subject: input.title,
-        html: `<p>${escapeHtml(input.title)}</p>${input.body ? `<p>${escapeHtml(input.body)}</p>` : ""}<p style="color:#64748b;font-size:12px">Sent by ActivityRoster</p>`,
+        html: noticeHtml(input),
       });
     } catch (err) {
       console.error("[notify] email failed:", (err as Error).message);
     }
   }
   return row;
+}
+
+const noticeHtml = (input: NotifyInput) => `<p>${escapeHtml(input.title)}</p>${input.body ? `<p>${escapeHtml(input.body)}</p>` : ""}<p style="color:#64748b;font-size:12px">Sent by ActivityRoster</p>`;
+
+/**
+ * Notify many instructors at once (publishing a week), each with their own
+ * notice, in a fixed handful of queries however many people there are: the
+ * in-app notifications are written in batches straight away, and the emails
+ * and phone pushes are queued for the delivery job, which sends them within a
+ * couple of minutes. Same rules as {@link notifyInstructor}: restricted or
+ * anonymised people are skipped; email only to an address whose owner hasn't
+ * switched email off. Returns how many people were notified.
+ */
+export async function notifyInstructors(
+  repos: Repositories,
+  ctx: AnyTenantContext,
+  items: { instructorId: string; input: NotifyInput }[],
+): Promise<number> {
+  if (items.length === 0) return 0;
+  const people = new Map((await repos.tenant.instructor.listIn(ctx, instructorTable.id, items.map((i) => i.instructorId))).map((p) => [p.id, p]));
+  const live = items.flatMap((i) => {
+    const p = people.get(i.instructorId);
+    return p && !p.restrictedAt && !p.anonymisedAt ? [{ p, input: i.input }] : [];
+  });
+  const now = new Date();
+  await repos.tenant.notification.insertMany(ctx, live.map(({ p, input }) => ({ userId: p.userId ?? null, instructorId: p.id, channel: "in_app" as const, title: input.title, body: input.body ?? null, readAt: null, sentAt: now })));
+
+  const pushes = live.flatMap(({ p, input }) => (p.userId ? [{ userId: p.userId, title: input.title, body: input.body ?? null, url: "/portal/notifications" }] : []));
+  try {
+    if (pushes.length) await new PlatformRepository(repos.db).enqueuePushes(pushes);
+  } catch (err) {
+    console.error("[notify] queueing pushes failed:", (err as Error).message);
+  }
+  const emails = live.flatMap(({ p, input }) => (input.email && p.email && p.notifyEmail !== false ? [{ to: p.email, subject: input.title, html: noticeHtml(input) }] : []));
+  try {
+    if (emails.length) await queueEmails(emails);
+  } catch (err) {
+    console.error("[notify] queueing emails failed:", (err as Error).message);
+  }
+  return live.length;
 }
 
 /** An instructor's notifications, newest first. */

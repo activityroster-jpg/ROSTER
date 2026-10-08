@@ -1,22 +1,25 @@
-# The hourly tick on Cloudflare's scheduler (see index.ts). Secrets: CRON_SECRET,
-# the same value as the app's OUTREACH_CRON_SECRET, set by the deploy workflows.
+# The hourly tick and the two-minute delivery job on Cloudflare's scheduler
+# (see index.ts). Secrets: CRON_SECRET, the same value as the app's
+# OUTREACH_CRON_SECRET, set by the deploy workflows.
 name = "roster-tick"
 main = "index.ts"
 compatibility_date = "2025-01-01"
 workers_dev = false
 
 [triggers]
-crons = ["5 * * * *"]
+crons = ["5 * * * *", "*/2 * * * *"]
 
 [vars]
 TICK_URL = "https://activityroster.com/api/outreach/tick"
+DRAIN_URL = "https://activityroster.com/api/mail/drain"
 
 [env.staging]
 name = "roster-tick-staging"
 workers_dev = false
 
 [env.staging.triggers]
-crons = ["20 * * * *"]
+crons = ["20 * * * *", "*/2 * * * *"]
 
 [env.staging.vars]
 TICK_URL = "https://staging.activityroster.com/api/outreach/tick"
+DRAIN_URL = "https://staging.activityroster.com/api/mail/drain"

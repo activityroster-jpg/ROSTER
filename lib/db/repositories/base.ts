@@ -1,7 +1,7 @@
-import { and, eq, getTableColumns, inArray, type SQL } from "drizzle-orm";
+import { and, eq, type SQL } from "drizzle-orm";
 import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
 import type { Database } from "@/lib/db/client";
-import { D1_MAX_PARAMS, paramChunks } from "@/lib/db/params";
+import { inList, rowsPerInsert } from "@/lib/db/params";
 import { isGhostContext, isReadOnlyContext, type AnyTenantContext } from "@/lib/tenant/context";
 import { GhostReadOnlyError } from "@/lib/auth/ghost";
 import { TrialReadOnlyError } from "@/lib/billing/trial";
@@ -53,15 +53,13 @@ export class TenantRepository<T extends TenantTable> {
 
   /**
    * Rows whose `column` is one of `values` (optionally further filtered), in
-   * chunks so no query passes D1's limit of 100 bound parameters. Still pinned
-   * to the tenant by {@link list}. For bounded reads: "these courses' sessions".
+   * one query however long the list ({@link inList}: one bound parameter, so
+   * D1's limit of 100 never bites). Still pinned to the tenant by
+   * {@link list}. For bounded reads: "these courses' sessions".
    */
   async listIn(ctx: AnyTenantContext, column: SQLiteColumn, values: readonly string[], where?: SQL): Promise<T["$inferSelect"][]> {
-    const out: T["$inferSelect"][] = [];
-    for (const chunk of paramChunks([...new Set(values)])) {
-      out.push(...(await this.list(ctx, where ? (and(inArray(column, chunk), where) as SQL) : inArray(column, chunk))));
-    }
-    return out;
+    if (values.length === 0) return [];
+    return this.list(ctx, where ? (and(inList(column, values), where) as SQL) : inList(column, values));
   }
 
   /** The distinct values of one column across this tenant's rows (e.g. which courses have sessions). */
@@ -129,7 +127,7 @@ export class TenantRepository<T extends TenantTable> {
     const withOrg = rows.map((r) => ({ ...r, organisationId: ctx.organisationId })) as T["$inferInsert"][];
     // D1 allows 100 bound parameters per statement, and every column of every
     // row is one, so a wide table takes fewer rows per statement.
-    const CHUNK = Math.max(1, Math.floor(D1_MAX_PARAMS / Object.keys(getTableColumns(this.table as SQLiteTable)).length));
+    const CHUNK = rowsPerInsert(this.table as SQLiteTable);
     const out: T["$inferSelect"][] = [];
     for (let i = 0; i < withOrg.length; i += CHUNK) {
       const inserted = await this.db.insert(this.table).values(withOrg.slice(i, i + CHUNK)).returning();

@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, gte, inArray, lt, lte, sql } from "drizzle-orm";
 import type { Database } from "@/lib/db/client";
+import { inList, rowsPerInsert } from "@/lib/db/params";
 import {
   organisation,
   membership,
@@ -26,6 +27,7 @@ import {
   errorReport,
   rulePack,
   emailOutbox,
+  pushOutbox,
   callAvailability,
   callBooking,
   type CallAvailability,
@@ -62,6 +64,7 @@ import {
   type RulePack,
   type EmailOutbox,
   type NewEmailOutbox,
+  type PushOutbox,
   type EmailOutboxStatus,
   type OutreachLeadStatus,
   type SuppressionReason,
@@ -709,6 +712,40 @@ export class PlatformRepository {
     const a = await this.db.delete(emailOutbox).where(and(eq(emailOutbox.status, "sent"), lte(emailOutbox.updatedAt, sentCut))).returning({ id: emailOutbox.id });
     const b = await this.db.delete(emailOutbox).where(and(eq(emailOutbox.status, "failed"), lte(emailOutbox.updatedAt, failedCut))).returning({ id: emailOutbox.id });
     return a.length + b.length;
+  }
+
+  /** Many emails queued in a few statements (bulk notices); the delivery job sends them. */
+  async enqueueEmails(rows: Omit<NewEmailOutbox, "id" | "createdAt" | "updatedAt">[]): Promise<number> {
+    const per = rowsPerInsert(emailOutbox);
+    for (let i = 0; i < rows.length; i += per) await this.db.insert(emailOutbox).values(rows.slice(i, i + per));
+    return rows.length;
+  }
+  /** Which of these addresses are on the suppression list (bounced or complained), in one query. */
+  async suppressedAmong(emails: readonly string[]): Promise<Set<string>> {
+    if (emails.length === 0) return new Set();
+    const rows = await this.db.select({ email: outreachSuppression.email }).from(outreachSuppression).where(inList(outreachSuppression.email, emails.map((e) => e.toLowerCase())));
+    return new Set(rows.map((r) => r.email));
+  }
+
+  // --- Push outbox --------------------------------------------------------------
+
+  async enqueuePushes(rows: { userId: string; title: string; body: string | null; url: string | null }[]): Promise<number> {
+    const per = rowsPerInsert(pushOutbox);
+    for (let i = 0; i < rows.length; i += per) await this.db.insert(pushOutbox).values(rows.slice(i, i + per).map((r) => ({ ...r, status: "queued" as const })));
+    return rows.length;
+  }
+  /** Queued pushes, oldest first. */
+  async duePushes(limit = 200): Promise<PushOutbox[]> {
+    return this.db.select().from(pushOutbox).where(eq(pushOutbox.status, "queued")).orderBy(asc(pushOutbox.createdAt)).limit(limit);
+  }
+  async markPushes(ids: readonly string[], status: "sent" | "failed", now = new Date()): Promise<void> {
+    if (ids.length === 0) return;
+    await this.db.update(pushOutbox).set({ status, sentAt: status === "sent" ? now : null, updatedAt: now }).where(inList(pushOutbox.id, ids));
+  }
+  /** Delivered or failed pushes go after a week; nothing in them is needed later. */
+  async purgePushOutbox(now: Date, days = 7): Promise<number> {
+    const cut = new Date(now.getTime() - days * 86_400_000);
+    return (await this.db.delete(pushOutbox).where(and(sql`${pushOutbox.status} != 'queued'`, lte(pushOutbox.updatedAt, cut))).returning({ id: pushOutbox.id })).length;
   }
 
   // --- Rule packs (working-time law as data) --------------------------------

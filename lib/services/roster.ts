@@ -1,13 +1,14 @@
 import { and, eq, gte, lt } from "drizzle-orm";
 import type { Repositories } from "@/lib/db/repositories";
 import { actorUserId, type AnyTenantContext } from "@/lib/tenant/context";
-import { courseSession as courseSessionTable, courseStaff as courseStaffTable, rosterWeek as rosterWeekTable } from "@/lib/db/schema";
+import { courseSession as courseSessionTable, courseStaff as courseStaffTable, rosterWeek as rosterWeekTable, sessionStaffOverride as overrideTable } from "@/lib/db/schema";
 import { addDays, weekStart } from "./schedule";
-import { notifyInstructor } from "./notifications";
+import { notifyInstructors } from "./notifications";
 import { emailAdmins } from "./admin-mail";
 import { writeAudit } from "./audit";
 import { syncHoursForCourse } from "./hours";
 import { liveSessions } from "@/lib/domain/sessions";
+import { effectiveStaffBySession } from "@/lib/domain/session-staff";
 
 /** Monday (YYYY-MM-DD) of the week a date falls in. */
 export const weekOf = (dateIso: string) => weekStart(new Date(`${dateIso}T00:00:00Z`));
@@ -64,18 +65,25 @@ export async function publishWeek(
   const courseIds = new Set(sessions.map((s) => s.courseId));
   let instructorsNotified = 0;
   if (opts.notify !== false && courseIds.size > 0) {
-    const staff = (await t.courseStaff.list(ctx)).filter((r) => courseIds.has(r.courseId) && r.status !== "declined");
+    // Who is on each session, per-day staffing included (a day-only add is
+    // told, someone skipped for a day isn't counted for it).
+    const [staff, overrides] = await Promise.all([
+      t.courseStaff.listIn(ctx, courseStaffTable.courseId, [...courseIds]),
+      t.sessionStaffOverride.listIn(ctx, overrideTable.courseSessionId, sessions.map((s) => s.id)),
+    ]);
+    const onSessions = new Map<string, number>();
+    for (const members of effectiveStaffBySession(sessions, staff, overrides).values()) {
+      for (const m of members) if (m.status !== "declined") onSessions.set(m.instructorId, (onSessions.get(m.instructorId) ?? 0) + 1);
+    }
     const label = fmtMonday(monday);
-    for (const instructorId of new Set(staff.map((r) => r.instructorId))) {
-      const myCourses = new Set(staff.filter((r) => r.instructorId === instructorId).map((r) => r.courseId));
-      const n = sessions.filter((s) => myCourses.has(s.courseId)).length;
-      await notifyInstructor(repos, ctx, instructorId, {
+    instructorsNotified = await notifyInstructors(repos, ctx, [...onSessions].map(([instructorId, n]) => ({
+      instructorId,
+      input: {
         title: `Roster published — week of ${label}`,
         body: `You're on ${n} session${n === 1 ? "" : "s"} that week. Open the app to see them and confirm.`,
         email: true,
-      });
-      instructorsNotified++;
-    }
+      },
+    })));
   }
 
   await writeAudit(repos, ctx, {
