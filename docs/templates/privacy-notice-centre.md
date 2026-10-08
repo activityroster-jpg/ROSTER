@@ -24,7 +24,7 @@ volunteer agreement, legal obligations, and our legitimate interest in running t
 
 **Who sees it.** Centre admins see everything above. Other instructors see your name and
 shift times only. [If you are under 18, your contact details are visible only to admins
-and the welfare officer.] We use ActivityRoster (ActiveRoster Ltd) to store and process
+and the welfare officer.] We use ActivityRoster (ActiveRoster Ltd, company number 17505500) to store and process
 this information on our behalf; it is hosted in the UK/EU and never sold or used for
 anything else. Their notice is at activityroster.com/privacy.
 

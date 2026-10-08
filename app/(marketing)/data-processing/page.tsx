@@ -8,7 +8,7 @@ export default function DataProcessingPage() {
       <P>These terms apply where ActivityRoster processes personal data on behalf of a centre (the &ldquo;Controller&rdquo;) — for example the instructor, cert (qualification) and compliance records a centre stores in the platform. They form part of our agreement with each centre and reflect Article 28 UK/EU GDPR.</P>
 
       <H2>Roles</H2>
-      <P>The centre is the Controller of its staff/operational data. ActivityRoster is the Processor and processes that data only on the centre&apos;s documented instructions (using the platform as intended).</P>
+      <P>The centre is the Controller of its staff/operational data. ActivityRoster, operated by ActiveRoster Ltd (registered in England &amp; Wales, company number 17505500, registered office 71-75 Shelton Street, London WC2H 9JQ, United Kingdom), is the Processor and processes that data only on the centre&apos;s documented instructions (using the platform as intended).</P>
 
       <H2>Subject matter &amp; duration</H2>
       <P>Processing lasts for the term of the subscription plus the post-termination export/retention window. Subject matter: provision of rostering, compliance-tracking and course-administration services.</P>

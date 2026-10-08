@@ -9,7 +9,7 @@ import { LeadCapture } from "@/components/marketing/LeadCapture";
 import { ComplianceFlow } from "@/components/marketing/ComplianceFlow";
 import { ScreenShot } from "@/components/marketing/ScreenShot";
 import { SCREENS } from "@/lib/screens";
-import { apexDomain } from "@/lib/config";
+import { apexDomain, COMPANY } from "@/lib/config";
 
 export const metadata = {
   title: { absolute: "RYA Sailing School Software & Staff Rostering | ActivityRoster" },
@@ -113,6 +113,9 @@ export default function MarketingHome() {
         "@type": "Organization",
         "@id": `${site}/#organization`,
         name: "ActivityRoster",
+        legalName: COMPANY.legalName,
+        identifier: { "@type": "PropertyValue", propertyID: "Companies House company number", value: COMPANY.companyNumber },
+        address: { "@type": "PostalAddress", streetAddress: COMPANY.addressLines[0], addressLocality: COMPANY.addressLines[1], postalCode: COMPANY.addressLines[2], addressCountry: "GB" },
         url: site,
         description: "RYA sailing school software: compliance-aware staff rostering, qualification tracking and course administration for RYA sailing and watersports centres, schools and clubs.",
         areaServed: "GB",

@@ -7,7 +7,9 @@ children (instructors aged 15 to 17) and vetting status, so a DPIA is appropriat
 
 ActivityRoster rosters instructors at RYA sailing and watersports centres, tracks their
 qualifications and vetting status, records worked hours and leave, and notifies them of
-shifts. Centres are controllers for their staff data; ActivityRoster is processor.
+shifts. ActivityRoster is operated by ActiveRoster Ltd (registered in England & Wales,
+company number 17505500, registered office 71-75 Shelton Street, London WC2H 9JQ).
+Centres are controllers for their staff data; ActivityRoster is processor.
 ActivityRoster is controller for customer accounts, billing, website enquiries and a
 B2B prospect list. Full inventory: `docs/data-map.md`. Data stays in the UK/EU; sub-
 processors in `docs/subprocessors.md`.

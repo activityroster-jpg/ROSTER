@@ -13,7 +13,7 @@ describe("outreach email draft", () => {
       "Compliance-aware rostering for sailing & watersports centres",
       "activityroster.com · hello@activityroster.com",
       "",
-      "ActivityRoster is a trading name of ActiveRoster Ltd, registered in England & Wales.",
+      "ActivityRoster is a trading name of ActiveRoster Ltd, registered in England & Wales, company number 17505500.",
       "Registered office: 71-75 Shelton Street, London WC2H 9JQ, United Kingdom.",
     ].join("\n"))).toBe(true);
   });

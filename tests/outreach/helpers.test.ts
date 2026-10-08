@@ -41,6 +41,8 @@ describe("writer helpers", () => {
     const f = footerText({ senderName: "Conor at ActivityRoster", company: "ActiveRoster Ltd", address: "1 Street, Town", unsubscribeUrl: "https://x.test/u/abc" });
     expect(f).toContain("ActiveRoster Ltd");
     expect(f).toContain("https://x.test/u/abc");
+    const withReg = footerText({ senderName: "Conor", company: "ActiveRoster Ltd", registration: "Registered in England & Wales, company number 17505500", address: "1 Street, Town", unsubscribeUrl: "https://x.test/u/abc" });
+    expect(withReg).toContain("company number 17505500");
   });
   it("html escapes and links", () => {
     const h = toHtml("Hi <Jane>\n\nSee https://activityroster.com/pricing");

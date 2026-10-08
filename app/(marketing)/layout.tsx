@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { COMPANY } from "@/lib/config";
 import { LANDINGS } from "@/lib/seo/landings";
 import { CookieNotice } from "@/components/marketing/CookieNotice";
 import { SiteHeader } from "@/components/marketing/SiteHeader";
@@ -53,7 +54,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
             </a>
           </div>
           <p>© {new Date().getFullYear()} ActiveRoster Ltd · Built for UK &amp; Irish RYA centres · Hosted in the EU · UK GDPR-ready.</p>
-          <p className="mt-1">ActiveRoster Ltd is registered in England &amp; Wales. Registered office: 71-75 Shelton Street, London WC2H 9JQ.</p>
+          <p className="mt-1">{COMPANY.legalName} is registered in England &amp; Wales, company number {COMPANY.companyNumber}. Registered office: {COMPANY.addressInline}.</p>
         </div>
       </footer>
       <HelpAssistant surface="site" />

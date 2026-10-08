@@ -49,6 +49,7 @@ export function renderEmail(bodyHtml: string, opts: { code?: boolean } = {}): st
       </div>
       <div style="padding:16px 8px 8px;text-align:center;color:#94a3b8;font-size:12px;line-height:1.6">
         <div style="font-weight:600;color:#64748b">${legalName}</div>
+        <div>${escapeHtml(COMPANY.registration)}</div>
         <div>Staff rostering &amp; course administration for RYA sailing &amp; watersports centres.</div>
         ${address}
         <div style="margin-top:8px">
@@ -75,7 +76,7 @@ export function renderEmailText(bodyHtml: string): string {
   const legalName = env.COMPANY_LEGAL_NAME || COMPANY.legalName;
   const support = env.SUPPORT_EMAIL || `support@${apex}`;
   const addressText = env.COMPANY_ADDRESS || COMPANY.addressInline;
-  return [htmlToText(bodyHtml), "", "--", legalName, ...(addressText ? [addressText] : []), `https://${apex} · ${support}`].join("\n");
+  return [htmlToText(bodyHtml), "", "--", legalName, COMPANY.registration, ...(addressText ? [addressText] : []), `https://${apex} · ${support}`].join("\n");
 }
 
 /** Escape user-supplied text before it goes into an email body. */

@@ -22,4 +22,10 @@ describe("one-time-code emails", () => {
     expect(renderEmail(body)).toContain("All rights reserved");
     expect(renderEmailText(body)).toContain("71-75 Shelton Street");
   });
+
+  it("show the company number in the designed and plain-text footers", () => {
+    const body = codeEmailHtml({ label: "sign-in code", code: "123456", footnote: "x" });
+    expect(renderEmail(body)).toContain("Registered in England &amp; Wales, company number 17505500");
+    expect(renderEmailText(body)).toContain("company number 17505500");
+  });
 });

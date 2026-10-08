@@ -126,7 +126,7 @@ export const EMAIL_SIGNATURE: readonly string[] = [
   "Compliance-aware rostering for sailing & watersports centres",
   "activityroster.com · hello@activityroster.com",
   "",
-  `${COMPANY.name} is a trading name of ${COMPANY.legalName}, registered in England & Wales.`,
+  `${COMPANY.name} is a trading name of ${COMPANY.legalName}, registered in England & Wales, company number ${COMPANY.companyNumber}.`,
   `Registered office: ${street}, ${town} ${postcode}, ${country}.`,
 ];
 

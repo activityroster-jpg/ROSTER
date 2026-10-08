@@ -33,9 +33,10 @@ there.
 1. **D-U-N-S number first** (free, ~5 working days). Most UK Ltd companies
    already have one because Dun & Bradstreet mirrors Companies House. Check at
    https://developer.apple.com/enroll/duns-lookup/ using the *exact* Companies
-   House name (e.g. `ACTIVITYROSTER LTD`, not the trading name) and the
-   registered office address. If none is found the same form requests one;
-   D&B emails it. Allow another 2 working days for Apple to see it.
+   House name (`ACTIVEROSTER LTD`, company number 17505500, not the trading
+   name) and the registered office address. If none is found the same form
+   requests one; D&B emails it. Allow another 2 working days for Apple to see
+   it. Requested 7 October 2026 (D&B tracking ID 11024869, case 11083109).
 2. **Apple Account** for the Account Holder (a company director): real legal
    first/last name, two-factor authentication on. Ideally sign in with an
    address on the company domain (e.g. `name@activityroster.com`).

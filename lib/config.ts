@@ -19,9 +19,19 @@ export function apexDomain(): string {
 export const COMPANY = {
   name: "ActivityRoster",
   legalName: "ActiveRoster Ltd",
+  companyNumber: "17505500",
+  registeredIn: "England & Wales",
   addressLines: ["71-75 Shelton Street", "London", "WC2H 9JQ", "United Kingdom"],
   get addressInline() {
     return this.addressLines.join(", ");
+  },
+  /** "Registered in England & Wales, company number 17505500" */
+  get registration() {
+    return `Registered in ${this.registeredIn}, company number ${this.companyNumber}`;
+  },
+  /** The full statement the Companies Act asks for on letters, emails and the website. */
+  get legalLine() {
+    return `${this.legalName}. ${this.registration}. Registered office: ${this.addressInline}.`;
   },
 };
 

@@ -1,5 +1,6 @@
 import type { MarketingProspect } from "@/lib/db/schema";
 import { LETTER_SENDER } from "@/lib/marketing";
+import { COMPANY } from "@/lib/config";
 
 /*
  * Envelope window geometry, in millimetres from the top-left of the A4 sheet
@@ -22,6 +23,7 @@ export function LetterStyles() {
       .window-address { font-size: 11pt; line-height: 1.3; text-align: left; max-width: ${WINDOW.width}mm; }
       .letter-body { margin-top: ${BODY_TOP}mm; font-size: 11pt; line-height: 1.4; color: #111; }
       .sign-line { width: 65mm; border-bottom: 1px solid #111; }
+      .letter-legal { position: absolute; left: ${SHEET_PAD}mm; right: ${SHEET_PAD}mm; bottom: 9mm; font-size: 7.5pt; line-height: 1.35; color: #666; text-align: center; }
       @media print {
         html, body { margin: 0 !important; padding: 0 !important; min-height: 0 !important; height: auto !important; background: #fff !important; }
         .no-print { display: none !important; }
@@ -91,6 +93,8 @@ export function LetterSheet({ p }: { p: MarketingProspect }) {
         <p style={{ fontSize: "9pt", color: "#555" }}>{LETTER_SENDER.name}</p>
         <p style={{ marginTop: "6mm", fontWeight: 700 }}>{LETTER_SENDER.website}</p>
       </div>
+      {/* What the Companies Act asks a business letter to show. */}
+      <p className="letter-legal">{COMPANY.name} is a trading name of {COMPANY.legalLine}</p>
     </div>
   );
 }

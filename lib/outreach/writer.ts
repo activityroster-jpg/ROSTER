@@ -1,3 +1,4 @@
+import { COMPANY } from "@/lib/config";
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod/v4";
@@ -21,8 +22,8 @@ export function renderTemplate(tpl: string, vars: Record<string, string | null |
 }
 
 /** The compliance footer every outreach email ends with. */
-export function footerText(opts: { senderName: string; company: string; address: string; unsubscribeUrl: string }): string {
-  return `\n\n—\n${opts.senderName}, ${opts.company}\n${opts.address}\nNot the right person, or not relevant? Reply "no thanks" or opt out here: ${opts.unsubscribeUrl}`;
+export function footerText(opts: { senderName: string; company: string; address: string; unsubscribeUrl: string; registration?: string }): string {
+  return `\n\n—\n${opts.senderName}, ${opts.company}\n${opts.registration ? `${opts.registration}\n` : ""}${opts.address}\nNot the right person, or not relevant? Reply "no thanks" or opt out here: ${opts.unsubscribeUrl}`;
 }
 
 export function toHtml(text: string): string {
@@ -94,6 +95,6 @@ export async function composeEmail(input: {
       console.error("[outreach] writer AI failed, using template:", (err as Error).message);
     }
   }
-  const text = body + footerText({ senderName: campaign.fromName, company: input.company, address: input.address, unsubscribeUrl: input.unsubscribeUrl });
+  const text = body + footerText({ senderName: campaign.fromName, company: input.company, registration: COMPANY.registration, address: input.address, unsubscribeUrl: input.unsubscribeUrl });
   return { subject, text, html: toHtml(text), usedAi };
 }

@@ -110,6 +110,7 @@ export default function ContactPage() {
               <span key={line} className="block">{line}</span>
             ))}
           </address>
+          <p className="mt-2 text-xs text-slate-500">{COMPANY.registration}</p>
         </div>
       </div>
 
