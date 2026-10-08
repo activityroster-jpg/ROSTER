@@ -1,4 +1,4 @@
-import { eq, inArray } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
 import { courseSession as courseSessionTable, courseStaff as courseStaffTable, sessionStaffOverride as overrideTable, type CourseSession, type CourseStaff, type SessionStaffMode, type SessionStaffOverride } from "@/lib/db/schema";
@@ -20,7 +20,7 @@ const ms = (v: Date | number) => (v instanceof Date ? v.getTime() : Number(v));
 /** Overrides for some sessions (or all of the centre's). */
 export async function loadOverrides(repos: Repositories, ctx: AnyTenantContext, sessionIds?: readonly string[]): Promise<SessionStaffOverride[]> {
   if (sessionIds && sessionIds.length === 0) return [];
-  return sessionIds ? repos.tenant.sessionStaffOverride.list(ctx, inArray(overrideTable.courseSessionId, [...sessionIds])) : repos.tenant.sessionStaffOverride.list(ctx);
+  return sessionIds ? repos.tenant.sessionStaffOverride.listIn(ctx, overrideTable.courseSessionId, sessionIds) : repos.tenant.sessionStaffOverride.list(ctx);
 }
 
 /**

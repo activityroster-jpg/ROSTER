@@ -138,7 +138,6 @@ export function LeadCapture({
         <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@yourcentre.com" className={field} aria-label="Email" autoComplete="email" />
         <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Create a password" className={field} aria-label="Password" autoComplete="new-password" />
         <PasswordStrength password={password} />
-        <PasswordStrength password={password} className="mt-1" />
         <input required value={centreName} onChange={(e) => onCentreName(e.target.value)} placeholder="Centre / club name" className={field} aria-label="Centre name" />
 
         {/* Web address */}
@@ -192,9 +191,6 @@ export function LeadCapture({
         <button type="submit" disabled={status === "busy" || !acceptedTerms} className="w-full rounded-lg bg-teal px-5 py-3.5 font-semibold text-white transition hover:bg-teal-700 disabled:opacity-50 sm:w-auto">
           {status === "busy" ? "Setting up…" : "Start my free month"}
         </button>
-        <Link href="/demo" className="hidden rounded-lg border border-slate-300 px-5 py-3 font-semibold text-navy hover:bg-slate-50 md:inline-block">
-          Explore the demo first
-        </Link>
       </div>
       {!acceptedTerms && status !== "busy" ? <p className="mt-2 text-xs text-slate-500">Tick the box above to agree to the terms, then start.</p> : null}
       <p className="mt-2 text-xs text-slate-500">Free for a month · no card required · cancel anytime.</p>

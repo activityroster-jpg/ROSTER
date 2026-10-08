@@ -14,7 +14,6 @@ import { welfareForRange } from "./welfare";
 import { effectiveStaffBySession, coveringStaff } from "@/lib/domain/session-staff";
 import { course as courseTable, courseEquipment as courseEquipmentTable, courseLocation as courseLocationTable, courseStaff as courseStaffTable, sessionStaffOverride as overrideTable, type Course, type CourseStaff, type CourseType, roleType as roleTypeSchema } from "@/lib/db/schema";
 type RoleType = typeof roleTypeSchema.$inferSelect;
-import { inArray } from "drizzle-orm";
 
 export interface CourseCoverage {
   courseId: string;
@@ -207,7 +206,7 @@ export async function getWeekSchedule(
   const sunday = addDays(mondayIso, 7);
   const inWeek = sessions.filter((s) => s.date >= mondayIso && s.date < sunday);
   // Per-day overrides change who is on a given session, so cover is judged per session.
-  const overrides = inWeek.length ? await t.sessionStaffOverride.list(ctx, inArray(overrideTable.courseSessionId, inWeek.map((s) => s.id))) : [];
+  const overrides = inWeek.length ? await t.sessionStaffOverride.listIn(ctx, overrideTable.courseSessionId, inWeek.map((s) => s.id)) : [];
   const staffBySessionId = effectiveStaffBySession(inWeek, staffAssignments, overrides);
   const courseById = new Map(courses.map((c) => [c.id, c]));
   const weekSessions: WeekSession[] = inWeek
@@ -375,7 +374,7 @@ export async function getRotaDays(
 
   const sunday = addDays(mondayIso, dayCount);
   const inWeek = sessions.filter((s) => s.date >= mondayIso && s.date < sunday);
-  const overrides = inWeek.length ? await t.sessionStaffOverride.list(ctx, inArray(overrideTable.courseSessionId, inWeek.map((s) => s.id))) : [];
+  const overrides = inWeek.length ? await t.sessionStaffOverride.listIn(ctx, overrideTable.courseSessionId, inWeek.map((s) => s.id)) : [];
   const staffBySessionId = effectiveStaffBySession(inWeek, staffAssignments, overrides);
   const slotRank: Record<SlotCode, number> = { AM: 0, PM: 1, EV: 2 };
   const welfare = await welfareForRange(repos, ctx, mondayIso, sunday);

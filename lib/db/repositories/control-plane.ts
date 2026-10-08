@@ -1,5 +1,6 @@
 import { and, eq, gte, inArray, isNotNull, isNull, lt, ne, sql } from "drizzle-orm";
 import type { Database } from "@/lib/db/client";
+import { paramChunks } from "@/lib/db/params";
 import {
   account,
   errorReport,
@@ -104,7 +105,7 @@ export class ControlPlaneRepository {
   async deleteOtherSessions(userId: string, keepSessionId: string | null): Promise<number> {
     const rows = await this.db.select({ id: session.id }).from(session).where(eq(session.userId, userId));
     const victims = rows.map((r) => r.id).filter((id) => id !== keepSessionId);
-    if (victims.length) await this.db.delete(session).where(inArray(session.id, victims));
+    for (const chunk of paramChunks(victims)) await this.db.delete(session).where(inArray(session.id, chunk));
     return victims.length;
   }
 
@@ -136,7 +137,10 @@ export class ControlPlaneRepository {
   async sessionSummaries(userIds: string[]): Promise<Map<string, { lastSeen: Date | null; active: number }>> {
     const out = new Map<string, { lastSeen: Date | null; active: number }>();
     if (userIds.length === 0) return out;
-    const rows = await this.db.select({ userId: session.userId, updatedAt: session.updatedAt, expiresAt: session.expiresAt }).from(session).where(inArray(session.userId, userIds));
+    const rows = [];
+    for (const chunk of paramChunks(userIds)) {
+      rows.push(...(await this.db.select({ userId: session.userId, updatedAt: session.updatedAt, expiresAt: session.expiresAt }).from(session).where(inArray(session.userId, chunk))));
+    }
     const now = Date.now();
     for (const id of userIds) out.set(id, { lastSeen: null, active: 0 });
     for (const r of rows) {

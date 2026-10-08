@@ -1,4 +1,4 @@
-import { and, eq, gte, inArray, isNull } from "drizzle-orm";
+import { and, eq, gte, isNull } from "drizzle-orm";
 import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
 import { courseStaff as courseStaffTable, courseSession as courseSessionTable, hoursRecord as hoursRecordTable, type HoursRecord } from "@/lib/db/schema";
@@ -59,8 +59,8 @@ export async function planHoursForCourse(
   const paySource = settingsRows[0]?.paySource ?? "roster";
 
   const [existing, storedOverrides] = await Promise.all([
-    t.hoursRecord.list(ctx, inArray(hoursRecordTable.courseSessionId, allSessions.map((s) => s.id))),
-    t.sessionStaffOverride.list(ctx, inArray(overrideTable.courseSessionId, allSessions.map((s) => s.id))),
+    t.hoursRecord.listIn(ctx, hoursRecordTable.courseSessionId, allSessions.map((s) => s.id)),
+    t.sessionStaffOverride.listIn(ctx, overrideTable.courseSessionId, allSessions.map((s) => s.id)),
   ]);
   const overrides = opts.adjustOverrides ? opts.adjustOverrides(storedOverrides) : storedOverrides;
   const byKey = new Map<string, HoursRecord>();
@@ -134,7 +134,7 @@ export async function applyRateToUnapprovedLines(repos: Repositories, ctx: AnyTe
     t.courseStaff.list(ctx, eq(courseStaffTable.instructorId, instructorId)),
   ]);
   const sessionIds = records.map((r) => r.courseSessionId).filter((x): x is string => Boolean(x));
-  const sessions = sessionIds.length ? await t.courseSession.list(ctx, and(inArray(courseSessionTable.id, sessionIds), gte(courseSessionTable.date, fromIso))) : [];
+  const sessions = sessionIds.length ? await t.courseSession.listIn(ctx, courseSessionTable.id, sessionIds, gte(courseSessionTable.date, fromIso)) : [];
   const sessionById = new Map(sessions.map((s) => [s.id, s]));
   const roleByCourse = new Map(staff.map((a) => [a.courseId, a.roleTypeId]));
   let n = 0;

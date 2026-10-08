@@ -1,6 +1,7 @@
-import { and, eq, inArray, type SQL } from "drizzle-orm";
+import { and, eq, getTableColumns, inArray, type SQL } from "drizzle-orm";
 import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
 import type { Database } from "@/lib/db/client";
+import { D1_MAX_PARAMS, paramChunks } from "@/lib/db/params";
 import { isGhostContext, isReadOnlyContext, type AnyTenantContext } from "@/lib/tenant/context";
 import { GhostReadOnlyError } from "@/lib/auth/ghost";
 import { TrialReadOnlyError } from "@/lib/billing/trial";
@@ -56,10 +57,8 @@ export class TenantRepository<T extends TenantTable> {
    * to the tenant by {@link list}. For bounded reads: "these courses' sessions".
    */
   async listIn(ctx: AnyTenantContext, column: SQLiteColumn, values: readonly string[], where?: SQL): Promise<T["$inferSelect"][]> {
-    const unique = [...new Set(values)];
     const out: T["$inferSelect"][] = [];
-    for (let i = 0; i < unique.length; i += 80) {
-      const chunk = unique.slice(i, i + 80);
+    for (const chunk of paramChunks([...new Set(values)])) {
       out.push(...(await this.list(ctx, where ? (and(inArray(column, chunk), where) as SQL) : inArray(column, chunk))));
     }
     return out;
@@ -128,9 +127,9 @@ export class TenantRepository<T extends TenantTable> {
     this.assertWritable(ctx);
     if (rows.length === 0) return [];
     const withOrg = rows.map((r) => ({ ...r, organisationId: ctx.organisationId })) as T["$inferInsert"][];
-    // D1 allows 100 bound parameters per statement; ten rows of any tenant
-    // table stays comfortably under that.
-    const CHUNK = 10;
+    // D1 allows 100 bound parameters per statement, and every column of every
+    // row is one, so a wide table takes fewer rows per statement.
+    const CHUNK = Math.max(1, Math.floor(D1_MAX_PARAMS / Object.keys(getTableColumns(this.table as SQLiteTable)).length));
     const out: T["$inferSelect"][] = [];
     for (let i = 0; i < withOrg.length; i += CHUNK) {
       const inserted = await this.db.insert(this.table).values(withOrg.slice(i, i + CHUNK)).returning();

@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import type { Database } from "@/lib/db/client";
+import { paramChunks } from "@/lib/db/params";
 import {
   featureRequest,
   featureRequestVote,
@@ -98,10 +99,12 @@ export class FeatureRequestRepository {
       .orderBy(desc(featureRequest.createdAt)).limit(limit);
     const ids = rows.map((r) => r.id);
     const counts = await this.voteCounts(ids);
-    const mineVoted = ids.length
-      ? new Set((await this.db.select({ id: featureRequestVote.requestId }).from(featureRequestVote)
-        .where(and(eq(featureRequestVote.organisationId, ctx.organisationId), inArray(featureRequestVote.requestId, ids)))).map((v) => v.id))
-      : new Set<string>();
+    const mineVoted = new Set<string>();
+    for (const chunk of paramChunks(ids)) {
+      const voted = await this.db.select({ id: featureRequestVote.requestId }).from(featureRequestVote)
+        .where(and(eq(featureRequestVote.organisationId, ctx.organisationId), inArray(featureRequestVote.requestId, chunk)));
+      for (const v of voted) mineVoted.add(v.id);
+    }
     return rows.map((r) => ({
       id: r.id, publicTitle: r.publicTitle, kind: r.kind, status: r.status, createdAt: r.createdAt,
       votes: counts.get(r.id) ?? 0, mine: Boolean(r.mine), voted: mineVoted.has(r.id),
@@ -127,10 +130,13 @@ export class FeatureRequestRepository {
   }
 
   private async voteCounts(ids: string[]): Promise<Map<string, number>> {
-    if (!ids.length) return new Map();
-    const rows = await this.db.select({ id: featureRequestVote.requestId, n: sql<number>`count(*)` })
-      .from(featureRequestVote).where(inArray(featureRequestVote.requestId, ids)).groupBy(featureRequestVote.requestId);
-    return new Map(rows.map((r) => [r.id, Number(r.n)]));
+    const out = new Map<string, number>();
+    for (const chunk of paramChunks(ids)) {
+      const rows = await this.db.select({ id: featureRequestVote.requestId, n: sql<number>`count(*)` })
+        .from(featureRequestVote).where(inArray(featureRequestVote.requestId, chunk)).groupBy(featureRequestVote.requestId);
+      for (const r of rows) out.set(r.id, Number(r.n));
+    }
+    return out;
   }
 
   // --- Dev Center (platform admin only) ------------------------------------

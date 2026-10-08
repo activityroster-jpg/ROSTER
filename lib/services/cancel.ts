@@ -1,4 +1,4 @@
-import { eq, inArray } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
 import {
@@ -61,7 +61,7 @@ export async function cancelSessions(repos: Repositories, ctx: AnyTenantContext,
   const fee = input.pay.rule === "fee" ? Math.max(0, Number(input.pay.fee ?? 0)) : null;
   const targetIds = targets.map((s) => s.id);
   const [records, staff] = await Promise.all([
-    t.hoursRecord.list(ctx, inArray(hoursRecordTable.courseSessionId, targetIds)),
+    t.hoursRecord.listIn(ctx, hoursRecordTable.courseSessionId, targetIds),
     t.courseStaff.list(ctx, eq(courseStaffTable.courseId, course.id)),
   ]);
 
@@ -127,7 +127,7 @@ export async function restoreSessions(repos: Repositories, ctx: AnyTenantContext
   // The restore and its log entry go in one batch; pay lines are then rebuilt from the roster (re-runnable).
   const ops: PromiseLike<unknown>[] = targets.map((s) => t.courseSession.updateStatement(ctx, s.id, { cancelledAt: null, cancelReason: null, cancelPay: null, cancelFee: null }));
   // Lines the cancellation touched carry its note; clear the cancellation overrides so the roster drives them again.
-  const records = await t.hoursRecord.list(ctx, inArray(hoursRecordTable.courseSessionId, targets.map((s) => s.id)));
+  const records = await t.hoursRecord.listIn(ctx, hoursRecordTable.courseSessionId, targets.map((s) => s.id));
   for (const r of records) {
     if (r.approved) continue;
     if (r.note?.includes("Session cancelled")) ops.push(t.hoursRecord.updateStatement(ctx, r.id, { overrideMinutes: null, overridePay: null, note: r.note.split(" · ").filter((n) => !n.startsWith("Session cancelled")).join(" · ") || null }));
@@ -163,7 +163,7 @@ export async function canDeleteCourse(repos: Repositories, ctx: AnyTenantContext
   if (sessions.length) {
     const published = await publishedWeeks(repos, ctx);
     if (sessions.some((s) => published.has(weekOf(s.date)))) return { ok: false, reason: "This course is in a published week. Cancel it instead." };
-    const records = await t.hoursRecord.list(ctx, inArray(hoursRecordTable.courseSessionId, sessions.map((s) => s.id)));
+    const records = await t.hoursRecord.listIn(ctx, hoursRecordTable.courseSessionId, sessions.map((s) => s.id));
     if (records.some((r) => r.approved || r.actualMinutes != null || r.overrideMinutes != null || r.overridePay != null)) return { ok: false, reason: "Payroll lines for this course have been approved or edited. Cancel it instead." };
   }
   return { ok: true };
@@ -187,7 +187,7 @@ export async function canRemoveSession(repos: Repositories, ctx: AnyTenantContex
  */
 export async function dropHoursForSessions(repos: Repositories, ctx: AnyTenantContext, sessionIds: string[]): Promise<number> {
   if (sessionIds.length === 0) return 0;
-  const records = await repos.tenant.hoursRecord.list(ctx, inArray(hoursRecordTable.courseSessionId, sessionIds));
+  const records = await repos.tenant.hoursRecord.listIn(ctx, hoursRecordTable.courseSessionId, sessionIds);
   let n = 0;
   for (const r of records) {
     if (r.approved || r.actualMinutes != null || r.overrideMinutes != null || r.overridePay != null) {
