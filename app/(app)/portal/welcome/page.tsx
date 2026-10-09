@@ -37,6 +37,8 @@ export default async function PortalWelcomePage() {
   const outstanding = docs.filter((d) => !d.hasFile).length;
   const parentInvited = (await guardianLinksFor(repos, ctx, me.id)).some((l) => l.status === "active");
   const settings = (await repos.tenant.orgSettings.list(ctx))[0];
+  // Invites now set the password on the "Create your account" page; the card is only for older invites.
+  const hasPassword = await repos.control.hasCredentialPassword(ctx.userId);
 
   return (
     <div>
@@ -54,7 +56,7 @@ export default async function PortalWelcomePage() {
       <div className="mt-5 space-y-3">
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Get started</p>
 
-        <SetPasswordCard />
+        {hasPassword ? null : <SetPasswordCard />}
 
         {!me.dateOfBirth || (isUnder18(me.dateOfBirth) && !parentInvited) ? (
           <Card>

@@ -87,7 +87,7 @@ export async function setupInstructorAction(_prev: ActionState, formData: FormDa
   let invite: InviteResult | null = null;
   if (email) {
     const linked = await linkInstructorUser(repos, ctx, instructor.id);
-    if (linked.ok) invite = await sendInvite(repos, ctx, { email: linked.email, userId: linked.userId, kind: "instructor", centreName: organisation.name, slug: organisation.slug, callbackPath: "/portal/welcome" });
+    if (linked.ok) invite = await sendInvite(repos, ctx, { email: linked.email, userId: linked.userId, kind: "instructor", centreName: organisation.name, slug: organisation.slug, callbackPath: "/welcome?next=/portal/welcome" });
   }
 
   revalidatePath("/office/staff");
@@ -213,7 +213,7 @@ export async function inviteInstructorAction(_prev: ActionState, formData: FormD
   if (!linked.ok) return { ok: false, error: linked.error };
 
   // Best-effort invitation email so they can sign in and reach the portal.
-  const sent = await sendInvite(repos, ctx, { email: linked.email, userId: linked.userId, kind: "instructor", centreName: organisation.name, slug: organisation.slug, callbackPath: "/portal/welcome" });
+  const sent = await sendInvite(repos, ctx, { email: linked.email, userId: linked.userId, kind: "instructor", centreName: organisation.name, slug: organisation.slug, callbackPath: "/welcome?next=/portal/welcome" });
   if (sent === "failed") return { ok: false, error: `Couldn't email ${linked.email} just now. Try again in a minute.` };
 
   revalidatePath("/office/staff");

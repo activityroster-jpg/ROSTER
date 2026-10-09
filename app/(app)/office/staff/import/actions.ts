@@ -97,7 +97,7 @@ export async function importInstructorsAction(rows: ConfirmedStaff[], opts?: { s
     if (opts?.sendInvites && email) {
       const linked = await linkInstructorUser(repos, ctx, instructor.id);
       if (linked.ok) {
-        const res = await sendInvite(repos, ctx, { email: linked.email, userId: linked.userId, kind: "instructor", centreName: organisation.name, slug: organisation.slug, callbackPath: "/portal/welcome" });
+        const res = await sendInvite(repos, ctx, { email: linked.email, userId: linked.userId, kind: "instructor", centreName: organisation.name, slug: organisation.slug, callbackPath: "/welcome?next=/portal/welcome" });
         if (res === "sent") invited++;
         else if (res === "queued") queued++;
       }

@@ -162,7 +162,7 @@ export async function addTeamMemberAction(input: {
   if (email) {
     const linked = await linkInstructorUser(repos, ctx, instructor.id);
     if (linked.ok) {
-      invited = (await sendInvite(repos, ctx, { email: linked.email, userId: linked.userId, kind: "instructor", centreName: organisation.name, slug: organisation.slug, callbackPath: "/portal/welcome" })) !== "failed";
+      invited = (await sendInvite(repos, ctx, { email: linked.email, userId: linked.userId, kind: "instructor", centreName: organisation.name, slug: organisation.slug, callbackPath: "/welcome?next=/portal/welcome" })) !== "failed";
     }
   }
 
