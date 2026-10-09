@@ -7,9 +7,11 @@ import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { BLOG_STATUSES, type BlogStatus } from "@/lib/db/schema";
 import { buildSeedRows } from "@/lib/blog/seed";
 import { getEnv } from "@/lib/cf/bindings";
+import { COVER_PULL_GAP_S } from "@/lib/blog/cover-pacing";
 import { findCover, downloadImage, queryForArticle, queryFingerprint, hasStockKey } from "@/lib/blog/stock";
 
-export type BlogResult = { ok: boolean; error?: string; message?: string; id?: string };
+/** `remaining`: covers still to do after a one-at-a-time fetch. `retryAfter`: seconds until the photo library may be asked again. */
+export type BlogResult = { ok: boolean; error?: string; message?: string; id?: string; remaining?: number; retryAfter?: number; fetched?: number };
 
 async function platform() {
   await requirePlatformAdmin();
@@ -178,6 +180,27 @@ export async function resyncArticlesAction(): Promise<BlogResult> {
   return { ok: true, message: `Re-synced content — ${updated} updated${created ? `, ${created} added` : ""}.` };
 }
 
+/**
+ * The photo library restricts how often it is asked, so cover images are
+ * pulled one at a time with at least 20 seconds between pulls. The time of the
+ * last pull is kept in KV, so the gap holds across clicks, tabs and admins.
+ */
+const LAST_PULL_KEY = "blog:stock:last-pull";
+
+/** Seconds to wait before the next pull (0 = go now, and the pull is recorded). */
+async function takePullSlot(env: ReturnType<typeof getEnv>): Promise<number> {
+  const now = Date.now();
+  try {
+    const last = Number(await env.TENANT_CACHE.get(LAST_PULL_KEY)) || 0;
+    const wait = Math.ceil((last + COVER_PULL_GAP_S * 1000 - now) / 1000);
+    if (wait > 0) return wait;
+    await env.TENANT_CACHE.put(LAST_PULL_KEY, String(now), { expirationTtl: 3600 });
+  } catch { /* KV unavailable: the admin page still spaces its own pulls */ }
+  return 0;
+}
+
+const waitMessage = (s: number) => `The photo library allows one image every ${COVER_PULL_GAP_S} seconds. Try again in ${s} second${s === 1 ? "" : "s"}.`;
+
 const NO_KEY = "Set a PIXABAY_API_KEY (instant free key at pixabay.com/api/docs) or PEXELS_API_KEY Worker secret first.";
 
 // Timestamped R2 key per fetch so a re-fetch gets a fresh URL (busts the CDN /
@@ -204,6 +227,8 @@ export async function fetchCoverImageAction(postId: string): Promise<BlogResult>
   if (!hasStockKey(env)) return { ok: false, error: NO_KEY };
   const post = await repo.getPostById(postId);
   if (!post) return { ok: false, error: "Post not found" };
+  const wait = await takePullSlot(env);
+  if (wait > 0) return { ok: false, error: waitMessage(wait), retryAfter: wait };
 
   // Exclude photos already used elsewhere, plus this post's current one (so a
   // re-fetch actually changes the image).
@@ -263,18 +288,21 @@ export async function refreshStaleCoversAction(limit = 6): Promise<BlogResult> {
 }
 
 async function fetchCoversBatch(limit: number, mode: "missing" | "stale"): Promise<BlogResult> {
+  void limit; // one image per call: the admin page repeats it with the 20-second gap
   const repo = await platform();
   const env = getEnv();
   if (!hasStockKey(env)) return { ok: false, error: NO_KEY };
   const all = await repo.listAllPosts();
   const used = new Set(all.map((p) => p.coverImageCreditUrl).filter(Boolean) as string[]);
   const wanted = (p: (typeof all)[number]) => (mode === "missing" ? !p.coverImageKey : coverIsStale(p));
-  const todo = all.filter(wanted).slice(0, limit);
+  const todo = all.filter(wanted).slice(0, 1);
+  if (todo.length === 0) return { ok: true, message: "All done: every article has a matching cover.", remaining: 0, fetched: 0 };
+  const wait = await takePullSlot(env);
+  if (wait > 0) return { ok: false, error: waitMessage(wait), retryAfter: wait, remaining: all.filter(wanted).length };
   let done = 0;
   let rateLimited = false;
-  for (const [i, post] of todo.entries()) {
+  for (const post of todo) {
     try {
-      if (i > 0) await new Promise((r) => setTimeout(r, 500)); // gentle spacing to avoid 429s
       const query = queryForArticle(post);
       // On a replace, also avoid the photo currently on this post.
       const exclude = post.coverImageCreditUrl ? new Set([...used, post.coverImageCreditUrl]) : used;
@@ -301,9 +329,7 @@ async function fetchCoversBatch(limit: number, mode: "missing" | "stale"): Promi
   const remaining = all.filter(wanted).length - done;
   revalidatePath("/admin/blog");
   revalidatePath("/blog");
-  const suffix = rateLimited
-    ? ` — hit the Pixabay rate limit, wait a minute then run again (${remaining} to do)`
-    : remaining > 0 ? ` — ${remaining} still to do, run again` : " — all done";
+  if (rateLimited) return { ok: false, error: `The photo library says too many requests. Wait a minute, then run it again (${remaining} to do).`, remaining };
   const verb = mode === "missing" ? "Fetched" : "Refreshed";
-  return { ok: true, message: `${verb} ${done} cover image${done === 1 ? "" : "s"}${suffix}.` };
+  return { ok: true, message: `${verb} ${done} cover image${done === 1 ? "" : "s"}${remaining > 0 ? `, ${remaining} still to do` : ", all done"}.`, remaining, fetched: done };
 }

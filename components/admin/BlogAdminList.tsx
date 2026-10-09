@@ -1,9 +1,10 @@
 "use client";
 
 import { askConfirm } from "@/lib/ui/ask-confirm";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { COVER_PULL_GAP_S, COVER_RUN_SIZE } from "@/lib/blog/cover-pacing";
 import { seedArticlesAction, resyncArticlesAction, fetchCoverImageAction, fetchMissingCoversAction, refreshStaleCoversAction, setPostStatusAction, deletePostAction } from "@/app/admin/blog/actions";
 
 export interface PostRow {
@@ -24,6 +25,33 @@ export function BlogAdminList({ posts }: { posts: PostRow[] }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
+
+  // Cover images: one at a time, COVER_PULL_GAP_S apart (the photo library's limit), up to COVER_RUN_SIZE per press.
+  const [coverRun, setCoverRun] = useState<{ done: number; waiting: number } | null>(null);
+  const stopRun = useRef(false);
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  const countdown = async (seconds: number, done: number) => {
+    for (let s = seconds; s > 0 && !stopRun.current; s--) { setCoverRun({ done, waiting: s }); await sleep(1000); }
+  };
+  const fetchCovers = async (action: (limit: number) => Promise<{ ok: boolean; error?: string; message?: string; remaining?: number; retryAfter?: number; fetched?: number }>) => {
+    setMsg(null); stopRun.current = false;
+    let done = 0;
+    setCoverRun({ done, waiting: 0 });
+    try {
+      while (done < COVER_RUN_SIZE && !stopRun.current) {
+        const res = await action(1);
+        if (res.retryAfter) { await countdown(res.retryAfter, done); continue; }
+        if (!res.ok) { setMsg(res.error ?? "Failed"); return; }
+        if (res.remaining === 0 && !res.fetched) { setMsg(done ? `${done} cover image${done === 1 ? "" : "s"} done. Every article now has one.` : res.message ?? "All done"); return; }
+        done++;
+        router.refresh();
+        if (res.remaining === 0) { setMsg(`${done} cover image${done === 1 ? "" : "s"} done. Every article now has one.`); return; }
+        if (done < COVER_RUN_SIZE) await countdown(COVER_PULL_GAP_S, done);
+        else setMsg(`${done} cover images done, ${res.remaining ?? "more"} still to do. Press again for the next ${COVER_RUN_SIZE}.`);
+      }
+      if (stopRun.current) setMsg(`Stopped after ${done} cover image${done === 1 ? "" : "s"}.`);
+    } finally { setCoverRun(null); }
+  };
 
   const run = (fn: () => Promise<{ ok: boolean; error?: string; message?: string }>) => {
     setMsg(null);
@@ -51,12 +79,21 @@ export function BlogAdminList({ posts }: { posts: PostRow[] }) {
               <button type="button" onClick={() => run(resyncArticlesAction)} disabled={pending} title="Update existing articles' content from the latest starter text (keeps their publish dates)" className="text-sm font-medium text-teal hover:underline disabled:opacity-50">
                 {pending ? "Working…" : "Re-sync article content"}
               </button>
-              <button type="button" onClick={() => run(() => fetchMissingCoversAction(10))} disabled={pending} title="Fetch self-hosted cover images from Pexels for articles that don't have one (10 at a time)" className="text-sm font-medium text-teal hover:underline disabled:opacity-50">
-                {pending ? "Working…" : "Fetch cover images (10)"}
-              </button>
-              <button type="button" onClick={() => run(() => refreshStaleCoversAction(10))} disabled={pending} title="Replace cover photos that don't match their article's subject any more (10 at a time; run until it says all done)" className="text-sm font-medium text-teal hover:underline disabled:opacity-50">
-                {pending ? "Working…" : "Refresh covers to match articles (10)"}
-              </button>
+              {coverRun ? (
+                <span className="flex items-center gap-2 text-sm text-slate-600" role="status">
+                  {coverRun.waiting > 0 ? `${coverRun.done} of ${COVER_RUN_SIZE} fetched · next in ${coverRun.waiting}s (the photo library allows one every ${COVER_PULL_GAP_S}s)` : `Fetching image ${coverRun.done + 1} of ${COVER_RUN_SIZE}…`}
+                  <button type="button" onClick={() => { stopRun.current = true; }} className="font-medium text-port hover:underline">Stop</button>
+                </span>
+              ) : (
+                <>
+                  <button type="button" onClick={() => void fetchCovers(fetchMissingCoversAction)} disabled={pending} title={`Fetch cover images for articles that don't have one: ${COVER_RUN_SIZE} per press, one every ${COVER_PULL_GAP_S} seconds`} className="text-sm font-medium text-teal hover:underline disabled:opacity-50">
+                    Fetch cover images ({COVER_RUN_SIZE})
+                  </button>
+                  <button type="button" onClick={() => void fetchCovers(refreshStaleCoversAction)} disabled={pending} title={`Replace cover photos that no longer match their article: ${COVER_RUN_SIZE} per press, one every ${COVER_PULL_GAP_S} seconds`} className="text-sm font-medium text-teal hover:underline disabled:opacity-50">
+                    Refresh covers to match articles ({COVER_RUN_SIZE})
+                  </button>
+                </>
+              )}
             </>
           )}
         </div>
