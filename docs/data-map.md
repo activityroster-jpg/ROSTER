@@ -31,14 +31,8 @@ in `docs/retention.md`. Sub-processors in `docs/subprocessors.md`.
 | R2 bucket `activityroster-docs` | Uploaded certificate and vetting documents, keyed by centre | Staff | High | As `compliance_item` | Admins, via authenticated download only |
 
 Held since P0-E (3 October 2026): dates of birth, parent or guardian details and
-encrypted emergency contacts on `instructor`. Held since 9 October 2026:
-`instructor.medical_notes`, a short free-text note of medical conditions the duty
-officer needs in an emergency. This is health data (GDPR special category): it is
-encrypted, optional, shown only to people with the Emergency & guardian contacts
-tick and on the day's emergency sheet, included in the person's data export and
-wiped on erasure; the lawful basis is vital interests and the centre's health and
-safety duty, with the staff member's explicit consent. Not held: student names,
-student medical information, photos. Exports that list children's working patterns (the young-worker
+encrypted emergency contacts on `instructor`. Not held: student names, medical
+information, photos. Exports that list children's working patterns (the young-worker
 time register CSV) and views of guardian or emergency contacts are each written to
 `audit_log`. The `rule_pack` table (control plane) holds legal figures only, no
 personal data.

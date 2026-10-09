@@ -68,7 +68,7 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
   const age = ageOn(instructor.dateOfBirth);
   const canEdit = can(ctx, "staff.edit");
   const canProtected = can(ctx, "protected.view");
-  const contacts = canProtected ? await readProtectedContacts(repos, ctx, instructor) : { guardianName: "", guardianPhone: "", guardianEmail: "", emergencyName: "", emergencyPhone: "", emergencyRelationship: "", medicalNotes: "" };
+  const contacts = canProtected ? await readProtectedContacts(repos, ctx, instructor) : { guardianName: "", guardianPhone: "", guardianEmail: "", emergencyName: "", emergencyPhone: "", emergencyRelationship: "" };
   const guardians = under18 ? await guardianLinksFor(repos, ctx, instructor.id) : [];
   const retention = left && !instructor.anonymisedAt ? await retentionPlan(repos, ctx, settings[0], new Date()) : null;
   const scheduled = retention?.staffDue.find((x) => x.id === instructor.id) ?? null;

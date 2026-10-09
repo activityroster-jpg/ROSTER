@@ -23,7 +23,6 @@ export interface SheetPerson {
   emergencyRelationship: string | null;
   guardianName: string | null;
   guardianPhone: string | null;
-  medicalNotes: string | null;
 }
 export interface SheetSession { courseName: string; slot: string; startAt: number; endAt: number; locations: string[]; staff: SheetPerson[] }
 export interface DaySheet { date: string; sessions: SheetSession[]; onDuty: SheetPerson[]; welfare: Partial<Record<string, string>>; /** False when the viewer lacks "Emergency & guardian contacts": names and roles only. */ contactsShown: boolean }
@@ -59,7 +58,6 @@ export async function getDaySheet(repos: Repositories, ctx: AnyTenantContext, da
       instructorId: i.id, name: i.name, role: "", status: "", phone: i.phone, under18: isUnder18(i.dateOfBirth),
       emergencyName: contactsShown ? await openToken(i.emergencyName) : null, emergencyPhone: contactsShown ? await openToken(i.emergencyPhone) : null, emergencyRelationship: contactsShown ? i.emergencyRelationship : null,
       guardianName: contactsShown ? i.guardianName : null, guardianPhone: contactsShown ? await openToken(i.guardianPhone) : null,
-      medicalNotes: contactsShown ? await openToken(i.medicalNotes) : null,
     };
     people.set(id, p);
     return p;
@@ -88,9 +86,9 @@ export async function getDaySheet(repos: Repositories, ctx: AnyTenantContext, da
 /** One row per person on duty: who they are and who to call. No course details (the roster has those). */
 export function sheetToCsv(sheet: DaySheet): string {
   const esc = (v: string | null | undefined) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-  const rows = [["Date", "Name", "Under 18", "Emergency contact", "Relationship", "Emergency phone", "Guardian", "Guardian phone", "Medical conditions"]];
+  const rows = [["Date", "Name", "Under 18", "Emergency contact", "Relationship", "Emergency phone", "Guardian", "Guardian phone"]];
   for (const p of sheet.onDuty) {
-    rows.push([sheet.date, p.name, p.under18 ? "yes" : "", p.emergencyName ?? "", p.emergencyRelationship ?? "", p.emergencyPhone ?? "", p.guardianName ?? "", p.guardianPhone ?? "", p.medicalNotes ?? ""]);
+    rows.push([sheet.date, p.name, p.under18 ? "yes" : "", p.emergencyName ?? "", p.emergencyRelationship ?? "", p.emergencyPhone ?? "", p.guardianName ?? "", p.guardianPhone ?? ""]);
   }
   return rows.map((r) => r.map(esc).join(",")).join("\r\n") + "\r\n";
 }

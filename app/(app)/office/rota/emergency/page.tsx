@@ -52,7 +52,7 @@ export default async function EmergencySheetPage({ searchParams }: { searchParam
         <div className="overflow-x-auto rounded-card border border-slate-200 bg-white">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500 print:bg-white">
-              <tr><th className="px-4 py-2">Name</th><th className="px-4 py-2">Emergency contact</th><th className="px-4 py-2">Emergency number</th><th className="px-4 py-2">Medical conditions</th></tr>
+              <tr><th className="px-4 py-2">Name</th><th className="px-4 py-2">Emergency contact</th><th className="px-4 py-2">Emergency number</th></tr>
             </thead>
             <tbody>
               {sheet.onDuty.map((p) => (
@@ -66,7 +66,6 @@ export default async function EmergencySheetPage({ searchParams }: { searchParam
                     {!sheet.contactsShown ? <span className="text-slate-400">hidden</span> : p.emergencyPhone ?? <span className="text-port">none</span>}
                     {sheet.contactsShown && p.under18 && p.guardianPhone ? <div className="text-xs text-slate-500">{p.guardianPhone}</div> : null}
                   </td>
-                  <td className="whitespace-pre-line px-4 py-2 text-slate-700">{!sheet.contactsShown ? <span className="text-slate-400">hidden</span> : p.medicalNotes || <span className="text-slate-400">none recorded</span>}</td>
                 </tr>
               ))}
             </tbody>

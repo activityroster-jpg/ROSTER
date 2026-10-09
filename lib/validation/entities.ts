@@ -94,7 +94,6 @@ export const protectedContactsSchema = z.object({
   emergencyName: z.string().trim().max(120).optional().or(z.literal("")),
   emergencyPhone: z.string().trim().max(40).optional().or(z.literal("")),
   emergencyRelationship: z.string().trim().max(60).optional().or(z.literal("")),
-  medicalNotes: z.string().trim().max(500, "Keep medical notes under 500 characters").optional().or(z.literal("")),
 });
 
 export const instructorSchema = z.object({

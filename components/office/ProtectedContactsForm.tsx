@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { addParentalPermissionAction, updateProtectedContactsAction } from "@/app/(app)/office/staff/actions";
 
-export interface ProtectedContactsValues { guardianName: string; guardianPhone: string; guardianEmail: string; emergencyName: string; emergencyPhone: string; emergencyRelationship: string; medicalNotes: string }
+export interface ProtectedContactsValues { guardianName: string; guardianPhone: string; guardianEmail: string; emergencyName: string; emergencyPhone: string; emergencyRelationship: string }
 
 /** Admin-only: emergency contact for everyone, parent or guardian for under-18s. Stored encrypted; every view is logged. */
 export function ProtectedContactsForm({ instructorId, initial, under18, hasPermissionSlot, visibleTo }: { instructorId: string; initial: ProtectedContactsValues; under18: boolean; hasPermissionSlot: boolean; visibleTo?: string }) {
@@ -29,7 +29,6 @@ export function ProtectedContactsForm({ instructorId, initial, under18, hasPermi
           <label className="text-xs font-medium text-slate-500">Emergency contact name<input value={v.emergencyName} onChange={set("emergencyName")} className={field} /></label>
           <label className="text-xs font-medium text-slate-500">Emergency contact phone<input value={v.emergencyPhone} onChange={set("emergencyPhone")} className={field} /></label>
           <label className="text-xs font-medium text-slate-500 sm:col-span-2">Relationship<input value={v.emergencyRelationship} onChange={set("emergencyRelationship")} placeholder="parent, partner, friend" className={field} /></label>
-          <label className="text-xs font-medium text-slate-500 sm:col-span-2">Medical conditions to know about in an emergency<textarea value={v.medicalNotes} onChange={(e) => setV((s) => ({ ...s, medicalNotes: e.target.value }))} rows={2} maxLength={500} placeholder="e.g. asthma, inhaler in kit bag; allergic to penicillin" className={field} /><span className="mt-0.5 block text-[11px] font-normal text-slate-400">Only what a first-aider would need. Stored encrypted and shown on the emergency sheet to people with this permission.</span></label>
           {under18 ? (
             <>
               <label className="text-xs font-medium text-slate-500">Parent / guardian name<input value={v.guardianName} onChange={set("guardianName")} className={field} /></label>
@@ -46,7 +45,6 @@ export function ProtectedContactsForm({ instructorId, initial, under18, hasPermi
         <dl className="grid gap-x-6 gap-y-1 text-sm sm:grid-cols-2">
           <div><dt className="text-xs text-slate-500">Emergency contact</dt><dd className="text-navy">{initial.emergencyName || "–"}{initial.emergencyRelationship ? ` (${initial.emergencyRelationship})` : ""}</dd></div>
           <div><dt className="text-xs text-slate-500">Emergency phone</dt><dd className="text-navy">{initial.emergencyPhone || "–"}</dd></div>
-          <div className="sm:col-span-2"><dt className="text-xs text-slate-500">Medical conditions</dt><dd className="whitespace-pre-line text-navy">{initial.medicalNotes || "None recorded"}</dd></div>
           {under18 ? (
             <>
               <div><dt className="text-xs text-slate-500">Parent / guardian</dt><dd className="text-navy">{initial.guardianName || "–"}</dd></div>

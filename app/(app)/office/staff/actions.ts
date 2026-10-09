@@ -386,7 +386,6 @@ export async function updateProtectedContactsAction(instructorId: string, input:
     emergencyName: await seal(d.emergencyName),
     emergencyPhone: await seal(d.emergencyPhone),
     emergencyRelationship: d.emergencyRelationship?.trim() || null,
-    medicalNotes: await seal(d.medicalNotes),
   };
   await repos.tenant.instructor.update(ctx, instructorId, patch);
   const changed = (Object.keys(patch) as (keyof typeof patch)[]).filter((k) => (patch[k] ?? null) !== (before[k] ?? null));

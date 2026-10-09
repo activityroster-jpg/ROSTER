@@ -18,7 +18,7 @@ processors in `docs/subprocessors.md`.
 
 - Purpose: safe, lawful staffing of water-based activities (ratios, qualifications, safety cover) and employment administration.
 - Lawful bases (centre): contract with staff; legal obligation (working time, RYA recognition, safeguarding); legitimate interests (operational records).
-- Minimisation: no student medical data; staff medical notes are optional, short, encrypted and limited to emergency use (see risk table); no student personal data, no photos; headcounts instead of names; configuration data separate from personal data; unused `booking` table scheduled for removal.
+- Minimisation: no medical data, no student personal data, no photos; headcounts instead of names; configuration data separate from personal data; unused `booking` table scheduled for removal.
 - Retention: `docs/retention.md`.
 - Rights: export, correction and deletion via the centre; public request form; privacy notices linked in-app; template notices for centres.
 
@@ -34,7 +34,6 @@ processors in `docs/subprocessors.md`.
 | Over-retention | Medium | Medium | Documented defaults; *planned Phase 2:* per-centre retention settings and scheduled deletion | Medium until Phase 2 |
 | Email misdelivery or interception | Low | Medium | Minimal content in emails, links into the app, authenticated domain, planned separate subdomains | Low |
 | Unlawful young-worker hours rostered | Medium | Medium | *Planned P0-F:* rules engine with jurisdiction packs, block-with-override default, disclaimer that the centre remains responsible | Low after P0-F |
-| Exposure of staff medical notes (health data) | Low | High | Optional field; encrypted at rest; visible only with the Emergency & guardian contacts tick and on the emergency sheet, where each view and print is logged; included in export, wiped on erasure; centre collects with explicit consent | Low |
 | B2B outreach contacting the wrong people | Low | Low | Prospect list separate from users; business contacts only; suppression list; sender identity and opt-out in every email | Low |
 
 ## 4. Consultation
