@@ -1,5 +1,6 @@
 "use client";
 
+import { askConfirm } from "@/lib/ui/ask-confirm";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { renameLocationCategoryAction, setLocationCategoryActiveAction } from "@/app/(app)/office/locations/actions";
@@ -37,7 +38,7 @@ export function LocationCategoryHeader({ id, name, count }: { id: string; name: 
       <h3 className="font-semibold text-navy">{name} <span className="ml-1 text-xs font-normal text-slate-400">{count}</span></h3>
       <span className="flex flex-none items-center gap-2">
         <button type="button" onClick={() => setEditing(true)} className="text-xs text-slate-400 hover:text-navy">Edit</button>
-        <button type="button" disabled={pending} onClick={() => { if (confirm(`Retire the "${name}" category? Its locations stay, under "Uncategorised".`)) run(() => setLocationCategoryActiveAction(id, false)); }} className="text-xs text-slate-400 hover:text-navy">Retire</button>
+        <button type="button" disabled={pending} onClick={async () => { if (await askConfirm(`Retire the "${name}" category? Its locations stay, under "Uncategorised".`)) run(() => setLocationCategoryActiveAction(id, false)); }} className="text-xs text-slate-400 hover:text-navy">Retire</button>
       </span>
     </div>
   );

@@ -23,10 +23,11 @@ const STEPS: Record<InviteKind, string[]> = {
   instructor: [
     "Set a password and a 4-digit PIN.",
     "Mark the days you're free, so the office can roster you.",
-    "Upload your certificates (first aid, RYA tickets and so on).",
+    "Upload your certificates (first aid, RYA licences and so on).",
   ],
   office: [
-    "Set a password and a 4-digit PIN.",
+    "Create your account: your name and a password (no account needed beforehand).",
+    "Confirm with the code we email you, and choose a 4-digit PIN.",
     "Open the office. You'll see the parts your superadmin has ticked for you.",
     "Have a look round the roster and staff list.",
   ],
@@ -44,10 +45,10 @@ export function inviteEmail(input: InviteEmailInput): { subject: string; html: s
     html: `
       <p>Hello,</p>
       <p>${escapeHtml(who(input))} has invited you to ActivityRoster, the system ${c} uses for ${input.kind === "office" ? "the roster, staff and courses" : "the instructor roster"}.</p>
-      <p><a href="${input.url ?? input.signInUrl}" style="display:inline-block;background:#0C6B74;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none">Accept the invitation</a></p>
+      <p><a href="${input.url ?? input.signInUrl}" style="display:inline-block;background:#0C6B74;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none">Accept and create your account</a></p>
       <p style="margin-bottom:4px"><strong>What happens next</strong></p>
       <ol style="margin-top:0;padding-left:20px">${steps}</ol>
-      <p style="color:#64748b;font-size:12px">The button works once and only for a short while. If it has expired, open <a href="${input.signInUrl}">${escapeHtml(input.signInUrl.replace(/^https?:\/\//, "").replace(/\?.*$/, ""))}</a>, enter ${escapeHtml(input.email)} and choose “Email me a sign-in link”.</p>
+      <p style="color:#64748b;font-size:12px">The button works once and only for a short while. If it has expired, open <a href="${input.signInUrl}">${escapeHtml(input.signInUrl.replace(/^https?:\/\//, "").replace(/\?.*$/, ""))}</a>, enter ${escapeHtml(input.email)} and choose “Set up your account”.</p>
       <p style="color:#64748b;font-size:12px">Not expecting this? You can ignore it; nothing happens unless you accept.</p>
     `,
   };

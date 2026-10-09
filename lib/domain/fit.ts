@@ -2,7 +2,7 @@
  * Fit-to-roster: can this instructor be assigned?
  *
  * The RYA rule mirrored here: an instructor with ANY expired *mandatory*
- * compliance check (e.g. first aid) is BLOCKED from assignment — a ticket
+ * compliance check (e.g. first aid) is BLOCKED from assignment — a licence
  * lapses if first aid isn't current. Which checks are mandatory depends on the
  * org's jurisdiction + role, expressed as data (compliance_type.mandatory), not
  * code. Non-mandatory expiries are surfaced as warnings, not blocks.

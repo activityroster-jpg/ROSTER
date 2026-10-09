@@ -15,7 +15,7 @@
  */
 export function qualTeachDiscipline(qualName: string): string | null {
   const n = qualName.toLowerCase();
-  // Not lead-teaching tickets → never auto-preselect courses.
+  // Not lead-teaching licences → never auto-preselect courses.
   if (/assistant/.test(n)) return null;
   if (/safety boat/.test(n)) return null;
   if (/first aid/.test(n)) return null;
@@ -34,7 +34,7 @@ export function qualTeachDiscipline(qualName: string): string | null {
 /**
  * The discipline a COURSE belongs to, or null when uncertain. Uses the RYA
  * scheme/category first (most reliable), then the name. Racing and Sailability
- * return null on purpose — they need a specialist ticket, so we don't preselect.
+ * return null on purpose — they need a specialist licence, so we don't preselect.
  */
 export function courseTeachDiscipline(c: { name: string; scheme?: string | null; category?: string | null }): string | null {
   const scheme = (c.scheme ?? "").toLowerCase();

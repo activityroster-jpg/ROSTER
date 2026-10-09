@@ -5,7 +5,7 @@ import { signIn, authClient } from "@/lib/auth/client";
 import { twoFactorHintAction } from "./actions";
 import { Turnstile } from "@/components/auth/Turnstile";
 
-type Mode = "link" | "password";
+type Mode = "link" | "password" | "setup";
 
 export default function SignInPage() {
   const [mode, setMode] = useState<Mode>("password");
@@ -38,7 +38,7 @@ export default function SignInPage() {
     if (q.get("expired") === "1") setExpired(true);
     // From an invitation or its reminder: their address filled in, ready for a fresh link.
     const em = q.get("email");
-    if (em && em.length <= 200 && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) { setEmail(em); setMode("link"); }
+    if (em && em.length <= 200 && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) { setEmail(em); setMode("setup"); }
   }, []);
   const pickMode = (m: Mode) => { setMode(m); try { window.localStorage.setItem("ar.signin.mode", m); } catch { /* ignore */ } };
 
@@ -48,7 +48,9 @@ export default function SignInPage() {
     if (!email) { setError("Enter your email first."); return; }
     setBusy(true);
     try {
-      const res = await signIn.magicLink({ email, callbackURL: after });
+      // Setting up an account: the link confirms the email, then /welcome asks for a name and password.
+      const target = mode === "setup" ? `/welcome?next=${encodeURIComponent(isPortal ? (next.startsWith("/go") ? "/portal" : next) : "/office")}` : after;
+      const res = await signIn.magicLink({ email, callbackURL: target });
       if (res.error) setError(res.error.message ?? "Could not send link");
       else setSent(true);
     } finally { setBusy(false); }
@@ -104,8 +106,9 @@ export default function SignInPage() {
           <p className="text-3xl">📩</p>
           <h1 className="mt-2 font-display text-xl font-semibold text-navy">Check your email</h1>
           <p className="mt-2 text-sm text-slate-600">
-            We&apos;ve sent a sign-in link to <span className="font-medium text-navy">{email}</span>. Click it to come
-            straight in — no password needed.
+            {mode === "setup"
+              ? <>We&apos;ve sent a link to <span className="font-medium text-navy">{email}</span>. Click it to confirm your email, then choose your password.</>
+              : <>We&apos;ve sent a sign-in link to <span className="font-medium text-navy">{email}</span>. Click it to come straight in — no password needed.</>}
           </p>
           <button onClick={() => { setSent(false); setNote(null); }} className="mt-4 text-sm font-medium text-teal hover:underline">Use a different email</button>
         </div>
@@ -115,12 +118,23 @@ export default function SignInPage() {
 
   return (
     <div className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-4">
-      <h1 className="mb-1 font-display text-2xl font-semibold text-navy">{isPortal ? "Instructor sign in" : "Sign in"}</h1>
-      <p className="mb-6 text-sm text-slate-500">{isPortal ? "Enter your email and password to open your portal." : "Enter your email and password. We'll then email you a code to confirm it's you."}</p>
+      <h1 className="mb-1 font-display text-2xl font-semibold text-navy">{mode === "setup" ? "Set up your account" : isPortal ? "Instructor sign in" : "Sign in"}</h1>
+      <p className="mb-6 text-sm text-slate-500">{mode === "setup" ? "Been invited to a centre? Enter your email and we'll send a link to confirm it. Then you'll choose your password." : isPortal ? "Enter your email and password to open your portal." : "Enter your email and password. We'll then email you a code to confirm it's you."}</p>
       {expired ? <p role="status" className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">You were signed out after a while away. Sign in again to carry on.</p> : null}
 
       <div className="rounded-card border border-slate-200 bg-white p-5">
-        {mode === "link" ? (
+        {mode === "setup" ? (
+          <form onSubmit={sendLink} className="space-y-3">
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@yourcentre.com" required autoComplete="email" className="w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-teal" />
+            {error ? <p className="text-sm text-port">{error}</p> : null}
+            <button type="submit" disabled={busy} className="w-full rounded-lg bg-teal px-4 py-2.5 font-semibold text-white hover:bg-teal-700 disabled:opacity-50">
+              {busy ? "Sending…" : "Email me a set-up link"}
+            </button>
+            <button type="button" onClick={() => { pickMode("password"); setError(null); }} className="w-full text-center text-sm font-medium text-slate-500 hover:text-navy">
+              Already have a password? Sign in
+            </button>
+          </form>
+        ) : mode === "link" ? (
           <form onSubmit={sendLink} className="space-y-3">
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@yourcentre.com" required autoComplete="email" className="w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-teal" />
             {error ? <p className="text-sm text-port">{error}</p> : null}
@@ -150,6 +164,11 @@ export default function SignInPage() {
         )}
       </div>
 
+      {mode !== "setup" ? (
+        <button type="button" onClick={() => { setMode("setup"); setError(null); setNote(null); }} className="mt-4 w-full rounded-card border border-teal/30 bg-teal/5 px-4 py-3 text-left text-sm text-navy hover:bg-teal/10">
+          <span className="font-semibold">First time here, or been invited?</span> <span className="text-teal">Set up your account →</span>
+        </button>
+      ) : null}
       <p className="mt-4 text-center text-xs text-slate-400">Forgot your PIN? Get in with a sign-in link above, then reset it from the PIN screen.</p>
     </div>
   );

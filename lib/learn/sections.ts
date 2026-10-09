@@ -205,7 +205,7 @@ export const SECTIONS: Section[] = [
       { kind: "steps", items: [
         "Open “Add with all details”, then enter their name and (optionally) email.",
         "Pick their employment type — employed, freelance or volunteer. Need a different one? Add a custom job/instructor type inline.",
-        "Tick the qualifications/tickets they hold and the courses they can teach (a searchable tickbox list).",
+        "Tick the qualifications/licences they hold and the courses they can teach (a searchable tickbox list).",
         "Save. If you gave an email, they're automatically invited to the instructor app to upload their own certs.",
         "An invite shows as “Invited today”, “Invited 3 days ago” and so on until they open it. Access to your centre only starts when the invited person signs in, so a mistyped address can't let the wrong account in.",
         "The invitation email names your centre and who sent it, and lists what to do first. If they haven't signed in a day later, they get one reminder, and nothing more. “Re-send invite” sends a fresh one and starts that day again.",
@@ -230,7 +230,7 @@ export const SECTIONS: Section[] = [
       { kind: "sub", text: "How messy data is handled" },
       { kind: "bullets", items: [
         "Rows without a name are skipped, never guessed.",
-        "Qualifications/tickets and courses-they-can-teach are matched to your catalogue by name; anything it doesn't recognise is ignored so you don't get junk — add those on each profile later.",
+        "Qualifications/licences and courses-they-can-teach are matched to your catalogue by name; anything it doesn't recognise is ignored so you don't get junk — add those on each profile later.",
         "Employment type is read loosely (e.g. 'casual' → freelance) and defaults to employed.",
       ] },
       { kind: "tip", text: "Start simple: a sheet of just names and emails is enough to get everyone in and invited — you can fill in certs and courses afterwards." },
@@ -392,7 +392,7 @@ export const SECTIONS: Section[] = [
       { kind: "bullets", items: [
         "Click any session to see who's on it (confirmed, unconfirmed, can't make it, this day only), the roles still open and the week's problems for that session.",
         "Add someone: the picker shows their availability for that slot, whether they're cleared to roster, whether their qualifications cover the course type and, for under-18s, the young-worker hours result. On a multi-day course choose “This day only” or “Whole course”.",
-        "Remove, or on a multi-day course “skip this day”. A block (Busy, clash, cert, qualification) can be overridden with a note, which is recorded.",
+        "Remove, or on a multi-day course “skip this day”. A block (Busy, clash, cert, qualification) can be overridden, and the override is recorded.",
         "“Print view” keeps the three printable templates, the PDF and the emergency sheet.",
       ] },
       { kind: "tip", text: "Green dot = Free, amber = Maybe, red = Busy, faint red = hasn't answered (counts as Busy), grey = not asked yet (beyond the availability window)." },
@@ -425,7 +425,7 @@ export const SECTIONS: Section[] = [
       { kind: "steps", items: [
         "Pick the instructor and the role.",
         "Filter the course list (all / youth / adult / needs cover) and tick the courses — or “select all shown”.",
-        "Optionally tick “assign anyway” with a reason to override checks.",
+        "Optionally tick “assign anyway” to override checks (the override is recorded in the change log).",
         "Assign. You get a summary: how many were assigned, how many they were already on, and how many were skipped and why.",
       ] },
       { kind: "tip", text: "Bulk assign runs the same safety checks as a single assignment, and never double-books — a course they're already on is left untouched." },
@@ -455,7 +455,7 @@ export const SECTIONS: Section[] = [
         "Instructors see their own in the app (rostered while Busy, on leave, or on two courses at once) with a link to fix their availability.",
         "After you move or add a session, the message tells you straight away who it now clashes with.",
       ] },
-      { kind: "tip", text: "Red items block rostering (an override with a note was used, or something changed later); amber ones are warnings. Click the course name to sort it out." },
+      { kind: "tip", text: "Red items block rostering (an override was used, or something changed later); amber ones are warnings. Click the course name to sort it out." },
     ],
   },
   {

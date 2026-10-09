@@ -29,7 +29,6 @@ export async function createOpenShiftAction(courseSessionId: string, roleTypeId:
 export async function confirmOpenShiftAction(shiftId: string, override?: { note: string }): Promise<Result> {
   const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const note = override?.note?.trim();
-  if (override && !note) return { ok: false, error: "Add a reason to override the checks" };
   const res = await confirmOpenShift(repos, ctx, shiftId, override ? { override: true, overrideNote: note } : {});
   if (!res.ok) return { ok: false, error: res.reason === "blocked" ? `${res.detail}. Tick “confirm anyway” to override.` : res.detail };
   revalidatePath("/office/leave");

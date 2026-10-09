@@ -212,11 +212,11 @@ Get this right and most of the other safety systems have something solid to stan
     slug: "tracking-instructor-qualifications-and-expiry-dates",
     title: "Tracking Instructor Qualifications and Expiry Dates",
     category: CAT,
-    excerpt: "An expired first-aid certificate can ground an instructor. How to keep every ticket current without the last-minute panic.",
+    excerpt: "An expired first-aid certificate can ground an instructor. How to keep every licence current without the last-minute panic.",
     tags: ["qualifications", "compliance", "records"],
     coverEmoji: "🎫",
     imageQuery: "certificates folder records office desk",
-    body: `Every instructor at your centre is a bundle of expiring documents. Their RYA instructor qualification needs revalidating on a cycle. Their first aid certificate lasts a fixed term. Their safeguarding training has a shelf life. Their criminal records check may need renewing. Their powerboat and safety boat tickets, their coach qualifications, their RYA membership, their right to work documents, their driving licence for towing: each has a date after which the person cannot do part of their job. Lose track of one and an instructor is grounded on a busy day, a session breaches the ratio, or an inspector finds a gap. This article covers how to keep every ticket current without heroic effort.
+    body: `Every instructor at your centre is a bundle of expiring documents. Their RYA instructor qualification needs revalidating on a cycle. Their first aid certificate lasts a fixed term. Their safeguarding training has a shelf life. Their criminal records check may need renewing. Their powerboat and safety boat licences, their coach qualifications, their RYA membership, their right to work documents, their driving licence for towing: each has a date after which the person cannot do part of their job. Lose track of one and an instructor is grounded on a busy day, a session breaches the ratio, or an inspector finds a gap. This article covers how to keep every licence current without heroic effort.
 
 ## Know what you are tracking
 

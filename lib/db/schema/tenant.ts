@@ -359,6 +359,8 @@ export const instructor = sqliteTable("instructor", {
   emergencyName: text("emergency_name"),
   emergencyPhone: text("emergency_phone"),
   emergencyRelationship: text("emergency_relationship"),
+  /** Medical conditions the safety boat should know about (health data: special category). Sealed (AES-GCM) at rest, shown only with the emergency-contacts permission. */
+  medicalNotes: text("medical_notes"),
   // --- Per-person data rights (compliance P1-A) ------------------------------
   /** Restriction of processing (GDPR art. 18): kept but not rostered or contacted while set. */
   restrictedAt: integer("restricted_at", { mode: "timestamp_ms" }),

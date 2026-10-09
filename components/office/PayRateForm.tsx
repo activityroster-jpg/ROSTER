@@ -1,5 +1,6 @@
 "use client";
 
+import { askConfirm } from "@/lib/ui/ask-confirm";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { deletePayRateAction, setPayRateAction } from "@/app/(app)/office/staff/actions";
@@ -50,7 +51,7 @@ export function PayRateForm({ instructorId, rates, roles, currency }: { instruct
           </select>
         </label>
         <button type="button" disabled={pending || amount === ""} onClick={() => run(() => setPayRateAction(instructorId, { roleTypeId: null, unit, rate: Number(amount), applyFrom: applyOn ? applyFrom : null }))} className="rounded-lg bg-teal px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{base ? "Update" : "Set rate"}</button>
-        {base ? <button type="button" disabled={pending} onClick={() => { if (confirm("Remove this rate? Their pay will show as blank until a new one is set.")) run(() => deletePayRateAction(base.id)); }} className="text-xs text-slate-400 hover:text-port">Remove</button> : null}
+        {base ? <button type="button" disabled={pending} onClick={async () => { if (await askConfirm("Remove this rate? Their pay will show as blank until a new one is set.")) run(() => deletePayRateAction(base.id)); }} className="text-xs text-slate-400 hover:text-port">Remove</button> : null}
       </div>
       <label className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
         <input type="checkbox" checked={applyOn} onChange={(e) => setApplyOn(e.target.checked)} className="h-4 w-4 rounded border-slate-300" />

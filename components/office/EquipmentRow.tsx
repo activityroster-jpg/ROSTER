@@ -1,5 +1,6 @@
 "use client";
 
+import { askConfirm } from "@/lib/ui/ask-confirm";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { deleteOrRetireEquipmentAction, setEquipmentMaintenanceAction, setEquipmentUnitStatusAction } from "@/app/(app)/office/equipment/actions";
@@ -24,10 +25,13 @@ export function EquipmentRow({ row }: { row: EquipmentUnitRow }) {
     setMsg(r.ok ? null : r.error ?? "Failed");
     router.refresh();
   });
-  const remove = () => {
+  const remove = async () => {
     const q = row.referenced ? `Retire "${row.name}"? Courses that used it keep showing it; it won't be offered for new ones.` : `Delete "${row.name}"? No course has used it, so it goes for good.`;
-    if (!confirm(q)) return;
-    start(async () => { const r = await deleteOrRetireEquipmentAction(row.id); setMsg(r.ok ? r.message ?? null : r.error ?? "Failed"); router.refresh(); });
+    if (!await askConfirm(q)) return;
+    start(async () => {
+      try { const r = await deleteOrRetireEquipmentAction(row.id); setMsg(r.ok ? r.message ?? null : r.error ?? "Failed"); router.refresh(); }
+      catch { setMsg("That didn't save. Reload the page and try again."); }
+    });
   };
   return (
     <tr className={retired ? "text-slate-400" : ""}>

@@ -1,5 +1,6 @@
 "use client";
 
+import { askConfirm } from "@/lib/ui/ask-confirm";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createPostAction, updatePostAction, deletePostAction, type BlogResult } from "@/app/admin/blog/actions";
@@ -40,9 +41,9 @@ export function PostEditor({ initial }: { initial: PostInitial }) {
     });
   };
 
-  const remove = () => {
+  const remove = async () => {
     if (!initial.id) return;
-    if (!confirm("Delete this post permanently?")) return;
+    if (!await askConfirm("Delete this post permanently?")) return;
     start(async () => {
       const res = await deletePostAction(initial.id!);
       if (res.ok) router.push("/admin/blog");

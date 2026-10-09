@@ -1,5 +1,6 @@
 "use client";
 
+import { askConfirm } from "@/lib/ui/ask-confirm";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { resetRulePackAction, saveRulePackAction } from "@/app/admin/rules/actions";
@@ -31,7 +32,7 @@ export function RulePackEditor({ packs }: { packs: PackView[] }) {
     if (r.ok) { setEditing(null); router.refresh(); }
   });
   const reset = (key: string) => start(async () => {
-    if (!confirm("Discard the edited figures and go back to the built-in pack?")) return;
+    if (!await askConfirm("Discard the edited figures and go back to the built-in pack?")) return;
     const r = await resetRulePackAction(key);
     setMsg({ key, ok: r.ok, text: r.error ?? r.message ?? "" });
     router.refresh();

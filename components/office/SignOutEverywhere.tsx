@@ -1,5 +1,6 @@
 "use client";
 
+import { askConfirm } from "@/lib/ui/ask-confirm";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { signOutEverywhereAction } from "@/app/(app)/security/actions";
@@ -13,7 +14,7 @@ export function SignOutEverywhere() {
     <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-slate-100 pt-3">
       <button
         disabled={pending}
-        onClick={() => { if (confirm("Sign out every other device? They will each need to sign in and confirm again.")) start(async () => { const r = await signOutEverywhereAction(); setMsg(r.ok ? r.message ?? "Done" : r.error ?? "Failed"); router.refresh(); }); }}
+        onClick={async () => { if (await askConfirm("Sign out every other device? They will each need to sign in and confirm again.")) start(async () => { const r = await signOutEverywhereAction(); setMsg(r.ok ? r.message ?? "Done" : r.error ?? "Failed"); router.refresh(); }); }}
         className="rounded-lg border border-port/40 px-3 py-1.5 text-sm font-medium text-port hover:bg-port/5 disabled:opacity-50"
       >
         {pending ? "Signing out…" : "Sign out all other devices"}

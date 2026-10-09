@@ -1,5 +1,6 @@
 "use client";
 
+import { askConfirm } from "@/lib/ui/ask-confirm";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { parentDecideAction } from "@/app/(app)/parent/actions";
@@ -8,9 +9,9 @@ import { parentDecideAction } from "@/app/(app)/parent/actions";
 export function ParentDecision({ linkId, childName, centreName, decision, decidedAt }: { linkId: string; childName: string; centreName: string; decision: string | null; decidedAt: string | null }) {
   const router = useRouter();
   const [pending, start] = useTransition();
-  const decide = (d: "approved" | "declined" | "withdrawn") => {
+  const decide = async (d: "approved" | "declined" | "withdrawn") => {
     const q = d === "approved" ? `Approve ${childName} working at ${centreName}?` : d === "declined" ? `Decline? ${centreName} will not roster ${childName} until you approve.` : `Withdraw your approval? ${centreName} will stop rostering ${childName} from now on.`;
-    if (!confirm(q)) return;
+    if (!await askConfirm(q)) return;
     start(async () => { await parentDecideAction(linkId, d); router.refresh(); });
   };
   const when = decidedAt ? new Date(decidedAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) : null;

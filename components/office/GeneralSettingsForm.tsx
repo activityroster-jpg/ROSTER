@@ -154,7 +154,7 @@ export function GeneralSettingsForm({
         <label className="block text-sm text-slate-600">
           <span className="mb-1 block text-xs font-medium text-slate-500">When rostering an under-18 would break their hour, rest or start/finish rules</span>
           <select name="workingTimeMode" defaultValue={workingTimeMode} className="w-full max-w-md rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal">
-            <option value="block_override">Block it, but let an admin override with a note (recommended; the override is recorded)</option>
+            <option value="block_override">Block it, but let an admin override (recommended; the override is recorded)</option>
             <option value="block">Block it outright (no override)</option>
             <option value="warn">Warn only (still recorded against the assignment)</option>
           </select>
@@ -193,7 +193,7 @@ export function GeneralSettingsForm({
       <SectionForm section="checks" title="Checks when rostering">
         <p className="mb-2 text-xs text-slate-400">
           Cert expiry is always shown on the Instructors tab. These decide what the Courses tab stops you doing as you roster
-          (you can always override with a note).
+          (you can always override).
         </p>
         <div className="grid gap-2 sm:grid-cols-3">
           <label className="flex items-start gap-2 text-sm text-slate-600">

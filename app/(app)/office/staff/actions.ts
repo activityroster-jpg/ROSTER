@@ -13,14 +13,15 @@ import { requireTenant } from "@/lib/tenant/require";
 import { getAuth } from "@/lib/auth";
 import { dobSchema, protectedContactsSchema, instructorSchema, complianceItemSchema, qualificationSchema } from "@/lib/validation/entities";
 import { writeAudit } from "@/lib/services/audit";
-import { idSchema, managedBySchema } from "@/lib/validation/actions";
+import { idSchema, managedBySchema, staffLicenceSchema, teachableCoursesSchema } from "@/lib/validation/actions";
 import { hasFreshStepUp } from "@/lib/auth/step-up-server";
 import { deleteInstructorIfUnreferenced } from "@/lib/services/retire";
 import { linkInstructorUser } from "@/lib/services/invite";
 import { toggleOnboarding } from "@/lib/services/hr";
 import { instructorCapState, capUpgradeMessage } from "@/lib/tenant/limits";
 import { apexDomain } from "@/lib/config";
-import { EMPLOYMENT_TYPES, PAY_UNITS, type EmploymentType, type PayUnit } from "@/lib/db/schema";
+import { EMPLOYMENT_TYPES, PAY_UNITS, instructorCourseType as instructorCourseTypeTable, type EmploymentType, type PayUnit } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 import { deletePayRate, setPayRate } from "@/lib/services/pay-rates";
 import { applyRateToUnapprovedLines, rebuildHoursFromRoster } from "@/lib/services/hours";
 import { z } from "zod";
@@ -68,7 +69,7 @@ export async function setupInstructorAction(_prev: ActionState, formData: FormDa
   const validCourses = new Set((await repos.tenant.courseType.list(ctx)).map((c) => c.id));
   for (const cid of courseIds) if (validCourses.has(cid)) await repos.tenant.instructorCourseType.insert(ctx, { instructorId: instructor.id, courseTypeId: cid });
 
-  // Required licences (tickets) → placeholder qualification rows to upload against.
+  // Required licences (licences) → placeholder qualification rows to upload against.
   const validQuals = new Set((await repos.tenant.qualificationType.list(ctx)).map((q) => q.id));
   for (const qid of qualIds) if (validQuals.has(qid)) {
     await repos.tenant.qualification.insert(ctx, { instructorId: instructor.id, qualificationTypeId: qid, certNo: null, issueDate: null, expiryDate: null, verified: false });
@@ -385,6 +386,7 @@ export async function updateProtectedContactsAction(instructorId: string, input:
     emergencyName: await seal(d.emergencyName),
     emergencyPhone: await seal(d.emergencyPhone),
     emergencyRelationship: d.emergencyRelationship?.trim() || null,
+    medicalNotes: await seal(d.medicalNotes),
   };
   await repos.tenant.instructor.update(ctx, instructorId, patch);
   const changed = (Object.keys(patch) as (keyof typeof patch)[]).filter((k) => (patch[k] ?? null) !== (before[k] ?? null));
@@ -509,4 +511,38 @@ export async function setManagedByAction(input: unknown): Promise<{ ok: boolean;
   revalidatePath("/office/staff");
   revalidatePath("/office/availability");
   return { ok: true };
+}
+
+/** The office records a licence someone holds (from their staff page). Both ids must be this centre's. */
+export async function addStaffLicenceAction(input: unknown): Promise<{ ok: boolean; error?: string }> {
+  const { ctx, repos } = await requireTenant({ permission: "staff.edit" });
+  const parsed = staffLicenceSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Pick a licence" };
+  const [person, type] = await Promise.all([repos.tenant.instructor.findById(ctx, parsed.data.instructorId), repos.tenant.qualificationType.findById(ctx, parsed.data.qualificationTypeId)]);
+  if (!person || !type) return { ok: false, error: "Not found" };
+  const created = await repos.tenant.qualification.insert(ctx, { instructorId: person.id, qualificationTypeId: type.id, certNo: null, expiryDate: parsed.data.expiryDate ?? null, verified: false });
+  await writeAudit(repos, ctx, { action: "create", entity: "qualification", entityId: created.id, after: { instructorId: person.id, licence: type.name, expiryDate: created.expiryDate } });
+  revalidatePath(`/office/staff/${person.id}`);
+  revalidatePath("/office/staff");
+  return { ok: true };
+}
+
+/** The office sets which course types someone can teach (replaces the list). Only this centre's course types count. */
+export async function setTeachableCoursesAction(input: unknown): Promise<{ ok: boolean; error?: string; message?: string }> {
+  const { ctx, repos } = await requireTenant({ permission: "staff.edit" });
+  const parsed = teachableCoursesSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Please check the list" };
+  const person = await repos.tenant.instructor.findById(ctx, parsed.data.instructorId);
+  if (!person) return { ok: false, error: "Not found" };
+  const valid = new Set((await repos.tenant.courseType.list(ctx)).map((c) => c.id));
+  const wanted = new Set(parsed.data.courseTypeIds.filter((id) => valid.has(id)));
+  const current = await repos.tenant.instructorCourseType.list(ctx, eq(instructorCourseTypeTable.instructorId, person.id));
+  const have = new Set(current.map((r) => r.courseTypeId));
+  for (const r of current) if (!wanted.has(r.courseTypeId)) await repos.tenant.instructorCourseType.delete(ctx, r.id);
+  const add = [...wanted].filter((id) => !have.has(id));
+  if (add.length) await repos.tenant.instructorCourseType.insertMany(ctx, add.map((courseTypeId) => ({ instructorId: person.id, courseTypeId })));
+  await writeAudit(repos, ctx, { action: "set_teachable_courses", entity: "instructor", entityId: person.id, after: { count: wanted.size } });
+  revalidatePath(`/office/staff/${person.id}`);
+  revalidatePath("/office/staff");
+  return { ok: true, message: `Saved: ${wanted.size} course${wanted.size === 1 ? "" : "s"}` };
 }

@@ -25,7 +25,7 @@ export async function inviteOfficeAdminAction(input: { name: string; email: stri
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Check the details" };
   const r = await inviteOfficeAdmin(repos, ctx, parsed.data);
   if (!r.ok) return r;
-  const sent = await sendInvite(repos, ctx, { email: r.email, userId: r.userId, kind: "office", centreName: organisation.name, slug: organisation.slug, callbackPath: "/office" });
+  const sent = await sendInvite(repos, ctx, { email: r.email, userId: r.userId, kind: "office", centreName: organisation.name, slug: organisation.slug, callbackPath: "/welcome?next=/office" });
   revalidatePath("/office/staff");
   return { ok: true, message: r.alreadyMember ? `Office access updated for ${r.email}` : sent === "queued" ? `Invite for ${r.email}: ${QUEUED_NOTE}` : `Invite sent to ${r.email}` };
 }

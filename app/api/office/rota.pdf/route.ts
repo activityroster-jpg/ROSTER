@@ -28,7 +28,16 @@ export async function GET(req: Request) {
   const fromQ = sp.get("from");
   const bounds = rangeBounds(range, fromQ && ISO.test(fromQ) ? fromQ : londonToday());
   const days = await getRotaDays(repos, ctx, bounds.from, bounds.days);
-  const pdf = await renderRotaPdf({ centreName: organisation.name, title: bounds.title, days, template: { ...saved, range, orientation }, timeZone: settings?.timezone ?? "Europe/London" });
+  // Most experienced first: the highest licence they hold, then how many they hold.
+  const [quals, qualTypes] = await Promise.all([repos.tenant.qualification.list(ctx), repos.tenant.qualificationType.list(ctx)]);
+  const rank = new Map(qualTypes.map((q) => [q.id, q.rank]));
+  const seniority = new Map<string, number>();
+  for (const q of quals) {
+    const r = rank.get(q.qualificationTypeId) ?? 0;
+    const prev = seniority.get(q.instructorId) ?? 0;
+    seniority.set(q.instructorId, Math.max(Math.floor(prev / 1000) * 1000, r * 1000) + (prev % 1000) + 1);
+  }
+  const pdf = await renderRotaPdf({ centreName: organisation.name, title: bounds.title, days, template: { ...saved, range, orientation }, timeZone: settings?.timezone ?? "Europe/London", seniority });
   await writeAudit(repos, ctx, { action: "export_rota_pdf", entity: "roster_week", after: { range, from: bounds.from, days: bounds.days, orientation } });
   const name = `${ctx.slug}-rota-${range}-${bounds.from}.pdf`;
   return new Response(pdf as unknown as BodyInit, {

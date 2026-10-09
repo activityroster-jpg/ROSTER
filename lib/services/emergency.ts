@@ -1,5 +1,4 @@
 import { can } from "@/lib/auth/rbac";
-import { fmtWallTime } from "@/lib/domain";
 import { and, gte, lt } from "drizzle-orm";
 import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
@@ -24,6 +23,7 @@ export interface SheetPerson {
   emergencyRelationship: string | null;
   guardianName: string | null;
   guardianPhone: string | null;
+  medicalNotes: string | null;
 }
 export interface SheetSession { courseName: string; slot: string; startAt: number; endAt: number; locations: string[]; staff: SheetPerson[] }
 export interface DaySheet { date: string; sessions: SheetSession[]; onDuty: SheetPerson[]; welfare: Partial<Record<string, string>>; /** False when the viewer lacks "Emergency & guardian contacts": names and roles only. */ contactsShown: boolean }
@@ -59,6 +59,7 @@ export async function getDaySheet(repos: Repositories, ctx: AnyTenantContext, da
       instructorId: i.id, name: i.name, role: "", status: "", phone: i.phone, under18: isUnder18(i.dateOfBirth),
       emergencyName: contactsShown ? await openToken(i.emergencyName) : null, emergencyPhone: contactsShown ? await openToken(i.emergencyPhone) : null, emergencyRelationship: contactsShown ? i.emergencyRelationship : null,
       guardianName: contactsShown ? i.guardianName : null, guardianPhone: contactsShown ? await openToken(i.guardianPhone) : null,
+      medicalNotes: contactsShown ? await openToken(i.medicalNotes) : null,
     };
     people.set(id, p);
     return p;
@@ -78,18 +79,18 @@ export async function getDaySheet(repos: Repositories, ctx: AnyTenantContext, da
       staff,
     });
   }
-  const onDuty = [...people.values()].filter((p) => out.some((s) => s.staff.some((x) => x.instructorId === p.instructorId)));
+  const onDuty = [...people.values()].filter((p) => out.some((s) => s.staff.some((x) => x.instructorId === p.instructorId))).sort((a, b) => a.name.localeCompare(b.name));
   await writeAudit(repos, ctx, { action: "view_emergency_sheet", entity: "organisation", entityId: ctx.organisationId, after: { date: dateIso, people: onDuty.length, contactsShown } }).catch(() => {});
   const welfare = (await welfareForRange(repos, ctx, dateIso, addDays(dateIso, 1))).byDate.get(dateIso) ?? {};
   return { date: dateIso, sessions: out, onDuty, welfare, contactsShown };
 }
 
+/** One row per person on duty: who they are and who to call. No course details (the roster has those). */
 export function sheetToCsv(sheet: DaySheet): string {
   const esc = (v: string | null | undefined) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-  const rows = [["Date", "Course", "Slot", "Start", "End", "Locations", "Name", "Role", "Status", "Phone", "Under 18", "Emergency contact", "Emergency phone", "Relationship", "Guardian", "Guardian phone"]];
-  const time = (ms: number) => fmtWallTime(ms);
-  for (const s of sheet.sessions) for (const p of s.staff) {
-    rows.push([sheet.date, s.courseName, s.slot, time(s.startAt), time(s.endAt), s.locations.join("; "), p.name, p.role, p.status, p.phone ?? "", p.under18 ? "yes" : "", p.emergencyName ?? "", p.emergencyPhone ?? "", p.emergencyRelationship ?? "", p.guardianName ?? "", p.guardianPhone ?? ""]);
+  const rows = [["Date", "Name", "Under 18", "Emergency contact", "Relationship", "Emergency phone", "Guardian", "Guardian phone", "Medical conditions"]];
+  for (const p of sheet.onDuty) {
+    rows.push([sheet.date, p.name, p.under18 ? "yes" : "", p.emergencyName ?? "", p.emergencyRelationship ?? "", p.emergencyPhone ?? "", p.guardianName ?? "", p.guardianPhone ?? "", p.medicalNotes ?? ""]);
   }
   return rows.map((r) => r.map(esc).join(",")).join("\r\n") + "\r\n";
 }

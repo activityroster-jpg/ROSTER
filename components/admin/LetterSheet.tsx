@@ -68,7 +68,7 @@ export function LetterSheet({ p }: { p: MarketingProspect }) {
         <p style={{ marginTop: "4mm" }}>
           It handles the parts of running a centre that spreadsheets make painful: rostering instructors across
           youth and adult courses while automatically checking RYA ratios, safety-boat cover and each
-          instructor&apos;s qualifications and tickets; tracking DBS, first aid and safeguarding expiry; letting
+          instructor&apos;s qualifications and licences; tracking DBS, first aid and safeguarding expiry; letting
           staff submit availability, log hours and request leave from their phone; and producing a clean weekly
           roster you can print or share in seconds.
         </p>

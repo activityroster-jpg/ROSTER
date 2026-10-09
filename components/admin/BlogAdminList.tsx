@@ -1,5 +1,6 @@
 "use client";
 
+import { askConfirm } from "@/lib/ui/ask-confirm";
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -107,7 +108,7 @@ export function BlogAdminList({ posts }: { posts: PostRow[] }) {
                       {p.status === "published"
                         ? <button type="button" onClick={() => run(() => setPostStatusAction(p.id, "draft"))} disabled={pending} className="text-slate-500 hover:underline">Unpublish</button>
                         : <button type="button" onClick={() => run(() => setPostStatusAction(p.id, "published"))} disabled={pending} className="text-slate-500 hover:underline">Publish</button>}
-                      <button type="button" onClick={() => { if (confirm("Delete this post?")) run(() => deletePostAction(p.id)); }} disabled={pending} className="text-port hover:underline">Delete</button>
+                      <button type="button" onClick={async () => { if (await askConfirm("Delete this post?")) run(() => deletePostAction(p.id)); }} disabled={pending} className="text-port hover:underline">Delete</button>
                     </div>
                   </td>
                 </tr>

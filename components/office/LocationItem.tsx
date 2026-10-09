@@ -1,5 +1,6 @@
 "use client";
 
+import { askConfirm } from "@/lib/ui/ask-confirm";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { deleteOrRetireLocationAction, setLocationActiveAction } from "@/app/(app)/office/locations/actions";
@@ -12,9 +13,9 @@ export function LocationItem({ id, name, active, referenced }: { id: string; nam
   const router = useRouter();
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
-  const remove = () => {
+  const remove = async () => {
     const q = referenced ? `Retire "${name}"? Courses that used it keep showing it; it won't be offered for new ones.` : `Delete "${name}"? Nothing has used it, so it goes for good.`;
-    if (!confirm(q)) return;
+    if (!await askConfirm(q)) return;
     start(async () => { const r = await deleteOrRetireLocationAction(id); setMsg(r.ok ? r.message ?? null : r.error ?? "Failed"); router.refresh(); });
   };
   const reactivate = () => start(async () => {

@@ -1,4 +1,5 @@
 import { managedByOffice } from "@/lib/domain/availability";
+import { availability as availabilityTable } from "@/lib/db/schema";
 import { requireTenant } from "@/lib/tenant/require";
 import { isUnder18 } from "@/lib/domain/age";
 import { listStaffWithFit } from "@/lib/services/staff";
@@ -41,6 +42,7 @@ export default async function StaffPage() {
   const officeMembers = await listOfficeMembers(repos, ctx);
   const links = await repos.tenant.guardianLink.list(ctx);
   const settingsRow = (await repos.tenant.orgSettings.list(ctx))[0];
+  const withAvailability = new Set((await repos.tenant.availability.distinct(ctx, availabilityTable.instructorId)) as string[]);
   const inviteStatusFor = (userId: string | null): StaffRow["inviteStatus"] => {
     if (!userId) return "none";
     return membershipStatus.get(userId) === "active" ? "accepted" : "pending";
@@ -61,6 +63,8 @@ export default async function StaffPage() {
       fit: fit.fit,
       warnings: fit.warnings.length,
       blockText: fit.blocks.map((b) => (b.kind === "missing" ? `${b.name} missing` : `${b.name} expired`)).join(", "),
+      expiringText: fit.warnings.map((w) => w.name).join(", "),
+      hasAvailability: withAvailability.has(instructor.id),
       linked: Boolean(instructor.userId),
       inviteStatus: inviteStatusFor(instructor.userId),
       officeManaged: managedByOffice(instructor, settingsRow),
@@ -87,7 +91,7 @@ export default async function StaffPage() {
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-bold text-navy">Instructors</h1>
-          <p className="text-sm text-slate-500">{currentCount} instructor{currentCount === 1 ? "" : "s"}{under18Count ? ` · ${under18Count} under 18` : ""} · fit-to-roster and the courses each can teach, from the certs they hold</p>
+          <p className="text-sm text-slate-500">{currentCount} instructor{currentCount === 1 ? "" : "s"}{under18Count ? ` · ${under18Count} under 18` : ""} · whether each has set availability and whose licences need updating</p>
           {missingDob ? <p className="mt-1 text-xs text-amber-700">{missingDob} {missingDob === 1 ? "person has" : "people have"} no date of birth yet. Add it from their profile so under-18 protections and working-hours rules apply correctly.</p> : null}
         </div>
         <div className="flex flex-none items-center gap-3">

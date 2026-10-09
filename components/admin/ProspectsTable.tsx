@@ -1,5 +1,6 @@
 "use client";
 
+import { askConfirm } from "@/lib/ui/ask-confirm";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -144,14 +145,14 @@ export function ProspectsTable({ rows: serverRows }: { rows: ProspectRow[] }) {
     });
   };
 
-  const remove = (id: string, name: string) => {
-    if (!confirm(`Remove ${name} from your prospect list?`)) return;
+  const remove = async (id: string, name: string) => {
+    if (!await askConfirm(`Remove ${name} from your prospect list?`)) return;
     setBusyId(id);
     startTransition(async () => { await deleteProspectAction(id); router.refresh(); setBusyId(null); });
   };
 
-  const nextLetters = () => {
-    if (!confirm("Prepare the next 10 letters? Those centres will be marked “Letter sent” and the batch opens in a new tab to print or save as PDF.")) return;
+  const nextLetters = async () => {
+    if (!await askConfirm("Prepare the next 10 letters? Those centres will be marked “Letter sent” and the batch opens in a new tab to print or save as PDF.")) return;
     setBatchMsg(null);
     startTransition(async () => {
       const r = await prepareNextLettersAction(10);

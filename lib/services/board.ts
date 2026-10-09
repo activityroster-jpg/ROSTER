@@ -35,7 +35,13 @@ export interface BoardData {
   /** Per session id: roles still open. */
   openRoles: Record<string, OpenRole[]>;
   /** Per session id: course type id and whether the course has more than one session (so "this day only" is offered). */
-  sessionMeta: Record<string, { courseTypeId: string; multiDay: boolean; courseId: string }>;
+  sessionMeta: Record<string, {
+    courseTypeId: string; multiDay: boolean; courseId: string;
+    /** Every role the course needs and how many of each (its role lines, or worked out from the ratio when it has none). */
+    needs: { roleTypeId: string; roleName: string; count: number }[];
+    /** True when the needs come from the course's own role lines (editable), false when worked out from the ratio. */
+    explicitRoles: boolean;
+  }>;
   roles: { id: string; name: string; countsTowardRatio: boolean; isSafetyCover: boolean }[];
   instructors: BoardInstructor[];
   problems: Record<string, string[]>;
@@ -81,12 +87,13 @@ export async function getBoard(repos: Repositories, ctx: AnyTenantContext, monda
     for (const s of d.sessions) {
       const course = courseById.get(s.courseId);
       const ct = course ? ctById.get(course.courseTypeId) : undefined;
-      sessionMeta[s.sessionId] = { courseTypeId: course?.courseTypeId ?? "", multiDay: (liveCount.get(s.courseId) ?? 0) > 1, courseId: s.courseId };
       const covering = s.staff.filter((m) => m.status !== "declined");
       const lines = cleanRoleLines(requirements.filter((r) => r.courseId === s.courseId));
       const open: OpenRole[] = [];
+      const needs: { roleTypeId: string; roleName: string; count: number }[] = [];
       if (lines.length) {
         for (const l of lines) {
+          needs.push({ roleTypeId: l.roleTypeId, roleName: roleById.get(l.roleTypeId)?.name ?? "Role", count: l.count });
           const filled = covering.filter((m) => m.roleTypeId === l.roleTypeId).length;
           if (filled < l.count) open.push({ roleTypeId: l.roleTypeId, roleName: roleById.get(l.roleTypeId)?.name ?? "Role", missing: l.count - filled });
         }
@@ -94,11 +101,14 @@ export async function getBoard(repos: Repositories, ctx: AnyTenantContext, monda
         const need = requiredInstructors(course.capacity, course.ratio);
         const counting = covering.filter((m) => roleById.get(m.roleTypeId)?.countsTowardRatio).length;
         const instructorRole = roles.find((r) => r.active && r.countsTowardRatio && !r.isSafetyCover) ?? roles.find((r) => r.active && r.countsTowardRatio);
+        if (instructorRole && need > 0) needs.push({ roleTypeId: instructorRole.id, roleName: instructorRole.name, count: need });
         if (instructorRole && counting < need) open.push({ roleTypeId: instructorRole.id, roleName: instructorRole.name, missing: need - counting });
         const safetyRole = roles.find((r) => r.active && r.isSafetyCover);
+        if (ct?.requiresSafetyBoat && safetyRole) needs.push({ roleTypeId: safetyRole.id, roleName: safetyRole.name, count: 1 });
         if (ct?.requiresSafetyBoat && safetyRole && !covering.some((m) => roleById.get(m.roleTypeId)?.isSafetyCover)) open.push({ roleTypeId: safetyRole.id, roleName: safetyRole.name, missing: 1 });
       }
       openRoles[s.sessionId] = open;
+      sessionMeta[s.sessionId] = { courseTypeId: course?.courseTypeId ?? "", multiDay: (liveCount.get(s.courseId) ?? 0) > 1, courseId: s.courseId, needs, explicitRoles: lines.length > 0 };
     }
   }
 

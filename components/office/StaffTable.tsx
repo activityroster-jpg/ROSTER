@@ -14,6 +14,10 @@ export interface StaffRow {
   fit: boolean;
   warnings: number;
   blockText: string;
+  /** Licences or checks running out soon, by name. */
+  expiringText?: string;
+  /** Whether they have any availability on file (a dated answer or a usual week). */
+  hasAvailability?: boolean;
   linked: boolean;
   /** Portal access: none yet, invite sent but not accepted, or accepted. */
   inviteStatus: "none" | "pending" | "accepted";
@@ -41,8 +45,8 @@ type Tab = "all" | "fit" | "blocked" | "expiring" | "left";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "all", label: "Current" },
-  { key: "fit", label: "Fit to roster" },
-  { key: "blocked", label: "Blocked" },
+  { key: "fit", label: "Licences up to date" },
+  { key: "blocked", label: "Needs a licence update" },
   { key: "expiring", label: "Expiring soon" },
   { key: "left", label: "Left" },
 ];
@@ -114,16 +118,15 @@ export function StaffTable({ rows }: { rows: StaffRow[] }) {
             <tr>
               <Th>Name</Th>
               <Th>Email</Th>
-              <Th>Employment</Th>
-              <Th>Can teach</Th>
-              <Th>Fit to roster</Th>
+              <Th>Has set availability</Th>
+              <Th>Needs to update licences</Th>
               <Th>App access</Th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-10 text-center text-slate-400">{tab === "left" ? "Nobody has left." : "No instructors match this view."}</td>
+                <td colSpan={5} className="px-4 py-10 text-center text-slate-400">{tab === "left" ? "Nobody has left." : "No instructors match this view."}</td>
               </tr>
             ) : (
               filtered.map((r) => (
@@ -133,34 +136,27 @@ export function StaffTable({ rows }: { rows: StaffRow[] }) {
                       <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-teal/10 text-xs font-semibold text-teal">
                         {r.name.split(" ").map((p) => p[0]).slice(0, 2).join("")}
                       </span>
-                      <Link href={`/office/staff/${r.id}`} className="font-medium text-navy hover:text-teal hover:underline">{r.name}</Link>{r.under18 ? <span className="ml-2 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800">Under 18</span> : null}{r.hasDob === false && !r.anonymised ? <span className="ml-2 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500" title="Add their date of birth so the right protections and hours rules apply">No DOB</span> : null}{r.restricted ? <span className="ml-2 rounded-full bg-port/10 px-1.5 py-0.5 text-[10px] font-semibold text-port" title="Processing restricted: not rostered or contacted">Restricted</span> : null}{r.anonymised ? <span className="ml-2 rounded-full bg-slate-200 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600">Anonymised</span> : null}
+                      <div className="flex min-w-0 flex-wrap items-center gap-1.5"><Link href={`/office/staff/${r.id}`} className="font-medium text-navy hover:text-teal hover:underline">{r.name}</Link>{r.under18 ? <span className="flex-none whitespace-nowrap rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800">Under 18</span> : null}{r.hasDob === false && !r.anonymised ? <span className="flex-none whitespace-nowrap rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500" title="Add their date of birth so the right protections and hours rules apply">No DOB</span> : null}{r.restricted ? <span className="flex-none whitespace-nowrap rounded-full bg-port/10 px-1.5 py-0.5 text-[10px] font-semibold text-port" title="Processing restricted: not rostered or contacted">Restricted</span> : null}{r.anonymised ? <span className="flex-none whitespace-nowrap rounded-full bg-slate-200 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600">Anonymised</span> : null}</div>
                     </div>
                   </td>
                   <td className="px-4 py-3 text-slate-500">{r.email ?? "—"}</td>
-                  <td className="px-4 py-3 capitalize text-slate-600">{r.employment}</td>
-                  <td className="px-4 py-3">
-                    {r.teaches.length === 0 ? (
-                      <span className="text-xs text-slate-400">Add a cert</span>
-                    ) : (
-                      <div className="flex flex-col gap-1">
-                        <div className="flex flex-wrap gap-1">
-                          {r.teachesYouth ? <span className="rounded-full bg-amber/15 px-2 py-0.5 text-[11px] font-semibold text-amber">Youth</span> : null}
-                          {r.teachesAdult ? <span className="rounded-full bg-teal/15 px-2 py-0.5 text-[11px] font-semibold text-teal">Adult</span> : null}
-                        </div>
-                        <span className="text-xs text-slate-500" title={r.teaches.join(", ")}>
-                          {r.teaches.slice(0, 2).join(", ")}{r.teaches.length > 2 ? ` +${r.teaches.length - 2} more` : ""}
-                        </span>
-                      </div>
-                    )}
+                  <td className="px-4 py-3 text-sm">
+                    {r.status === "inactive" ? <span className="text-xs text-slate-400">—</span>
+                      : r.officeManaged ? <span className="text-slate-500" title="The office keeps their availability">Office keeps it</span>
+                      : r.hasAvailability ? <span className="text-starboard">✓ Yes</span>
+                      : <span className="text-amber">Not yet</span>}
                   </td>
                   <td className="px-4 py-3">
-                    {r.status === "inactive" ? <StatusPill tone="neutral">Left</StatusPill> : r.fit ? <StatusPill tone="covered">Fit</StatusPill> : <StatusPill tone="conflict">{r.blockText || "Not cleared"}</StatusPill>}
-                    {r.warnings > 0 ? (
-                      <span className="ml-2"><StatusPill tone="attention">{r.warnings} expiring</StatusPill></span>
-                    ) : null}
-                    {r.parentApproval && r.parentApproval !== "not-needed" ? (
-                      <span className="ml-2" title="Parent or guardian's approval to work"><StatusPill tone={r.parentApproval === "approved" ? "covered" : r.parentApproval === "pending" ? "attention" : "conflict"}>{r.parentApproval === "approved" ? "Parent approved" : r.parentApproval === "pending" ? "Parent approval pending" : r.parentApproval === "none" ? "No parent invited" : `Parent ${r.parentApproval}`}</StatusPill></span>
-                    ) : null}
+                    {r.status === "inactive" ? <StatusPill tone="neutral">Left</StatusPill> : (
+                      <div className="flex flex-wrap gap-1.5">
+                        {!r.fit ? <StatusPill tone="conflict">{r.blockText || "Missing a licence or check"}</StatusPill> : null}
+                        {r.warnings > 0 ? <span title={r.expiringText}><StatusPill tone="attention">{r.expiringText ? `${r.expiringText} expiring` : `${r.warnings} expiring`}</StatusPill></span> : null}
+                        {r.fit && r.warnings === 0 ? <span className="text-sm text-starboard">✓ Up to date</span> : null}
+                        {r.parentApproval && r.parentApproval !== "not-needed" ? (
+                          <span title="Parent or guardian's approval to work"><StatusPill tone={r.parentApproval === "approved" ? "covered" : r.parentApproval === "pending" ? "attention" : "conflict"}>{r.parentApproval === "approved" ? "Parent approved" : r.parentApproval === "pending" ? "Parent approval pending" : r.parentApproval === "none" ? "No parent invited" : `Parent ${r.parentApproval}`}</StatusPill></span>
+                        ) : null}
+                      </div>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     {r.status === "inactive" ? (

@@ -18,7 +18,6 @@ export default async function EmergencySheetPage({ searchParams }: { searchParam
   const date = typeof sp.date === "string" && ISO.test(sp.date) ? sp.date : londonToday();
   const sheet = await getDaySheet(repos, ctx, date);
   const owner = sheet.contactsShown ? null : ownerName(await listOfficeMembers(repos, ctx));
-  const time = (ms: number) => new Date(ms).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" });
   const nice = new Date(`${date}T12:00:00Z`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
   return (
@@ -47,37 +46,34 @@ export default async function EmergencySheetPage({ searchParams }: { searchParam
       {Object.keys(sheet.welfare).length ? (
         <p className="mb-4 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-navy"><span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Welfare on duty</span> {(["AM", "PM", "EV"] as const).filter((s) => sheet.welfare[s]).map((s) => `${SLOT[s] ?? s}: ${sheet.welfare[s]}`).join(" · ")}</p>
       ) : null}
-      {sheet.sessions.length === 0 ? (
-        <p className="rounded-card border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">No sessions on this day.</p>
+      {sheet.onDuty.length === 0 ? (
+        <p className="rounded-card border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">Nobody is rostered on this day.</p>
       ) : (
-        <div className="space-y-4">
-          {sheet.sessions.map((s, i) => (
-            <section key={i} className="overflow-hidden rounded-card border border-slate-200 bg-white print:break-inside-avoid">
-              <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-slate-100 bg-slate-50 px-4 py-2 print:bg-white">
-                <p className="font-semibold text-navy">{s.courseName} <span className="font-normal text-slate-500">· {SLOT[s.slot] ?? s.slot} {time(s.startAt)}–{time(s.endAt)}</span></p>
-                {s.locations.length ? <p className="text-sm text-slate-600">{s.locations.join(", ")}</p> : null}
-              </div>
-              <table className="w-full text-sm">
-                <thead className="text-left text-xs uppercase tracking-wide text-slate-500"><tr><th className="px-4 py-2">Name</th><th className="px-4 py-2">Role</th><th className="px-4 py-2">Phone</th><th className="px-4 py-2">Emergency contact</th></tr></thead>
-                <tbody>
-                  {s.staff.length === 0 ? <tr><td colSpan={4} className="px-4 py-2 text-slate-400">Nobody rostered</td></tr> : s.staff.map((p) => (
-                    <tr key={p.instructorId} className="border-t border-slate-100">
-                      <td className="px-4 py-2 font-medium text-navy">{p.name}{p.under18 ? <span className="ml-1 rounded bg-amber-100 px-1 text-[10px] font-semibold text-amber-800">U18</span> : null}{p.status === "assigned" ? <span className="ml-1 text-[10px] text-slate-400">unconfirmed</span> : null}</td>
-                      <td className="px-4 py-2 text-slate-600">{p.role}</td>
-                      <td className="px-4 py-2 text-slate-600">{p.phone ?? "–"}</td>
-                      <td className="px-4 py-2 text-slate-600">
-                        {!sheet.contactsShown ? <span className="text-slate-400">hidden</span> : p.emergencyName || p.emergencyPhone ? <>{p.emergencyName}{p.emergencyRelationship ? ` (${p.emergencyRelationship})` : ""} {p.emergencyPhone}</> : <span className="text-port">none on file</span>}
-                        {p.under18 && (p.guardianName || p.guardianPhone) ? <div className="text-xs text-slate-500">Guardian: {p.guardianName} {p.guardianPhone}</div> : null}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </section>
-          ))}
+        <div className="overflow-x-auto rounded-card border border-slate-200 bg-white">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500 print:bg-white">
+              <tr><th className="px-4 py-2">Name</th><th className="px-4 py-2">Emergency contact</th><th className="px-4 py-2">Emergency number</th><th className="px-4 py-2">Medical conditions</th></tr>
+            </thead>
+            <tbody>
+              {sheet.onDuty.map((p) => (
+                <tr key={p.instructorId} className="border-t border-slate-100 align-top print:break-inside-avoid">
+                  <td className="px-4 py-2 font-medium text-navy">{p.name}{p.under18 ? <span className="ml-1 rounded bg-amber-100 px-1 text-[10px] font-semibold text-amber-800">U18</span> : null}</td>
+                  <td className="px-4 py-2 text-slate-700">
+                    {!sheet.contactsShown ? <span className="text-slate-400">hidden</span> : p.emergencyName ? <>{p.emergencyName}{p.emergencyRelationship ? <span className="text-slate-500"> ({p.emergencyRelationship})</span> : null}</> : <span className="text-port">none on file</span>}
+                    {sheet.contactsShown && p.under18 && (p.guardianName || p.guardianPhone) ? <div className="text-xs text-slate-500">Parent/guardian: {p.guardianName}</div> : null}
+                  </td>
+                  <td className="px-4 py-2 text-slate-700">
+                    {!sheet.contactsShown ? <span className="text-slate-400">hidden</span> : p.emergencyPhone ?? <span className="text-port">none</span>}
+                    {sheet.contactsShown && p.under18 && p.guardianPhone ? <div className="text-xs text-slate-500">{p.guardianPhone}</div> : null}
+                  </td>
+                  <td className="whitespace-pre-line px-4 py-2 text-slate-700">{!sheet.contactsShown ? <span className="text-slate-400">hidden</span> : p.medicalNotes || <span className="text-slate-400">none recorded</span>}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
-      <p className="mt-4 text-xs text-slate-400 print:text-black">Students are not recorded in ActivityRoster; keep the booking list from your own system with this sheet.</p>
+      <p className="mt-4 text-xs text-slate-400 print:text-black">Everyone rostered today, in name order. Who is on which course is on the <Link href={`/office/rota?week=${date}&view=print`} className="text-teal hover:underline print:hidden">roster</Link>. Students are not recorded in ActivityRoster; keep the booking list from your own system with this sheet.</p>
     </div>
   );
 }

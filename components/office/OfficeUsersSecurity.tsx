@@ -1,5 +1,6 @@
 "use client";
 
+import { askConfirm } from "@/lib/ui/ask-confirm";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { signOutUserEverywhereAction } from "@/app/(app)/security/actions";
@@ -33,7 +34,7 @@ export function OfficeUsersSecurity({ rows, meId, isOwner }: { rows: OfficeUserS
               </p>
             </div>
             {isOwner && r.userId !== meId && r.activeSessions > 0 ? (
-              <button type="button" disabled={pending} onClick={() => { if (confirm(`Sign ${r.name || r.email} out of every device? They'll need to sign in again.`)) start(async () => { const x = await signOutUserEverywhereAction(r.userId); setMsg(x.ok ? "Signed out everywhere" : x.error ?? "Failed"); router.refresh(); }); }} className="text-xs font-medium text-port hover:underline disabled:opacity-50">Sign out everywhere</button>
+              <button type="button" disabled={pending} onClick={async () => { if (await askConfirm(`Sign ${r.name || r.email} out of every device? They'll need to sign in again.`)) start(async () => { const x = await signOutUserEverywhereAction(r.userId); setMsg(x.ok ? "Signed out everywhere" : x.error ?? "Failed"); router.refresh(); }); }} className="text-xs font-medium text-port hover:underline disabled:opacity-50">Sign out everywhere</button>
             ) : null}
           </li>
         ))}

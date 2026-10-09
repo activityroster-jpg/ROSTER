@@ -41,7 +41,7 @@ function guessJurisdiction(region: string | null, country: string | null): Juris
 
 const FEATURES: [string, string][] = [
   ["Scheduling & rostering", "Build the week on a calendar; fit-checked as you go."],
-  ["Compliance engine", "Ratios, safety-boat cover and tickets enforced before anyone goes afloat."],
+  ["Compliance engine", "Ratios, safety-boat cover and licences enforced before anyone goes afloat."],
   ["Licence & vetting tracking", "Every RYA cert and check, with expiry alerts and a private document vault."],
   ["Time & attendance", "Clock in/out from the phone; timesheets build themselves."],
   ["Availability & leave", "Staff set availability and request leave in the app; you approve in a tap."],
@@ -166,7 +166,7 @@ export default async function ProspectMockupPage({ params }: { params: Promise<{
         <Sheet n={3} title="Your office · Dashboard">
           <p className="mb-3 text-[10pt] text-slate-600">The first screen every morning: today&apos;s sessions, who&apos;s on, and anything that needs you — with sample data for {p.name}.</p>
           <BrowserFrame url={`${url}/office`}><DashboardScreen d={d} /></BrowserFrame>
-          <p className="mt-3 text-[9pt] text-slate-500">Red and amber flags are the compliance engine: a course without safety-boat cover, an under-staffed group, a ticket about to expire, a blocked instructor. They appear before anyone reaches the water.</p>
+          <p className="mt-3 text-[9pt] text-slate-500">Red and amber flags are the compliance engine: a course without safety-boat cover, an under-staffed group, a licence about to expire, a blocked instructor. They appear before anyone reaches the water.</p>
         </Sheet>
 
         {/* 4 · Courses */}

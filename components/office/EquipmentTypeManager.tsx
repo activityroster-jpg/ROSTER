@@ -1,5 +1,6 @@
 "use client";
 
+import { askConfirm } from "@/lib/ui/ask-confirm";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { deleteOrRetireEquipmentTypeAction, saveEquipmentTypeAction, setEquipmentTypeActiveAction, type EquipmentTypeInput } from "@/app/(app)/office/equipment/actions";
@@ -46,7 +47,7 @@ function Row({ row, onMsg }: { row: EquipmentTypeRow; onMsg: (m: { ok: boolean; 
       </td>
       <td className="whitespace-nowrap px-4 py-2 text-right">
         {dirty ? <button type="button" disabled={pending} onClick={() => run(() => saveEquipmentTypeAction(row.id, v))} className="mr-3 rounded bg-teal px-2.5 py-1 text-xs font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{pending ? "…" : "Save"}</button> : null}
-        <button type="button" disabled={pending} onClick={() => { if (confirm(`Delete "${row.name}"? If any unit, course or course type still uses it, it is retired instead.`)) run(() => deleteOrRetireEquipmentTypeAction(row.id)); }} className="text-xs text-slate-400 hover:text-port">Delete</button>
+        <button type="button" disabled={pending} onClick={async () => { if (await askConfirm(`Delete "${row.name}"? If any unit, course or course type still uses it, it is retired instead.`)) run(() => deleteOrRetireEquipmentTypeAction(row.id)); }} className="text-xs text-slate-400 hover:text-port">Delete</button>
       </td>
     </tr>
   );

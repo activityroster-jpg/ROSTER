@@ -24,7 +24,6 @@ const NAV = [
     items: [
       { href: "/office", label: "Dashboard", icon: LayoutDashboard },
       { href: "/office/courses", label: "Courses", icon: CalendarDays },
-      { href: "/office/course-setup", label: "Course setup", icon: LifeBuoy },
       { href: "/office/rota", label: "Roster", icon: ClipboardList },
       { href: "/office/availability", label: "Availability", icon: CalendarDays },
       { href: "/office/timeclock", label: "Time clock", icon: Clock },
@@ -44,6 +43,7 @@ const NAV = [
     group: "Set up",
     items: [
       { href: "/office/settings", label: "Settings", icon: Settings },
+      { href: "/office/course-setup", label: "Course setup", icon: LifeBuoy },
       { href: "/office/billing", label: "Billing", icon: CreditCard },
       { href: "/office/change-log", label: "Change log", icon: History },
       { href: "/office/requests", label: "Requests & ideas", icon: Lightbulb },

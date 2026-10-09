@@ -1,5 +1,6 @@
 "use client";
 
+import { askConfirm } from "@/lib/ui/ask-confirm";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { approveJoinRequestAction, declineJoinRequestAction } from "@/app/(app)/office/staff/actions";
@@ -29,7 +30,7 @@ export function JoinRequests({ rows }: { rows: JoinRequestRow[] }) {
               <p className="truncate text-xs text-slate-500">{[r.email, r.phone].filter(Boolean).join(" · ")} · asked {r.requestedAt}</p>
             </div>
             <button type="button" disabled={pending} onClick={() => run(() => approveJoinRequestAction(r.id))} className="rounded-lg bg-teal px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-700 disabled:opacity-50">Approve</button>
-            <button type="button" disabled={pending} onClick={() => { if (confirm(`Decline ${r.name}? They'll be told their request wasn't approved.`)) run(() => declineJoinRequestAction(r.id)); }} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:border-port hover:text-port disabled:opacity-50">Decline</button>
+            <button type="button" disabled={pending} onClick={async () => { if (await askConfirm(`Decline ${r.name}? They'll be told their request wasn't approved.`)) run(() => declineJoinRequestAction(r.id)); }} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:border-port hover:text-port disabled:opacity-50">Decline</button>
           </li>
         ))}
       </ul>

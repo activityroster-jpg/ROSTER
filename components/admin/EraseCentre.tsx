@@ -1,5 +1,6 @@
 "use client";
 
+import { askConfirm } from "@/lib/ui/ask-confirm";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { eraseCentreAction, replayDeletionsAction } from "@/app/admin/actions";
@@ -17,7 +18,7 @@ export function EraseCentre({ id, slug, status, deadline }: { id: string; slug: 
   const leaving = status === "suspended" || status === "cancelled";
   const open = leaving && deadline !== null && new Date(deadline).getTime() <= Date.now();
   const run = () => start(async () => {
-    if (!confirm(`Permanently erase ${slug} and every record it holds? This cannot be undone.`)) return;
+    if (!await askConfirm(`Permanently erase ${slug} and every record it holds? This cannot be undone.`)) return;
     const r = await eraseCentreAction(id, typed);
     setMsg(r.ok ? "Erased. The centre's former admins have been emailed." : r.error ?? "Failed");
     if (r.ok) router.push("/admin");

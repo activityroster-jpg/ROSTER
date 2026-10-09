@@ -40,7 +40,8 @@ export function WeekCalendarView({ events, addHref }: { events: EventUi[]; addHr
         {monday !== thisMonday ? <button type="button" onClick={() => setMonday(thisMonday)} className="text-sm font-medium text-teal hover:underline">This week</button> : null}
         {addHref ? <a href={addHref} className="ml-auto rounded-lg bg-teal px-3 py-1.5 text-sm font-semibold text-white hover:bg-teal-700"><span aria-hidden="true">＋</span> New course</a> : null}
       </div>
-      <div className="grid grid-cols-7 gap-2">
+      <div className="overflow-x-auto pb-1">
+      <div className="grid min-w-[56rem] grid-cols-7 gap-2">
         {days.map((d, i) => {
           const evs = byDay.get(d) ?? [];
           return (
@@ -58,6 +59,7 @@ export function WeekCalendarView({ events, addHref }: { events: EventUi[]; addHr
             </div>
           );
         })}
+      </div>
       </div>
       {editing ? <CourseEditorModal courseId={editing} onClose={() => setEditing(null)} /> : null}
     </div>

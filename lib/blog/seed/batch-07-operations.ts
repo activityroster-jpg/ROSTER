@@ -639,7 +639,7 @@ A centre with a booking tool, a roster app, a spreadsheet for certificates, a me
 
 ## Check it is built for centres like yours
 
-Generic roster and booking tools are built for shops, restaurants and gyms, where a shift is a shift. A sailing centre needs the roster to know that a Level 2 course requires an instructor per so many learners plus a safety boat with a qualified driver, that this instructor's Powerboat ticket expires in March, that this session is at the lake not the harbour, and that these two boats cannot be in two places. Ask the supplier to show you, with your own course types, how the system handles ratios, qualifications, safety cover and clashes. If the answer is a workaround, keep looking.
+Generic roster and booking tools are built for shops, restaurants and gyms, where a shift is a shift. A sailing centre needs the roster to know that a Level 2 course requires an instructor per so many learners plus a safety boat with a qualified driver, that this instructor's Powerboat licence expires in March, that this session is at the lake not the harbour, and that these two boats cannot be in two places. Ask the supplier to show you, with your own course types, how the system handles ratios, qualifications, safety cover and clashes. If the answer is a workaround, keep looking.
 
 ## Insist on the phone test
 

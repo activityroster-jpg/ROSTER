@@ -21,9 +21,9 @@ export const metadata = {
 // The full platform, one line each, in the order a centre manager cares about.
 // Keep this in step with what is built (and with INCLUDED on the pricing page).
 const PLATFORM = [
-  { icon: CalendarCheck, title: "Roster builder", body: "Build the week; every assignment is checked for tickets, ratios and clashes." },
+  { icon: CalendarCheck, title: "Roster builder", body: "Build the week; every assignment is checked for licences, ratios and clashes." },
   { icon: Smartphone, title: "Instructor app", body: "Shifts, availability, swaps, hours and documents on their phone, with notifications." },
-  { icon: FileCheck, title: "Certs & vetting", body: "Every RYA ticket, first aid and DBS/PVG/AccessNI/Garda check, with expiry reminders." },
+  { icon: FileCheck, title: "Certs & vetting", body: "Every RYA licence, first aid and DBS/PVG/AccessNI/Garda check, with expiry reminders." },
   { icon: Baby, title: "Young workers' hours", body: "Under-18s checked against the legal hours for their age; adults warned over 48 a week." },
   { icon: Users, title: "Parent & guardian view", body: "A read-only roster for the parents of under-18 staff. Nothing else, nobody else's details." },
   { icon: KeyRound, title: "Roles for your team", body: "Admin, senior instructor and welfare officer, each seeing only what they need." },
@@ -39,14 +39,14 @@ const SAFETY = [
   { icon: ShieldCheck, title: "Won't roster the under-qualified", body: "Lapsed first aid or vetting? They can't be assigned without a recorded override." },
   { icon: Users, title: "Ratio-aware", body: "Flags a course the moment it's short of instructors." },
   { icon: LifeBuoy, title: "Safety-boat cover enforced", body: "Nothing goes afloat without cover — overrides are recorded." },
-  { icon: AlertTriangle, title: "Nothing lapses quietly", body: "Expiry alerts on every ticket and check." },
+  { icon: AlertTriangle, title: "Nothing lapses quietly", body: "Expiry alerts on every licence and check." },
   { icon: CalendarCheck, title: "Clash detection", body: "Double-booked instructor or boat? Caught instantly." },
   { icon: Wallet, title: "Hours & pay, done", body: "Scheduled vs actual, exported for payroll." },
 ];
 
 const AUDIENCES = [
   { icon: Anchor, title: "Yacht clubs", body: "Volunteer rosters and racing safety cover, without the committee spreadsheet." },
-  { icon: Ship, title: "Sailing schools", body: "Back-to-back RYA courses, a big freelance pool, every ticket tracked." },
+  { icon: Ship, title: "Sailing schools", body: "Back-to-back RYA courses, a big freelance pool, every licence tracked." },
   { icon: Waves, title: "Activity centres", body: "Dinghy, windsurf, powerboat and kayak — one roster, one compliance picture." },
 ];
 

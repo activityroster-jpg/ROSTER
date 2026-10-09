@@ -30,7 +30,7 @@ function safeName(name: string): string {
  *
  * `restrictToInstructorId` (set for the instructor portal) enforces that the
  * target record belongs to that instructor — an instructor can only upload
- * against their own tickets/checks.
+ * against their own licences/checks.
  */
 export async function attachDocument(
   repos: Repositories,

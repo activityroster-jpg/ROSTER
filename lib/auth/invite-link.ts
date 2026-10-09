@@ -65,7 +65,7 @@ export async function sweepQueuedInvites(repos: Repositories): Promise<{ queued:
     if (full.has(r.organisationId)) { held++; continue; }
     const ctx: AnyTenantContext = { organisationId: r.organisationId, slug: r.slug, system: true, reason: "queued invite" };
     const kind: InviteKind = r.role === "admin" ? "office" : "instructor";
-    const res = await sendInvite(repos, ctx, { email: r.email, userId: r.userId, kind, centreName: r.centreName, slug: r.slug, callbackPath: kind === "office" ? "/office" : "/portal/welcome", inviterName: r.invitedByName });
+    const res = await sendInvite(repos, ctx, { email: r.email, userId: r.userId, kind, centreName: r.centreName, slug: r.slug, callbackPath: kind === "office" ? "/welcome?next=/office" : "/portal/welcome", inviterName: r.invitedByName });
     if (res === "sent") sent++;
     else if (res === "queued") { full.add(r.organisationId); held++; }
     else failed++;

@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import type { BoardData, BoardInstructor, OpenRole } from "@/lib/services/board";
 import type { RotaDay, RotaSession } from "@/lib/services/schedule";
 import { boardAssignAction, boardRemoveAction, boardWorkingTimeAction } from "@/app/(app)/office/rota/board-actions";
+import { setCourseStaffingAction } from "@/app/(app)/office/courses/actions";
 import { ConfirmDialog } from "./ConfirmDialog";
 
 type Layout = "courses" | "people";
@@ -67,7 +68,7 @@ export function RosterBoard({ data, canEdit }: { data: BoardData; canEdit: boole
         </p>
       </div>
 
-      <div className={`grid gap-4 ${layout === "courses" && canEdit ? "lg:grid-cols-[1fr_15rem]" : ""}`}>
+      <div className={`grid gap-4 ${layout === "courses" && canEdit ? "lg:grid-cols-[minmax(0,1fr)_13rem]" : ""} ${sel ? "lg:mr-[28rem]" : ""}`}>
         {layout === "courses" ? (
           <CoursesByDay data={data} canEdit={canEdit} picked={picked} dropTarget={dropTarget} setDropTarget={setDropTarget} onDrop={onDropInstructor} onOpen={(s, d) => { setSel({ session: s, day: d }); if (picked) { setPendingDrop({ session: s, day: d, instructorId: picked }); setPicked(null); } }} selectedId={sel?.session.sessionId ?? null} />
         ) : (
@@ -101,7 +102,8 @@ function CoursesByDay({ data, canEdit, picked, dropTarget, setDropTarget, onDrop
   onDrop: (s: RotaSession, d: RotaDay, instructorId: string) => void; onOpen: (s: RotaSession, d: RotaDay) => void; selectedId: string | null;
 }) {
   return (
-    <div className="grid gap-2 md:grid-cols-7">
+    <div className="overflow-x-auto pb-1">
+    <div className="grid min-w-[56rem] grid-cols-7 gap-2">
       {data.days.map((d) => (
         <div key={d.date} className="min-w-0 rounded-card border border-slate-200 bg-white">
           <div className="border-b border-slate-100 bg-slate-50 px-2 py-1.5 text-xs font-semibold text-navy">{d.label}</div>
@@ -125,29 +127,15 @@ function CoursesByDay({ data, canEdit, picked, dropTarget, setDropTarget, onDrop
                     <span className="font-semibold leading-tight text-navy">{s.courseName}</span>
                     {flags.length ? <span title={flags.join("\n")} className="rounded-full bg-port/15 px-1.5 text-[10px] font-semibold text-port">⚠{flags.length}</span> : null}
                   </div>
-                  <div className="text-[10px] text-slate-500">{fmtTime(s.startAt)}–{fmtTime(s.endAt)}{s.locations.length ? ` · ${s.locations[0]}` : ""}</div>
-                  <ul className="mt-1 space-y-0.5">
-                    {s.staff.map((m) => (
-                      <li key={m.instructorId} className={`flex items-center gap-1 ${m.status === "declined" ? "text-port line-through" : "text-slate-700"}`}>
-                        <span className={`h-1.5 w-1.5 flex-none rounded-full ${m.status === "confirmed" ? "bg-starboard" : m.status === "declined" ? "bg-port" : "bg-slate-300"}`} />
-                        <span className="truncate">{m.name}</span>
-                        <span className="truncate text-[10px] text-slate-400">{m.role}</span>
-                        {m.dayOnly ? <span className="rounded bg-teal/15 px-1 text-[9px] font-semibold uppercase text-teal">day</span> : null}
-                      </li>
-                    ))}
-                    {open.map((r) => (
-                      <li key={r.roleTypeId} className="flex items-center gap-1 text-amber">
-                        <span className="h-1.5 w-1.5 flex-none rounded-full border border-amber" />
-                        <span>+ {r.missing > 1 ? `${r.missing} × ` : ""}{r.roleName}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="text-[11px] text-slate-500">{fmtTime(s.startAt)}–{fmtTime(s.endAt)}</div>
+                  {open.length ? <span className="mt-1 inline-block rounded-full bg-amber/15 px-1.5 text-[10px] font-semibold text-amber" title={open.map((r) => `${r.missing} × ${r.roleName}`).join(", ")}>needs {open.reduce((n, r) => n + r.missing, 0)}</span> : null}
                 </button>
               );
             })}
           </div>
         </div>
       ))}
+    </div>
     </div>
   );
 }
@@ -235,6 +223,126 @@ function PeopleByDay({ data, onOpen }: { data: BoardData; onOpen: (sessionId: st
 }
 
 /* ---------- Side panel for one session ---------- */
+type Member = RotaSession["staff"][number];
+interface SlotRowProps {
+  roleTypeId: string; roleName: string; member?: Member; extra?: boolean;
+  candidates: BoardInstructor[]; byId: Map<string, BoardInstructor>; slotKey: string; dayWord: string; slot: string;
+  courseTypeId: string | null; courseId: string | null; canEdit: boolean; multiDay: boolean; pending: boolean; preselect: string | null;
+  onAssign: (instructorId: string, roleTypeId: string, replacing?: Member) => void; onRemove: (m: Member, scope: "course" | "day") => void; onAskRemove: (m: Member) => void;
+}
+
+function optionLabel(i: BoardInstructor, slotKey: string, courseTypeId: string | null): string {
+  const a = i.availability[slotKey];
+  const av = a ? AVAIL[a.status] ?? AVAIL.unasked! : AVAIL.unasked!;
+  const q = courseTypeId ? (i.knownQualifications ? i.teaches.includes(courseTypeId) : null) : null;
+  return `${i.name} · ${av.word}${a?.source === "default" ? " (not answered)" : a?.source === "pattern" ? " (usual)" : ""}${!i.fit ? ` · ${i.fitReason}` : ""}${q === false ? " · not qualified for this course" : ""}`;
+}
+
+/** One role slot: filled (name, Change, Remove) or empty (pick someone, Assign). */
+function SlotRow({ roleTypeId, roleName, member, extra, candidates, byId, slotKey, dayWord, slot, courseTypeId, courseId, canEdit, multiDay, pending, preselect, onAssign, onRemove, onAskRemove }: SlotRowProps) {
+  const [changing, setChanging] = useState(false);
+  const [pick, setPick] = useState(!member && preselect ? preselect : "");
+  const [wt, setWt] = useState<{ blocks: string; warns: string } | null>(null);
+  const chosen = pick ? byId.get(pick) : undefined;
+  const chosenAvail = chosen?.availability[slotKey];
+  const qualified = chosen && courseTypeId ? (chosen.knownQualifications ? chosen.teaches.includes(courseTypeId) : null) : null;
+  useEffect(() => {
+    if (!pick || !chosen?.under18 || !courseId) { setWt(null); return; }
+    let live = true;
+    boardWorkingTimeAction(courseId, pick).then((r) => { if (live && r.ok && r.active) setWt({ blocks: r.blocks, warns: r.warns }); }).catch(() => {});
+    return () => { live = false; };
+  }, [pick, chosen?.under18, courseId]);
+  const field = "min-w-0 flex-1 rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal";
+  const showPicker = canEdit && (!member || changing);
+
+  return (
+    <li className="rounded-lg border border-slate-200 px-2.5 py-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="w-28 flex-none text-xs font-semibold text-slate-500">{roleName}{extra ? <span className="block text-[10px] font-normal text-slate-400">not required</span> : null}</span>
+        {member && !changing ? (
+          <>
+            <span className={`font-medium ${member.status === "declined" ? "text-port line-through" : "text-navy"}`}>{member.name}</span>
+            {member.status === "confirmed" ? <span className="text-[10px] font-semibold text-starboard">confirmed</span> : member.status === "declined" ? <span className="rounded bg-port/10 px-1 text-[10px] font-semibold text-port">can&apos;t make it</span> : <span className="text-[10px] text-slate-400">unconfirmed</span>}
+            {member.dayOnly ? <span className="rounded bg-teal/15 px-1 text-[9px] font-semibold uppercase text-teal">this day only</span> : null}
+            {canEdit ? (
+              <span className="ml-auto flex items-center gap-2 text-xs">
+                <button type="button" disabled={pending} onClick={() => { setChanging(true); setPick(""); }} className="rounded border border-slate-300 px-2 py-0.5 font-medium text-navy hover:bg-slate-50">Change</button>
+                {member.dayOnly ? <button type="button" disabled={pending} onClick={() => onRemove(member, "day")} className="text-slate-400 hover:text-port">Remove</button> : (
+                  <>
+                    {multiDay ? <button type="button" disabled={pending} onClick={() => onRemove(member, "day")} className="text-slate-400 hover:text-port" title="Not needed this day; stays on the rest of the course">Skip this day</button> : null}
+                    <button type="button" disabled={pending} onClick={() => onAskRemove(member)} className="text-slate-400 hover:text-port">Remove</button>
+                  </>
+                )}
+              </span>
+            ) : null}
+          </>
+        ) : showPicker ? (
+          <>
+            <select value={pick} onChange={(e) => setPick(e.target.value)} aria-label={`Who for ${roleName}`} className={field}>
+              <option value="">{member ? `Replace ${member.name} with…` : "Choose someone…"}</option>
+              {candidates.map((i) => <option key={i.id} value={i.id}>{optionLabel(i, slotKey, courseTypeId)}</option>)}
+            </select>
+            <button type="button" disabled={pending || !pick} onClick={() => { onAssign(pick, roleTypeId, changing ? member : undefined); setChanging(false); setPick(""); }} className="rounded-lg bg-teal px-3 py-1.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{member ? "Save" : "Assign"}</button>
+            {changing ? <button type="button" onClick={() => { setChanging(false); setPick(""); }} className="text-xs text-slate-400 hover:text-navy">Cancel</button> : null}
+          </>
+        ) : (
+          <span className="text-sm text-amber">Not filled</span>
+        )}
+      </div>
+      {showPicker && chosen ? (
+        <div className="mt-1.5 space-y-0.5 pl-[7.5rem] text-xs">
+          <p className={chosenAvail?.status === "available" ? "text-starboard" : chosenAvail?.status === "unavailable" ? "text-port" : "text-slate-500"}>Availability {dayWord} {slot}: {(chosenAvail ? AVAIL[chosenAvail.status] ?? AVAIL.unasked! : AVAIL.unasked!).word}{chosenAvail?.source === "default" ? " (hasn't answered; counts as busy)" : chosenAvail?.source === "pattern" ? " (usual week)" : chosenAvail?.source === "assumed" ? " (office keeps their availability)" : ""}</p>
+          {!chosen.fit ? <p className="text-port">Not cleared to roster: {chosen.fitReason}</p> : null}
+          {qualified === false ? <p className="text-port">Their licences don&apos;t cover this course (override needed).</p> : qualified === null ? <p className="text-slate-400">No licences recorded for them.</p> : null}
+          {chosen.under18 ? (wt ? (wt.blocks ? <p className="text-port">Young worker&apos;s hours: {wt.blocks}</p> : wt.warns ? <p className="text-amber">Young worker&apos;s hours: {wt.warns}</p> : <p className="text-starboard">Young worker&apos;s hours: within the limits.</p>) : <p className="text-slate-400">Checking young worker&apos;s hours…</p>) : null}
+        </div>
+      ) : null}
+    </li>
+  );
+}
+
+/** Students and the roles the course needs, editable for the whole course. */
+function StaffingEditor({ courseId, students, needs, roles, onSaved, onCancel }: {
+  courseId: string; students: number; needs: { roleTypeId: string; count: number }[]; roles: BoardData["roles"]; onSaved: () => void; onCancel: () => void;
+}) {
+  const [n, setN] = useState(String(students || ""));
+  const [lines, setLines] = useState(needs.length ? needs.map((x) => ({ ...x })) : [{ roleTypeId: roles[0]?.id ?? "", count: 1 }]);
+  const [pending, start] = useTransition();
+  const [err, setErr] = useState<string | null>(null);
+  const save = () => {
+    setErr(null);
+    start(async () => {
+      const r = await setCourseStaffingAction({ courseId, students: Math.max(0, Math.round(Number(n) || 0)), roles: lines.filter((l) => l.roleTypeId && l.count > 0) });
+      if (r.ok) onSaved(); else setErr(r.error ?? "That didn't save");
+    });
+  };
+  const field = "rounded-lg border border-slate-300 px-2 py-1 text-sm outline-none focus:border-teal";
+  return (
+    <div className="mb-3 rounded-lg border border-navy/20 bg-slate-50 p-3">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Students and staff needed (whole course)</p>
+      <label className="flex items-center gap-2 text-sm text-navy">Students <input type="number" min={0} max={500} value={n} onChange={(e) => setN(e.target.value)} className={`${field} w-20`} /></label>
+      <ul className="mt-2 space-y-1.5">
+        {lines.map((l, i) => (
+          <li key={i} className="flex items-center gap-2">
+            <input type="number" min={1} max={50} value={l.count} onChange={(e) => setLines((ls) => ls.map((x, j) => (j === i ? { ...x, count: Math.max(1, Math.round(Number(e.target.value) || 1)) } : x)))} aria-label="How many" className={`${field} w-16`} />
+            <span className="text-slate-400">×</span>
+            <select value={l.roleTypeId} onChange={(e) => setLines((ls) => ls.map((x, j) => (j === i ? { ...x, roleTypeId: e.target.value } : x)))} aria-label="Role" className={`${field} flex-1`}>
+              {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+            </select>
+            <button type="button" onClick={() => setLines((ls) => ls.filter((_, j) => j !== i))} className="text-xs text-slate-400 hover:text-port" aria-label="Remove this role">✕</button>
+          </li>
+        ))}
+      </ul>
+      <button type="button" onClick={() => setLines((ls) => [...ls, { roleTypeId: roles[0]?.id ?? "", count: 1 }])} className="mt-2 text-xs font-medium text-teal hover:underline">+ Add a role</button>
+      {err ? <p className="mt-2 text-xs text-port">{err}</p> : null}
+      <div className="mt-3 flex items-center gap-2">
+        <button type="button" disabled={pending} onClick={save} className="rounded-lg bg-teal px-3 py-1.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{pending ? "Saving…" : "Save"}</button>
+        <button type="button" onClick={onCancel} className="text-sm text-slate-500 hover:text-navy">Cancel</button>
+      </div>
+    </div>
+  );
+}
+
 function SessionPanel({ data, selected, canEdit, preselect, instructors, byId, onClose, onChanged }: {
   data: BoardData; selected: Selected; canEdit: boolean; preselect: string | null; instructors: BoardInstructor[]; byId: Map<string, BoardInstructor>; onClose: () => void; onChanged: () => void;
 }) {
@@ -243,110 +351,94 @@ function SessionPanel({ data, selected, canEdit, preselect, instructors, byId, o
   const open = data.openRoles[s.sessionId] ?? [];
   const flags = data.problems[s.sessionId] ?? [];
   const [pending, start] = useTransition();
-  const [who, setWho] = useState(preselect ?? "");
-  const [role, setRole] = useState(open[0]?.roleTypeId ?? data.roles[0]?.id ?? "");
   const [scope, setScope] = useState<"course" | "day">(meta?.multiDay ? "day" : "course");
   const [override, setOverride] = useState(false);
-  const [note, setNote] = useState("");
+  const [editing, setEditing] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  const [wt, setWt] = useState<{ blocks: string; warns: string } | null>(null);
-  const [askRemove, setAskRemove] = useState<RotaSession["staff"][number] | null>(null);
+  const [askRemove, setAskRemove] = useState<Member | null>(null);
   const key = `${day.date}|${s.slot}`;
-  const chosen = who ? byId.get(who) : undefined;
-  const chosenAvail = chosen?.availability[key];
-  const qualified = chosen && meta ? (chosen.knownQualifications ? chosen.teaches.includes(meta.courseTypeId) : null) : null;
 
-  useEffect(() => {
-    if (!who || !chosen?.under18 || !meta) { setWt(null); return; }
-    let live = true;
-    boardWorkingTimeAction(meta.courseId, who).then((r) => { if (live && r.ok && r.active) setWt({ blocks: r.blocks, warns: r.warns }); }).catch(() => {});
-    return () => { live = false; };
-  }, [who, chosen?.under18, meta]);
-
-  const run = (fn: () => Promise<{ ok: boolean; error?: string; message?: string }>) => start(async () => {
-    const r = await fn();
-    setMsg({ ok: r.ok, text: r.ok ? r.message ?? "Done" : r.error ?? "Failed" });
-    if (r.ok) { setWho(""); setOverride(false); setNote(""); onChanged(); }
+  const run = (fn: () => Promise<{ ok: boolean; error?: string; message?: string }>, then?: () => Promise<unknown>) => start(async () => {
+    try {
+      const r = await fn();
+      setMsg({ ok: r.ok, text: r.ok ? r.message ?? "Done" : r.error ?? "Failed" });
+      if (r.ok) { if (then) await then(); setOverride(false); onChanged(); }
+    } catch { setMsg({ ok: false, text: "That didn't save. Reload the page and try again." }); }
   });
-  const assign = () => { if (!who || !role || !meta) return; run(() => boardAssignAction({ sessionId: s.sessionId, courseId: s.courseId, instructorId: who, roleTypeId: role, scope, override, note: override ? note : null })); };
-  const remove = (m: RotaSession["staff"][number], sc: "course" | "day") => run(() => boardRemoveAction({ sessionId: s.sessionId, courseId: s.courseId, instructorId: m.instructorId, roleTypeId: m.roleTypeId, assignmentId: m.assignmentId, scope: sc }));
-  const candidates = instructors.filter((i) => !s.staff.some((m) => m.instructorId === i.id && m.status !== "declined"));
-  const field = "rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal";
+  const remove = (m: Member, sc: "course" | "day") => run(() => boardRemoveAction({ sessionId: s.sessionId, courseId: s.courseId, instructorId: m.instructorId, roleTypeId: m.roleTypeId, assignmentId: m.assignmentId, scope: sc }));
+  // Change = put the new person on first, then take the old one off, so a refused assignment leaves the slot as it was.
+  const assign = (instructorId: string, roleTypeId: string, replacing?: Member) => run(
+    () => boardAssignAction({ sessionId: s.sessionId, courseId: s.courseId, instructorId, roleTypeId, scope: replacing?.dayOnly ? "day" : scope, override }),
+    replacing ? () => boardRemoveAction({ sessionId: s.sessionId, courseId: s.courseId, instructorId: replacing.instructorId, roleTypeId: replacing.roleTypeId, assignmentId: replacing.assignmentId, scope: replacing.dayOnly ? "day" : "course" }) : undefined,
+  );
+
+  // One row per required place; people on roles the course doesn't list come after.
+  const active = s.staff.filter((m) => m.status !== "declined");
+  const used = new Set<Member>();
+  const slots: { roleTypeId: string; roleName: string; member?: Member; extra?: boolean }[] = [];
+  // Needs worked out from the ratio (no role lines) are met by anyone in a teaching role, as the ratio check counts them.
+  const roleFlags = new Map(data.roles.map((r) => [r.id, r]));
+  const fits = (m: Member, roleTypeId: string) => {
+    if (meta?.explicitRoles !== false) return m.roleTypeId === roleTypeId;
+    const want = roleFlags.get(roleTypeId), has = roleFlags.get(m.roleTypeId);
+    if (!want || !has) return m.roleTypeId === roleTypeId;
+    return want.isSafetyCover ? Boolean(has.isSafetyCover) : Boolean(has.countsTowardRatio && !has.isSafetyCover);
+  };
+  for (const n of meta?.needs ?? []) {
+    const onRole = s.staff.filter((m) => fits(m, n.roleTypeId) && !used.has(m));
+    const filled = onRole.filter((m) => m.status !== "declined");
+    const declined = onRole.filter((m) => m.status === "declined");
+    for (const m of [...filled, ...declined]) used.add(m);
+    const label = (m?: Member) => (m && m.roleTypeId !== n.roleTypeId ? m.role : n.roleName);
+    for (let i = 0; i < Math.max(n.count, filled.length); i++) slots.push({ roleTypeId: n.roleTypeId, roleName: label(filled[i]), member: filled[i] });
+    for (const m of declined) slots.push({ roleTypeId: n.roleTypeId, roleName: label(m), member: m });
+  }
+  for (const m of s.staff.filter((x) => !used.has(x))) slots.push({ roleTypeId: m.roleTypeId, roleName: m.role, member: m, extra: true });
+  const candidates = instructors.filter((i) => !active.some((m) => m.instructorId === i.id));
+  const preselectRole = open[0]?.roleTypeId;
+  const dayWord = day.label.split(" ")[0] ?? "";
+  const totalNeeded = (meta?.needs ?? []).reduce((n, x) => n + x.count, 0);
 
   return (
     <div className="fixed inset-y-0 right-0 z-40 flex w-full max-w-md flex-col border-l border-slate-200 bg-white shadow-xl" role="dialog" aria-label={`${s.courseName}, ${day.label}`}>
       <div className="flex items-start justify-between gap-2 border-b border-slate-100 px-4 py-3">
         <div>
           <p className="font-display text-lg font-semibold text-navy">{s.courseName}</p>
-          <p className="text-xs text-slate-500">{day.label} · {SLOT_LABEL[s.slot] ?? s.slot} {fmtTime(s.startAt)}–{fmtTime(s.endAt)}{s.locations.length ? ` · ${s.locations.join(", ")}` : ""}{s.students ? ` · ${s.students} students` : ""}</p>
+          <p className="text-xs text-slate-500">{day.label} · {SLOT_LABEL[s.slot] ?? s.slot} {fmtTime(s.startAt)}–{fmtTime(s.endAt)}{s.locations.length ? ` · ${s.locations.join(", ")}` : ""}</p>
           <Link href={`/office/courses/${s.courseId}`} className="text-xs font-medium text-teal hover:underline">Open the course →</Link>
         </div>
         <button type="button" onClick={onClose} className="text-sm text-slate-400 hover:text-navy" aria-label="Close">✕</button>
       </div>
       <div className="flex-1 overflow-y-auto px-4 py-3 text-sm">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2">
+          <p className="text-sm text-navy"><span className="font-semibold">{s.students || 0}</span> students · <span className="font-semibold">{totalNeeded}</span> staff needed</p>
+          {canEdit && meta ? <button type="button" onClick={() => setEditing((v) => !v)} className="rounded border border-slate-300 bg-white px-2 py-0.5 text-xs font-medium text-navy hover:bg-slate-50">{editing ? "Close" : "Edit students & roles"}</button> : null}
+        </div>
+        {editing && meta ? <StaffingEditor courseId={meta.courseId} students={s.students} needs={(meta.needs ?? []).map((x) => ({ roleTypeId: x.roleTypeId, count: x.count }))} roles={data.roles} onCancel={() => setEditing(false)} onSaved={() => { setEditing(false); setMsg({ ok: true, text: "Students and roles saved for the whole course" }); onChanged(); }} /> : null}
         {flags.length ? <ul className="mb-3 space-y-1 rounded-lg bg-port/5 p-2 text-xs text-port">{flags.map((f, i) => <li key={i}>⚠ {f}</li>)}</ul> : null}
 
-        <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">On this session</p>
-        {s.staff.length === 0 ? <p className="mb-3 text-xs text-slate-400">Nobody yet.</p> : (
-          <ul className="mb-3 space-y-1">
-            {s.staff.map((m) => (
-              <li key={m.instructorId} className="flex flex-wrap items-center gap-2 rounded-lg bg-slate-50 px-2 py-1.5">
-                <span className={`font-medium ${m.status === "declined" ? "text-port line-through" : "text-navy"}`}>{m.name}</span>
-                <span className="text-xs text-slate-500">{m.role}</span>
-                {m.status === "confirmed" ? <span className="text-[10px] font-semibold text-starboard">confirmed</span> : m.status === "declined" ? <span className="rounded bg-port/10 px-1 text-[10px] font-semibold text-port">can&apos;t make it</span> : <span className="text-[10px] text-slate-400">unconfirmed</span>}
-                {m.dayOnly ? <span className="rounded bg-teal/15 px-1 text-[9px] font-semibold uppercase text-teal">this day only</span> : null}
-                {canEdit ? (
-                  <span className="ml-auto flex items-center gap-2 text-[11px]">
-                    {m.dayOnly ? <button type="button" disabled={pending} onClick={() => remove(m, "day")} className="text-slate-400 hover:text-port">remove</button> : (
-                      <>
-                        {meta?.multiDay ? <button type="button" disabled={pending} onClick={() => remove(m, "day")} className="text-slate-400 hover:text-port" title="Not needed this day; stays on the rest of the course">skip this day</button> : null}
-                        <button type="button" disabled={pending} onClick={() => setAskRemove(m)} className="text-slate-400 hover:text-port">remove</button>
-                      </>
-                    )}
-                  </span>
-                ) : null}
-              </li>
+        <div className="mb-1 flex items-center justify-between">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Roles</p>
+          {open.length ? <p className="text-xs text-amber">{open.reduce((n, r: OpenRole) => n + r.missing, 0)} still to fill</p> : <p className="text-xs text-starboard">Every role filled</p>}
+        </div>
+        {canEdit && meta?.multiDay ? (
+          <div className="mb-2 flex gap-3 text-xs text-slate-600">
+            <span className="text-slate-400">Assign for:</span>
+            <label className="flex items-center gap-1"><input type="radio" name="scope" checked={scope === "day"} onChange={() => setScope("day")} /> This day only</label>
+            <label className="flex items-center gap-1"><input type="radio" name="scope" checked={scope === "course"} onChange={() => setScope("course")} /> Whole course</label>
+          </div>
+        ) : null}
+        {slots.length === 0 ? <p className="mb-3 text-xs text-slate-400">This course doesn&apos;t list any roles yet. Use &ldquo;Edit students &amp; roles&rdquo; to add them.</p> : (
+          <ul className="mb-3 space-y-1.5">
+            {slots.map((sl, i) => (
+              <SlotRow key={`${sl.roleTypeId}-${sl.member?.instructorId ?? "open"}-${i}`} {...sl} candidates={candidates} byId={byId} slotKey={key} dayWord={dayWord} slot={s.slot}
+                courseTypeId={meta?.courseTypeId ?? null} courseId={meta?.courseId ?? null} canEdit={canEdit} multiDay={Boolean(meta?.multiDay)} pending={pending}
+                preselect={!sl.member && sl.roleTypeId === preselectRole ? preselect : null}
+                onAssign={assign} onRemove={remove} onAskRemove={setAskRemove} />
             ))}
           </ul>
         )}
-        {open.length ? <p className="mb-3 text-xs text-amber">Still open: {open.map((r: OpenRole) => `${r.missing} × ${r.roleName}`).join(", ")}</p> : <p className="mb-3 text-xs text-starboard">Every role filled.</p>}
-
-        {canEdit ? (
-          <div className="rounded-lg border border-slate-200 p-3">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Add someone</p>
-            <div className="grid gap-2">
-              <select value={who} onChange={(e) => setWho(e.target.value)} aria-label="Instructor" className={field}>
-                <option value="">Instructor…</option>
-                {candidates.map((i) => {
-                  const a = i.availability[key];
-                  const av = a ? AVAIL[a.status] ?? AVAIL.unasked! : AVAIL.unasked!;
-                  const q = meta ? (i.knownQualifications ? i.teaches.includes(meta.courseTypeId) : null) : null;
-                  return <option key={i.id} value={i.id}>{i.name} · {av.word}{a?.source === "default" ? " (not answered)" : a?.source === "pattern" ? " (usual)" : ""}{!i.fit ? ` · ${i.fitReason}` : ""}{q === false ? " · not qualified for this type" : ""}</option>;
-                })}
-              </select>
-              {chosen ? (
-                <div className="space-y-0.5 text-xs">
-                  <p className={chosenAvail?.status === "available" ? "text-starboard" : chosenAvail?.status === "unavailable" ? "text-port" : "text-slate-500"}>Availability {day.label.split(" ")[0]} {s.slot}: {(chosenAvail ? AVAIL[chosenAvail.status] ?? AVAIL.unasked! : AVAIL.unasked!).word}{chosenAvail?.source === "default" ? " (hasn't answered; counts as busy)" : chosenAvail?.source === "pattern" ? " (usual week)" : ""}</p>
-                  {!chosen.fit ? <p className="text-port">Not cleared to roster: {chosen.fitReason}</p> : null}
-                  {qualified === false ? <p className="text-port">Their qualifications don&apos;t cover this course type (override needed).</p> : qualified === null ? <p className="text-slate-400">No qualifications recorded for them.</p> : null}
-                  {chosen.under18 ? (wt ? (wt.blocks ? <p className="text-port">Young worker&apos;s hours: {wt.blocks}</p> : wt.warns ? <p className="text-amber">Young worker&apos;s hours: {wt.warns}</p> : <p className="text-starboard">Young worker&apos;s hours: within the limits.</p>) : <p className="text-slate-400">Checking young worker&apos;s hours…</p>) : null}
-                </div>
-              ) : null}
-              <select value={role} onChange={(e) => setRole(e.target.value)} aria-label="Role" className={field}>
-                {data.roles.map((r) => <option key={r.id} value={r.id}>{r.name}{open.some((o) => o.roleTypeId === r.id) ? " (needed)" : ""}</option>)}
-              </select>
-              {meta?.multiDay ? (
-                <div className="flex gap-3 text-xs text-slate-600">
-                  <label className="flex items-center gap-1"><input type="radio" name="scope" checked={scope === "day"} onChange={() => setScope("day")} /> This day only</label>
-                  <label className="flex items-center gap-1"><input type="radio" name="scope" checked={scope === "course"} onChange={() => setScope("course")} /> Whole course</label>
-                </div>
-              ) : null}
-              <label className="flex items-center gap-2 text-xs text-slate-600"><input type="checkbox" checked={override} onChange={(e) => setOverride(e.target.checked)} /> Override a block (Busy, clash, cert, qualification) with a note</label>
-              {override ? <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Why it's fine, for the record" maxLength={300} className={field} /> : null}
-              <button type="button" disabled={pending || !who || !role || (override && !note.trim())} onClick={assign} className="rounded-lg bg-teal px-3 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{pending ? "Saving…" : scope === "day" && meta?.multiDay ? "Add for this day" : "Assign"}</button>
-            </div>
-          </div>
-        ) : null}
+        {canEdit ? <label className="flex items-center gap-2 text-xs text-slate-600"><input type="checkbox" checked={override} onChange={(e) => setOverride(e.target.checked)} /> Override a block (Busy, clash, licence, qualification)</label> : null}
         {msg ? <p className={`mt-3 text-xs ${msg.ok ? "text-starboard" : "text-port"}`}>{msg.text}</p> : null}
       </div>
       <ConfirmDialog open={askRemove !== null} title={`Take ${askRemove?.name ?? ""} off ${s.courseName}?`} confirmLabel="Remove from the course" busy={pending} onCancel={() => setAskRemove(null)}

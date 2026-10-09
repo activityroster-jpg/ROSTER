@@ -303,7 +303,7 @@ Start modestly: a small beginner fleet, one qualified instructor, a Start Windsu
 
 ## Recognition and instructors
 
-Each new discipline needs its own RYA recognition, instructor qualifications and procedures. Many dinghy instructors can add a paddlesport or windsurfing instructor ticket relatively easily, and doing so makes them more employable and more useful across your season. Plan the qualifications a year ahead and fund them for the instructors who will teach the new activity. Make sure your insurance explicitly covers each activity before the first session.
+Each new discipline needs its own RYA recognition, instructor qualifications and procedures. Many dinghy instructors can add a paddlesport or windsurfing instructor licence relatively easily, and doing so makes them more employable and more useful across your season. Plan the qualifications a year ahead and fund them for the instructors who will teach the new activity. Make sure your insurance explicitly covers each activity before the first session.
 
 ## Equipment, storage and care
 

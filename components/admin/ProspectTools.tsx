@@ -1,5 +1,6 @@
 "use client";
 
+import { askConfirm } from "@/lib/ui/ask-confirm";
 import { useActionState, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -42,10 +43,10 @@ export function ProspectTools({ hasRows }: { hasRows: boolean }) {
   const [bulkStatus, setBulkStatus] = useState("letter_sent");
   const [bulkMsg, setBulkMsg] = useState<(ProspectResult & { unmatched?: string[] }) | null>(null);
 
-  const doBulk = (mode: "add" | "remove") => {
+  const doBulk = async (mode: "add" | "remove") => {
     const n = bulkText.split(/\r?\n/).filter((l) => l.trim()).length;
     const label = PROSPECT_STATUS_META[bulkStatus as keyof typeof PROSPECT_STATUS_META]?.label ?? bulkStatus;
-    if (!confirm(`${mode === "add" ? "Add" : "Remove"} “${label}” on up to ${n} centre${n === 1 ? "" : "s"}?`)) return;
+    if (!await askConfirm(`${mode === "add" ? "Add" : "Remove"} “${label}” on up to ${n} centre${n === 1 ? "" : "s"}?`)) return;
     setBulkMsg(null);
     startTransition(async () => {
       const res = await bulkStatusByNameAction(bulkText, bulkStatus, mode);
@@ -76,13 +77,13 @@ export function ProspectTools({ hasRows }: { hasRows: boolean }) {
     }
   };
   const seed = () => startTransition(async () => { await seedSampleProspectsAction(); router.refresh(); });
-  const dedupe = () => {
-    if (!confirm("Merge duplicate centres? Rows with the same name and postcode are combined into one, keeping the furthest-along status and all notes.")) return;
+  const dedupe = async () => {
+    if (!await askConfirm("Merge duplicate centres? Rows with the same name and postcode are combined into one, keeping the furthest-along status and all notes.")) return;
     setImportMsg(null);
     startTransition(async () => { const res = await dedupeProspectsAction(); setImportMsg(res); router.refresh(); });
   };
-  const loadDirectory = () => {
-    if (!confirm("Add every centre from the RYA directory (2,138)? Centres already on your list are skipped and keep their statuses.")) return;
+  const loadDirectory = async () => {
+    if (!await askConfirm("Add every centre from the RYA directory (2,138)? Centres already on your list are skipped and keep their statuses.")) return;
     setImportMsg(null);
     startTransition(async () => { const res = await loadRyaDirectoryAction(); setImportMsg(res); router.refresh(); });
   };

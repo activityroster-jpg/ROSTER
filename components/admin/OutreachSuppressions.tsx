@@ -1,5 +1,6 @@
 "use client";
 
+import { askConfirm } from "@/lib/ui/ask-confirm";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { addSuppressionAction, removeSuppressionAction, type OutreachResult } from "@/app/admin/outreach/actions";
@@ -30,7 +31,7 @@ export function OutreachSuppressions({ rows }: { rows: { email: string; reason: 
               <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">{r.reason}</span>
               {r.note ? <span className="text-xs text-slate-400">{r.note}</span> : null}
               <span className="ml-auto text-xs text-slate-400">{new Date(r.createdAt).toLocaleDateString("en-GB")}</span>
-              <button disabled={pending} onClick={() => { if (!confirm(`Allow emails to ${r.email} again?`)) return; start(async () => { await removeSuppressionAction(r.email); router.refresh(); }); }} className="text-xs text-port hover:underline">Remove</button>
+              <button disabled={pending} onClick={async () => { if (!await askConfirm(`Allow emails to ${r.email} again?`)) return; start(async () => { await removeSuppressionAction(r.email); router.refresh(); }); }} className="text-xs text-port hover:underline">Remove</button>
             </li>
           ))}
         </ul>

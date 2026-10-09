@@ -97,21 +97,21 @@ export function StaffImportWizard() {
 
       {phase === "review" ? (
         <div>
-          <p className="mb-3 text-sm text-slate-600">Fix anything flagged, then import. Rows without a name are skipped. Unrecognised tickets/courses are ignored — you can add them on each profile later.</p>
+          <p className="mb-3 text-sm text-slate-600">Fix anything flagged, then import. Rows without a name are skipped. Unrecognised licences/courses are ignored — you can add them on each profile later.</p>
           <div className="max-h-[28rem] space-y-2 overflow-y-auto">
             {drafts.map((d, i) => (
               <div key={i} className={`rounded-lg border p-3 ${d.name.trim() ? "border-slate-200" : "border-port/40 bg-port/5"}`}>
                 <div className="grid gap-2 sm:grid-cols-2">
                   <input value={d.name} onChange={(e) => update(i, { name: e.target.value })} placeholder="Full name *" className={input} />
                   <input value={d.email} onChange={(e) => update(i, { email: e.target.value })} placeholder="Email" className={input} />
-                  <input value={d.quals} onChange={(e) => update(i, { quals: e.target.value })} placeholder="Qualifications / tickets" className={input} />
+                  <input value={d.quals} onChange={(e) => update(i, { quals: e.target.value })} placeholder="Qualifications / licences" className={input} />
                   <input value={d.courses} onChange={(e) => update(i, { courses: e.target.value })} placeholder="Courses they can teach" className={input} />
                 </div>
                 <div className="mt-1.5 flex flex-wrap items-center gap-2">
                   <select value={d.employment} onChange={(e) => update(i, { employment: e.target.value })} className={input}>
                     <option value="employed">Employed</option><option value="freelance">Freelance</option><option value="volunteer">Volunteer</option>
                   </select>
-                  {splitList(d.quals).length ? <span className="text-[11px] text-slate-400">{splitList(d.quals).length} ticket(s)</span> : null}
+                  {splitList(d.quals).length ? <span className="text-[11px] text-slate-400">{splitList(d.quals).length} licence(s)</span> : null}
                   {splitList(d.courses).length ? <span className="text-[11px] text-slate-400">· {splitList(d.courses).length} course(s)</span> : null}
                   {d.issues.map((x) => <span key={x} className="rounded bg-amber/15 px-1.5 py-0.5 text-[10px] font-medium text-amber">{x}</span>)}
                   <button type="button" onClick={() => remove(i)} className="ml-auto text-xs text-slate-400 hover:text-port">Remove</button>

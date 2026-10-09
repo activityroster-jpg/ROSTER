@@ -1,5 +1,6 @@
 "use client";
 
+import { askConfirm } from "@/lib/ui/ask-confirm";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -85,7 +86,7 @@ function Row({ row, onMsg }: { row: CourseTypeRow; onMsg: (m: { ok: boolean; tex
         <button
           type="button"
           disabled={pending}
-          onClick={() => { if (confirm(`Delete "${row.name}"? If it's used by existing courses it will be retired instead.`)) run(() => deleteCourseTypeAction(row.id)); }}
+          onClick={async () => { if (await askConfirm(`Delete "${row.name}"? If it's used by existing courses it will be retired instead.`)) run(() => deleteCourseTypeAction(row.id)); }}
           className="text-xs text-slate-400 hover:text-port"
         >
           Delete

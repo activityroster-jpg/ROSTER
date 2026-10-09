@@ -44,7 +44,7 @@ export default async function RotaPage({ searchParams }: { searchParams: Promise
   const total = rota.reduce((n, d) => n + d.sessions.length, 0);
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className={view === "print" ? "mx-auto max-w-4xl" : "w-full"}>
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3 print:mb-3">
         <div>
           <h1 className="font-display text-2xl font-bold text-navy">Weekly roster</h1>

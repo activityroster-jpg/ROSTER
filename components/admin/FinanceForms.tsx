@@ -1,5 +1,6 @@
 "use client";
 
+import { askConfirm } from "@/lib/ui/ask-confirm";
 import { useActionState, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { addTransactionAction, deleteTransactionAction, syncStripeAction, updateFinanceSettingsAction, updateTransactionAction, type FinanceResult } from "@/app/admin/finance/actions";
@@ -81,7 +82,7 @@ export function TransactionTable({ rows }: { rows: TxRow[] }) {
     setMsg(r.ok ? "Saved" : r.error ?? "Could not save");
     if (r.ok) { setEditing(null); router.refresh(); }
   });
-  const del = (id: string) => { if (!confirm("Delete this line? Your accountant will not see it.")) return; start(async () => { const r = await deleteTransactionAction(id); setMsg(r.ok ? "Deleted" : r.error ?? "Failed"); router.refresh(); }); };
+  const del = async (id: string) => { if (!await askConfirm("Delete this line? Your accountant will not see it.")) return; start(async () => { const r = await deleteTransactionAction(id); setMsg(r.ok ? "Deleted" : r.error ?? "Failed"); router.refresh(); }); };
 
   return (
     <div>

@@ -98,7 +98,7 @@ None of these costs money. All of them signal that getting better matters here.
 
 ## Formal courses and qualifications
 
-Plan the formal steps as part of the season's budget. Funding or part-funding an instructor's next qualification, a Senior Instructor course, a Powerboat Instructor ticket, a first aid renewal, a safeguarding course or a coaching award, is one of the most effective retention tools there is, especially when it is tied to returning next season. Host courses at your own centre where you can; the regional RYA team is often looking for venues, and your staff get to attend without travel.
+Plan the formal steps as part of the season's budget. Funding or part-funding an instructor's next qualification, a Senior Instructor course, a Powerboat Instructor licence, a first aid renewal, a safeguarding course or a coaching award, is one of the most effective retention tools there is, especially when it is tied to returning next season. Host courses at your own centre where you can; the regional RYA team is often looking for venues, and your staff get to attend without travel.
 
 Think beyond sailing qualifications. Training in working with disabled sailors, in mental health first aid, in managing difficult conversations, in basic maintenance or in customer service all make better instructors and broaden what the centre can offer.
 
@@ -158,7 +158,7 @@ The Chief Instructor and the Principal set the tone. Instructors return to leade
 
 ## Make them better
 
-Instructors come back to places where they grew. Fund the next qualification, give them responsibility, coach them, let them teach a wider range of courses. Describe the pathway and show them their place on it. An instructor who leaves your centre with a Senior Instructor ticket they earned with your help is an instructor who will return, and who will tell others.
+Instructors come back to places where they grew. Fund the next qualification, give them responsibility, coach them, let them teach a wider range of courses. Describe the pathway and show them their place on it. An instructor who leaves your centre with a Senior Instructor licence they earned with your help is an instructor who will return, and who will tell others.
 
 ## Build the team
 
@@ -602,7 +602,7 @@ Before a session, an instructor wants to know who is in the group, their level a
 
 ## Qualifications and reminders
 
-Instructors should not have to remember when their first aid expires; the system should tell them, well ahead, and tell the Chief Instructor too. A personal view of their own certificates, with upload of new ones from their phone, keeps the centre's register accurate without the Chief Instructor chasing. Rostering that will not assign someone whose ticket has lapsed turns a compliance risk into a non-event.
+Instructors should not have to remember when their first aid expires; the system should tell them, well ahead, and tell the Chief Instructor too. A personal view of their own certificates, with upload of new ones from their phone, keeps the centre's register accurate without the Chief Instructor chasing. Rostering that will not assign someone whose licence has lapsed turns a compliance risk into a non-event.
 
 ## Time and pay
 
@@ -636,7 +636,7 @@ Tools fail with instructors when they duplicate work, when they are slow, when t
 
 ## Introduce it as a benefit
 
-Present new tools to the team as what they are: a way to spend less time on admin and more on teaching, to get paid accurately, to know their roster early, to be reminded before a ticket lapses. Show it working on a phone in the induction. Ask for feedback in the first fortnight and fix what is awkward. Instructors who feel a tool was chosen for them will use it, and the office will notice the difference within a month.`,
+Present new tools to the team as what they are: a way to spend less time on admin and more on teaching, to get paid accurately, to know their roster early, to be reminded before a licence lapses. Show it working on a phone in the induction. Ask for feedback in the first fortnight and fix what is awkward. Instructors who feel a tool was chosen for them will use it, and the office will notice the difference within a month.`,
   },
   {
     slug: "creating-a-team-culture-people-want-to-join",

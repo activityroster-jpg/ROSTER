@@ -37,7 +37,7 @@ export async function boardAssignAction(input: { sessionId: string; courseId: st
     return { ok: true, message: r.overridden ? `Added for this day (overriding: ${r.warnings.join("; ")})` : "Added for this day" };
   }
   const r = await assignStaff(repos, ctx, { courseId: input.courseId, instructorId: input.instructorId, roleTypeId: input.roleTypeId, override: Boolean(input.override), overrideNote: note ?? undefined });
-  if (!r.ok) return { ok: false, error: `${assignBlockMessage(r.reason, r.detail)}${r.noOverride ? "" : ". Tick override and add a note to push it through."}` };
+  if (!r.ok) return { ok: false, error: `${assignBlockMessage(r.reason, r.detail)}${r.noOverride ? "" : ". Tick override to push it through."}` };
   refresh();
   return { ok: true, message: r.warnings.length ? `Assigned — ⚠ ${r.warnings.join("; ")}` : r.overridden ? "Assigned (override recorded)" : "Assigned" };
 }

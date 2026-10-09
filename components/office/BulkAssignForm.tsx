@@ -52,7 +52,6 @@ export function BulkAssignForm({
     setMsg(null);
     if (!instructorId || !roleTypeId) { setMsg({ ok: false, text: "Pick an instructor and a role." }); return; }
     if (picked.size === 0) { setMsg({ ok: false, text: "Tick at least one course." }); return; }
-    if (override && !note.trim()) { setMsg({ ok: false, text: "Add a reason to override." }); return; }
     start(async () => {
       const res = await bulkAssignStaffAction({ courseIds: [...picked], instructorId, roleTypeId, override, overrideNote: note });
       if (res.ok) {
@@ -122,7 +121,6 @@ export function BulkAssignForm({
           </label>
           {override ? (
             <>
-              <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Override reason (required)" aria-label="Override reason" className="mt-2 w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal" />
               <FreeTextHint className="mt-1" />
             </>
           ) : null}

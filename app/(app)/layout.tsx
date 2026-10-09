@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { ActionFailureWatcher } from "@/components/ActionFailureWatcher";
 
 /**
  * Render every page in this group per request. Sign-in, two-factor and
@@ -10,5 +11,5 @@ import type { ReactNode } from "react";
 export const dynamic = "force-dynamic";
 
 export default function AppGroupLayout({ children }: { children: ReactNode }) {
-  return children;
+  return <>{children}<ActionFailureWatcher /></>;
 }

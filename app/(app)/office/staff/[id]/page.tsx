@@ -24,6 +24,9 @@ import { readProtectedContacts } from "@/lib/services/protected-contacts";
 import { ProtectedContactsForm } from "@/components/office/ProtectedContactsForm";
 import { parentApprovalFromLinks } from "@/lib/services/guardians";
 import { StaffAvailabilityCard } from "@/components/office/StaffAvailabilityCard";
+import { StaffLicencesCourses } from "@/components/office/StaffLicencesCourses";
+import { eq } from "drizzle-orm";
+import { instructorCourseType as instructorCourseTypeTable, qualification as qualificationTable } from "@/lib/db/schema";
 import { staffAvailabilityView } from "@/lib/services/availability";
 import { weekStart } from "@/lib/services/schedule";
 
@@ -55,11 +58,17 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
   const inviteStatus = !instructor.userId ? "none" : membership?.status === "active" ? "accepted" : "pending";
   const availability = await staffAvailabilityView(repos, ctx, instructor.id, weekStart(new Date()));
   const centreMode = settings[0]?.staffManagedBy ?? "staff";
+  const [qualTypes, courseTypes, held, teachRows] = await Promise.all([
+    repos.tenant.qualificationType.list(ctx),
+    repos.tenant.courseType.list(ctx),
+    repos.tenant.qualification.list(ctx, eq(qualificationTable.instructorId, instructor.id)),
+    repos.tenant.instructorCourseType.list(ctx, eq(instructorCourseTypeTable.instructorId, instructor.id)),
+  ]);
   const under18 = isUnder18(instructor.dateOfBirth);
   const age = ageOn(instructor.dateOfBirth);
   const canEdit = can(ctx, "staff.edit");
   const canProtected = can(ctx, "protected.view");
-  const contacts = canProtected ? await readProtectedContacts(repos, ctx, instructor) : { guardianName: "", guardianPhone: "", guardianEmail: "", emergencyName: "", emergencyPhone: "", emergencyRelationship: "" };
+  const contacts = canProtected ? await readProtectedContacts(repos, ctx, instructor) : { guardianName: "", guardianPhone: "", guardianEmail: "", emergencyName: "", emergencyPhone: "", emergencyRelationship: "", medicalNotes: "" };
   const guardians = under18 ? await guardianLinksFor(repos, ctx, instructor.id) : [];
   const retention = left && !instructor.anonymisedAt ? await retentionPlan(repos, ctx, settings[0], new Date()) : null;
   const scheduled = retention?.staffDue.find((x) => x.id === instructor.id) ?? null;
@@ -88,7 +97,7 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
       <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
         <div className="space-y-6">
           <Card>
-            <h2 className="mb-1 font-semibold text-navy">Certs &amp; documents</h2>
+            <h2 className="mb-1 font-semibold text-navy">Licences &amp; documents</h2>
             <WhoCanSee repos={repos} ctx={ctx} feature="staff" className="mb-3" />
             <DocumentManager items={docItems} admin />
           </Card>
@@ -113,9 +122,18 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
           ) : null}
 
           <Card>
-            <h2 className="mb-2 font-semibold text-navy">Courses they can teach</h2>
-            {approvedCourses.length === 0 ? (
-              <p className="text-sm text-slate-400">None set yet — they&apos;re suggested from the certs they hold when you add them.</p>
+            <h2 className="mb-2 font-semibold text-navy">Licences &amp; courses they can teach</h2>
+            {canEdit && !left ? (
+              <StaffLicencesCourses
+                instructorId={instructor.id}
+                name={instructor.name.split(" ")[0] ?? instructor.name}
+                licenceTypes={qualTypes.filter((q) => q.active).sort((a, b) => a.rank - b.rank).map((q) => ({ id: q.id, name: q.name }))}
+                heldTypeIds={held.map((q) => q.qualificationTypeId)}
+                courseTypes={courseTypes.filter((c) => c.active && c.listed).sort((a, b) => a.name.localeCompare(b.name)).map((c) => ({ id: c.id, name: c.name, group: c.category || (c.audience === "youth" ? "Youth" : c.audience === "adult" ? "Adult" : "Courses") }))}
+                teaches={teachRows.map((r) => r.courseTypeId)}
+              />
+            ) : approvedCourses.length === 0 ? (
+              <p className="text-sm text-slate-400">None set yet.</p>
             ) : (
               <ul className="flex flex-wrap gap-2">
                 {approvedCourses.map((c) => <li key={c.id} className="rounded-full bg-teal/10 px-3 py-1 text-xs font-medium text-teal">{c.name}</li>)}

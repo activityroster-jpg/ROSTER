@@ -15,7 +15,7 @@ export const metadata = {
 };
 
 const INCLUDED = [
-  "Roster builder with RYA ratio, ticket and safety-cover checks on every assignment",
+  "Roster builder with RYA ratio, licence and safety-cover checks on every assignment",
   "Instructor app: shifts, availability, swaps, leave, hours and documents",
   "Certificate and vetting tracking (DBS, PVG, AccessNI, Garda) with expiry reminders",
   "Young workers' hours checked by age; parent and guardian read-only view",
@@ -31,7 +31,7 @@ const SETUP_INCLUDED = [
   "A kick-off call to understand exactly how your centre runs",
   "We tailor the platform to your way of working — your courses, grades, roles, ratios, checks and session times, set up your way",
   "Custom features and tweaks built around what you actually need — tell us how you want it and we'll make it work like that",
-  "We import your existing schedule, staff and tickets from your spreadsheets",
+  "We import your existing schedule, staff and licences from your spreadsheets",
   "We invite your instructors and set up availability & the weekly roster",
   "A walk-through so you and your team are confident from day one",
 ];

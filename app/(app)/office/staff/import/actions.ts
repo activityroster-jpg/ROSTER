@@ -77,7 +77,7 @@ export async function importInstructorsAction(rows: ConfirmedStaff[], opts?: { s
     created++;
     if (remaining !== null) remaining--;
 
-    // Qualifications → placeholder rows for the tickets we recognise.
+    // Qualifications → placeholder rows for the licences we recognise.
     for (const q of splitList(raw.quals)) {
       const qt = qualByName.get(q.toLowerCase());
       if (qt) {
@@ -109,7 +109,7 @@ export async function importInstructorsAction(rows: ConfirmedStaff[], opts?: { s
   const parts = [`${created} added`];
   if (invited) parts.push(`${invited} invited`);
   if (queued) parts.push(`${queued} invite${queued === 1 ? "" : "s"} queued for tomorrow (daily limit of ${await inviteDailyCap(repos.db)})`);
-  if (qualsLinked) parts.push(`${qualsLinked} tickets matched`);
+  if (qualsLinked) parts.push(`${qualsLinked} licences matched`);
   if (coursesLinked) parts.push(`${coursesLinked} course approvals`);
   if (skipped) parts.push(`${skipped} skipped`);
   const message = limitReached ? `${parts.join(" · ")} — ${capUpgradeMessage(organisation)}` : parts.join(" · ");

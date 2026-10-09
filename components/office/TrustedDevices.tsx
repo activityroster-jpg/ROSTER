@@ -1,5 +1,6 @@
 "use client";
 
+import { askConfirm } from "@/lib/ui/ask-confirm";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { forgetDevicesAction } from "@/app/verify-device/actions";
@@ -12,8 +13,8 @@ export function TrustedDevices({ rows }: { rows: TrustedDeviceRow[] }) {
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
 
-  const forget = () => {
-    if (!confirm("Forget all devices? You'll be asked for your password again on every device, including this one.")) return;
+  const forget = async () => {
+    if (!await askConfirm("Forget all devices? You'll be asked for your password again on every device, including this one.")) return;
     start(async () => {
       const r = await forgetDevicesAction();
       setMsg(r.ok ? r.message ?? "Done" : r.error ?? "Could not forget devices");

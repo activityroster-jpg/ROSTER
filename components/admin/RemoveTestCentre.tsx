@@ -1,5 +1,6 @@
 "use client";
 
+import { askConfirm } from "@/lib/ui/ask-confirm";
 import { useState, useTransition } from "react";
 import { removeTestCentreAction } from "@/app/admin/actions";
 
@@ -16,7 +17,7 @@ export function RemoveTestCentre({ id, slug, members, liveSubscription }: { id: 
   const [msg, setMsg] = useState<string | null>(null);
   const ready = isTest && typed.trim().toLowerCase() === slug && !liveSubscription;
   const run = () => start(async () => {
-    if (!confirm(`Remove ${slug} now? The centre, everything in it and its logins are deleted straight away. This cannot be undone.`)) return;
+    if (!await askConfirm(`Remove ${slug} now? The centre, everything in it and its logins are deleted straight away. This cannot be undone.`)) return;
     const r = await removeTestCentreAction({ id, confirmSlug: typed, confirmedTest: isTest });
     // On success the action takes you back to the Dev Center overview.
     if (r && !r.ok) setMsg(r.error ?? "Failed");

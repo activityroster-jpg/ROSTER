@@ -231,7 +231,7 @@ Beyond the RYA, the Principal usually carries the legal responsibilities of the 
 
 ## What the Principal is not
 
-The Principal does not have to be the best sailor in the building, nor teach every course, nor hold every instructor ticket. Teaching standards within each scheme belong to the Chief Instructor. The Principal's job is to make sure there is a competent Chief Instructor, that they have what they need, and that the system around them works.
+The Principal does not have to be the best sailor in the building, nor teach every course, nor hold every instructor licence. Teaching standards within each scheme belong to the Chief Instructor. The Principal's job is to make sure there is a competent Chief Instructor, that they have what they need, and that the system around them works.
 
 Newer Principals often try to do everything themselves because they can. The result is a centre that works only when they are present and a person who burns out within three seasons. The real skill is building a centre that runs well in your absence.
 

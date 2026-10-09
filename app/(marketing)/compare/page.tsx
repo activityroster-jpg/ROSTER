@@ -34,8 +34,8 @@ const ROWS: Row[] = [
     us: "yes", general: "no", club: "no", sheets: "no",
   },
   {
-    feature: "Instructor cert & ticket tracking",
-    detail: "Dinghy/keelboat/windsurf/SUP/powerboat tickets, first aid, with expiry alerts.",
+    feature: "Instructor cert & licence tracking",
+    detail: "Dinghy/keelboat/windsurf/SUP/powerboat licences, first aid, with expiry alerts.",
     us: "yes", general: "partial", club: "partial", sheets: "partial",
   },
   {
@@ -140,7 +140,7 @@ export default function ComparePage() {
         <p className="mx-auto mt-3 max-w-2xl text-slate-600">
           General rostering apps schedule shifts. Club systems take bookings and money. Spreadsheets do
           whatever you build. None of them understand an RYA centre&apos;s compliance the way ActivityRoster does —
-          ratios, safety cover, tickets and vetting, enforced as you roster.
+          ratios, safety cover, licences and vetting, enforced as you roster.
         </p>
       </div>
 

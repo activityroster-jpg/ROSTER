@@ -24,7 +24,7 @@ describe("the invitation email", () => {
     expect(e.html).toContain("Yeadon &lt;SC&gt;");
     expect(e.html).toContain("magic?token=x");
     expect(e.html).toContain("Mark the days you");
-    expect(e.html).toContain("Email me a sign-in link");
+    expect(e.html).toContain("Set up your account");
     const r = inviteReminderEmail({ kind: "office", centreName: "Yeadon", inviterName: null, signInUrl: "https://yeadon.activityroster.com/sign-in", email: "jo@x.org" });
     expect(r.subject).toBe("Reminder: Yeadon invited you to ActivityRoster");
     expect(r.html).not.toContain("token");

@@ -37,7 +37,7 @@ export function ComplianceFlow({ showStrip = true }: { showStrip?: boolean }) {
         <li className="rounded-card border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex items-center gap-3"><StepNumber n={2} /><Users className="h-5 w-5 text-teal" aria-hidden="true" /></div>
           <p className="mt-3 font-display text-lg font-semibold text-navy">Select your staff</p>
-          <p className="mt-1 text-sm text-slate-600">See at a glance who&rsquo;s available and who&rsquo;s already assigned, on one availability sheet. Clashes, expired tickets and missing safety cover are flagged as you go.</p>
+          <p className="mt-1 text-sm text-slate-600">See at a glance who&rsquo;s available and who&rsquo;s already assigned, on one availability sheet. Clashes, expired licences and missing safety cover are flagged as you go.</p>
           <ul className="mt-3 flex flex-wrap gap-1.5" aria-label="Checked for every assignment">
             {CHECKS.map((c) => (
               <li key={c} className="inline-flex items-center gap-1 rounded-full bg-starboard/10 px-2 py-0.5 text-[11px] font-semibold text-starboard"><Check className="h-3 w-3" aria-hidden="true" />{c}</li>

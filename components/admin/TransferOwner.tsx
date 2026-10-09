@@ -1,5 +1,6 @@
 "use client";
 
+import { askConfirm } from "@/lib/ui/ask-confirm";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { transferOwnerAction } from "@/app/admin/actions";
@@ -28,7 +29,7 @@ export function TransferOwner({ id, members }: { id: string; members: OfficeUser
         <button
           type="button"
           disabled={pending || !to}
-          onClick={() => { if (!confirm(`Make ${to} the superadmin? The current superadmin becomes an office admin with full access. Both are emailed.`)) return; start(async () => { const r = await transferOwnerAction(id, to); setMsg(r.ok ? "Transferred" : r.error ?? "Failed"); router.refresh(); }); }}
+          onClick={async () => { if (!await askConfirm(`Make ${to} the superadmin? The current superadmin becomes an office admin with full access. Both are emailed.`)) return; start(async () => { const r = await transferOwnerAction(id, to); setMsg(r.ok ? "Transferred" : r.error ?? "Failed"); router.refresh(); }); }}
           className="rounded-lg border border-port/40 px-3 py-2 text-sm font-semibold text-port hover:bg-port/5 disabled:opacity-50"
         >
           {pending ? "Transferring…" : "Transfer"}

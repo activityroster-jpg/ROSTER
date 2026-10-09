@@ -73,7 +73,7 @@ export function AddInstructorForm({ courses, quals, checks }: { courses: CourseC
         </div>
       </div>
 
-      <Field title="Certs they hold" hint="RYA tickets, licences and qualifications. Pick them and we'll suggest the courses they can teach below. They upload a photo of each for you to verify.">
+      <Field title="Certs they hold" hint="RYA licences and qualifications. Pick them and we'll suggest the courses they can teach below. They upload a photo of each for you to verify.">
         <MultiSelect placeholder="Select certs…" options={quals} selected={selQuals} onToggle={toggleQual} onSelectAll={allOf(quals, setSelQuals)} onClear={clear(setSelQuals)} />
       </Field>
 

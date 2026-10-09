@@ -1,5 +1,6 @@
 "use client";
 
+import { askConfirm } from "@/lib/ui/ask-confirm";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { setIncidentAction, setMaintenanceAction } from "@/app/admin/actions";
@@ -31,7 +32,7 @@ export function OpsControls({ incident, maintenance }: { incident: { message: st
         <div className="mt-2 flex flex-wrap items-center gap-2">
           {maintenance?.on
             ? <button disabled={pending} onClick={() => run(() => setMaintenanceAction(false, mMsg))} className="rounded-lg bg-starboard px-3 py-1 text-xs font-semibold text-white disabled:opacity-50">Switch maintenance off</button>
-            : <button disabled={pending} onClick={() => { if (confirm("Put every centre into maintenance mode now?")) run(() => setMaintenanceAction(true, mMsg)); }} className="rounded-lg bg-port px-3 py-1 text-xs font-semibold text-white disabled:opacity-50">Switch maintenance on</button>}
+            : <button disabled={pending} onClick={async () => { if (await askConfirm("Put every centre into maintenance mode now?")) run(() => setMaintenanceAction(true, mMsg)); }} className="rounded-lg bg-port px-3 py-1 text-xs font-semibold text-white disabled:opacity-50">Switch maintenance on</button>}
         </div>
       </div>
       {note ? <p className="text-xs text-slate-500 md:col-span-2">{note}</p> : null}

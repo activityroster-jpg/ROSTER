@@ -24,6 +24,8 @@ export interface RotaPdfInput {
   template: RotaTemplateSettings;
   generatedAt?: Date;
   timeZone?: string;
+  /** instructorId → seniority score (higher = more experienced/licensed); names are listed most senior first. */
+  seniority?: Map<string, number>;
 }
 
 const A4 = { w: 595.28, h: 841.89 };
@@ -115,14 +117,16 @@ export function rotaColumns(t: RotaTemplateSettings): { key: Col["key"]; label: 
   return cols;
 }
 
-/** Cell text for one session: each staff member on their own line. */
-function cell(key: Col["key"], s: RotaSession, t: RotaTemplateSettings, names: Map<string, string>, tz: string): string[] {
+/** Cell text for one session: staff on one line, most experienced first, wrapping only when the line runs out. */
+function cell(key: Col["key"], s: RotaSession, t: RotaTemplateSettings, names: Map<string, string>, tz: string, seniority?: Map<string, number>): string[] {
   switch (key) {
     case "course": return [s.courseName];
     case "times": return [`${clock(s.startAt, "UTC")} – ${clock(s.endAt, "UTC")}`]; // session times are wall-clock values stored as UTC
     case "staff": {
-      const who = s.staff.filter((x) => x.status !== "declined").map((x) => (t.fields.roles ? `${names.get(x.name) ?? x.name} (${x.role})` : names.get(x.name) ?? x.name));
-      return who.length ? who : ["Unassigned"];
+      const on = s.staff.filter((x) => x.status !== "declined");
+      const sorted = [...on].sort((a, b) => (seniority?.get(b.instructorId) ?? 0) - (seniority?.get(a.instructorId) ?? 0) || a.name.localeCompare(b.name));
+      const who = sorted.map((x) => (t.fields.roles ? `${names.get(x.name) ?? x.name} (${x.role})` : names.get(x.name) ?? x.name));
+      return who.length ? [who.join(", ")] : ["Unassigned"];
     }
     case "students": return [s.students > 0 ? String(s.students) : "—"];
     case "where": return s.locations.length ? [s.locations.join(", ")] : ["—"];
@@ -200,7 +204,7 @@ function drawBreakdown(c: Ctx, input: RotaPdfInput, names: Map<string, string>, 
     drawColumnHeader();
 
     day.sessions.forEach((s, idx) => {
-      const cells = cols.map((col) => cell(col.key, s, input.template, names, tz).flatMap((line) => wrap(line, c.font, size, col.w - 2 * pad)));
+      const cells = cols.map((col) => cell(col.key, s, input.template, names, tz, input.seniority).flatMap((line) => wrap(line, c.font, size, col.w - 2 * pad)));
       const rows = Math.max(1, ...cells.map((cl) => cl.length));
       const rowH = rows * lh + 2 * pad;
       if (c.y - rowH < M) { newPage(c); drawColumnHeader(); }

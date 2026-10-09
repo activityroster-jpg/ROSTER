@@ -1,5 +1,6 @@
 "use client";
 
+import { askConfirm } from "@/lib/ui/ask-confirm";
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -133,7 +134,7 @@ export function ProspectDetail({ prospect: p, interactions }: { prospect: Prospe
       setLogMsg,
     );
   };
-  const removeEntry = (id: string) => { if (confirm("Remove this entry from the log?")) run(() => deleteInteractionAction(p.id, id), undefined, setLogMsg); };
+  const removeEntry = async (id: string) => { if (await askConfirm("Remove this entry from the log?")) run(() => deleteInteractionAction(p.id, id), undefined, setLogMsg); };
 
   const vibe = VIBE_META[vibeOf(p.stage, Boolean(p.engagedAt)) ?? "none"];
   const complete = addressComplete(p);

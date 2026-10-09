@@ -13,7 +13,7 @@ export const STAFF_FIELD_LABELS: Record<StaffField, string> = {
   email: "Email",
   phone: "Phone",
   employment: "Employment",
-  quals: "Qualifications / tickets",
+  quals: "Qualifications / licences",
   courses: "Courses they can teach",
 };
 

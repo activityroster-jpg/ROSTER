@@ -1,5 +1,6 @@
 "use client";
 
+import { askConfirm } from "@/lib/ui/ask-confirm";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { regenerateJoinCodeAction } from "@/app/(app)/office/settings/actions";
@@ -12,8 +13,8 @@ export function CompanyCodeCard({ code }: { code: string }) {
   const copy = async () => {
     try { await navigator.clipboard.writeText(code); setMsg("Copied"); } catch { setMsg("Select and copy the code"); }
   };
-  const regen = () => {
-    if (!confirm("Issue a new company code? The current one stops working immediately — anyone you've already given it to will need the new one.")) return;
+  const regen = async () => {
+    if (!await askConfirm("Issue a new company code? The current one stops working immediately — anyone you've already given it to will need the new one.")) return;
     start(async () => {
       const r = await regenerateJoinCodeAction();
       setMsg(r.ok ? "New code issued" : r.error ?? "Could not regenerate");

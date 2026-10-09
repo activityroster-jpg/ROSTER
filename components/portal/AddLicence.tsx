@@ -39,7 +39,7 @@ export function AddLicence({ types }: { types: LicenceType[] }) {
   return (
     <div className="rounded-card border border-slate-200 bg-white p-4">
       <p className="font-semibold text-navy">Add another cert</p>
-      <p className="mb-3 text-sm text-slate-500">Hold a ticket your centre hasn&apos;t listed? Add it here, then upload a photo of it below.</p>
+      <p className="mb-3 text-sm text-slate-500">Hold a licence your centre hasn&apos;t listed? Add it here, then upload a photo of it below.</p>
 
       <div className="flex flex-wrap items-center gap-2">
         <select value={typeId} onChange={(e) => setTypeId(e.target.value)} className="min-w-[12rem] flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal">
@@ -52,7 +52,7 @@ export function AddLicence({ types }: { types: LicenceType[] }) {
       <div className="mt-2">
         {showCustom ? (
           <div className="flex flex-wrap items-center gap-2">
-            <input value={custom} onChange={(e) => setCustom(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustom(); } }} placeholder="Name of your cert / ticket" className="min-w-[12rem] flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal" />
+            <input value={custom} onChange={(e) => setCustom(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustom(); } }} placeholder="Name of your cert / licence" className="min-w-[12rem] flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal" />
             <button type="button" onClick={addCustom} disabled={pending || custom.trim().length < 2} className="rounded-lg bg-navy px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:opacity-50">Add cert</button>
             <button type="button" onClick={() => { setShowCustom(false); setCustom(""); }} className="text-sm text-slate-400 hover:text-navy">Cancel</button>
           </div>

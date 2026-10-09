@@ -108,21 +108,23 @@ export function StaffAvailabilityCard({
   return (
     <div>
       <fieldset className="rounded-lg border border-slate-200 p-3">
-        <legend className="px-1 text-xs font-medium text-slate-500">Who keeps {name}&rsquo;s availability?</legend>
+        <legend className="px-1 text-xs font-medium text-slate-500">Who sets {name}&rsquo;s availability?</legend>
         {([
-          [null, `The centre's setting (${centreMode === "office" ? "the office" : "each instructor, in the app"})`],
-          ["staff", "They do, in the app"],
-          ["office", "The office: no sign-up needed"],
+          ["staff", `${name} sets it in the app`],
+          ["office", `The office sets it, so ${name} doesn't need to sign up`],
         ] as const).map(([value, label]) => (
-          <label key={String(value)} className="flex items-center gap-2 py-0.5 text-sm text-navy">
-            <input type="radio" name={`managed-${instructorId}`} checked={managedBy === value} disabled={!canEditStaff || pending} onChange={() => setWho(value)} />
-            {label}
+          <label key={value} className="flex items-center gap-2 py-0.5 text-sm text-navy">
+            {/* Choosing the centre's default stores nothing, so a later change to the default applies. */}
+            <input type="radio" name={`managed-${instructorId}`} checked={(managedBy ?? centreMode) === value} disabled={!canEditStaff || pending} onChange={() => setWho(value === centreMode ? null : value)} />
+            <span>{label}{value === centreMode ? <span className="ml-1 text-xs text-slate-400">(your centre&rsquo;s default)</span> : null}</span>
           </label>
         ))}
-        <p className="mt-1 text-xs text-slate-500">
+        <p className="mt-1.5 text-xs text-slate-500">
           {officeManaged
-            ? `Counted as free unless you mark them busy, and not asked to confirm sessions.${hasLogin ? " They can still see their roster in the app." : " Published rosters reach them by email; with no email, give them the printed roster."}`
-            : `They mark when they're free in the app; a slot counts as busy until they do.${hasLogin ? "" : " They haven't signed up yet, so until they do, set their availability here or invite them."}`}
+            ? `${name} counts as free unless you mark the days they can't work below, and isn't asked to confirm sessions.`
+            : hasLogin
+              ? `${name} marks when they're free in the app. Until they do, a slot counts as busy.`
+              : `${name} hasn't signed up yet, so counts as busy until they do. Invite them, or switch to "The office sets it".`}
         </p>
       </fieldset>
 

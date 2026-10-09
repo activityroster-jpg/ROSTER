@@ -268,7 +268,7 @@ export async function setDayStaffAction(input: { sessionId: string; instructorId
   const note = typeof input.note === "string" ? input.note.trim().slice(0, 300) || null : null;
   if (input.override && !note) return { ok: false, error: "Say why you're overriding" };
   const r = await setDayStaff(repos, ctx, { sessionId: input.sessionId, instructorId: input.instructorId, roleTypeId: input.roleTypeId, mode: input.mode as SessionStaffMode, override: Boolean(input.override), note });
-  if (!r.ok) return { ok: false, error: `${r.error}. Tick override and add a note to push it through.` };
+  if (!r.ok) return { ok: false, error: `${r.error}. Tick override to push it through.` };
   revalidatePath("/office/courses");
   revalidatePath("/office/rota");
   revalidatePath("/office");
@@ -449,7 +449,6 @@ export async function bulkAssignStaffAction(input: {
   if (!input.instructorId || !input.roleTypeId) return { ok: false, error: "Pick an instructor and a role" };
   const courseIds = [...new Set(input.courseIds ?? [])].filter(Boolean);
   if (courseIds.length === 0) return { ok: false, error: "Tick at least one course" };
-  if (input.override && !(input.overrideNote ?? "").trim()) return { ok: false, error: "Add a reason to override the checks" };
 
   const res = await bulkAssignStaff(repos, ctx, {
     courseIds,

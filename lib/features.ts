@@ -6,7 +6,7 @@ export const FEATURE_META: Record<OptionalFeature, { label: string; blurb: strin
   locations: { label: "Locations & classrooms", blurb: "Rooms, launch areas and meeting points.", href: "/office/locations" },
   operatingAreas: { label: "Operating areas", blurb: "Define the water you run activities on.", href: "/office/locations" },
   payroll: { label: "Pay & payroll", blurb: "Pay rates, hours and payroll export.", href: "/office/finance" },
-  documents: { label: "Documents & onboarding", blurb: "Store tickets, DBS and staff paperwork.", href: "/office/staff" },
+  documents: { label: "Documents & onboarding", blurb: "Store licences, DBS and staff paperwork.", href: "/office/staff" },
 };
 
 /** Parse the JSON string on org_settings.enabledFeatures into a validated set. */

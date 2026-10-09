@@ -1,5 +1,6 @@
 "use client";
 
+import { askConfirm } from "@/lib/ui/ask-confirm";
 import { useState, useTransition } from "react";
 import { sendSubprocessorNoticeAction } from "@/app/admin/privacy/actions";
 
@@ -26,7 +27,7 @@ export function SubprocessorNotice() {
       </label>
       <div className="mt-3 flex flex-wrap items-center gap-3">
         <button type="button" onClick={() => run(true)} disabled={pending || summary.trim().length < 20} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-navy hover:bg-slate-50 disabled:opacity-50">Send me a test</button>
-        <button type="button" onClick={() => { if (confirm("Send this notice to every centre admin now?")) run(false); }} disabled={pending || summary.trim().length < 20} className="rounded-lg bg-teal px-4 py-1.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{pending ? "Sending…" : "Send to all centres"}</button>
+        <button type="button" onClick={async () => { if (await askConfirm("Send this notice to every centre admin now?")) run(false); }} disabled={pending || summary.trim().length < 20} className="rounded-lg bg-teal px-4 py-1.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{pending ? "Sending…" : "Send to all centres"}</button>
         {msg ? <span className={`text-sm ${msg.ok ? "text-starboard" : "text-port"}`}>{msg.text}</span> : null}
       </div>
     </div>

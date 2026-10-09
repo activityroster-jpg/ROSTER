@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import { askConfirm } from "@/lib/ui/ask-confirm";
 import { useRouter } from "next/navigation";
 import { assignableForCellAction, assignFromAvailabilityAction, setAvailabilityBulkAction, setAvailabilityForStaffAction, type CellCandidate } from "@/app/(app)/office/availability/actions";
 
@@ -141,15 +142,28 @@ export function AvailabilityMatrix({ days, rows, availableCounts, staffManagedBy
 
   return (
     <div>
-      <div className="mb-3 flex flex-wrap items-center gap-2 rounded-card border border-slate-200 bg-white px-3 py-2 text-xs">
-        <span className="font-semibold text-navy">Quick set:</span>
-        <button type="button" onClick={() => { setQuick({ kind: "week" }); setQuickMsg(null); }} className="rounded-full border border-slate-300 px-2.5 py-1 font-medium text-navy hover:bg-slate-50">Everyone, this week…</button>
-        <span className="text-slate-300">|</span>
-        <span className="text-slate-500">Brush:</span>
-        {BRUSHES.map((b) => (
-          <button key={b.value} type="button" aria-pressed={brush === b.value} onClick={() => setBrush(brush === b.value ? null : b.value)} className={`rounded-full px-2.5 py-1 font-semibold ${b.cls} ${brush === b.value ? "ring-2 ring-navy" : "opacity-80 hover:opacity-100"}`}>{b.label}</button>
-        ))}
-        <span className="text-slate-400">{brush ? "Click or drag across slots to paint them. Click the brush again to stop." : "Pick a brush to paint many slots, or click a name, a day or a slot heading."}</span>
+      <div className="mb-3 rounded-card border border-teal/30 bg-teal/5 p-3 text-sm">
+        <p className="font-semibold text-navy">Set availability for lots of slots at once</p>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <span className="flex h-5 w-5 flex-none items-center justify-center rounded-full bg-navy text-[11px] font-bold text-white">1</span>
+          <span className="text-slate-600">Choose:</span>
+          {BRUSHES.map((b) => (
+            <button key={b.value} type="button" aria-pressed={brush === b.value} onClick={() => setBrush(brush === b.value ? null : b.value)} className={`rounded-full px-3 py-1 text-xs font-semibold ${b.cls} ${brush === b.value ? "ring-2 ring-navy" : "opacity-80 hover:opacity-100"}`}>{b.label}</button>
+          ))}
+        </div>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <span className={`flex h-5 w-5 flex-none items-center justify-center rounded-full text-[11px] font-bold text-white ${brush ? "bg-navy" : "bg-slate-300"}`}>2</span>
+          {brush ? (
+            <>
+              <span className="text-slate-700">Click or drag across the grid to paint slots <strong>{BRUSHES.find((b) => b.value === brush)?.label}</strong>, or</span>
+              <button type="button" disabled={pending} onClick={async () => { if (await askConfirm(`Set everyone's whole week to ${BRUSHES.find((b) => b.value === brush)?.label}? Approved leave is left as it is.`)) runBulk({ everyone: true, dates: days, slots: [...SLOTS], status: statusOf(brush) }); }} className="rounded-full border border-navy/30 bg-white px-3 py-1 text-xs font-semibold text-navy hover:bg-slate-50 disabled:opacity-50">apply to everyone, this week</button>
+              <button type="button" onClick={() => setBrush(null)} className="text-xs text-slate-500 underline hover:text-navy">stop</button>
+            </>
+          ) : (
+            <span className="text-slate-500">Then click or drag across the grid, or apply it to everyone for the week.</span>
+          )}
+        </div>
+        <p className="mt-2 text-xs text-slate-500">Or click a <strong>name</strong> to set that person&rsquo;s whole week, or a <strong>day</strong> or <strong>AM / PM / EV</strong> heading to set everyone then. With nothing chosen, clicking one slot opens it to set or fill a shift.</p>
       </div>
 
       {quick ? (

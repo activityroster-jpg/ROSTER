@@ -32,7 +32,7 @@ const RYA_ROWS = (them: Partial<Record<string, Cell>>): CompareRow[] => {
   const base: [string, Cell][] = [
     ["RYA ratio & safety-boat cover checks", "no"],
     ["Blocks unqualified / expired instructors", "no"],
-    ["Licence & ticket tracking with expiry alerts", "partial"],
+    ["Licence tracking with expiry alerts", "partial"],
     ["DBS / safeguarding vetting enforced at assignment", "no"],
     ["Youth vs adult courses separated throughout", "no"],
     ["Course-based multi-session scheduling", "partial"],
@@ -61,7 +61,7 @@ export const COMPETITORS: Competitor[] = [
     ],
     weWin: [
       "Deputy schedules shifts; it doesn't know a Dinghy Instructor from a Senior Instructor, or that a session needs a safety boat.",
-      "ActivityRoster blocks an instructor who's missing a mandatory check or whose ticket has expired — with a recorded override if you must proceed.",
+      "ActivityRoster blocks an instructor who's missing a mandatory check or whose licence has expired — with a recorded override if you must proceed.",
       "Courses run as multi-session bookings (a 5-day camp, a weekly club), not just individual shifts.",
       "Boats and kit are conflict-checked against sessions; youth and adult courses are separated everywhere.",
     ],
@@ -97,7 +97,7 @@ export const COMPETITORS: Competitor[] = [
       "Cost/hours reporting",
     ],
     weWin: [
-      "Strong on generic rosters and leave, but there's no ticket tracking, safety-cover logic or course structure.",
+      "Strong on generic rosters and leave, but there's no licence tracking, safety-cover logic or course structure.",
       "ActivityRoster gives you leave and open-shift cover too — plus the compliance moat RotaCloud doesn't attempt.",
       "The roster is course- and audience-aware (youth/adult), and prints cleanly for the wall or the inbox.",
     ],
@@ -138,7 +138,7 @@ export const COMPETITORS: Competitor[] = [
       "It complements a booking system rather than replacing it: you run the roster, they take the money.",
     ],
     migration: "Keep your booking system for members and payments; import your course schedule into ActivityRoster for rostering.",
-    rows: RYA_ROWS({ "Instructor availability collection": "no", "Clock in/out & payroll-ready hours": "no", "Visual week calendar & planner": "no", "Licence & ticket tracking with expiry alerts": "partial", "DBS / safeguarding vetting enforced at assignment": "partial", "Per-centre data isolation": "partial" }),
+    rows: RYA_ROWS({ "Instructor availability collection": "no", "Clock in/out & payroll-ready hours": "no", "Visual week calendar & planner": "no", "Licence tracking with expiry alerts": "partial", "DBS / safeguarding vetting enforced at assignment": "partial", "Per-centre data isolation": "partial" }),
   },
   {
     slug: "spreadsheets",
@@ -156,7 +156,7 @@ export const COMPETITORS: Competitor[] = [
       "Data is isolated per centre, hosted on Cloudflare in the EU and exportable — not scattered across tabs and inboxes.",
     ],
     migration: "This is the easiest move of all — paste your spreadsheet straight into the importer and we build your courses and sessions.",
-    rows: RYA_ROWS({ "Printable weekly roster (PDF)": "yes", "Instructor availability collection": "no", "Clock in/out & payroll-ready hours": "no", "Visual week calendar & planner": "no", "Bulk assign one instructor to many courses": "partial", "Course-based multi-session scheduling": "partial", "Per-centre data isolation": "no", "Licence & ticket tracking with expiry alerts": "partial" }),
+    rows: RYA_ROWS({ "Printable weekly roster (PDF)": "yes", "Instructor availability collection": "no", "Clock in/out & payroll-ready hours": "no", "Visual week calendar & planner": "no", "Bulk assign one instructor to many courses": "partial", "Course-based multi-session scheduling": "partial", "Per-centre data isolation": "no", "Licence tracking with expiry alerts": "partial" }),
   },
 ];
 

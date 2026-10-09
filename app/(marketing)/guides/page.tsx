@@ -17,7 +17,7 @@ export default function GuidesPage() {
         <h1 className="mt-1 font-display text-3xl font-bold text-navy sm:text-4xl" style={{ textWrap: "balance" }}>Running the staff side of a sailing school</h1>
         <p className="mt-3 text-slate-600">
           Straight answers to the questions that come up every season: how many instructors a course needs, how to collect availability,
-          how to keep track of tickets and safety-boat cover, and how to build a rota you can run. Free to read, and free to use without our software.
+          how to keep track of licences and safety-boat cover, and how to build a rota you can run. Free to read, and free to use without our software.
         </p>
       </div>
       <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3">

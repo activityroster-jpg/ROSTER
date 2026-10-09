@@ -89,6 +89,8 @@ the source of truth and this table is a convenience copy.
 | 2026-10-06 | 1ebdce2 | `00000583-00000000-000050fc-ccf872b39b74824033ecc4930ba82857` (Actions run 37499417597) | Pressed by Conor. Tag `prod-20261006-1657`; migration 0073 (feature_request, feature_request_vote). Contents: feature requests (Requests & ideas page for centres, Dev Center Requests board, "We need this too" votes, private screenshots, guide) and the "Built around what centres vote for" website sections. |
 | 2026-10-06 | 4c7f998 | `000005a0-00000000-000050fc-655be67c971b421089eae8e13d689a49` (Actions run 37509664665) | Pressed by Conor. Tag `prod-20261006-1816`; no migrations. Contents: homepage tiles "Your week, in three steps" (add your courses, select your staff, publish). |
 | 2026-10-07 | 4c7f998 | `000007fa-00000000-000050fd-0f541c84dc2bffb970695a1d395ff68d` (Actions run 37703863809) | Pressed by Conor. Tag `prod-20261007-2346`; no migrations. Re-deploy of the same commit; nothing new went out. |
+| 2026-10-08 | ec6e284 | `00000905-00000000-000050fe-77765ed2fcf22b520f533fd10ee9372c` (Actions run 37771867542) | Pressed by Conor. Tag `prod-20261008-1145`; migrations 0074_push_outbox and 0075_office_managed_staff applied. Contents: roster crash fix, sign-up fixes, large-centre work, push/email delivery job (tick worker now also runs every 2 minutes), office-managed staff. |
+| 2026-10-08 | ec6e284 | `0000093c-00000000-000050fe-f7c8ead4649d83f9dfb4746400b1f082` (Actions run 37788496541) | Pressed by Conor. Tag `prod-20261008-1359`; no migrations. Re-deploy of the same commit; nothing new went out. |
 
 ### Cloudflare "Workers Builds" must stay disconnected
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { askConfirm } from "@/lib/ui/ask-confirm";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { connectIntegrationAction, removeIntegrationAction, previewIntegrationChangesAction, applyIntegrationChangesAction, type PreviewResult } from "@/app/(app)/office/integrations/actions";
@@ -124,7 +125,7 @@ export function BookingIntegrations({ providers, connected }: { providers: Provi
                   </div>
                   <div className="flex items-center gap-3">
                     <button type="button" onClick={() => check(c.id)} disabled={pending} className="rounded-lg bg-teal px-3 py-1.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{pending && reviewId === c.id ? "Checking…" : "Check for updates"}</button>
-                    <button type="button" onClick={() => { if (confirm("Disconnect this booking system? (Your courses stay — nothing is deleted.)")) run(() => removeIntegrationAction(c.id)); }} disabled={pending} className="text-sm text-port hover:underline">Disconnect</button>
+                    <button type="button" onClick={async () => { if (await askConfirm("Disconnect this booking system? (Your courses stay — nothing is deleted.)")) run(() => removeIntegrationAction(c.id)); }} disabled={pending} className="text-sm text-port hover:underline">Disconnect</button>
                   </div>
                 </div>
 

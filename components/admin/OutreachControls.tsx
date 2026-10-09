@@ -1,5 +1,6 @@
 "use client";
 
+import { askConfirm } from "@/lib/ui/ask-confirm";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { deleteCampaignAction, launchCampaignAction, researchNowAction, sendDueNowAction, setCampaignStatusAction, type OutreachResult } from "@/app/admin/outreach/actions";
@@ -13,12 +14,12 @@ export function CampaignControls({ id, status, hasNew, hasDue }: { id: string; s
   const router = useRouter();
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<OutreachResult | null>(null);
-  const del = () => {
-    if (!confirm("Delete this campaign and all its leads and message history? This cannot be undone.")) return;
+  const del = async () => {
+    if (!await askConfirm("Delete this campaign and all its leads and message history? This cannot be undone.")) return;
     start(async () => { const r = await deleteCampaignAction(id); if (r.ok) router.push("/admin/outreach"); else setMsg(r); });
   };
-  const run = (fn: () => Promise<OutreachResult>, confirmText?: string) => {
-    if (confirmText && !confirm(confirmText)) return;
+  const run = async (fn: () => Promise<OutreachResult>, confirmText?: string) => {
+    if (confirmText && !await askConfirm(confirmText)) return;
     setMsg(null);
     start(async () => { const r = await fn(); setMsg(r); if (r.ok) router.refresh(); });
   };

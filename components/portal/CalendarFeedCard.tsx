@@ -1,5 +1,6 @@
 "use client";
 
+import { askConfirm } from "@/lib/ui/ask-confirm";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { createMyCalendarFeedAction, revokeMyCalendarFeedAction } from "@/app/(app)/portal/settings/actions";
@@ -18,7 +19,7 @@ export function CalendarFeedCard({ active, createdAt }: { active: boolean; creat
     if (r.ok && r.url) { setUrl(r.url); setMsg(null); router.refresh(); } else setMsg(r.error ?? "Couldn't make a link");
   });
   const off = () => start(async () => {
-    if (!confirm("Turn the calendar link off? Calendars using it stop updating straight away.")) return;
+    if (!await askConfirm("Turn the calendar link off? Calendars using it stop updating straight away.")) return;
     const r = await revokeMyCalendarFeedAction();
     setUrl(null); setMsg(r.ok ? "Calendar link turned off." : r.error ?? "Failed"); router.refresh();
   });
