@@ -23,6 +23,7 @@ export function PinForm({ mode, next, hasPassword = true, userId }: { mode: "ent
         if (!saved) return;
         startTransition(async () => {
           const res = await verifyPinAction(saved, next);
+          if (res?.ok && res.next) { window.location.assign(res.next); return; }
           if (res && !res.ok) { await forgetBiometricPin(); setErr("Your saved PIN no longer matches — enter it to continue."); }
         });
       });
@@ -47,7 +48,9 @@ export function PinForm({ mode, next, hasPassword = true, userId }: { mode: "ent
       // Save for biometrics BEFORE the action (a successful action redirects away); undo on failure.
       if (rememberBio && bioAvailable && userId) { try { await savePinForBiometrics(userId, pin); } catch { /* ignore */ } }
       const res = mode === "set" ? await setPinAction(pin, confirm, next) : await verifyPinAction(pin, next);
-      // On success the action redirects; only failures return here.
+      // A full page load, not a client-side hop: the next page must be fetched
+      // fresh with the cookie just set, or the router can show a stale page.
+      if (res?.ok && res.next) { window.location.assign(res.next); return; }
       if (res && !res.ok) { if (rememberBio) await forgetBiometricPin(); setErr(res.error ?? "Something went wrong"); setPin(""); setConfirm(""); }
     });
   };
@@ -65,6 +68,7 @@ export function PinForm({ mode, next, hasPassword = true, userId }: { mode: "ent
     setErr(null);
     startTransition(async () => {
       const r = await resetMyPinAction(next, useCode ? { code } : { password });
+      if (r?.ok && r.next) { window.location.assign(r.next); return; }
       if (r && !r.ok) { setErr(r.error ?? "Couldn't reset PIN"); if (!useCode) setPassword(""); else setCode(""); }
     });
   };

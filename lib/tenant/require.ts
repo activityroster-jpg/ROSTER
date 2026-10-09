@@ -76,11 +76,14 @@ export async function requireTenant(opts?: { role?: "admin"; owner?: boolean; pe
   // owner looking in from the Dev Center, which has its own gates.
   if (isOfficeRole(res.ctx.role) && !res.ctx.ghost) await enforceLoginVerified(res.sessionId);
 
+  // After a gate, come back to the page that was asked for (an invite's
+  // welcome page, a deep link), not just the role's home page.
+  const back = path.startsWith(landing) ? path : landing;
   // Unfamiliar device, country or IP → password again first; then the PIN.
-  await enforceDeviceGate(res.ctx.userId, landing, res.ctx.organisationId, isOfficeRole(res.ctx.role));
+  await enforceDeviceGate(res.ctx.userId, back, res.ctx.organisationId, isOfficeRole(res.ctx.role));
   // Office roles and instructors set and enter a 4-digit PIN each session.
   // Parents (read-only roster of their child) sign in with their password only.
-  if (res.ctx.role !== "parent") await enforcePinGate(res.ctx.userId, res.sessionId, landing);
+  if (res.ctx.role !== "parent") await enforcePinGate(res.ctx.userId, res.sessionId, back);
 
   const repos = await getRepositories();
 

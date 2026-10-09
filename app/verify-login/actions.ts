@@ -2,7 +2,6 @@
 
 import { codeEmailHtml } from "@/lib/mail/code-email";
 import { cookies, headers } from "next/headers";
-import { redirect } from "next/navigation";
 import { getAuth } from "@/lib/auth";
 import { getEnv, getRepositories } from "@/lib/cf/bindings";
 import { currentDeviceId } from "@/lib/auth/device-gate";
@@ -15,7 +14,7 @@ import { escapeHtml, sendEmail } from "@/lib/mail";
 import { maskEmail } from "@/lib/security/mask";
 import { otpCodeSchema } from "@/lib/validation/actions";
 
-export type LoginVerifyResult = { ok: boolean; error?: string; message?: string };
+export type LoginVerifyResult = { ok: boolean; error?: string; message?: string; next?: string };
 
 function safeNext(next: string | undefined): string {
   if (typeof next === "string" && next.startsWith("/") && !next.startsWith("//")) return next;
@@ -108,5 +107,5 @@ export async function finishLoginAction(stay: boolean, next: string): Promise<Lo
     }
   } catch { /* the device gate will simply ask */ }
   await recordSecurityEvent("reauth_passed", { userId: who.userId, meta: { step: "login-verified", by: pendingOk ? "email-code" : who.twoFactor ? "2fa" : "recent-device", stay } }).catch(() => {});
-  redirect(safeNext(next));
+  return { ok: true, next: safeNext(next) };
 }

@@ -10,6 +10,7 @@ type Mode = "link" | "password" | "setup";
 export default function SignInPage() {
   const [mode, setMode] = useState<Mode>("password");
   const [expired, setExpired] = useState(false);
+  const [linkUsed, setLinkUsed] = useState(false);
   // Shown only after repeated failures (the server answers 428 until a check passes).
   const [needsCheck, setNeedsCheck] = useState(false);
   const [tsToken, setTsToken] = useState<string | null>(null);
@@ -36,6 +37,8 @@ export default function SignInPage() {
     const n = q.get("next");
     if (n === "/portal" || n === "/office" || n === "/parent" || n === "/go?to=portal" || n === "/go?to=office") setNext(n);
     if (q.get("expired") === "1") setExpired(true);
+    // An emailed link that was already used, or has expired (the auth library adds ?error=).
+    if (q.get("error")) setLinkUsed(true);
     // From an invitation or its reminder: their address filled in, ready for a fresh link.
     const em = q.get("email");
     if (em && em.length <= 200 && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) { setEmail(em); setMode("setup"); }
@@ -50,7 +53,7 @@ export default function SignInPage() {
     try {
       // Setting up an account: the link confirms the email, then /welcome asks for a name and password.
       const target = mode === "setup" ? `/welcome?next=${encodeURIComponent(isPortal ? (next.startsWith("/go") ? "/portal" : next) : "/office")}` : after;
-      const res = await signIn.magicLink({ email, callbackURL: target });
+      const res = await signIn.magicLink({ email, callbackURL: target, errorCallbackURL: `/sign-in?next=${encodeURIComponent(next)}&email=${encodeURIComponent(email)}` });
       if (res.error) setError(res.error.message ?? "Could not send link");
       else setSent(true);
     } finally { setBusy(false); }
@@ -120,6 +123,7 @@ export default function SignInPage() {
     <div className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-4">
       <h1 className="mb-1 font-display text-2xl font-semibold text-navy">{mode === "setup" ? "Set up your account" : isPortal ? "Instructor sign in" : "Sign in"}</h1>
       <p className="mb-6 text-sm text-slate-500">{mode === "setup" ? "Been invited to a centre? Enter your email and we'll send a link to confirm it. Then you'll choose your password." : isPortal ? "Enter your email and password to open your portal." : "Enter your email and password. We'll then email you a code to confirm it's you."}</p>
+      {linkUsed ? <p role="status" className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">That link has already been used or has expired. If you&rsquo;ve already set up your account, sign in with your password. If not, send yourself a new link below.</p> : null}
       {expired ? <p role="status" className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">You were signed out after a while away. Sign in again to carry on.</p> : null}
 
       <div className="rounded-card border border-slate-200 bg-white p-5">

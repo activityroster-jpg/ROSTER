@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getAuth } from "@/lib/auth";
 import { maskEmail } from "@/lib/security/mask";
 import { authSecret } from "@/lib/security/secrets";
-import { LV_DEVICE_COOKIE, verifyLvDevice } from "@/lib/auth/login-verify";
+import { LV_DEVICE_COOKIE, LV_PENDING_COOKIE, verifyLvDevice, verifyLvPending } from "@/lib/auth/login-verify";
 import { VerifyLoginForm } from "@/components/auth/VerifyLoginForm";
 
 export const dynamic = "force-dynamic";
@@ -15,6 +15,9 @@ export default async function VerifyLoginPage({ searchParams }: { searchParams: 
   const s = await (await getAuth()).api.getSession({ headers: new Headers(await headers()) });
   if (!s?.user) redirect(`/sign-in?next=${encodeURIComponent(next)}`);
   const twoFactor = Boolean((s.user as { twoFactorEnabled?: boolean | null }).twoFactorEnabled);
-  const recentDevice = await verifyLvDevice(authSecret(), s.user.id, (await cookies()).get(LV_DEVICE_COOKIE)?.value);
-  return <VerifyLoginForm next={next} emailHint={maskEmail(s.user.email)} preVerified={twoFactor || recentDevice} />;
+  const jar = await cookies();
+  const recentDevice = await verifyLvDevice(authSecret(), s.user.id, jar.get(LV_DEVICE_COOKIE)?.value);
+  // Signed in from an emailed link or code moments ago: the email is already proved.
+  const emailProved = await verifyLvPending(authSecret(), s.session.id, jar.get(LV_PENDING_COOKIE)?.value);
+  return <VerifyLoginForm next={next} emailHint={maskEmail(s.user.email)} preVerified={twoFactor || recentDevice || emailProved} />;
 }

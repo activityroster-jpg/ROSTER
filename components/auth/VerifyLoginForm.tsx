@@ -38,6 +38,7 @@ export function VerifyLoginForm({ next, emailHint, preVerified }: { next: string
     setErr(null); setBusy(true);
     try {
       const r = await finishLoginAction(stay, next);
+      if (r?.ok && r.next) { window.location.assign(r.next); return; }
       if (r && !r.ok) setErr(r.error ?? "Something went wrong. Please sign in again.");
     } finally { setBusy(false); }
   };

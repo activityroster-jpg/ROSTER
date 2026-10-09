@@ -43,7 +43,15 @@ export async function sendInvite(
   try {
     try { await getEnv().TENANT_CACHE.put(inviteNoteKey(input.email), JSON.stringify(note), { expirationTtl: 600 }); } catch { /* falls back to the plain sign-in email */ }
     const auth = await getAuth();
-    await auth.api.signInMagicLink({ body: { email: input.email, callbackURL: `https://${input.slug}.${apexDomain()}${input.callbackPath}` }, headers: new Headers(await headers()) });
+    await auth.api.signInMagicLink({
+      body: {
+        email: input.email,
+        callbackURL: `https://${input.slug}.${apexDomain()}${input.callbackPath}`,
+        // Used twice or expired: the centre's sign-in page, address filled in, saying what happened.
+        errorCallbackURL: centreSignInUrl(input.slug, input.email, input.kind),
+      },
+      headers: new Headers(await headers()),
+    });
     if (input.userId) await repos.control.noteInviteSent(input.userId, ctx.organisationId, inviterName);
     return "sent";
   } catch (err) {

@@ -2,7 +2,6 @@
 
 import { codeEmailHtml } from "@/lib/mail/code-email";
 import { cookies, headers } from "next/headers";
-import { redirect } from "next/navigation";
 import { getAuth } from "@/lib/auth";
 import { getEnv, getRepositories } from "@/lib/cf/bindings";
 import {
@@ -26,7 +25,8 @@ import { getDb } from "@/lib/cf/bindings";
 import { STEPUP_COOKIE, STEPUP_TTL_S, stepUpCookieValue } from "@/lib/auth/step-up";
 import { hasFreshStepUp } from "@/lib/auth/step-up-server";
 
-export type PinResult = { ok: boolean; error?: string; message?: string };
+/** `next`: where to go on success. The form does a full page load there (see PinForm). */
+export type PinResult = { ok: boolean; error?: string; message?: string; next?: string };
 
 /** Only allow same-site internal redirects (no open-redirect). */
 function safeNext(next: string | undefined): string {
@@ -87,7 +87,7 @@ export async function setPinAction(pin: string, confirm: string, next: string): 
   await control.setUserPin(info.userId, await hashPin(pin));
   await recordSecurityEvent("pin_set", { userId: info.userId });
   if (info.sessionId) await setVerifiedCookie(info.sessionId);
-  redirect(safeNext(next));
+  return { ok: true, next: safeNext(next) };
 }
 
 /**
@@ -173,7 +173,7 @@ export async function resetMyPinAction(next: string, proof: PinResetProof): Prom
     "Your ActivityRoster PIN was reset",
     `<p>Your login PIN was just reset using ${method === "password" ? "your password" : "an emailed code"}, and a new one is being set.</p>`,
   );
-  redirect(`/set-pin?next=${encodeURIComponent(safeNext(next))}`);
+  return { ok: true, next: `/set-pin?next=${encodeURIComponent(safeNext(next))}` };
 }
 
 /**
@@ -216,7 +216,7 @@ export async function verifyPinAction(pin: string, next: string): Promise<PinRes
 
   const { control } = await getRepositories();
   const sec = await control.getUserSecurity(info.userId);
-  if (!sec?.pinHash) redirect(`/set-pin?next=${encodeURIComponent(safeNext(next))}`);
+  if (!sec?.pinHash) return { ok: true, next: `/set-pin?next=${encodeURIComponent(safeNext(next))}` };
   if (sec.pinLockedUntil && sec.pinLockedUntil.getTime() > Date.now()) {
     const mins = Math.ceil((sec.pinLockedUntil.getTime() - Date.now()) / 60000);
     return { ok: false, error: `Too many attempts. Try again in ${mins} minute${mins === 1 ? "" : "s"}.` };
@@ -225,7 +225,7 @@ export async function verifyPinAction(pin: string, next: string): Promise<PinRes
   if (await verifyPin(pin, sec.pinHash)) {
     await control.resetPinFailures(info.userId);
     if (info.sessionId) await setVerifiedCookie(info.sessionId);
-    redirect(safeNext(next));
+    return { ok: true, next: safeNext(next) };
   }
 
   const attempt = (sec.pinFailedCount ?? 0) + 1;

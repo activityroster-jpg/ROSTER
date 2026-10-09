@@ -30,7 +30,7 @@ export function CreateAccountForm({ initialName, next }: { initialName: string; 
       <label className="text-sm font-medium text-navy">Type it again<input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required autoComplete="new-password" className={`${field} mt-1`} /></label>
       {err ? <p className="text-sm text-port">{err}</p> : null}
       <button type="submit" disabled={pending} className="mt-1 rounded-lg bg-teal px-5 py-3 font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{pending ? "Creating your account…" : "Create my account"}</button>
-      <p className="text-xs text-slate-400">8+ characters with letters and numbers. Next you&rsquo;ll confirm it&rsquo;s you with a code we email, then choose a 4-digit PIN.</p>
+      <p className="text-xs text-slate-400">8+ characters with letters and numbers. Next you&rsquo;ll choose a 4-digit PIN, and you&rsquo;re in.</p>
     </form>
   );
 }

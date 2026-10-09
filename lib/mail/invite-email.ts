@@ -27,7 +27,7 @@ const STEPS: Record<InviteKind, string[]> = {
   ],
   office: [
     "Create your account: your name and a password (no account needed beforehand).",
-    "Confirm with the code we email you, and choose a 4-digit PIN.",
+    "Choose a 4-digit PIN. The link in this email already confirms your address, so there is no extra code to type.",
     "Open the office. You'll see the parts your superadmin has ticked for you.",
     "Have a look round the roster and staff list.",
   ],

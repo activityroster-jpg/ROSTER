@@ -10,6 +10,8 @@ import { getDb, getEnv, type CloudflareEnv } from "@/lib/cf/bindings";
 import { sendEmail } from "@/lib/mail";
 import { notifySecurityChange, recordSecurityEvent } from "@/lib/security/events";
 import { authSecret } from "@/lib/security/secrets";
+import { createAuthMiddleware } from "better-auth/api";
+import { LV_PENDING_COOKIE, LV_PROVEN_MAX_AGE_S, lvPendingValue } from "./login-verify";
 
 /**
  * Better Auth is the source of truth for authentication (email/password, magic
@@ -87,6 +89,20 @@ export function createAuth(db: Database, env: CloudflareEnv) {
         domain: `.${env.APP_APEX_DOMAIN}`,
       },
     },
+    // A sign-in that came from an emailed link or code has just proved the
+    // email address, so the office's "check your email" step must not ask for
+    // a second code (see lib/auth/login-verify.ts). Leave the proof bound to
+    // the new session; the person still chooses "stay signed in?" and a PIN.
+    hooks: {
+      after: createAuthMiddleware(async (ctx) => {
+        if (!EMAIL_PROOF_PATHS.has(ctx.path)) return;
+        const created = ctx.context.newSession;
+        if (!created?.session?.id) return;
+        ctx.setCookie(LV_PENDING_COOKIE, await lvPendingValue(authSecret(env), created.session.id), {
+          httpOnly: true, secure: true, sameSite: "lax", path: "/", domain: `.${env.APP_APEX_DOMAIN}`, maxAge: LV_PROVEN_MAX_AGE_S,
+        });
+      }),
+    },
     session: {
       expiresIn: 60 * 60 * 24 * 7,
       updateAge: 60 * 60 * 24,
@@ -149,6 +165,9 @@ export function createAuth(db: Database, env: CloudflareEnv) {
     ],
   });
 }
+
+/** Endpoints whose success proves the person holds the email address. */
+const EMAIL_PROOF_PATHS = new Set(["/magic-link/verify", "/verify-email", "/sign-in/email-otp", "/email-otp/verify-email"]);
 
 export type Auth = ReturnType<typeof createAuth>;
 

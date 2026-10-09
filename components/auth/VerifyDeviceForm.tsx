@@ -25,7 +25,7 @@ export function VerifyDeviceForm({ next, hasPassword, where }: { next: string; h
     setErr(null);
     start(async () => {
       const r = await verifyDeviceAction(next, useCode ? { code } : { password });
-      // On success the action redirects; only failures come back.
+      if (r?.ok && r.next) { window.location.assign(r.next); return; }
       if (r && !r.ok) { setErr(r.error ?? "Something went wrong"); if (useCode) setCode(""); else setPassword(""); }
     });
   };

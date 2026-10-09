@@ -24,6 +24,8 @@ export const LV_PENDING_COOKIE = "ar_lvp";
 export const LV_DEVICE_COOKIE = "ar_lvd";
 export const LV_IDLE_MAX_AGE_S = 12 * 60 * 60;
 export const LV_PENDING_MAX_AGE_S = 10 * 60;
+/** An emailed link/code sign-in: long enough to create the account and choose a password first. */
+export const LV_PROVEN_MAX_AGE_S = 30 * 60;
 
 export type LvMode = "p" | "s";
 

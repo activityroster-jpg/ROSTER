@@ -2,7 +2,6 @@
 
 import { codeEmailHtml } from "@/lib/mail/code-email";
 import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 import { getAuth } from "@/lib/auth";
 import { getEnv, getRepositories } from "@/lib/cf/bindings";
 import { currentDeviceId } from "@/lib/auth/device-gate";
@@ -11,7 +10,7 @@ import { describeAgent, notifySecurityChange, recordSecurityEvent, requestFinger
 import { rateLimit } from "@/lib/security/rate-limit";
 import { escapeHtml, sendEmail } from "@/lib/mail";
 
-export type VerifyResult = { ok: boolean; error?: string; message?: string };
+export type VerifyResult = { ok: boolean; error?: string; message?: string; next?: string };
 
 function safeNext(next: string | undefined): string {
   if (typeof next === "string" && next.startsWith("/") && !next.startsWith("//")) return next;
@@ -100,7 +99,7 @@ export async function verifyDeviceAction(next: string, proof: DeviceProof): Prom
   await recordSecurityEvent("reauth_passed", { userId: me.id, meta: { method } });
   await recordSecurityEvent("new_device", { userId: me.id });
   await notifySecurityChange(me.id, "New sign-in on your ActivityRoster account", "<p>Your account was just used from a device or location we hadn't seen before, and the password check passed.</p>");
-  redirect(safeNext(next));
+  return { ok: true, next: safeNext(next) };
 }
 
 /** Forget every confirmed device — the next request from anywhere asks for the password again. */
