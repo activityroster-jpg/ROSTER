@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { isStaleActionError } from "@/lib/ui/stale-action";
 
 /**
  * In-app error boundary. Keeps a runtime error inside the app shell, shows a
@@ -9,6 +10,8 @@ import { useEffect, useState } from "react";
  */
 export default function AppError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   const [reported, setReported] = useState<"idle" | "sending" | "done">("idle");
+  // A page left open across an update: reloading fixes it; nothing to report.
+  const stale = isStaleActionError(error.message);
 
   useEffect(() => {
     console.error("[app] render error:", error.message, error.digest);
@@ -29,6 +32,16 @@ export default function AppError({ error, reset }: { error: Error & { digest?: s
     } catch { /* ignore */ }
     setReported("done");
   };
+
+  if (stale) {
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 text-center">
+        <p className="font-display text-xl font-semibold text-navy">ActivityRoster has just been updated</p>
+        <p className="mt-1 max-w-md text-sm text-slate-500">This page was opened before the update, so that didn&rsquo;t go through. Reload the page and try again.</p>
+        <button onClick={() => window.location.reload()} className="mt-5 rounded-lg bg-teal px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal-700">Reload the page</button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 text-center">

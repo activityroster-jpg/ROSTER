@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { isStaleActionError } from "@/lib/ui/stale-action";
 
-/** A save made from a page that was loaded before a new version went live. */
-const STALE = /Server Action .*(not found|was not found)|Failed to find Server Action|unexpected response was received from the server/i;
+/** Signed-in areas, where an unexpected failure is worth reporting (the public site has browser-extension noise). */
+const REPORTED_AREAS = /^\/(office|portal|parent|admin|app|welcome|set-pin|pin|verify-login|verify-device|security|two-factor)(\/|$)/;
 
 /**
  * Watches for a save that fails without telling anyone (9 Oct: an equipment
@@ -19,8 +20,8 @@ export function ActionFailureWatcher() {
     const handle = (reason: unknown) => {
       const message = reason instanceof Error ? reason.message : typeof reason === "string" ? reason : "";
       if (!message) return;
-      if (STALE.test(message)) { setStale(true); return; }
-      if (seen.has(message)) return;
+      if (isStaleActionError(message)) { setStale(true); return; }
+      if (seen.has(message) || !REPORTED_AREAS.test(window.location.pathname)) return;
       seen.add(message);
       void fetch("/api/report-error", {
         method: "POST",

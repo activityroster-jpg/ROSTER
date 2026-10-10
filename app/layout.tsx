@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Fira_Sans } from "next/font/google";
 import { apexDomain } from "@/lib/config";
 import "./globals.css";
+import { ActionFailureWatcher } from "@/components/ActionFailureWatcher";
 
 const SITE = `https://${apexDomain()}`;
 
@@ -64,6 +65,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <a href="#main" className="skip-link">Skip to main content</a>
         {children}
+        {/* Every surface (centres, Dev Center, main site): a save from a page left open across an update asks for a reload. */}
+        <ActionFailureWatcher />
       </body>
     </html>
   );

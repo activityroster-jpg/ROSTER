@@ -7,6 +7,7 @@ import { getAuth } from "@/lib/auth";
 import { resolveHost } from "@/lib/tenant/host";
 import { platformAdminEmails } from "@/lib/platform/admin";
 import { escapeHtml, sendEmail } from "@/lib/mail";
+import { isStaleActionError } from "@/lib/ui/stale-action";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +29,8 @@ export async function POST(req: Request) {
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ ok: false }, { status: 400 });
   const { message, digest, path } = parsed.data;
+  // A page left open across a deploy (the person is shown a reload prompt): expected, not a bug.
+  if (isStaleActionError(message)) return NextResponse.json({ ok: true, ignored: "stale-action" });
   const userAgent = req.headers.get("user-agent") ?? undefined;
 
   await captureException(new Error(scrub(message)), {
