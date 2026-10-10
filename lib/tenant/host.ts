@@ -47,3 +47,14 @@ export function resolveHost(rawHost: string | null | undefined, apex: string): H
 
   return { kind: "tenant", slug: label };
 }
+
+/**
+ * Where an "/office…" landing should go on this host. The office is only
+ * served on a centre's own address, so on the main site (where a sign-in link
+ * may have been requested) it becomes the centre chooser, which forwards to
+ * the right centre. Anything else is left alone.
+ */
+export function officeLandingFor(next: string, host: HostResolution): string {
+  if (host.kind === "tenant") return next;
+  return next === "/office" || next.startsWith("/office/") ? "/go?to=office" : next;
+}

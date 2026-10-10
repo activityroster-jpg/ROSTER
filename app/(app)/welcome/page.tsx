@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { getAuth } from "@/lib/auth";
 import { getRepositories } from "@/lib/cf/bindings";
 import { resolveTenant } from "@/lib/tenant/resolve";
+import { officeLandingFor, resolveHost } from "@/lib/tenant/host";
+import { apexDomain } from "@/lib/config";
 import { CreateAccountForm } from "@/components/auth/CreateAccountForm";
 
 export const dynamic = "force-dynamic";
@@ -18,8 +20,9 @@ const SAFE_NEXT = /^\/(office|portal|parent)(\/[A-Za-z0-9/_-]*)?$/;
  */
 export default async function WelcomePage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   const sp = await searchParams;
-  const next = typeof sp.next === "string" && SAFE_NEXT.test(sp.next) ? sp.next : "/office";
   const h = new Headers(await headers());
+  // On the main site the office isn't served: carry on via the centre chooser.
+  const next = officeLandingFor(typeof sp.next === "string" && SAFE_NEXT.test(sp.next) ? sp.next : "/office", resolveHost(h.get("host"), apexDomain()));
   const session = await (await getAuth()).api.getSession({ headers: h }).catch(() => null);
   if (!session?.user) redirect(`/sign-in?next=${encodeURIComponent(next)}`);
   const { control } = await getRepositories();

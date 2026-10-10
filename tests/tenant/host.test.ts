@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveHost } from "@/lib/tenant/host";
+import { officeLandingFor, resolveHost } from "@/lib/tenant/host";
 import { validateSlug, isReservedSubdomain } from "@/lib/tenant/reserved";
 
 const APEX = "activityroster.com";
@@ -52,5 +52,18 @@ describe("validateSlug", () => {
     expect(validateSlug("-lead").ok).toBe(false);
     expect(validateSlug("has space").ok).toBe(false);
     expect(validateSlug("under_score").ok).toBe(false);
+  });
+});
+
+describe("officeLandingFor", () => {
+  const apex = "activityroster.com";
+  it("sends the office to the centre chooser on the main site", () => {
+    expect(officeLandingFor("/office", resolveHost(apex, apex))).toBe("/go?to=office");
+    expect(officeLandingFor("/office/staff", resolveHost(`www.${apex}`, apex))).toBe("/go?to=office");
+  });
+  it("leaves a centre's own address and other paths alone", () => {
+    expect(officeLandingFor("/office", resolveHost(`seaview.${apex}`, apex))).toBe("/office");
+    expect(officeLandingFor("/portal/welcome", resolveHost(apex, apex))).toBe("/portal/welcome");
+    expect(officeLandingFor("/officers", resolveHost(apex, apex))).toBe("/officers");
   });
 });
