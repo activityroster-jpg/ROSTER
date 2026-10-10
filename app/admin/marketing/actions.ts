@@ -475,7 +475,7 @@ export async function removeLinkedinContactAction(id: string, index: number): Pr
 /** Run the website finder now for the next few centres (it also runs by itself every hour). */
 export async function findLinkedinNowAction(): Promise<ProspectResult> {
   const repo = await platform();
-  const r = await runLinkedinFinder(repo, 15);
+  const r = await runLinkedinFinder(repo);
   revalidateLinkedin();
   return { ok: true, count: r.checked, message: r.checked ? `Checked ${r.checked} website${r.checked === 1 ? "" : "s"}: ${r.pages} LinkedIn page${r.pages === 1 ? "" : "s"} and ${r.people} contact${r.people === 1 ? "" : "s"} found. ${r.remaining} still to check.` : "Every centre with a website has been checked." };
 }

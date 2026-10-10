@@ -745,6 +745,19 @@ export class PlatformRepository {
     return (await this.db.delete(pushOutbox).where(and(sql`${pushOutbox.status} != 'queued'`, lte(pushOutbox.updatedAt, cut))).returning({ id: pushOutbox.id })).length;
   }
 
+  /** Any prospect with a website the LinkedIn finder hasn't read yet? (A cheap check before loading the list.) */
+  async hasUncheckedLinkedinWebsites(): Promise<boolean> {
+    const rows = await this.db.select({ id: marketingProspect.id }).from(marketingProspect)
+      .where(and(sql`${marketingProspect.linkedinCheckedAt} IS NULL`, sql`coalesce(trim(${marketingProspect.website}), '') <> ''`)).limit(1);
+    return rows.length > 0;
+  }
+
+  /** Claim a batch for the LinkedIn finder before reading their websites. */
+  async stampLinkedinChecked(ids: string[], at: Date): Promise<void> {
+    if (!ids.length) return;
+    await this.db.update(marketingProspect).set({ linkedinCheckedAt: at }).where(inArray(marketingProspect.id, ids));
+  }
+
   async openPrivacyRequestCount(): Promise<number> {
     const rows = await this.db.select({ id: privacyRequest.id }).from(privacyRequest).where(inArray(privacyRequest.status, ["new", "acknowledged", "in_progress"]));
     return rows.length;

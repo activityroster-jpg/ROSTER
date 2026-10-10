@@ -105,7 +105,7 @@ export function LinkedinBoard({ rows: serverRows }: { rows: LinkedinRow[] }) {
         <span className="ml-auto flex items-center gap-2">
           {msg ? <span className="text-xs text-slate-500">{msg}</span> : null}
           {pending ? <span className="text-xs text-slate-400">Saving…</span> : null}
-          <button type="button" disabled={pending} onClick={() => save(() => findLinkedinNowAction())} className="rounded-lg bg-teal px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-700 disabled:opacity-50" title="Read the next 15 centres' websites now (the finder also runs by itself every hour)">
+          <button type="button" disabled={pending} onClick={() => save(() => findLinkedinNowAction())} className="rounded-lg bg-teal px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-700 disabled:opacity-50" title="Read the next 8 centres' websites now (the finder also runs by itself every hour)">
             🔎 Find on websites now
           </button>
         </span>

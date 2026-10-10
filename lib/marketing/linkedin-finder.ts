@@ -10,8 +10,10 @@ import { parseLinkedinContacts, topRanks, type LinkedinContact } from "@/lib/mar
  * site is found by hand with the search links on the LinkedIn tab.
  */
 
-const MAX_BYTES = 400_000;
-const TIMEOUT_MS = 7000;
+// Kept small so the finder can never hold the site up: a slow club website
+// gives up after 4 seconds, and only the first 150 KB of a page is read.
+const MAX_BYTES = 150_000;
+const TIMEOUT_MS = 4000;
 const LINKEDIN_RE = /https?:\/\/(?:[a-z]{2,3}\.)?linkedin\.com\/(company|school|in|showcase)\/([A-Za-z0-9\-_%.]+)\/?/gi;
 const SUBPAGE_HINT = /contact|about|committee|team|people|who-we-are|officers/i;
 
@@ -88,27 +90,33 @@ export async function findLinkedinOnWebsite(website: string, fetchImpl: typeof f
   return found;
 }
 
+/** Centres read per run: the hourly tick and each press of "Find on websites now". */
+export const FINDER_BATCH = 8;
+
 /**
  * Check the next few centres not checked yet (the top 250 first), saving any
  * company page (only if none is on file) and adding new people to their
- * contacts. Every centre tried is stamped, found or not, so the finder moves
- * on through the list. Runs from the hourly tick and the LinkedIn tab's button.
+ * contacts. The batch is claimed (stamped) before any website is read, so two
+ * runs at once never read the same centres, and a centre is tried once, found
+ * or not. Runs from the hourly tick and the LinkedIn tab's button.
  */
-export async function runLinkedinFinder(repo: PlatformRepository, limit = 15, fetchImpl: typeof fetch = fetch): Promise<{ checked: number; pages: number; people: number; remaining: number }> {
+export async function runLinkedinFinder(repo: PlatformRepository, limit = FINDER_BATCH, fetchImpl: typeof fetch = fetch): Promise<{ checked: number; pages: number; people: number; remaining: number }> {
+  if (!(await repo.hasUncheckedLinkedinWebsites())) return { checked: 0, pages: 0, people: 0, remaining: 0 };
   const all = await repo.listProspects(10_000, 0);
   const ranks = topRanks(all);
   const todo = all
     .filter((p) => !p.linkedinCheckedAt && (p.website ?? "").trim())
     .sort((a, b) => (ranks.get(a.id) ?? 1e6) - (ranks.get(b.id) ?? 1e6) || a.name.localeCompare(b.name));
-  const batch = todo.slice(0, Math.max(1, Math.min(40, limit)));
+  const batch = todo.slice(0, Math.max(1, Math.min(FINDER_BATCH, limit)));
+  await repo.stampLinkedinChecked(batch.map((p) => p.id), new Date());
   let pages = 0;
   let people = 0;
-  for (let i = 0; i < batch.length; i += 5) {
-    const group = batch.slice(i, i + 5);
+  for (let i = 0; i < batch.length; i += 4) {
+    const group = batch.slice(i, i + 4);
     const results = await Promise.all(group.map((p) => findLinkedinOnWebsite(p.website!, fetchImpl).catch(() => null)));
     for (const [j, p] of group.entries()) {
       const found = results[j];
-      const patch: Parameters<PlatformRepository["updateProspect"]>[1] = { linkedinCheckedAt: new Date() };
+      const patch: Parameters<PlatformRepository["updateProspect"]>[1] = {};
       if (found?.companyUrl && !p.linkedinUrl) { patch.linkedinUrl = found.companyUrl; pages++; }
       if (found?.people.length) {
         const current = parseLinkedinContacts(p.linkedinContacts);
@@ -116,7 +124,7 @@ export async function runLinkedinFinder(repo: PlatformRepository, limit = 15, fe
         const added = found.people.filter((c) => !have.has(c.url.toLowerCase()));
         if (added.length) { patch.linkedinContacts = JSON.stringify([...current, ...added].slice(0, 20)); people += added.length; }
       }
-      await repo.updateProspect(p.id, patch);
+      if (Object.keys(patch).length) await repo.updateProspect(p.id, patch);
     }
   }
   return { checked: batch.length, pages, people, remaining: Math.max(0, todo.length - batch.length) };

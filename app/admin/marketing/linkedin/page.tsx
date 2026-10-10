@@ -43,7 +43,7 @@ export default async function LinkedinProspectsPage() {
           <h1 className="font-display text-2xl font-bold text-navy">LinkedIn</h1>
           <p className="mt-1 text-sm text-slate-500">
             Every centre, its LinkedIn page and the people to contact, with where things stand. The finder reads each centre&apos;s own
-            website for LinkedIn links, 20 centres an hour, biggest first ({checked} of {withWebsite} websites read so far). It never visits
+            website for LinkedIn links, 8 centres an hour, biggest first ({checked} of {withWebsite} websites read so far). It never visits
             LinkedIn itself, which LinkedIn&apos;s terms forbid, so use the search links to find the rest and add them here.
           </p>
         </div>
