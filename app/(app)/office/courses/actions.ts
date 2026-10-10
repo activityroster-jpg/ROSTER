@@ -266,7 +266,6 @@ export async function setDayStaffAction(input: { sessionId: string; instructorId
   if (![input.sessionId, input.instructorId, input.roleTypeId].every((v) => idSchema.safeParse(v).success)) return { ok: false, error: "Invalid request" };
   if (!(SESSION_STAFF_MODES as readonly string[]).includes(input.mode)) return { ok: false, error: "Invalid request" };
   const note = typeof input.note === "string" ? input.note.trim().slice(0, 300) || null : null;
-  if (input.override && !note) return { ok: false, error: "Say why you're overriding" };
   const r = await setDayStaff(repos, ctx, { sessionId: input.sessionId, instructorId: input.instructorId, roleTypeId: input.roleTypeId, mode: input.mode as SessionStaffMode, override: Boolean(input.override), note });
   if (!r.ok) return { ok: false, error: `${r.error}. Tick override to push it through.` };
   revalidatePath("/office/courses");

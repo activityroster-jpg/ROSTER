@@ -23,13 +23,12 @@ function refresh() {
 /**
  * Put someone on a session from the board: on the whole course (the default
  * for a one-day course) or on this day only. Both run the usual checks; an
- * override needs a note and is recorded.
+ * override is recorded (no reason asked; the warnings it overrode are logged).
  */
 export async function boardAssignAction(input: { sessionId: string; courseId: string; instructorId: string; roleTypeId: string; scope: "course" | "day"; override?: boolean; note?: string | null }): Promise<Result> {
   const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   if (![input.sessionId, input.courseId, input.instructorId, input.roleTypeId].every((v) => idSchema.safeParse(v).success)) return { ok: false, error: "Invalid request" };
   const note = typeof input.note === "string" ? input.note.trim().slice(0, 300) || null : null;
-  if (input.override && !note) return { ok: false, error: "Say why you're overriding" };
   if (input.scope === "day") {
     const r = await setDayStaff(repos, ctx, { sessionId: input.sessionId, instructorId: input.instructorId, roleTypeId: input.roleTypeId, mode: "add", override: Boolean(input.override), note });
     if (!r.ok) return { ok: false, error: r.error };

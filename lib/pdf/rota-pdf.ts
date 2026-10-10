@@ -97,8 +97,6 @@ function newPage(c: Ctx): void {
   c.page.drawText(right, { x: c.w - M - c.font.widthOfTextAtSize(right, 8), y: c.h - M - 4, size: 8, font: c.font, color: L.muted });
   c.page.drawLine({ start: { x: M, y: c.h - M - 30 }, end: { x: c.w - M, y: c.h - M - 30 }, thickness: 1, color: L.rule });
   c.y = c.h - M - 44;
-  const foot = safe("Produced by ActivityRoster · planning aid, not legal advice · check the live roster for late changes");
-  c.page.drawText(foot, { x: M, y: M - 14, size: 7, font: c.font, color: L.muted });
 }
 
 function ensure(c: Ctx, needed: number): void { if (c.y - needed < M) newPage(c); }
@@ -185,9 +183,14 @@ function drawBreakdown(c: Ctx, input: RotaPdfInput, names: Map<string, string>, 
     c.page.drawLine({ start: { x: M, y: c.y }, end: { x: M + inner, y: c.y }, thickness: 0.8, color: L.rule });
   };
 
+  let drawnAny = false;
   for (const day of input.days) {
     // A month skips its empty days; a day or week shows them so the gap is visible.
     if (input.template.range === "month" && day.sessions.length === 0) continue;
+    // Each day with courses starts on a fresh page, so a day can be handed out on its own.
+    // An empty day ("No courses") just follows on, rather than wasting a page.
+    if (drawnAny && day.sessions.length > 0) newPage(c);
+    drawnAny = true;
     ensure(c, L.dayH + size + 2 * pad + 30);
     if (L.dayFill) c.page.drawRectangle({ x: M, y: c.y - L.dayH, width: inner, height: L.dayH, color: L.dayFill });
     const count = day.sessions.length ? `${day.sessions.length} course${day.sessions.length === 1 ? "" : "s"}` : "No courses";

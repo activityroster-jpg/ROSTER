@@ -45,6 +45,9 @@ export function RosterBoard({ data, canEdit }: { data: BoardData; canEdit: boole
 
   const byId = useMemo(() => new Map(data.instructors.map((i) => [i.id, i])), [data.instructors]);
   const sessionById = useMemo(() => { const m = new Map<string, Selected>(); for (const d of data.days) for (const s of d.sessions) m.set(s.sessionId, { session: s, day: d }); return m; }, [data.days]);
+  // The panel shows the session as it is now, not as it was when clicked: after
+  // an assignment the board reloads and the new person must appear in their row.
+  const live = sel ? sessionById.get(sel.session.sessionId) ?? sel : null;
   const totalOpen = Object.values(data.openRoles).reduce((n, rs) => n + rs.reduce((x, r) => x + r.missing, 0), 0);
 
   const onDropInstructor = (session: RotaSession, day: RotaDay, instructorId: string) => {
@@ -64,28 +67,25 @@ export function RosterBoard({ data, canEdit }: { data: BoardData; canEdit: boole
         <p className="text-xs text-slate-500">
           {totalOpen ? <span className="font-semibold text-amber">{totalOpen} role{totalOpen === 1 ? "" : "s"} still open</span> : <span className="font-semibold text-starboard">Every role filled</span>}
           {data.problemCounts.total ? <> · <span className="font-semibold text-port">{data.problemCounts.total} problem{data.problemCounts.total === 1 ? "" : "s"}</span></> : null}
-          {canEdit ? <span className="ml-2 text-slate-400">Drag a person onto a session, or click a person then a session.</span> : null}
+          {canEdit ? <span className="ml-2 text-slate-400">Click a session to see its roles and assign people.</span> : null}
         </p>
       </div>
 
-      <div className={`grid gap-4 ${layout === "courses" && canEdit ? "lg:grid-cols-[minmax(0,1fr)_13rem]" : ""} ${sel ? "lg:mr-[28rem]" : ""}`}>
+      <div className={sel ? "lg:mr-[28rem]" : ""}>
         {layout === "courses" ? (
           <CoursesByDay data={data} canEdit={canEdit} picked={picked} dropTarget={dropTarget} setDropTarget={setDropTarget} onDrop={onDropInstructor} onOpen={(s, d) => { setSel({ session: s, day: d }); if (picked) { setPendingDrop({ session: s, day: d, instructorId: picked }); setPicked(null); } }} selectedId={sel?.session.sessionId ?? null} />
         ) : (
           <PeopleByDay data={data} onOpen={(id) => { const x = sessionById.get(id); if (x) setSel(x); }} />
         )}
-        {layout === "courses" && canEdit ? (
-          <SideList instructors={data.instructors} picked={picked} setPicked={setPicked} focus={sel ? `${sel.day.date}|${sel.session.slot}` : null} />
-        ) : null}
       </div>
 
-      {sel ? (
+      {live ? (
         <SessionPanel
-          key={sel.session.sessionId + (pendingDrop?.instructorId ?? "")}
+          key={live.session.sessionId + (pendingDrop?.instructorId ?? "")}
           data={data}
-          selected={sel}
+          selected={live}
           canEdit={canEdit}
-          preselect={pendingDrop && pendingDrop.session.sessionId === sel.session.sessionId ? pendingDrop.instructorId : null}
+          preselect={pendingDrop && pendingDrop.session.sessionId === live.session.sessionId ? pendingDrop.instructorId : null}
           instructors={data.instructors}
           byId={byId}
           onClose={() => { setSel(null); setPendingDrop(null); }}
@@ -137,41 +137,6 @@ function CoursesByDay({ data, canEdit, picked, dropTarget, setDropTarget, onDrop
       ))}
     </div>
     </div>
-  );
-}
-
-/* ---------- Side list of people (drag source) ---------- */
-function SideList({ instructors, picked, setPicked, focus }: { instructors: BoardInstructor[]; picked: string | null; setPicked: (id: string | null) => void; focus: string | null }) {
-  const [q, setQ] = useState("");
-  const shown = instructors.filter((i) => i.name.toLowerCase().includes(q.toLowerCase()));
-  return (
-    <aside className="rounded-card border border-slate-200 bg-white p-2">
-      <p className="mb-1 px-1 text-xs font-semibold uppercase tracking-wide text-slate-400">People</p>
-      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Find…" aria-label="Find an instructor" className="mb-2 w-full rounded-lg border border-slate-300 px-2 py-1 text-xs outline-none focus:border-teal" />
-      {focus ? <p className="mb-1 px-1 text-[10px] text-slate-400">Dots show availability for the selected slot.</p> : <p className="mb-1 px-1 text-[10px] text-slate-400">Click a session to see availability for its slot.</p>}
-      <ul className="max-h-[60vh] space-y-0.5 overflow-y-auto">
-        {shown.map((i) => {
-          const a = focus ? i.availability[focus] : undefined;
-          const av = a ? AVAIL[a.status] ?? AVAIL.unasked! : null;
-          return (
-            <li key={i.id}>
-              <button
-                type="button"
-                draggable
-                onDragStart={(e) => { e.dataTransfer.setData("text/instructor", i.id); e.dataTransfer.effectAllowed = "copy"; }}
-                onClick={() => setPicked(picked === i.id ? null : i.id)}
-                title={`${i.name}${av ? ` · ${av.word}${a?.source === "pattern" ? " (usual week)" : a?.source === "default" ? " (not answered)" : ""}` : ""}${i.fit ? "" : ` · ${i.fitReason}`}`}
-                className={`flex w-full cursor-grab items-center gap-2 rounded-lg px-2 py-1 text-left text-xs ${picked === i.id ? "bg-teal/15 ring-1 ring-teal" : "hover:bg-slate-50"}`}
-              >
-                {av ? <span className={`h-2 w-2 flex-none rounded-full ${av.dot} ${a?.source === "default" ? "opacity-40" : ""}`} /> : <span className="h-2 w-2 flex-none rounded-full bg-slate-200" />}
-                <span className={`truncate ${i.fit ? "text-navy" : "text-port"}`}>{i.name}</span>
-                {i.under18 ? <span className="rounded bg-amber/15 px-1 text-[9px] font-semibold text-amber">U18</span> : null}
-              </button>
-            </li>
-          );
-        })}
-      </ul>
-    </aside>
   );
 }
 

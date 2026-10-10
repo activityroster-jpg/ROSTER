@@ -513,7 +513,7 @@ export const SECTIONS: Section[] = [
       { kind: "p", text: "The weekly roster page has a link to download a young-worker time register (CSV): every session each under-18 was rostered on, with hours, status, any override note, and when it was assigned, confirmed and published. Keep it with your employment records; viewing it is written to your change log." },
       { kind: "sub", text: "Verified and unverified figures" },
       { kind: "p", text: "Each figure in a pack is marked verified once it has been checked against the official source. Until then a warning that depends on it says \"figure not yet verified\", and Settings shows how many figures in your pack are still outstanding. If your centre's jurisdiction has no pack yet, Settings says so plainly and the hour checks do not run; under-18s are still flagged on the Instructors tab." },
-      { kind: "tip", text: "This is a planning aid, not legal advice. Child-employment permits, school-leaving dates and local bylaws remain the employer's responsibility, and the disclaimer on the printed roster says so." },
+      { kind: "tip", text: "This is a planning aid, not legal advice. Child-employment permits, school-leaving dates and local bylaws remain the employer's responsibility; the roster page and Settings say so." },
     ],
   },
   {
