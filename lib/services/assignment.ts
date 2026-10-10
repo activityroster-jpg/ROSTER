@@ -6,6 +6,8 @@ import { actorUserId } from "@/lib/tenant/context";
 import {
   evaluateFit,
   hasConflict,
+  clashModeFor,
+  timeOverlapsOnly,
   type ComplianceRequirement,
   type HeldCompliance,
   type ResourceBooking,
@@ -18,6 +20,7 @@ import { planHoursForCourse } from "./hours";
 import { notifyInstructor } from "./notifications";
 import { publishedWeeks, weekOf } from "./roster";
 import { liveSessions } from "@/lib/domain/sessions";
+import { fmtWallTime } from "@/lib/domain/time";
 import { getTeachingMatrix } from "./teaching";
 import { qualificationGap } from "./problems";
 import { sessionsForInstructor } from "./session-staff";
@@ -158,18 +161,20 @@ export async function assignStaff(
       startAt: toMs(s.startAt),
       endAt: toMs(s.endAt),
       courseId: s.courseId,
+      date: s.date,
+      slot: s.slot,
     }));
+  const clashMode = clashModeFor(settings?.slotStyle);
+  const candidateOf = (s: { id: string; startAt: Date | number; endAt: Date | number; date: string; slot: string }) =>
+    ({ sessionId: s.id, resourceId: input.instructorId, startAt: toMs(s.startAt), endAt: toMs(s.endAt), date: s.date, slot: s.slot });
 
   const clashing = conflictChecksOn
     ? targetSessions.find((s) =>
-        hasConflict(
-          { sessionId: s.id, resourceId: input.instructorId, startAt: toMs(s.startAt), endAt: toMs(s.endAt) },
-          existingBookings,
-        ),
+        hasConflict(candidateOf(s), existingBookings, clashMode),
       )
     : undefined;
   if (clashing && !input.override) {
-    return { ok: false, reason: "conflict", detail: `Overlaps another booking on ${clashing.date} ${clashing.slot}` };
+    return { ok: false, reason: "conflict", detail: `Already on another course in the same session (${clashing.date} ${clashing.slot})` };
   }
 
   // --- 3. Availability: "Busy" blocks (on by default), override allowed ----
@@ -190,6 +195,20 @@ export async function assignStaff(
   }
 
   const warnings: string[] = [];
+  // Slot-run centres: a session before or after is fine, but say so when the typed times run into each other.
+  if (clashMode === "slots") {
+    const seen = new Set<string>();
+    for (const s of targetSessions) {
+      for (const o of timeOverlapsOnly(candidateOf(s), existingBookings)) {
+        const key = `${s.id}|${o.sessionId}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const from = Math.max(toMs(s.startAt), o.startAt);
+        const to = Math.min(toMs(s.endAt), o.endAt);
+        warnings.push(`Times overlap on ${s.date}: this ${s.slot} session (${fmtWallTime(s.startAt)}–${fmtWallTime(s.endAt)}) and their ${o.slot} session (${fmtWallTime(o.startAt)}–${fmtWallTime(o.endAt)}) overlap ${fmtWallTime(from)}–${fmtWallTime(to)}`);
+      }
+    }
+  }
 
   // --- 4. Persist ----------------------------------------------------------
   const overridden = Boolean(input.override && (!fit.fit || notQualified || clashing || busy));
@@ -231,8 +250,9 @@ export async function assignStaff(
     const freshSessions = liveSessions(await sessionsAround(repos, ctx, input.courseId));
     const now = (await sessionsForInstructor(repos, ctx, input.instructorId, freshSessions)).filter((s) => s.courseId !== input.courseId);
     const late = targetSessions.find((s) => hasConflict(
-      { sessionId: s.id, resourceId: input.instructorId, startAt: toMs(s.startAt), endAt: toMs(s.endAt) },
-      now.map((o) => ({ sessionId: o.id, resourceId: input.instructorId, startAt: toMs(o.startAt), endAt: toMs(o.endAt), courseId: o.courseId })),
+      candidateOf(s),
+      now.map((o) => ({ sessionId: o.id, resourceId: input.instructorId, startAt: toMs(o.startAt), endAt: toMs(o.endAt), courseId: o.courseId, date: o.date, slot: o.slot })),
+      clashMode,
     ));
     if (late) {
       const after = await t.courseStaff.list(ctx, eq(courseStaffTable.courseId, input.courseId));

@@ -296,9 +296,12 @@ export function AvailabilityMatrix({ days, rows, availableCounts, staffManagedBy
         </table>
       </div>
 
-      {/* Cell panel: set availability, fill a shift */}
+      {/* Cell panel: set availability, fill a shift. Pinned to the bottom of the screen so the
+          person's week stays in view above it; the spacer keeps the last rows reachable. */}
+      {sel ? <div aria-hidden className="h-[46vh]" /> : null}
       {sel ? (
-        <div className="mt-4 rounded-card border border-navy/20 bg-white p-4 shadow-sm">
+        <div role="dialog" aria-label={`${sel.name}, ${sel.dayLabel} ${sel.slot}`} onKeyDown={(e) => { if (e.key === "Escape") { setSel(null); setCands(null); setMsg(null); } }}
+          className="fixed inset-x-3 bottom-3 z-40 max-h-[44vh] overflow-y-auto rounded-card border border-navy/20 bg-white p-4 shadow-2xl lg:left-[calc(15rem+1.5rem)] lg:right-6">
           <div className="flex items-center justify-between gap-2">
             <p className="font-semibold text-navy">
               <span className="text-teal">{sel.name}</span>, {sel.dayLabel} {sel.slot}

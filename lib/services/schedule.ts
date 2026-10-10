@@ -3,6 +3,7 @@ import type { AnyTenantContext } from "@/lib/tenant/context";
 import {
   evaluateRatio,
   findConflicts,
+  clashModeFor,
   type AssignedRole,
   type Conflict,
   type RatioResult,
@@ -71,11 +72,13 @@ export async function getScheduleConflicts(
   ctx: AnyTenantContext,
 ): Promise<ScheduleConflicts> {
   const t = repos.tenant;
-  const [allSessions, staff, courseEquip] = await Promise.all([
+  const [allSessions, staff, courseEquip, settingsRows] = await Promise.all([
     t.courseSession.list(ctx),
     t.courseStaff.list(ctx),
     t.courseEquipment.list(ctx),
+    t.orgSettings.list(ctx),
   ]);
+  const mode = clashModeFor(settingsRows[0]?.slotStyle);
   const sessions = liveSessions(allSessions);
 
   const sessionsByCourse = new Map<string, typeof sessions>();
@@ -92,6 +95,8 @@ export async function getScheduleConflicts(
         startAt: toMs(s.startAt),
         endAt: toMs(s.endAt),
         courseId: a.courseId,
+        date: s.date,
+        slot: s.slot,
       });
     }
   }
@@ -106,12 +111,14 @@ export async function getScheduleConflicts(
         startAt: toMs(s.startAt),
         endAt: toMs(s.endAt),
         courseId: ce.courseId,
+        date: s.date,
+        slot: s.slot,
       });
     }
   }
 
-  const instructor = findConflicts(instructorBookings);
-  const equipment = findConflicts(equipmentBookings);
+  const instructor = findConflicts(instructorBookings, mode);
+  const equipment = findConflicts(equipmentBookings, mode);
   const courseIds = new Set<string>();
   for (const c of [...instructor, ...equipment]) {
     if (c.a.courseId) courseIds.add(c.a.courseId);

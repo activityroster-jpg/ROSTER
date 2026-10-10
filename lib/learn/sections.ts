@@ -466,7 +466,7 @@ export const SECTIONS: Section[] = [
       { kind: "p", text: "Checks used to run only when you assigned someone. Sessions move, people mark themselves Busy afterwards, leave gets approved, a boat goes into maintenance. The problems list looks at the roster as it stands today and tells you what no longer adds up." },
       { kind: "sub", text: "What it finds" },
       { kind: "bullets", items: [
-        "Double-booked: the same instructor on two courses at once (when you check for clashes).",
+        "Double-booked: the same instructor on two courses in the same session (AM, PM or EV) on the same day, when you check for clashes. A session before or after is fine. If the times typed for back-to-back sessions run into each other (a morning down until 13:30 and an afternoon from 13:00), it shows as a warning with the exact overlap. Centres that run to set times compare the times instead, and one ending at 13:00 with the next starting at 13:00 is not an overlap.",
         "Rostered while Busy or on approved leave, and anyone who hasn't marked a slot Free yet (counts as Busy).",
         "Someone who said they can't make it and still needs replacing.",
         "Not cleared to roster (an expired mandatory check), and qualifications that don't cover the course type.",

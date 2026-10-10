@@ -15,6 +15,28 @@ export interface ResourceBooking extends Interval {
   readonly resourceId: string;
   /** For messaging / grouping. */
   readonly courseId?: string;
+  /** The session's day and slot (AM / PM / EV): what a slot-run centre compares. */
+  readonly date?: string;
+  readonly slot?: string;
+}
+
+/**
+ * How a centre decides a clash. "slots" (the default way centres run): the
+ * same person on two sessions in the same slot on the same day; different
+ * slots never clash, whatever times were typed. "times" (centres that run to
+ * set start and end times): the times overlap, and one ending at 13:00 with
+ * the next starting at 13:00 does not count.
+ */
+export type ClashMode = "slots" | "times";
+
+/** The centre's rule from its session style (Settings: AM/PM/EV slots, or set times). */
+export const clashModeFor = (slotStyle: string | null | undefined): ClashMode => (slotStyle === "times" ? "times" : "slots");
+
+/** Do these two bookings clash under the centre's rule? */
+export function clashes(a: ResourceBooking, b: ResourceBooking, mode: ClashMode = "times"): boolean {
+  if (a.sessionId === b.sessionId) return false;
+  if (mode === "slots" && a.date && b.date && a.slot && b.slot) return a.date === b.date && a.slot === b.slot;
+  return overlaps(a, b);
 }
 
 export interface Conflict {
@@ -24,10 +46,10 @@ export interface Conflict {
 }
 
 /**
- * Find every pair of overlapping bookings that share a resource. O(n log n)-ish
+ * Find every pair of clashing bookings that share a resource. O(n log n)-ish
  * by grouping per resource then sorting by start; adequate for a centre's week.
  */
-export function findConflicts(bookings: readonly ResourceBooking[]): Conflict[] {
+export function findConflicts(bookings: readonly ResourceBooking[], mode: ClashMode = "times"): Conflict[] {
   const byResource = new Map<string, ResourceBooking[]>();
   for (const b of bookings) {
     const arr = byResource.get(b.resourceId);
@@ -43,24 +65,50 @@ export function findConflicts(bookings: readonly ResourceBooking[]): Conflict[] 
       for (let j = i + 1; j < sorted.length; j++) {
         const a = sorted[i]!;
         const b = sorted[j]!;
-        // Sessions are sorted by start; once b starts at/after a ends, no later
-        // b can overlap a either.
-        if (b.startAt >= a.endAt) break;
-        if (a.sessionId !== b.sessionId && overlaps(a, b)) {
-          conflicts.push({ resourceId, a, b });
-        }
+        // By time: sessions are sorted by start, so once b starts at/after a
+        // ends no later b can overlap a. By slot, keep looking (times may not
+        // follow the slots).
+        if (mode === "times" && b.startAt >= a.endAt) break;
+        if (clashes(a, b, mode)) conflicts.push({ resourceId, a, b });
       }
     }
   }
   return conflicts;
 }
 
+/**
+ * Slot-run centres: the same person on two sessions in DIFFERENT slots whose
+ * typed times overlap (say a morning down as 09:00–13:30 and an afternoon from
+ * 13:00). Not a clash, but worth a look: returned with the exact overlap.
+ */
+export function slotTimeOverlaps(bookings: readonly ResourceBooking[]): (Conflict & { from: number; to: number })[] {
+  const out: (Conflict & { from: number; to: number })[] = [];
+  const byResource = new Map<string, ResourceBooking[]>();
+  for (const b of bookings) byResource.set(b.resourceId, [...(byResource.get(b.resourceId) ?? []), b]);
+  for (const [resourceId, group] of byResource) {
+    const sorted = [...group].sort((x, y) => x.startAt - y.startAt);
+    for (let i = 0; i < sorted.length; i++) {
+      for (let j = i + 1; j < sorted.length; j++) {
+        const a = sorted[i]!;
+        const b = sorted[j]!;
+        if (b.startAt >= a.endAt) break;
+        if (a.sessionId !== b.sessionId && a.slot && b.slot && a.slot !== b.slot && overlaps(a, b)) out.push({ resourceId, a, b, from: b.startAt, to: Math.min(a.endAt, b.endAt) });
+      }
+    }
+  }
+  return out;
+}
+
 /** Does adding `candidate` to `existing` create any overlap for that resource? */
 export function hasConflict(
   candidate: ResourceBooking,
   existing: readonly ResourceBooking[],
+  mode: ClashMode = "times",
 ): boolean {
-  return existing.some(
-    (e) => e.resourceId === candidate.resourceId && e.sessionId !== candidate.sessionId && overlaps(candidate, e),
-  );
+  return existing.some((e) => e.resourceId === candidate.resourceId && clashes(candidate, e, mode));
+}
+
+/** The bookings a candidate overlaps in time but not in slot (slot-run centres): for a warning, not a block. */
+export function timeOverlapsOnly(candidate: ResourceBooking, existing: readonly ResourceBooking[]): ResourceBooking[] {
+  return existing.filter((e) => e.resourceId === candidate.resourceId && e.sessionId !== candidate.sessionId && e.slot && candidate.slot && e.slot !== candidate.slot && overlaps(candidate, e));
 }

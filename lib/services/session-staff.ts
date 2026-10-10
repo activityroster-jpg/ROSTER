@@ -3,7 +3,7 @@ import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
 import { courseSession as courseSessionTable, courseStaff as courseStaffTable, sessionStaffOverride as overrideTable, type CourseSession, type CourseStaff, type SessionStaffMode, type SessionStaffOverride } from "@/lib/db/schema";
 import { effectiveStaffBySession, type EffectiveStaffMember } from "@/lib/domain/session-staff";
-import { hasConflict, type ResourceBooking } from "@/lib/domain";
+import { clashModeFor, hasConflict, type ResourceBooking } from "@/lib/domain";
 import { effectiveAvailability, blocksRostering, describeBusy } from "@/lib/domain/availability";
 import { availabilityHorizon, loadInstructorAvailability } from "./availability";
 import { auditStatement } from "./audit";
@@ -99,8 +99,8 @@ export async function setDayStaff(repos: Repositories, ctx: AnyTenantContext, in
     }
     if (settings?.enforceConflictChecks ?? false) {
       const others = await sessionsForInstructor(repos, ctx, input.instructorId);
-      const bookings: ResourceBooking[] = others.filter((s) => s.id !== session.id).map((s) => ({ sessionId: s.id, resourceId: input.instructorId, startAt: ms(s.startAt), endAt: ms(s.endAt), courseId: s.courseId }));
-      if (hasConflict({ sessionId: session.id, resourceId: input.instructorId, startAt: ms(session.startAt), endAt: ms(session.endAt) }, bookings)) reasons.push(`Already on another session at that time (${session.date} ${session.slot})`);
+      const bookings: ResourceBooking[] = others.filter((s) => s.id !== session.id).map((s) => ({ sessionId: s.id, resourceId: input.instructorId, startAt: ms(s.startAt), endAt: ms(s.endAt), courseId: s.courseId, date: s.date, slot: s.slot }));
+      if (hasConflict({ sessionId: session.id, resourceId: input.instructorId, startAt: ms(session.startAt), endAt: ms(session.endAt), date: session.date, slot: session.slot }, bookings, clashModeFor(settings?.slotStyle))) reasons.push(`Already on another session in the same slot (${session.date} ${session.slot})`);
     }
     if (reasons.length && !input.override) return { ok: false, error: reasons.join("; ") };
     overridden = reasons.length > 0;

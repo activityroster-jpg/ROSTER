@@ -118,7 +118,7 @@ describe("per-day staffing against the database", () => {
     // Sam is on Stage 3 that morning: adding him to the taster clashes.
     const clash = await setDayStaff(repos, ctx, { sessionId: otherId, instructorId: samId, roleTypeId: roleId, mode: "add" });
     expect(clash.ok).toBe(false);
-    if (!clash.ok) expect(clash.error).toMatch(/another session at that time/);
+    if (!clash.ok) expect(clash.error).toMatch(/another session in the same slot/);
     const forced = await setDayStaff(repos, ctx, { sessionId: otherId, instructorId: samId, roleTypeId: roleId, mode: "add", override: true, note: "ten minutes' handover" });
     expect(forced.ok && forced.overridden).toBe(true);
     const report = await findProblems(repos, ctx, { from: "2027-06-09", to: "2027-06-10" });

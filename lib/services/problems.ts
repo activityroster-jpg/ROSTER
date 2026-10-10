@@ -2,7 +2,7 @@ import { and, eq, gte, isNull, lt, or } from "drizzle-orm";
 import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
 import { availability as availabilityTable, course as courseTable, courseEquipment as courseEquipmentTable, courseSession as courseSessionTable, courseStaff as courseStaffTable, sessionStaffOverride as overrideTable } from "@/lib/db/schema";
-import { evaluateFit, evaluateRatio, type AssignedRole, type ComplianceRequirement, type HeldCompliance } from "@/lib/domain";
+import { clashModeFor, evaluateFit, evaluateRatio, type AssignedRole, type ComplianceRequirement, type HeldCompliance } from "@/lib/domain";
 import { liveSessions } from "@/lib/domain/sessions";
 import { indexAvailability, keyOf, managedByOffice } from "@/lib/domain/availability";
 import {
@@ -115,7 +115,7 @@ export async function findProblems(repos: Repositories, ctx: AnyTenantContext, o
   const problems: Problem[] = [];
 
   // Double-bookings: when the centre checks for them.
-  if (settings?.enforceConflictChecks ?? false) problems.push(...doubleBookings(sessions, assignments, courses, instructors));
+  if (settings?.enforceConflictChecks ?? false) problems.push(...doubleBookings(sessions, assignments, courses, instructors, clashModeFor(settings?.slotStyle)));
 
   // Availability: Busy, leave, or never answered (on by default).
   if (settings?.enforceAvailabilityChecks ?? true) {
@@ -176,7 +176,7 @@ export async function findProblems(repos: Repositories, ctx: AnyTenantContext, o
   // Equipment: tracked units only.
   if (!opts.instructorId) {
     const units = new Map(equipment.map((e) => [e.id, { name: e.identifier ? `${e.name} (${e.identifier})` : e.name, status: e.status, maintenanceNote: e.maintenanceNote ?? null, backOn: e.backOn ?? null }]));
-    problems.push(...equipmentProblems(sessions, courseEquipment, units, courses));
+    problems.push(...equipmentProblems(sessions, courseEquipment, units, courses, clashModeFor(settings?.slotStyle)));
     if (settings?.checkEquipmentQuantities ?? true) {
       problems.push(...equipmentShortfalls(
         sessions,

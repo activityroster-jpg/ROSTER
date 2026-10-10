@@ -8,11 +8,13 @@
  * Pure functions: the service gathers the rows, these decide. No DB, no clock.
  */
 
-import { findConflicts, type ResourceBooking } from "./conflict";
+import { findConflicts, slotTimeOverlaps, type ClashMode, type ResourceBooking } from "./conflict";
+import { fmtWallTime } from "./time";
 import { effectiveAvailability, type AvailabilityHorizon, type AvailabilityIndex } from "./availability";
 
 export type ProblemKind =
   | "double-booked"
+  | "times-overlap"
   | "busy"
   | "on-leave"
   | "not-answered"
@@ -82,6 +84,7 @@ const KIND_LABEL: Record<ProblemKind, string> = {
   "on-leave": "Rostered while on leave",
   "not-answered": "Availability not answered",
   declined: "Declined, needs cover",
+  "times-overlap": "Session times overlap",
   "not-fit": "Not cleared to roster",
   "not-qualified": "Not an instructor for this course type",
   unstaffed: "Short of instructors",
@@ -103,17 +106,33 @@ const firstSessionOf = (courseId: string, sessions: readonly ProblemSession[], a
   return (a ? sessionsOf(a, mine) : mine).sort((x, y) => x.date.localeCompare(y.date) || x.startAt - y.startAt)[0];
 };
 
-/** The same instructor on two overlapping sessions of different courses. One problem per clash, dated by the earlier session. */
-export function doubleBookings(sessions: readonly ProblemSession[], assignments: readonly ProblemAssignment[], courses: ReadonlyMap<string, ProblemCourse>, instructors: ReadonlyMap<string, ProblemInstructor>): Problem[] {
+/**
+ * The same instructor on two sessions of different courses that clash (the same
+ * slot on the same day for a slot-run centre; overlapping times otherwise). One
+ * problem per clash, dated by the earlier session. A slot-run centre also gets
+ * a warning when sessions in different slots have typed times that run into
+ * each other, with the exact overlap.
+ */
+export function doubleBookings(sessions: readonly ProblemSession[], assignments: readonly ProblemAssignment[], courses: ReadonlyMap<string, ProblemCourse>, instructors: ReadonlyMap<string, ProblemInstructor>, mode: ClashMode = "times"): Problem[] {
   const byCourse = new Map<string, ProblemSession[]>();
   for (const s of sessions) byCourse.set(s.courseId, [...(byCourse.get(s.courseId) ?? []), s]);
   const bookings: ResourceBooking[] = [];
   for (const a of assignments) {
     if (!live(a)) continue;
-    for (const s of sessionsOf(a, byCourse.get(a.courseId) ?? [])) bookings.push({ sessionId: s.id, resourceId: a.instructorId, startAt: s.startAt, endAt: s.endAt, courseId: a.courseId });
+    for (const s of sessionsOf(a, byCourse.get(a.courseId) ?? [])) bookings.push({ sessionId: s.id, resourceId: a.instructorId, startAt: s.startAt, endAt: s.endAt, courseId: a.courseId, date: s.date, slot: s.slot });
   }
   const sessionById = new Map(sessions.map((s) => [s.id, s]));
-  return findConflicts(bookings).map((c) => {
+  const overlapsOut: Problem[] = mode === "slots" ? slotTimeOverlaps(bookings).filter((o) => o.a.courseId !== o.b.courseId).map((o) => {
+    const first = sessionById.get(o.a.sessionId)!;
+    const other = sessionById.get(o.b.sessionId)!;
+    return {
+      kind: "times-overlap" as const, severity: "warn" as const,
+      date: first.date, slot: first.slot, courseId: first.courseId, courseName: courses.get(first.courseId)?.name ?? "Course", sessionId: first.id, otherCourseId: other.courseId,
+      instructorId: o.resourceId, instructorName: instructors.get(o.resourceId)?.name ?? "Instructor",
+      detail: `${first.slot} ${fmtWallTime(first.startAt)}–${fmtWallTime(first.endAt)} and ${courses.get(other.courseId)?.name ?? "another course"} ${other.slot} ${fmtWallTime(other.startAt)}–${fmtWallTime(other.endAt)} overlap ${fmtWallTime(o.from)}–${fmtWallTime(o.to)}`,
+    };
+  }) : [];
+  return [...overlapsOut, ...findConflicts(bookings, mode).map((c): Problem => {
     const sa = sessionById.get(c.a.sessionId)!;
     const sb = sessionById.get(c.b.sessionId)!;
     const first = sa.startAt <= sb.startAt ? sa : sb;
@@ -122,9 +141,9 @@ export function doubleBookings(sessions: readonly ProblemSession[], assignments:
       kind: "double-booked", severity: "block",
       date: first.date, slot: first.slot, courseId: first.courseId, courseName: courses.get(first.courseId)?.name ?? "Course", sessionId: first.id, otherCourseId: other.courseId,
       instructorId: c.resourceId, instructorName: instructors.get(c.resourceId)?.name ?? "Instructor",
-      detail: `Also on ${courses.get(other.courseId)?.name ?? "another course"} at the same time (${other.date} ${other.slot})`,
+      detail: `Also on ${courses.get(other.courseId)?.name ?? "another course"} in the same session (${other.date} ${other.slot})`,
     };
-  });
+  })];
 }
 
 /** Rostered on a slot that is Busy (said so, usual week, or leave), or inside the window and never answered. */
@@ -219,6 +238,7 @@ export function equipmentProblems(
   courseEquipment: readonly { courseId: string; equipmentId: string | null }[],
   units: ReadonlyMap<string, { name: string; status: string; maintenanceNote?: string | null; backOn?: string | null }>,
   courses: ReadonlyMap<string, ProblemCourse>,
+  mode: ClashMode = "times",
 ): Problem[] {
   const out: Problem[] = [];
   const byCourse = new Map<string, ProblemSession[]>();
@@ -229,7 +249,7 @@ export function equipmentProblems(
     if (!ce.equipmentId) continue;
     const unit = units.get(ce.equipmentId);
     const mine = byCourse.get(ce.courseId) ?? [];
-    for (const s of mine) bookings.push({ sessionId: s.id, resourceId: ce.equipmentId, startAt: s.startAt, endAt: s.endAt, courseId: ce.courseId });
+    for (const s of mine) bookings.push({ sessionId: s.id, resourceId: ce.equipmentId, startAt: s.startAt, endAt: s.endAt, courseId: ce.courseId, date: s.date, slot: s.slot });
     const first = firstSessionOf(ce.courseId, sessions);
     if (unit && unit.status !== "available" && first && !seenMaint.has(`${ce.courseId}|${ce.equipmentId}`)) {
       seenMaint.add(`${ce.courseId}|${ce.equipmentId}`);
@@ -237,7 +257,7 @@ export function equipmentProblems(
     }
   }
   const sessionById = new Map(sessions.map((s) => [s.id, s]));
-  for (const c of findConflicts(bookings)) {
+  for (const c of findConflicts(bookings, mode)) {
     const sa = sessionById.get(c.a.sessionId)!;
     const sb = sessionById.get(c.b.sessionId)!;
     const first = sa.startAt <= sb.startAt ? sa : sb;
