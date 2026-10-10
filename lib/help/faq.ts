@@ -13,7 +13,9 @@ export interface FaqEntry {
 
 export const FAQ: FaqEntry[] = [
   { id: "setup", topic: "getting-started", ask: ["How does setup work?", "how do I get started", "set up my account", "first steps", "onboarding"],
-    answer: "Sign up and a short wizard sets your centre up in a few minutes: choose the features you want, tick the RYA courses you run, add your team (they get an invite), and pick how your printable roster looks. You can skip any step and finish later from the dashboard checklist." },
+    answer: "Sign up and a short wizard sets your centre up in a few minutes: choose the features you want, tick the RYA courses you run, add your team (they get an invite), choose whether to track each new instructor's onboarding, and pick how your printable roster looks. You can skip any step and finish later from the dashboard checklist." },
+  { id: "onboarding-tracker", topic: "onboarding-tracker", ask: ["How does the onboarding tracker work?", "onboarding tracker", "onboarding checklist", "new starter checklist", "track new instructors"],
+    answer: "Each instructor's page can show an onboarding checklist. Most steps tick themselves from their record: signed up to the app, licences and courses set, pay rate, first aid, DBS or vetting, and their first availability. Add office ticks like contract signed, or your own steps, under Settings → General → Instructor onboarding tracker, where you can also switch it off." },
   { id: "add-staff", topic: "staff", ask: ["How do I add instructors?", "add staff", "add a new instructor", "invite my team", "invite instructors", "invite new staff"],
     answer: "Go to Instructors → Add instructors. Quick add takes a name and email and sends the invite (tick “Send the invite”), so they fill in their own details and certificates when they accept it. Paste a list adds several people at once (one per line). Open “Add with all details” to set courses, licences and checks yourself." },
   { id: "import-staff", topic: "staff-import", ask: ["Can I import staff from a spreadsheet?", "import staff from a spreadsheet", "upload a list of instructors", "CSV of staff"],
