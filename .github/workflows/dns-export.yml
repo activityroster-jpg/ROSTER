@@ -44,7 +44,7 @@ jobs:
           if [ "$records" -lt 3 ]; then echo "::error::The export has fewer than 3 records, which cannot be right for a live zone."; exit 1; fi
 
       - name: Keep it as a workflow artifact (90 days)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dns-zone-${{ env.MONTH }}
           path: zone.txt
