@@ -307,6 +307,13 @@ export class PlatformRepository {
       .orderBy(desc(marketingInteraction.occurredOn), desc(marketingInteraction.createdAt));
   }
 
+  /** Log entries with this exact summary, newest first (the letter-batch history). */
+  async interactionsWithSummary(summary: string, limit = 3000): Promise<{ prospectId: string; author: string | null; createdAt: Date }[]> {
+    return this.db.select({ prospectId: marketingInteraction.prospectId, author: marketingInteraction.author, createdAt: marketingInteraction.createdAt })
+      .from(marketingInteraction).where(eq(marketingInteraction.summary, summary))
+      .orderBy(desc(marketingInteraction.createdAt)).limit(Math.max(1, Math.min(10_000, limit)));
+  }
+
   async addInteraction(values: { prospectId: string; kind: ProspectInteractionKind; occurredOn: string; summary: string | null; author: string | null }): Promise<MarketingInteraction> {
     const rows = await this.db.insert(marketingInteraction).values(values).returning();
     return rows[0]!;

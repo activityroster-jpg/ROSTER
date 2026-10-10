@@ -10,6 +10,7 @@ import { OUTREACH_TICKS, PIPELINE_META, PIPELINE_STAGES, PROSPECT_STATUS_META, l
 import { parseCsv } from "@/lib/import/parse";
 import { addressComplete, parseProspectStatuses, primaryProspectStatus as primaryOf } from "@/lib/marketing";
 import RYA_DIRECTORY from "@/lib/marketing/rya-directory.json";
+import { LETTER_BATCH_SUMMARY } from "@/lib/marketing/letter-batches";
 
 export type ProspectResult = { ok: boolean; error?: string; message?: string; count?: number };
 
@@ -403,7 +404,7 @@ export async function prepareNextLettersAction(count = 10, opts: { top250?: bool
     const statuses = toggleOutreach(parseProspectStatuses(p.statuses, p.status), "ready_to_send", true);
     await repo.setProspectStatuses(p.id, statuses, primaryOf(statuses));
   }
-  await repo.addInteractions(next.map((p) => ({ prospectId: p.id, kind: "stage" as const, occurredOn: today(), summary: "Letter printed in a batch: Ready to send", author: email })));
+  await repo.addInteractions(next.map((p) => ({ prospectId: p.id, kind: "stage" as const, occurredOn: today(), summary: LETTER_BATCH_SUMMARY, author: email })));
   revalidateProspects();
   return { ok: true, ids: next.map((p) => p.id) };
 }

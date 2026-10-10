@@ -7,6 +7,8 @@ import { ProspectTools } from "@/components/admin/ProspectTools";
 import Link from "next/link";
 import { PIPELINE_META, PIPELINE_STAGES, letterPrinted, parseProspectStatuses, stageOf, topRanks } from "@/lib/marketing";
 import { addressComplete } from "@/lib/marketing";
+import { LETTER_BATCH_SUMMARY, groupLetterBatches } from "@/lib/marketing/letter-batches";
+import { LetterBatchList } from "@/components/admin/LetterBatchList";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +31,9 @@ const STRIP: Record<string, string> = {
 export default async function AdminMarketingPage() {
   await requirePlatformAdmin();
   const platform = new PlatformRepository(await getDb());
-  const prospects = await platform.listProspects(10_000, 0);
+  const [prospects, batchEntries] = await Promise.all([platform.listProspects(10_000, 0), platform.interactionsWithSummary(LETTER_BATCH_SUMMARY)]);
+  const batches = groupLetterBatches(batchEntries);
+  const names = new Map(prospects.map((p) => [p.id, p.name]));
   const total = prospects.length;
   const ranks = topRanks(prospects);
 
@@ -118,6 +122,13 @@ export default async function AdminMarketingPage() {
       ) : null}
 
       <ProspectTools hasRows={rows.length > 0} />
+
+      {batches.length > 0 ? (
+        <details open className="mb-4 rounded-card border border-slate-200 bg-white px-4 py-3 shadow-sm">
+          <summary className="cursor-pointer text-sm font-semibold text-navy">Printed letters <span className="font-normal text-slate-500">· last {Math.min(5, batches.length)} of {batches.length} batch{batches.length === 1 ? "" : "es"} · print any of them again</span></summary>
+          <div className="mt-2"><LetterBatchList batches={batches.slice(0, 5)} names={names} more={batches.length - 5} /></div>
+        </details>
+      ) : null}
 
       {rows.length === 0 ? (
         <Card><p className="text-sm text-slate-400">No prospects yet. Use <span className="font-medium text-navy">Import CSV</span> to load the RYA directory, add one manually, or drop in a few example rows to see how it works.</p></Card>
