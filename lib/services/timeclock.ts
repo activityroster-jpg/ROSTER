@@ -4,7 +4,7 @@ import type { AnyTenantContext } from "@/lib/tenant/context";
 import { courseSession as courseSessionTable, hoursRecord as hoursRecordTable, timeEntry as timeEntryTable, type TimeEntry } from "@/lib/db/schema";
 import { durationMinutes, wallClockMs, wallDateIso } from "@/lib/domain";
 import { writeAudit } from "./audit";
-import { payRatesByInstructor, pickPayRate } from "./pay-rates";
+import { loadPayRules, rateFor } from "./pay-rates";
 
 /**
  * Clock stamps are WALL-CLOCK values encoded as UTC, like session times (see
@@ -136,13 +136,15 @@ async function syncHoursRecord(
   const scheduled = session ? durationMinutes({ startAt: session.startAt.getTime(), endAt: session.endAt.getTime() }) : minutes;
   const staff = session ? await repos.tenant.courseStaff.list(ctx) : [];
   const role = staff.find((a) => a.instructorId === entry.instructorId && a.courseId === session?.courseId)?.roleTypeId ?? null;
-  const rate = pickPayRate((await payRatesByInstructor(repos, ctx)).get(entry.instructorId) ?? [], role);
+  const courseRow = session ? await repos.tenant.course.findById(ctx, session.courseId) : null;
+  const rate = rateFor(await loadPayRules(repos, ctx), entry.instructorId, role, courseRow?.courseTypeId ?? null);
   await repos.tenant.hoursRecord.insert(ctx, {
     instructorId: entry.instructorId,
     courseSessionId: entry.courseSessionId,
     scheduledMinutes: scheduled,
     actualMinutes: minutes,
     rate: rate?.rate ?? null,
+    ratePence: rate?.ratePence ?? null,
     payUnit: rate?.unit ?? "hour",
     source: "clock",
     approved: false,

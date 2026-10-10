@@ -16,8 +16,8 @@ import { InviteInstructorButton } from "@/components/office/InviteInstructorButt
 import { Card, StatusPill } from "@/components/ui";
 import { EditInstructorForm } from "@/components/office/EditInstructorForm";
 import { instructorReferences } from "@/lib/services/retire";
-import { PayRateForm } from "@/components/office/PayRateForm";
-import { listPayRates } from "@/lib/services/pay-rates";
+import { PersonPayRates } from "@/components/office/PayRatesEditor";
+import { listCentreRates, listPayRates } from "@/lib/services/pay-rates";
 import { hasFeature } from "@/lib/features";
 import { ageOn, isUnder18 } from "@/lib/domain/age";
 import { readProtectedContacts } from "@/lib/services/protected-contacts";
@@ -49,7 +49,7 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
   }
 
   const { instructor, fit, documents, approvedCourses, onboarding } = profile;
-  const [rates, roles, settings] = await Promise.all([listPayRates(repos, ctx, id), repos.tenant.roleType.list(ctx), repos.tenant.orgSettings.list(ctx)]);
+  const [rates, centreRates, roles, settings] = await Promise.all([listPayRates(repos, ctx, id), listCentreRates(repos, ctx), repos.tenant.roleType.list(ctx), repos.tenant.orgSettings.list(ctx)]);
   const SYMBOL: Record<string, string> = { GBP: "£", EUR: "€", USD: "$" };
   const currency = SYMBOL[settings[0]?.currency ?? "GBP"] ?? "£";
   const payOn = hasFeature(settings[0]?.enabledFeatures, "payroll");
@@ -102,24 +102,6 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
             <DocumentManager items={docItems} admin />
           </Card>
 
-          <Card>
-            <div className="mb-2 flex items-center justify-between"><h2 className="font-semibold text-navy">Access</h2><GuideLink topic="roles" className="text-xs" /></div>
-            <AccessCard instructorId={instructor.id} linked={Boolean(instructor.userId)} role={membership?.role ?? null} canManageGuardians={can(ctx, "protected.view")} parentApproval={parentApprovalFromLinks(instructor.dateOfBirth, guardians)} under18={under18} guardianEmailOnFile={Boolean(contacts.guardianEmail)} guardians={guardians.map((g) => ({ id: g.id, email: g.email, status: g.status, consentGivenAt: g.consentGivenAt?.toISOString() ?? null, consentNote: g.consentNote, createdAt: g.createdAt.toISOString() }))} />
-          </Card>
-
-          {canProtected ? (
-          <Card>
-            <h2 className="mb-1 font-semibold text-navy">Emergency &amp; guardian contacts <span className="text-xs font-normal text-slate-400">logged on every view</span></h2>
-            <ProtectedContactsForm instructorId={instructor.id} initial={contacts} under18={under18} hasPermissionSlot={hasPermissionSlot} visibleTo={await whoCanSeeText(repos, ctx, "protected")} />
-          </Card>
-          ) : null}
-
-          {can(ctx, "data.export") ? (
-          <Card>
-            <div className="mb-2 flex items-center justify-between"><h2 className="font-semibold text-navy">Data &amp; privacy</h2><GuideLink topic="data" className="text-xs" /></div>
-            <PersonDataTools instructorId={instructor.id} name={instructor.name} restricted={Boolean(instructor.restrictedAt)} restrictedReason={instructor.restrictedReason} anonymised={Boolean(instructor.anonymisedAt)} />
-          </Card>
-          ) : null}
 
           <Card>
             <h2 className="mb-2 font-semibold text-navy">Licences &amp; courses they can teach</h2>
@@ -162,9 +144,16 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
           ) : null}
           {payOn && can(ctx, "finance.view") ? (
             <Card>
-              <h2 className="mb-1 font-semibold text-navy">Pay</h2>
-              <p className="mb-3 text-xs text-slate-500">How this instructor is paid. Payroll uses it for every session they&apos;re rostered on.</p>
-              <PayRateForm instructorId={instructor.id} rates={rates} roles={roles.filter((r) => r.active).map((r) => ({ id: r.id, name: r.name }))} currency={currency} />
+              <div className="mb-1 flex items-center justify-between"><h2 className="font-semibold text-navy">Pay</h2><a href="/learn?topic=pay-rates" target="_blank" rel="noreferrer" className="text-xs font-medium text-teal hover:underline">📖 Read the guide</a></div>
+              <p className="mb-3 text-xs text-slate-500">How {instructor.name.split(" ")[0] ?? instructor.name} is paid. Everyone&rsquo;s rates, and the standard rate for each role, are in <a href="/office/settings?tab=pay#pay-rates" className="font-medium text-teal hover:underline">Settings → Pay rates</a>.</p>
+              <PersonPayRates
+                currency={currency}
+                person={{ id: instructor.id, name: instructor.name, employment: instructor.employmentType }}
+                courses={courseTypes.filter((c) => (c.active && c.listed) || rates.some((r) => r.courseTypeId === c.id)).sort((a, b) => a.name.localeCompare(b.name)).map((c) => ({ id: c.id, name: c.name }))}
+                roles={roles.map((r) => ({ id: r.id, name: r.name }))}
+                rates={rates.map((r) => ({ instructorId: r.instructorId, roleTypeId: r.roleTypeId, courseTypeId: r.courseTypeId, unit: r.unit, rate: r.rate }))}
+                standard={centreRates.filter((r) => !r.courseTypeId).map((r) => ({ label: r.roleTypeId ? (roles.find((x) => x.id === r.roleTypeId)?.name ?? "Role") : "anyone else", rate: r.rate, unit: r.unit }))}
+              />
             </Card>
           ) : null}
           <Card>
@@ -172,6 +161,28 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
             <OnboardingChecklist items={onboarding.map((o) => ({ id: o.id, label: o.label, done: o.done }))} />
           </Card>
         </div>
+      </div>
+
+      {/* Access, contacts and data tools: needed now and then, so they sit at the bottom. */}
+      <div className="mt-6 space-y-6">
+          <Card>
+            <div className="mb-2 flex items-center justify-between"><h2 className="font-semibold text-navy">Access</h2><GuideLink topic="roles" className="text-xs" /></div>
+            <AccessCard instructorId={instructor.id} linked={Boolean(instructor.userId)} role={membership?.role ?? null} canManageGuardians={can(ctx, "protected.view")} parentApproval={parentApprovalFromLinks(instructor.dateOfBirth, guardians)} under18={under18} guardianEmailOnFile={Boolean(contacts.guardianEmail)} guardians={guardians.map((g) => ({ id: g.id, email: g.email, status: g.status, consentGivenAt: g.consentGivenAt?.toISOString() ?? null, consentNote: g.consentNote, createdAt: g.createdAt.toISOString() }))} />
+          </Card>
+
+          {canProtected ? (
+          <Card>
+            <h2 className="mb-1 font-semibold text-navy">Emergency &amp; guardian contacts <span className="text-xs font-normal text-slate-400">logged on every view</span></h2>
+            <ProtectedContactsForm instructorId={instructor.id} initial={contacts} under18={under18} hasPermissionSlot={hasPermissionSlot} visibleTo={await whoCanSeeText(repos, ctx, "protected")} />
+          </Card>
+          ) : null}
+
+          {can(ctx, "data.export") ? (
+          <Card>
+            <div className="mb-2 flex items-center justify-between"><h2 className="font-semibold text-navy">Data &amp; privacy</h2><GuideLink topic="data" className="text-xs" /></div>
+            <PersonDataTools instructorId={instructor.id} name={instructor.name} restricted={Boolean(instructor.restrictedAt)} restrictedReason={instructor.restrictedReason} anonymised={Boolean(instructor.anonymisedAt)} />
+          </Card>
+          ) : null}
       </div>
     </div>
   );

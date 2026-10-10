@@ -544,12 +544,7 @@ export const SECTIONS: Section[] = [
     blocks: [
       { kind: "p", text: "Hours come from the roster: every session an instructor is on becomes a line on the payroll page automatically, with its scheduled time. Nothing extra to do." },
       { kind: "sub", text: "Pay rates" },
-      { kind: "steps", items: [
-        "Open an instructor's page → Pay. Choose how they're paid — per hour, per session or per day — and the rate. Volunteers simply have no rate.",
-        "Add a different rate for a particular role if you need to (e.g. Senior Instructor days). The role rate wins when they work in that role.",
-        "When you change a rate, tick “Apply to unapproved payroll lines from” and pick the date it should count from: every unapproved line from then on takes the new rate. Approved lines always keep the pay they were approved at.",
-        "Volunteers have no rate and are hidden from payroll unless you tick “Show volunteers”.",
-      ] },
+      { kind: "p", text: "All rates are set in one place, Settings → Pay rates: a standard rate for each role, and each person's own rate where they're paid differently. See “Pay rates” for the details." },
       { kind: "sub", text: "The time clock (optional)" },
       { kind: "p", text: "Settings → Time clock & pay switches on clock in / out in the app. Instructors see the session they're clocking in to; clocking in with no session needs a short note. The office sees who's on the water now, and can step back to any earlier day. Choose whether pay follows the roster or the clock — and change it line by line on the payroll page." },
       { kind: "sub", text: "Payroll review & export" },
@@ -563,6 +558,38 @@ export const SECTIONS: Section[] = [
       ] },
       { kind: "sub", text: "Lunch breaks" },
       { kind: "p", text: "In Settings → Lunch breaks, set a break length, who gets it (anyone working over a number of hours) and whether it's paid. Unpaid breaks come off paid hours; paid breaks are shown but not deducted." },
+    ],
+  },
+  {
+    id: "pay-rates",
+    icon: "💷",
+    label: "Pay rates",
+    blurb: "Standard rates by role, each person's own rate, and different rates for particular courses: all in Settings → Pay rates.",
+    blocks: [
+      { kind: "p", text: "Settings → Pay rates holds every rate your centre pays. Most centres set a standard rate for each role and they're done; anyone paid differently gets their own rate. Each rate is per hour, per session or per day." },
+      { kind: "sub", text: "1 · Standard rates by role" },
+      { kind: "steps", items: [
+        "Enter the rate for each role (Instructor, Senior Instructor, Assistant, Safety boat driver and so on) and choose per hour, per session or per day.",
+        "“Everyone else” is the rate for any role without its own.",
+        "If a role pays differently on some courses (say, camps by the day), press “+ Different rate on a course” beside the role and set it.",
+      ] },
+      { kind: "sub", text: "2 · Each person" },
+      { kind: "steps", items: [
+        "Everyone is listed. Leave a person blank and they're paid the standard rate for the role they work in.",
+        "Type their own rate to pay them differently on every course, whatever role they're in.",
+        "Press “+ Course rate” to give them a different rate on particular courses.",
+        "Their own rate and course rates can also be set from the Pay card on their staff page; it's the same rate either way.",
+        "Volunteers usually have no rate: their hours still show on Payroll with pay blank.",
+      ] },
+      { kind: "sub", text: "Which rate applies" },
+      { kind: "p", text: "The most specific rate wins: their rate for that course, then their own rate, then the role's rate on that course, then the role's rate, then “Everyone else”. With nothing set, pay shows as blank, never zero." },
+      { kind: "sub", text: "Saving and payroll" },
+      { kind: "bullets", items: [
+        "Change as many rates as you like, then press Save once.",
+        "Payroll lines that had no rate pick up the new ones straight away.",
+        "Tick “Also re-price unapproved payroll lines from” and pick a date to move unapproved lines from that day onto the new rates. Approved lines always keep the pay they were approved at.",
+        "Office admins with the Payroll tick (but not Settings) see just this tab.",
+      ] },
     ],
   },
   {
@@ -798,7 +825,7 @@ export const GUIDE_STAGES: { label: string; ids: string[] }[] = [
   { label: "Add your courses", ids: ["courses", "import", "integrations"] },
   { label: "Add your instructors", ids: ["staff", "staff-import", "roles", "licences", "app"] },
   { label: "Build the roster", ids: ["availability", "office-managed", "dashboard", "board", "rostering", "bulk", "problems", "rota"] },
-  { label: "Run the season", ids: ["young-workers", "leave", "time", "notifications"] },
+  { label: "Run the season", ids: ["young-workers", "leave", "time", "pay-rates", "notifications"] },
   { label: "Account, billing & data", ids: ["plans", "billing", "trial-survey", "admin-security", "data", "retention"] },
   { label: "Help & troubleshooting", ids: ["help-assistant", "feature-requests", "if-the-platform-is-down"] },
 ];

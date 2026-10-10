@@ -65,7 +65,8 @@ describe("role by route", () => {
     const expected: Record<string, Permission[]> = {
       "app/(app)/office/finance": ["finance.view"],
       "app/(app)/office/timeclock": ["finance.view"],
-      "app/(app)/office/settings": ["settings.edit"],
+      // Settings → Pay rates is payroll data: its tab and save action ask for the Payroll tick.
+      "app/(app)/office/settings": ["settings.edit", "finance.view"],
       "app/(app)/office/change-log": ["settings.edit"],
       "app/(app)/office/onboarding": ["settings.edit"],
       "app/(app)/office/billing": ["billing.manage"],
@@ -99,7 +100,8 @@ describe("role by route", () => {
     expect(wrong).toEqual([]);
     // The staff area mixes four permissions on purpose; the owner gate guards office access.
     const staffActions = readFileSync(join(ROOT, "app/(app)/office/staff/actions.ts"), "utf8");
-    expect(new Set(permissionsOf(callsOf(staffActions)))).toEqual(new Set(["staff.edit", "protected.view", "finance.view", "data.export"]));
+    // Pay rates moved to Settings → Pay rates (settings/pay-actions.ts, finance.view).
+    expect(new Set(permissionsOf(callsOf(staffActions)))).toEqual(new Set(["staff.edit", "protected.view", "data.export"]));
     expect(callsOf(readFileSync(join(ROOT, "app/(app)/office/staff/access-actions.ts"), "utf8")).every((c) => /owner: true/.test(c))).toBe(true);
     expect(callsOf(readFileSync(join(ROOT, "app/(app)/office/page.tsx"), "utf8"))).toEqual(['{ permission: "office.view" }']);
   });

@@ -69,7 +69,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
 
       <FeatureNotice feature="payroll" enabled={enabled} />
       <p className="mb-4 text-sm text-slate-500">
-        Hours come from the roster{clockOn ? ", with clock-ins alongside" : ""}. Check each line, correct anything that&apos;s wrong, tick it as OK, then export. Pay rates are set on each instructor&apos;s page.
+        Hours come from the roster{clockOn ? ", with clock-ins alongside" : ""}. Check each line, correct anything that&apos;s wrong, tick it as OK, then export. Pay rates are set in <a href="/office/settings?tab=pay#pay-rates" className="font-medium text-teal hover:underline">Settings → Pay rates</a>.
       </p>
 
       <form method="get" className="mb-4 flex flex-wrap items-end gap-3 rounded-card border border-slate-200 bg-white p-3 print:hidden">

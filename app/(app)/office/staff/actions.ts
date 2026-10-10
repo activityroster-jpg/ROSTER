@@ -21,10 +21,8 @@ import { linkInstructorUser } from "@/lib/services/invite";
 import { toggleOnboarding } from "@/lib/services/hr";
 import { instructorCapState, capUpgradeMessage } from "@/lib/tenant/limits";
 import { apexDomain } from "@/lib/config";
-import { EMPLOYMENT_TYPES, PAY_UNITS, instructorCourseType as instructorCourseTypeTable, type EmploymentType, type PayUnit } from "@/lib/db/schema";
+import { EMPLOYMENT_TYPES, instructorCourseType as instructorCourseTypeTable, type EmploymentType } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { deletePayRate, setPayRate } from "@/lib/services/pay-rates";
-import { applyRateToUnapprovedLines, rebuildHoursFromRoster } from "@/lib/services/hours";
 import { z } from "zod";
 import { plausibleStaffDob } from "@/lib/domain/age";
 import { sealToken } from "@/lib/security/token-crypto";
@@ -333,38 +331,6 @@ export async function setInstructorStatusAction(instructorId: string, status: "a
   return { ok: true, message: status === "inactive" ? `${inst.name} marked as left` : `${inst.name} is back on the team` };
 }
 
-const rateSchema = z.object({
-  roleTypeId: z.string().min(1).max(64).nullable(),
-  unit: z.enum(PAY_UNITS),
-  rate: z.number().min(0).max(100_000),
-});
-
-/** Set how an instructor is paid (default, or for one role). Refreshes unpriced payroll lines. */
-export async function setPayRateAction(instructorId: string, input: { roleTypeId: string | null; unit: string; rate: number; /** Apply the new rate to unapproved lines dated on or after this day (YYYY-MM-DD); omit to leave existing lines alone. */ applyFrom?: string | null }): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ permission: "finance.view" });
-  const parsed = rateSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: "Enter an amount and how it's paid" };
-  if (!(await repos.tenant.instructor.findById(ctx, instructorId))) return { ok: false, error: "Instructor not found" };
-  if (parsed.data.roleTypeId && !(await repos.tenant.roleType.findById(ctx, parsed.data.roleTypeId))) return { ok: false, error: "Unknown role" };
-  await setPayRate(repos, ctx, { instructorId, roleTypeId: parsed.data.roleTypeId, unit: parsed.data.unit as PayUnit, rate: parsed.data.rate });
-  // Lines that had no rate pick this one up.
-  await rebuildHoursFromRoster(repos, ctx);
-  // A corrected rate reaches the unapproved lines it should have priced (approved ones keep their pay).
-  const applyFrom = typeof input.applyFrom === "string" && /^\d{4}-\d{2}-\d{2}$/.test(input.applyFrom) ? input.applyFrom : null;
-  const applied = applyFrom ? await applyRateToUnapprovedLines(repos, ctx, instructorId, applyFrom) : 0;
-  revalidatePath(`/office/staff/${instructorId}`);
-  revalidatePath("/office/finance");
-  return { ok: true, message: applied ? `Pay rate saved and applied to ${applied} unapproved line${applied === 1 ? "" : "s"} from ${applyFrom}` : "Pay rate saved" };
-}
-
-export async function deletePayRateAction(id: string): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ permission: "finance.view" });
-  const ok = await deletePayRate(repos, ctx, id);
-  if (!ok) return { ok: false, error: "Rate not found" };
-  revalidatePath("/office/staff");
-  revalidatePath("/office/finance");
-  return { ok: true, message: "Rate removed" };
-}
 
 
 /**

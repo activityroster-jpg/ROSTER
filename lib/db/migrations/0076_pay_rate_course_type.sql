@@ -1,0 +1,1 @@
+ALTER TABLE `pay_rate` ADD `course_type_id` text REFERENCES course_type(id);

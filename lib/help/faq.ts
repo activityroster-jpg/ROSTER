@@ -43,7 +43,7 @@ export const FAQ: FaqEntry[] = [
   { id: "availability", topic: "availability", ask: ["How does availability work?", "how does availability work", "staff availability", "mark free busy", "usual week"],
     answer: "Instructors mark each slot Free, Maybe or Busy in the app; anything not answered counts as Busy inside your availability window. They can set a usual week and add a note per day. The office can enter availability for someone too (useful for volunteers)." },
   { id: "pay", topic: "time", ask: ["How do I set pay rates?", "set pay rates", "payroll", "how is pay worked out", "hourly rate"],
-    answer: "Set each person's rate on their profile (per hour, session or day). Hours come from the roster: every session someone is on becomes a payroll line. Review, adjust and approve lines on the Payroll page, then export." },
+    answer: "Settings → Pay rates: set the standard rate for each role (per hour, session or day), then give anyone paid differently their own rate, or a rate for particular courses. Their own rate can also be set on their staff page. Hours come from the roster: every session someone is on becomes a payroll line. Review, adjust and approve lines on the Payroll page, then export." },
   { id: "holiday-pay", topic: "settings", ask: ["How is holiday pay worked out?", "holiday pay", "12.07%", "rolled up holiday"],
     answer: "Settings → General: set the holiday pay percentage (UK casual workers: 12.07%). It shows as its own column on payroll for employed and freelance staff, never for volunteers." },
   { id: "under-18", topic: "young-workers", ask: ["How do under-18 instructors work?", "under 18 instructors", "young workers hours", "child employment rules", "16 year old instructor"],

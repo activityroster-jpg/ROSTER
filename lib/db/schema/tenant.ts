@@ -703,6 +703,8 @@ export const payRate = sqliteTable("pay_rate", {
   organisationId: orgFk(),
   instructorId: text("instructor_id").references(() => instructor.id, { onDelete: "cascade" }),
   roleTypeId: text("role_type_id").references(() => roleType.id, { onDelete: "restrict" }),
+  /** A rate for one kind of course (a person's rate on that course, or the centre's for a role on it). Null = any course. */
+  courseTypeId: text("course_type_id").references(() => courseType.id, { onDelete: "restrict" }),
   rate: real("rate").notNull(),
   /** The same amount in integer pence (additive; written alongside `rate`, read in preference to it). */
   ratePence: integer("rate_pence"),

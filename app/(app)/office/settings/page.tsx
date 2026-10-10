@@ -20,12 +20,69 @@ import { WelfareSettingsForm } from "@/components/office/WelfareSettingsForm";
 import { parseWelfareSettings } from "@/lib/services/welfare";
 import { SettingsTabs } from "@/components/office/SettingsTabs";
 import { StepUpButton } from "@/components/office/StepUpButton";
+import { redirect } from "next/navigation";
+import { can } from "@/lib/auth/rbac";
+import { hasFeature } from "@/lib/features";
+import { FeatureNotice } from "@/components/office/FeatureNotice";
+import { listAllPayRates } from "@/lib/services/pay-rates";
+import { PayRatesSettings } from "@/components/office/PayRatesEditor";
+import { instructor as instructorTable } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
+import type { Repositories } from "@/lib/db/repositories";
+import type { AnyTenantContext } from "@/lib/tenant/context";
+
+/** Settings → Pay rates: the centre's standard rates by role and everyone's own rates, in one place. */
+async function PayRatesPanel({ repos, ctx, currency, featureOn }: { repos: Repositories; ctx: AnyTenantContext; currency: string; featureOn: boolean }) {
+  const t = repos.tenant;
+  const [roles, courseTypes, people, rates] = await Promise.all([
+    t.roleType.list(ctx),
+    t.courseType.list(ctx),
+    t.instructor.list(ctx, eq(instructorTable.status, "active")),
+    listAllPayRates(repos, ctx),
+  ]);
+  const usedRole = new Set(rates.map((r) => r.roleTypeId).filter(Boolean));
+  const usedCourse = new Set(rates.map((r) => r.courseTypeId).filter(Boolean));
+  const symbol = currency === "EUR" ? "€" : currency === "USD" ? "$" : "£";
+  return (
+    <div id="pay-rates">
+      <FeatureNotice feature="payroll" enabled={featureOn} />
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3 rounded-card border border-teal/30 bg-teal/5 p-4 text-sm text-slate-700">
+        <div className="max-w-3xl">
+          <p className="font-semibold text-navy">How pay is worked out</p>
+          <p className="mt-1">Set the <strong>standard rate for each role</strong> once, per hour, per session or per day. Anyone paid differently gets <strong>their own rate</strong> below, and a rate for one course beats a general one. In order: their rate for that course → their own rate → the role&rsquo;s rate on that course → the role&rsquo;s rate → everyone else.</p>
+        </div>
+        <a href="/learn?topic=pay-rates" target="_blank" rel="noreferrer" className="flex-none text-xs font-medium text-teal hover:underline">📖 Read the guide</a>
+      </div>
+      <PayRatesSettings
+        currency={symbol}
+        roles={roles.filter((r) => r.active || usedRole.has(r.id)).map((r) => ({ id: r.id, name: r.active ? r.name : `${r.name} (retired)` }))}
+        courses={courseTypes.filter((c) => (c.active && c.listed) || usedCourse.has(c.id)).map((c) => ({ id: c.id, name: c.active ? c.name : `${c.name} (retired)` })).sort((a, b) => a.name.localeCompare(b.name))}
+        people={people.map((p) => ({ id: p.id, name: p.name, employment: p.employmentType })).sort((a, b) => a.name.localeCompare(b.name))}
+        rates={rates.map((r) => ({ instructorId: r.instructorId, roleTypeId: r.roleTypeId, courseTypeId: r.courseTypeId, unit: r.unit, rate: r.rate }))}
+      />
+    </div>
+  );
+}
 
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
-  const { ctx, repos, organisation } = await requireTenant({ permission: "settings.edit" });
+  // Settings, or just its Pay rates tab for office admins who have Payroll but not Settings.
+  const { ctx, repos, organisation } = await requireTenant({ role: "admin" });
+  const canSettings = can(ctx, "settings.edit");
+  const canPay = can(ctx, "finance.view");
+  if (!canSettings && !canPay) redirect("/office?denied=settings.edit");
   const t = repos.tenant;
+  if (!canSettings) {
+    const row = (await t.orgSettings.list(ctx))[0];
+    return (
+      <div>
+        <h1 className="mb-1 font-display text-2xl font-semibold text-navy">Pay rates</h1>
+        <p className="mb-6 text-sm text-slate-500">How everyone at {organisation.name} is paid. The rest of Settings needs the Settings tick.</p>
+        <PayRatesPanel repos={repos} ctx={ctx} currency={row?.currency ?? "GBP"} featureOn={hasFeature(row?.enabledFeatures, "payroll")} />
+      </div>
+    );
+  }
   const [settings, slots, roles, grades, compliance, courseTypes] = await Promise.all([
     t.orgSettings.list(ctx),
     t.sessionSlot.list(ctx),
@@ -72,7 +129,8 @@ export default async function SettingsPage() {
         tabs={[
           { id: "general", label: "General", hint: "Company code, warnings, checks when rostering, availability window, holiday pay" },
           { id: "roster", label: "Roster & welfare", hint: "Welfare officers, the roster PDF, course default schedules" },
-          { id: "time", label: "Time & pay", hint: "Time clock, pay source, lunch breaks" },
+          ...(canPay ? [{ id: "pay", label: "Pay rates", hint: "Standard rates by role, and each person's own rate" }] : []),
+          { id: "time", label: "Time & clock", hint: "Time clock, pay source, lunch breaks" },
           { id: "lists", label: "Lists", hint: "Session slots, roles, certs and checks" },
           { id: "data", label: "Data & account", hint: "Retention, export, billing, security and PIN" },
         ]}
@@ -133,6 +191,7 @@ export default async function SettingsPage() {
       </div>
 
           </>),
+          pay: canPay ? <PayRatesPanel repos={repos} ctx={ctx} currency={s?.currency ?? "GBP"} featureOn={hasFeature(s?.enabledFeatures, "payroll")} /> : null,
           time: (<>
       <div className="mb-6 grid gap-6 lg:grid-cols-3">
         <Card>
@@ -214,7 +273,7 @@ export default async function SettingsPage() {
             { href: "/office/equipment", label: "Equipment & boats", desc: "Equipment types, quantities & your fleet" },
             { href: "/office/locations", label: "Locations", desc: "Location categories, sites & operating areas" },
             { href: "/office/course-setup", label: "Course setup", desc: "Course types, ratios & defaults" },
-            { href: "/office/staff", label: "Instructors & pay", desc: "Instructors, their certs & pay rates" },
+            { href: "/office/staff", label: "Instructors", desc: "Instructors, their licences & checks" },
           ].map((l) => (
             <a key={l.href} href={l.href} className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-sm hover:border-teal hover:bg-slate-50">
               <span><span className="font-medium text-navy">{l.label}</span><span className="block text-xs text-slate-400">{l.desc}</span></span>

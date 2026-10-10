@@ -1,13 +1,14 @@
 import { and, eq, gte, isNull } from "drizzle-orm";
 import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
-import { courseStaff as courseStaffTable, courseSession as courseSessionTable, hoursRecord as hoursRecordTable, type HoursRecord } from "@/lib/db/schema";
+import { course as courseTable, courseStaff as courseStaffTable, courseSession as courseSessionTable, hoursRecord as hoursRecordTable, type HoursRecord } from "@/lib/db/schema";
 import { durationMinutes } from "@/lib/domain";
-import { payRatesByInstructor, pickPayRate } from "./pay-rates";
+import { loadPayRules, rateFor } from "./pay-rates";
 import { writeAudit } from "./audit";
 import { liveSessions } from "@/lib/domain/sessions";
 import { effectiveStaffBySession, type CourseAssignmentLike, type SessionOverrideLike } from "@/lib/domain/session-staff";
 import { runAtomic } from "@/lib/db/batch";
+import { inList } from "@/lib/db/params";
 import { sessionStaffOverride as overrideTable } from "@/lib/db/schema";
 
 /**
@@ -44,12 +45,15 @@ export async function planHoursForCourse(
   opts: { staffOverride?: readonly CourseAssignmentLike[]; adjustOverrides?: (rows: SessionOverrideLike[]) => SessionOverrideLike[] } = {},
 ): Promise<{ statements: PromiseLike<unknown>[]; result: SyncResult }> {
   const t = repos.tenant;
-  const [allSessions, dbStaff, settingsRows, rates] = await Promise.all([
+  const [allSessions, dbStaff, settingsRows, rules, courseRow] = await Promise.all([
     t.courseSession.list(ctx, eq(courseSessionTable.courseId, courseId)),
     opts.staffOverride ? Promise.resolve(null) : t.courseStaff.list(ctx, eq(courseStaffTable.courseId, courseId)),
     t.orgSettings.list(ctx),
-    payRatesByInstructor(repos, ctx),
+    loadPayRules(repos, ctx),
+    t.course.findById(ctx, courseId),
   ]);
+  // Rates can differ by kind of course (Settings → Pay rates).
+  const courseTypeId = courseRow?.courseTypeId ?? null;
   const staff: readonly CourseAssignmentLike[] = opts.staffOverride ?? dbStaff ?? [];
   const out: SyncResult = { created: 0, updated: 0, removed: 0 };
   const statements: PromiseLike<unknown>[] = [];
@@ -72,7 +76,7 @@ export async function planHoursForCourse(
   for (const s of sessions) {
     for (const a of members.get(s.id) ?? []) {
       if (a.status === "declined") continue;
-      const rate = pickPayRate(rates.get(a.instructorId) ?? [], a.roleTypeId);
+      const rate = rateFor(rules, a.instructorId, a.roleTypeId, courseTypeId);
       const key = `${a.instructorId}|${s.id}`;
       if (wanted.has(key)) continue;
       wanted.add(key);
@@ -121,34 +125,65 @@ export async function planHoursForCourse(
 }
 
 /**
- * A corrected pay rate applied to the lines it should have priced: every
- * unapproved line of this instructor dated on or after `fromIso` whose pay the
- * office hasn't overridden takes the rate for its role (audit A8-3). Approved
- * lines keep the pay they were approved at.
+ * Re-price unapproved payroll lines after a pay rate changes: each line whose
+ * pay the office hasn't overridden takes the rate that now applies to it
+ * (Settings → Pay rates; most specific rate wins). Approved lines keep the pay
+ * they were approved at (audit A8-3).
+ *   - `instructorIds`: only these people's lines (null = everyone's, for a
+ *     change to the centre's standard rates);
+ *   - `fromIso`: only lines dated on or after this day;
+ *   - `onlyUnpriced`: only lines that have no rate yet.
+ * Lines going to the same rate are updated together, so this is a handful of
+ * statements however many lines there are.
  */
-export async function applyRateToUnapprovedLines(repos: Repositories, ctx: AnyTenantContext, instructorId: string, fromIso: string): Promise<number> {
+export async function repriceUnapprovedLines(
+  repos: Repositories,
+  ctx: AnyTenantContext,
+  opts: { instructorIds?: readonly string[] | null; fromIso?: string | null; onlyUnpriced?: boolean },
+): Promise<number> {
   const t = repos.tenant;
-  const [records, rates, staff] = await Promise.all([
-    t.hoursRecord.list(ctx, and(eq(hoursRecordTable.instructorId, instructorId), eq(hoursRecordTable.approved, false))),
-    payRatesByInstructor(repos, ctx),
-    t.courseStaff.list(ctx, eq(courseStaffTable.instructorId, instructorId)),
+  const conds = [eq(hoursRecordTable.approved, false), isNull(hoursRecordTable.overridePay)];
+  if (opts.onlyUnpriced) conds.push(isNull(hoursRecordTable.rate));
+  const where = and(...conds)!;
+  const ids = opts.instructorIds ? [...new Set(opts.instructorIds)] : null;
+  if (ids && ids.length === 0) return 0;
+  const [records, rules] = await Promise.all([
+    ids ? t.hoursRecord.listIn(ctx, hoursRecordTable.instructorId, ids, where) : t.hoursRecord.list(ctx, where),
+    loadPayRules(repos, ctx),
   ]);
-  const sessionIds = records.map((r) => r.courseSessionId).filter((x): x is string => Boolean(x));
-  const sessions = sessionIds.length ? await t.courseSession.listIn(ctx, courseSessionTable.id, sessionIds, gte(courseSessionTable.date, fromIso)) : [];
+  const sessionIds = [...new Set(records.map((r) => r.courseSessionId).filter((x): x is string => Boolean(x)))];
+  if (sessionIds.length === 0) return 0;
+  const sessions = await t.courseSession.listIn(ctx, courseSessionTable.id, sessionIds, opts.fromIso ? gte(courseSessionTable.date, opts.fromIso) : undefined);
   const sessionById = new Map(sessions.map((s) => [s.id, s]));
-  const roleByCourse = new Map(staff.map((a) => [a.courseId, a.roleTypeId]));
-  let n = 0;
+  const courseIds = [...new Set(sessions.map((s) => s.courseId))];
+  const [courses, staff] = courseIds.length
+    ? await Promise.all([t.course.listIn(ctx, courseTable.id, courseIds), t.courseStaff.listIn(ctx, courseStaffTable.courseId, courseIds)])
+    : [[], []];
+  const typeByCourse = new Map(courses.map((c) => [c.id, c.courseTypeId ?? null]));
+  const roleOf = new Map(staff.map((a) => [`${a.instructorId}|${a.courseId}`, a.roleTypeId]));
+
+  // Group the lines by the rate they should now carry.
+  const groups = new Map<string, { rate: number; ratePence: number; unit: HoursRecord["payUnit"]; ids: string[] }>();
   for (const r of records) {
     const s = r.courseSessionId ? sessionById.get(r.courseSessionId) : undefined;
-    if (!s || r.overridePay != null) continue;
-    const rate = pickPayRate(rates.get(instructorId) ?? [], roleByCourse.get(s.courseId) ?? null);
+    if (!s) continue;
+    const rate = rateFor(rules, r.instructorId, roleOf.get(`${r.instructorId}|${s.courseId}`) ?? null, typeByCourse.get(s.courseId) ?? null);
     if (!rate) continue;
     if (r.ratePence === rate.ratePence && r.payUnit === rate.unit) continue;
-    await t.hoursRecord.update(ctx, r.id, { rate: rate.rate, ratePence: rate.ratePence, payUnit: rate.unit });
-    n++;
+    const key = `${rate.ratePence}|${rate.unit}`;
+    const g = groups.get(key) ?? { rate: rate.rate, ratePence: rate.ratePence, unit: rate.unit, ids: [] };
+    g.ids.push(r.id);
+    groups.set(key, g);
   }
-  if (n) await writeAudit(repos, ctx, { action: "apply_pay_rate", entity: "hours_record", after: { instructorId, from: fromIso, lines: n } });
+  let n = 0;
+  for (const g of groups.values()) n += await t.hoursRecord.updateWhere(ctx, inList(hoursRecordTable.id, g.ids), { rate: g.rate, ratePence: g.ratePence, payUnit: g.unit });
+  if (n) await writeAudit(repos, ctx, { action: "apply_pay_rate", entity: "hours_record", after: { instructorIds: ids, from: opts.fromIso ?? null, onlyUnpriced: Boolean(opts.onlyUnpriced), lines: n } });
   return n;
+}
+
+/** One person's unapproved lines from a date take the rate that now applies (kept for callers and tests). */
+export function applyRateToUnapprovedLines(repos: Repositories, ctx: AnyTenantContext, instructorId: string | null, fromIso: string): Promise<number> {
+  return repriceUnapprovedLines(repos, ctx, { instructorIds: instructorId ? [instructorId] : null, fromIso });
 }
 
 /** Freeze what the roster says for a line being approved, or clear the snapshot and any change flag when it is re-opened. */

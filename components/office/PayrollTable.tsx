@@ -80,7 +80,7 @@ export function PayrollTable({
         onConfirm={() => { setAskApprove(false); run(null, () => approvePayrollLinesAction(unapproved, true)); }}
         consequences={[`${unapproved.length} line${unapproved.length === 1 ? " is" : "s are"} locked at today's minutes and pay; later roster changes flag them rather than change them.`, unpriced ? `${unpriced} of them ha${unpriced === 1 ? "s" : "ve"} no rate yet and will be approved with pay unknown.` : "Every line has a rate.", "You can untick OK on any line to re-open it."]} />
       {msg ? <p role="status" className="px-4 pt-2 text-xs text-slate-600 print:hidden">{msg}</p> : null}
-      {unpriced > 0 ? <p className="px-4 pt-2 text-xs text-amber print:hidden">⚠ {unpriced} line{unpriced === 1 ? " has" : "s have"} no pay rate — set one on the instructor&apos;s page and press “Refresh from roster”.</p> : null}
+      {unpriced > 0 ? <p className="px-4 pt-2 text-xs text-amber print:hidden">⚠ {unpriced} line{unpriced === 1 ? " has" : "s have"} no pay rate yet. Set one in <a href="/office/settings?tab=pay#pay-rates" className="font-medium underline">Settings → Pay rates</a>: lines with no rate pick it up straight away.</p> : null}
       {changed > 0 ? <p className="px-4 pt-2 text-xs text-port print:hidden">⚠ {changed} approved line{changed === 1 ? "" : "s"} changed on the roster after approval (moved, resized or the person was taken off). Untick OK to re-check, then approve again.</p> : null}
 
       <div className="overflow-x-auto">

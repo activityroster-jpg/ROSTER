@@ -1,57 +1,80 @@
-import { eq } from "drizzle-orm";
+import { eq, isNull } from "drizzle-orm";
 import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
 import { payRate as payRateTable, type PayRate, type PayUnit } from "@/lib/db/schema";
+import { resolvePayRate, type PayRateRule } from "@/lib/domain";
 import { writeAudit } from "./audit";
 
 /**
- * How an instructor is paid. One row per instructor is their default (per hour,
- * per session or per day, with the amount); optional extra rows per role
- * override it when they work in that role (e.g. a higher rate as Senior
- * Instructor, or a flat day rate for safety-boat cover).
+ * How people are paid, all in one table (Settings → Pay rates):
+ *   - centre rates (no instructor): the standard rate for a role, optionally
+ *     on one kind of course, plus a general rate for everyone else;
+ *   - a person's own rate (any course), and their own rate for particular
+ *     courses (older records may also hold a person's rate for a role).
+ * The most specific one that fits wins (lib/domain/pay → resolvePayRate).
  */
-export interface PayRateView { id: string; roleTypeId: string | null; unit: PayUnit; rate: number }
+export interface PayRateView { id: string; instructorId: string | null; roleTypeId: string | null; courseTypeId: string | null; unit: PayUnit; rate: number }
 
+const view = (r: PayRate): PayRateView => ({ id: r.id, instructorId: r.instructorId ?? null, roleTypeId: r.roleTypeId ?? null, courseTypeId: r.courseTypeId ?? null, unit: r.unit, rate: r.rate });
+
+/** One person's own rates. */
 export async function listPayRates(repos: Repositories, ctx: AnyTenantContext, instructorId: string): Promise<PayRateView[]> {
-  const rows = await repos.tenant.payRate.list(ctx, eq(payRateTable.instructorId, instructorId));
-  return rows.map((r) => ({ id: r.id, roleTypeId: r.roleTypeId ?? null, unit: r.unit, rate: r.rate }));
+  return (await repos.tenant.payRate.list(ctx, eq(payRateTable.instructorId, instructorId))).map(view);
 }
 
-/** The rate that applies to an instructor in a role: the role-specific row, else their default, else null. */
+/** The centre's standard rates (role, role on a course, general). */
+export async function listCentreRates(repos: Repositories, ctx: AnyTenantContext): Promise<PayRateView[]> {
+  return (await repos.tenant.payRate.list(ctx, isNull(payRateTable.instructorId))).map(view);
+}
+
+/** Every rate the centre holds, people's and its own. */
+export async function listAllPayRates(repos: Repositories, ctx: AnyTenantContext): Promise<PayRateView[]> {
+  return (await repos.tenant.payRate.list(ctx)).map(view);
+}
+
 /** Pence when recorded, else the float rounded to the penny: one number for every reader. */
 export const penceOf = (rate: number | null | undefined, pence?: number | null): number | null => (pence != null ? pence : rate == null ? null : Math.round(rate * 100));
 
-export function pickPayRate(rates: readonly Pick<PayRate, "roleTypeId" | "unit" | "rate" | "ratePence">[], roleTypeId: string | null): { unit: PayUnit; rate: number; ratePence: number } | null {
-  const forRole = roleTypeId ? rates.find((r) => r.roleTypeId === roleTypeId) : undefined;
-  const chosen = forRole ?? rates.find((r) => !r.roleTypeId);
-  return chosen ? { unit: chosen.unit, rate: chosen.rate, ratePence: penceOf(chosen.rate, chosen.ratePence)! } : null;
+/** All rates as rules for {@link resolvePayRate}: one read for payroll, the clock and the roster sync. */
+export async function loadPayRules(repos: Repositories, ctx: AnyTenantContext): Promise<PayRateRule[]> {
+  return (await repos.tenant.payRate.list(ctx)).map((r) => ({ instructorId: r.instructorId ?? null, roleTypeId: r.roleTypeId ?? null, courseTypeId: r.courseTypeId ?? null, unit: r.unit, rate: r.rate, ratePence: r.ratePence }));
 }
 
-/** All pay rates for the centre, keyed by instructor (one read for payroll/sync). */
-export async function payRatesByInstructor(repos: Repositories, ctx: AnyTenantContext): Promise<Map<string, PayRate[]>> {
-  const rows = await repos.tenant.payRate.list(ctx);
-  const by = new Map<string, PayRate[]>();
-  for (const r of rows) {
-    if (!r.instructorId) continue;
-    by.set(r.instructorId, [...(by.get(r.instructorId) ?? []), r]);
-  }
-  return by;
+/** The rate for one person in a role on a kind of course (most specific wins), or null when nothing is set. */
+export function rateFor(rules: readonly PayRateRule[], instructorId: string, roleTypeId: string | null, courseTypeId: string | null) {
+  return resolvePayRate(rules, { instructorId, roleTypeId, courseTypeId });
 }
 
-/** Set (or replace) the rate for an instructor, as their default (roleTypeId null) or for one role. Audited. */
+export interface PayRateKey { instructorId: string | null; roleTypeId: string | null; courseTypeId?: string | null }
+const sameKey = (r: PayRate, k: PayRateKey) => (r.instructorId ?? null) === (k.instructorId ?? null) && (r.roleTypeId ?? null) === (k.roleTypeId ?? null) && (r.courseTypeId ?? null) === (k.courseTypeId ?? null);
+
+/** Set (or replace) one rate: a person's or the centre's, for any role and course or a particular one. Audited. */
 export async function setPayRate(
   repos: Repositories,
   ctx: AnyTenantContext,
-  input: { instructorId: string; roleTypeId: string | null; unit: PayUnit; rate: number },
+  input: PayRateKey & { unit: PayUnit; rate: number },
 ): Promise<PayRate> {
-  const existing = (await repos.tenant.payRate.list(ctx, eq(payRateTable.instructorId, input.instructorId)))
-    .find((r) => (r.roleTypeId ?? null) === (input.roleTypeId ?? null));
+  const key: PayRateKey = { instructorId: input.instructorId ?? null, roleTypeId: input.roleTypeId ?? null, courseTypeId: input.courseTypeId ?? null };
+  const pool = key.instructorId
+    ? await repos.tenant.payRate.list(ctx, eq(payRateTable.instructorId, key.instructorId))
+    : await repos.tenant.payRate.list(ctx, isNull(payRateTable.instructorId));
+  const existing = pool.find((r) => sameKey(r, key));
   const ratePence = Math.round(input.rate * 100);
   const row = existing
     ? (await repos.tenant.payRate.update(ctx, existing.id, { unit: input.unit, rate: input.rate, ratePence }))!
-    : await repos.tenant.payRate.insert(ctx, { instructorId: input.instructorId, roleTypeId: input.roleTypeId, unit: input.unit, rate: input.rate, ratePence });
-  await writeAudit(repos, ctx, { action: existing ? "update_pay_rate" : "set_pay_rate", entity: "pay_rate", entityId: row.id, after: { instructorId: input.instructorId, roleTypeId: input.roleTypeId, unit: input.unit, rate: input.rate } });
+    : await repos.tenant.payRate.insert(ctx, { instructorId: key.instructorId, roleTypeId: key.roleTypeId, courseTypeId: key.courseTypeId ?? null, unit: input.unit, rate: input.rate, ratePence });
+  await writeAudit(repos, ctx, { action: existing ? "update_pay_rate" : "set_pay_rate", entity: "pay_rate", entityId: row.id, before: existing ? { unit: existing.unit, rate: existing.rate } : undefined, after: { ...key, unit: input.unit, rate: input.rate } });
   return row;
+}
+
+/** Remove the rate with this key, if there is one. Audited. */
+export async function clearPayRate(repos: Repositories, ctx: AnyTenantContext, key: PayRateKey): Promise<boolean> {
+  const pool = key.instructorId
+    ? await repos.tenant.payRate.list(ctx, eq(payRateTable.instructorId, key.instructorId))
+    : await repos.tenant.payRate.list(ctx, isNull(payRateTable.instructorId));
+  const existing = pool.find((r) => sameKey(r, key));
+  if (!existing) return false;
+  return deletePayRate(repos, ctx, existing.id);
 }
 
 export async function deletePayRate(repos: Repositories, ctx: AnyTenantContext, id: string): Promise<boolean> {
