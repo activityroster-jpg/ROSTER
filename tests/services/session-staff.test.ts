@@ -58,7 +58,7 @@ describe("per-day staffing against the database", () => {
     roleId = (await repos.tenant.roleType.list(ctx)).find((r) => r.countsTowardRatio)!.id;
     courseTypeId = (await repos.tenant.courseType.list(ctx))[0]!.id;
     const st = (await repos.tenant.orgSettings.list(ctx))[0]!;
-    await repos.tenant.orgSettings.update(ctx, st.id, { enforceConflictChecks: true, requireParentApproval: false });
+    await repos.tenant.orgSettings.update(ctx, st.id, { enforceConflictChecks: true });
     samId = (await repos.tenant.instructor.list(ctx))[0]!.id;
     kimId = (await repos.tenant.instructor.insert(ctx, { name: "Kim", email: "kim@days.test", employmentType: "freelance", status: "active" })).id;
     await setPayRate(repos, ctx, { instructorId: samId, roleTypeId: null, unit: "session", rate: 50 });

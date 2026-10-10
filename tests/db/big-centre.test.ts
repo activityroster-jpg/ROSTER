@@ -57,7 +57,7 @@ describe("a big centre: pages read a slice, not the whole history", () => {
     courseTypeId = (await t.courseType.list(ctx))[0]!.id;
     instructorId = (await t.instructor.list(ctx))[0]!.id;
     const st = (await t.orgSettings.list(ctx))[0]!;
-    await t.orgSettings.update(ctx, st.id, { requireParentApproval: false, enforceConflictChecks: true, enforceAvailabilityChecks: false });
+    await t.orgSettings.update(ctx, st.id, { enforceConflictChecks: true, enforceAvailabilityChecks: false });
     // 700 days of history and future: one two-session course a day.
     const start = Date.now() - 600 * DAY;
     const courses = [], sessions = [], staff = [], hours = [];

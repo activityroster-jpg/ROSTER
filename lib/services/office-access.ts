@@ -39,7 +39,6 @@ export async function inviteOfficeAdmin(repos: Repositories, ctx: AnyTenantConte
   const user = (await repos.control.userByEmail(email)) ?? (await repos.control.createUser({ name, email }));
   const existing = await repos.control.membershipFor(user.id, ctx.organisationId);
   if (existing?.role === "owner") return { ok: false, error: "That is the superadmin's account" };
-  if (existing?.role === "parent") return { ok: false, error: "That email belongs to a parent or guardian account here; office access needs a separate email" };
   if (existing?.role === "admin") {
     await repos.control.setMembershipFeatures(user.id, ctx.organisationId, features);
   } else if (existing) {

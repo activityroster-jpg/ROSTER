@@ -68,7 +68,6 @@ describe("saves are all or nothing", () => {
     roleId = (await repos.tenant.roleType.list(ctx)).find((r) => r.countsTowardRatio)!.id;
     const courseTypeId = (await repos.tenant.courseType.list(ctx))[0]!.id;
     const st = (await repos.tenant.orgSettings.list(ctx))[0]!;
-    await repos.tenant.orgSettings.update(ctx, st.id, { requireParentApproval: false });
     samId = (await repos.tenant.instructor.list(ctx))[0]!.id;
     kimId = (await repos.tenant.instructor.insert(ctx, { name: "Kim", email: "kim@batch.test", employmentType: "freelance", status: "active" })).id;
     await setPayRate(repos, ctx, { instructorId: samId, roleTypeId: null, unit: "session", rate: 50 });

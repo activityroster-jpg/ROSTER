@@ -41,12 +41,11 @@ export const PERMISSIONS = [
   "settings.edit",    // settings, onboarding, change log
   "billing.manage",   // plan, payments, invoices, the trial survey
   "data.export",      // exports, restriction, anonymisation
-  "parent.view",      // the /parent read-only roster
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
 /** Which office feature unlocks each permission for an office admin. */
-const FEATURE_FOR: Record<Exclude<Permission, "office.view" | "parent.view">, OfficeFeature> = {
+const FEATURE_FOR: Record<Exclude<Permission, "office.view">, OfficeFeature> = {
   "rota.view": "roster", "roster.edit": "roster",
   "staff.view": "staff", "staff.edit": "staff",
   "protected.view": "protected",
@@ -62,7 +61,6 @@ export interface Grant { role: MembershipRole; features?: readonly string[] | nu
 export function can(who: MembershipRole | Grant, permission: Permission): boolean {
   const role = typeof who === "string" ? who : who.role;
   const features = typeof who === "string" ? [] : (who.features ?? []);
-  if (permission === "parent.view") return role === "parent";
   if (role === "owner") return true;
   if (role === "admin") return permission === "office.view" || features.includes(FEATURE_FOR[permission]);
   return false;
@@ -81,7 +79,6 @@ export const isOfficeRole = (role: MembershipRole): boolean => OFFICE_ROLES.incl
 /** Where a role lands after signing in. */
 export function landingFor(role: MembershipRole): string {
   if (isOfficeRole(role)) return "/office";
-  if (role === "parent") return "/parent";
   return "/portal";
 }
 

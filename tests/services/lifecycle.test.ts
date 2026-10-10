@@ -29,7 +29,7 @@ describe("course lifecycle, end to end", () => {
     const { db } = createTestDb();
     const { repos, ctx } = await seedFullOrg(db, { name: "Life", slug: "life", jurisdiction: "england" });
     const st = (await repos.tenant.orgSettings.list(ctx))[0]!;
-    await repos.tenant.orgSettings.update(ctx, st.id, { enforceConflictChecks: true, requireParentApproval: false, enforceRatioChecks: false });
+    await repos.tenant.orgSettings.update(ctx, st.id, { enforceConflictChecks: true, enforceRatioChecks: false });
     const roles = await repos.tenant.roleType.list(ctx);
     const roleId = roles.find((r) => r.countsTowardRatio)!.id;
     const courseTypeId = (await repos.tenant.courseType.list(ctx))[0]!.id;

@@ -56,8 +56,6 @@ export type OptionalFeature = (typeof OPTIONAL_FEATURES)[number];
 export const SLOT_CODES = ["AM", "PM", "EV"] as const;
 export type SlotCode = (typeof SLOT_CODES)[number];
 
-export const WORKING_TIME_MODES = ["warn", "block_override", "block"] as const;
-export type WorkingTimeMode = (typeof WORKING_TIME_MODES)[number];
 
 export const EMPLOYMENT_TYPES = ["employed", "freelance", "volunteer"] as const;
 export type EmploymentType = (typeof EMPLOYMENT_TYPES)[number];
@@ -157,13 +155,6 @@ export const orgSettings = sqliteTable("org_settings", {
   /** Opt-in morning email of the day's roster to every admin (offline fallback). Hour is London time, 0–23. */
   dailyDigestEnabled: boolCol("daily_digest_enabled").default(false),
   dailyDigestHour: integer("daily_digest_hour").notNull().default(6),
-  // --- Young workers' hours: retired 10 Oct 2026 ------------------------------
-  // The working-time checks were removed (hours are the centre's to manage) and
-  // nothing reads these two columns. They stay until a later migration drops
-  // them (migrations are additive: add, migrate, remove later).
-  workingTimeMode: text("working_time_mode", { enum: WORKING_TIME_MODES }).notNull().default("block_override"),
-  /** Retired with the working-time checks: JSON array of {from,to,label?} school term dates. Not read. */
-  termDates: text("term_dates").notNull().default("[]"),
   /** JSON RotaTemplateSettings (lib/rota/template): range, orientation and fields for the roster PDF. */
   rotaTemplate: text("rota_template").notNull().default("{}"),
   /** Welfare officers by name (JSON string[]). Not accounts: a note the roster can carry (lib/services/welfare). */
@@ -172,8 +163,6 @@ export const orgSettings = sqliteTable("org_settings", {
   welfareDuty: text("welfare_duty").notNull().default("[]"),
   /** Instructor onboarding tracker (JSON TrackerConfig, lib/domain/onboarding-tracker). Empty = never chosen: the original checklist. */
   onboardingTracker: text("onboarding_tracker").notNull().default(""),
-  /** Retired 10 Oct 2026 with parent approval: not read. Stays until a later migration drops it. */
-  requireParentApproval: boolCol("require_parent_approval").default(true),
   /** Minutes of inactivity before an admin is asked for their PIN again (5–240). Applied from the next PIN entry. */
   idleTimeoutMinutes: integer("idle_timeout_minutes").notNull().default(30),
   /** JSON RetentionPolicy (lib/services/retention): months to keep each kind of record. Empty = defaults. */
@@ -891,33 +880,6 @@ export const deletionLog = sqliteTable("deletion_log", {
 }, (t) => [index("deletion_log_org_idx").on(t.organisationId)]);
 export type DeletionLog = typeof deletionLog.$inferSelect;
 
-/**
- * Retired 10 Oct 2026: a parent or guardian's read-only access to an under-18
- * instructor's roster and their approval. The parent view and parent approval
- * were removed and no code reads these rows; they go with the instructor
- * (cascade) and the table stays until a later migration clears and drops it.
- */
-export const GUARDIAN_LINK_STATUSES = ["active", "revoked"] as const;
-export const PARENT_DECISIONS = ["approved", "declined", "withdrawn"] as const;
-export type ParentDecision = (typeof PARENT_DECISIONS)[number];
-export const guardianLink = sqliteTable("guardian_link", {
-  id: id(),
-  organisationId: orgFk(),
-  instructorId: text("instructor_id").notNull().references(() => instructor.id, { onDelete: "cascade" }),
-  userId: text("user_id").notNull(),
-  email: text("email").notNull(),
-  status: text("status", { enum: GUARDIAN_LINK_STATUSES }).notNull().default("active"),
-  /** Consent to work recorded by the centre: when, by whom (user id) and the note (e.g. "signed form on file"). */
-  consentGivenAt: integer("consent_given_at", { mode: "timestamp_ms" }),
-  consentByUserId: text("consent_by_user_id"),
-  consentNote: text("consent_note"),
-  /** The parent's own answer from their account: approved, declined or withdrawn, and when. Null = not answered yet. */
-  parentDecision: text("parent_decision", { enum: PARENT_DECISIONS }),
-  parentDecidedAt: integer("parent_decided_at", { mode: "timestamp_ms" }),
-  createdAt: createdAt(),
-  updatedAt: updatedAt(),
-}, (t) => [index("guardian_link_org_idx").on(t.organisationId), index("guardian_link_user_idx").on(t.userId), index("guardian_link_instructor_idx").on(t.instructorId)]);
-export type GuardianLink = typeof guardianLink.$inferSelect;
 
 /** Who is the welfare officer on duty for one date and slot, when it differs from the default pattern in settings. A name, not an account. */
 export const welfareDuty = sqliteTable("welfare_duty", {

@@ -136,7 +136,6 @@ describe("availability service", () => {
 
   it("rostering is blocked by the Busy default inside the window, never beyond it, and the picker says why", async () => {
     const settings = (await repos.tenant.orgSettings.list(ctx))[0]!;
-    await repos.tenant.orgSettings.update(ctx, settings.id, { requireParentApproval: false });
     const h = availabilityHorizon(settings);
     const courseTypeId = (await repos.tenant.courseType.list(ctx))[0]!.id;
     const roleId = (await repos.tenant.roleType.list(ctx))[0]!.id;

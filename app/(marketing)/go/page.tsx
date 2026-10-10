@@ -22,9 +22,9 @@ export default async function GoPage({ searchParams }: { searchParams: Promise<{
   if (!s?.user) redirect(`/sign-in?next=${encodeURIComponent(`/go?to=${to}`)}`);
   const { control } = await getRepositories();
   const all = (await control.membershipsForUser(s.user.id)).filter((m) => m.status === "active" && m.orgStatus !== "cancelled");
-  const centres = to === "office" ? all.filter((m) => isOfficeRole(m.role)) : all.filter((m) => m.role !== "parent" || to === "portal");
+  const centres = to === "office" ? all.filter((m) => isOfficeRole(m.role)) : all.filter((m) => m.role !== "parent");
   const apex = apexDomain();
-  const link = (slug: string, role?: string) => `https://${slug}.${apex}/${to === "office" ? "office" : role === "parent" ? "parent" : "portal"}`;
+  const link = (slug: string, role?: string) => `https://${slug}.${apex}/${to === "office" ? "office" : "portal"}`;
 
   if (centres.length === 1) redirect(link(centres[0]!.slug, centres[0]!.role));
 

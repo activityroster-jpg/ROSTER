@@ -103,14 +103,9 @@ Working rules from the spec, binding on every session:
    data in the repo, in logs or in docs.
 4. **Plain English, no scripts for Conor.** Automate recurring work in the cloud (GitHub
    Actions, Workers); when a dashboard step is unavoidable, say exactly what to click.
-5. **Legal figures are data.** Hour limits and similar rules live in versioned data
-   (rule packs), never hard-coded, and are marked verified or unverified. Working-time
-   packs: built-in copies in `lib/rules/working-time/packs.ts`, edits in the `rule_pack`
-   table via Dev Center → Rules, validated by `lib/rules/working-time/schema.ts`; the
-   checks in `lib/domain/working-time.ts` read figures only from the pack they are given.
-6. **Minors are children under GDPR.** Under-18 staff get higher-privacy defaults; never
+5. **Minors are children under GDPR.** Under-18 staff get higher-privacy defaults; never
    add messaging, profiling or marketing that reaches them.
-7. **Change management:** every push to the working branch deploys to **staging**
+6. **Change management:** every push to the working branch deploys to **staging**
    (`staging.activityroster.com`) after typecheck and tests; **production deploys only
    when Conor presses "Deploy production"** in GitHub Actions, which records the D1 Time
    Travel bookmark, applies pending migrations, deploys, smoke-tests and rolls back on
@@ -118,5 +113,5 @@ Working rules from the spec, binding on every session:
    what the deploy contains and ask him to press it. Migrations are additive (add,
    migrate, remove later) and are never pasted into the production console again.
    Deploys only from GitHub; `main` is the record of production, not a working branch.
-8. **New third party that touches personal data → add it to `docs/subprocessors.md`
+7. **New third party that touches personal data → add it to `docs/subprocessors.md`
    first** and tell Conor, who notifies customers.

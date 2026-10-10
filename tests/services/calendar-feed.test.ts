@@ -34,7 +34,6 @@ describe("calendar feed", () => {
     const b = await seedFullOrg(db, { name: "Bravo", slug: "bravo", jurisdiction: "england" });
     const { repos, ctx } = a;
     const st = (await repos.tenant.orgSettings.list(ctx))[0]!;
-    await repos.tenant.orgSettings.update(ctx, st.id, { requireParentApproval: false });
     const me = (await repos.tenant.instructor.list(ctx))[0]!;
     const roleId = (await repos.tenant.roleType.list(ctx))[0]!.id;
     const courseTypeId = (await repos.tenant.courseType.list(ctx))[0]!.id;

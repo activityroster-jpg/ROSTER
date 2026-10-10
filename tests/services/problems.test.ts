@@ -31,7 +31,7 @@ describe("problems service", () => {
     courseTypeId = (await repos.tenant.courseType.list(ctx))[0]!.id;
     roleId = (await repos.tenant.roleType.list(ctx))[0]!.id;
     const st = (await repos.tenant.orgSettings.list(ctx))[0]!;
-    await repos.tenant.orgSettings.update(ctx, st.id, { enforceConflictChecks: true, requireParentApproval: false });
+    await repos.tenant.orgSettings.update(ctx, st.id, { enforceConflictChecks: true });
     inside = addDaysIso(availabilityHorizon(st).from, 2);
     sendEmail.mockClear();
   });

@@ -78,7 +78,7 @@ describe("a large centre: every page loads within Cloudflare's limits", () => {
     const [roles, courseTypes, grades, complianceTypes] = await Promise.all([t.roleType.list(ctx), t.courseType.list(ctx), t.qualificationType.list(ctx), t.complianceType.list(ctx)]);
     roleId = roles.find((r) => r.countsTowardRatio)!.id;
     const settings = (await t.orgSettings.list(ctx))[0]!;
-    await t.orgSettings.update(ctx, settings.id, { requireParentApproval: false, enforceConflictChecks: true, enforceAvailabilityChecks: true, enforceRatioChecks: true, enforceLicenceChecks: true });
+    await t.orgSettings.update(ctx, settings.id, { enforceConflictChecks: true, enforceAvailabilityChecks: true, enforceRatioChecks: true, enforceLicenceChecks: true });
 
     // People: 200 staff, 150 of them with a login.
     const people = Array.from({ length: STAFF }, (_, i) => ({ name: `Staff ${String(i).padStart(3, "0")}`, email: `staff${i}@large.test`, employmentType: (["employed", "freelance", "volunteer"] as const)[i % 3], status: "active" as const }));

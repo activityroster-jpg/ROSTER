@@ -7,7 +7,7 @@ import { can, type Permission } from "@/lib/auth/rbac";
  * Role by route (audit Part E phase 2, tests): every office page, server action
  * and office API route must authorise through requireTenant with a permission
  * (or the owner / office-role gate), and no entry point may reach the
- * repositories any other way. The portal and parent areas have their own,
+ * repositories any other way. The portal has its own,
  * narrower rules. This is a static scan of the source, so a new file that
  * forgets the gate fails CI.
  */
@@ -39,7 +39,6 @@ describe("role by route", () => {
   const office = walk(join(ROOT, "app/(app)/office"));
   const api = walk(join(ROOT, "app/api/office"));
   const portal = walk(join(ROOT, "app/(app)/portal"));
-  const parent = walk(join(ROOT, "app/(app)/parent"));
 
   it("finds the entry points (a sanity check on the scan itself)", () => {
     expect(office.length).toBeGreaterThan(30);
@@ -117,7 +116,7 @@ describe("role by route", () => {
     }
   });
 
-  it("the portal and parent areas use only the membership gate or their own permission, never an office one", () => {
+  it("the portal uses only the membership gate, never an office permission", () => {
     const wrong: string[] = [];
     for (const file of portal) {
       const r = rel(file);
@@ -125,13 +124,12 @@ describe("role by route", () => {
       if (calls.length === 0 && !ALLOWED_WITHOUT_GATE[r]) wrong.push(`${r}: no requireTenant`);
       for (const c of calls) if (c !== "") wrong.push(`${r}: requireTenant(${c})`);
     }
-    for (const file of parent) for (const c of callsOf(readFileSync(file, "utf8"))) if (c !== '{ permission: "parent.view" }') wrong.push(`${rel(file)}: requireTenant(${c})`);
     expect(wrong).toEqual([]);
   });
 
-  it("no office, portal or parent entry point reaches the repositories except through requireTenant", () => {
+  it("no office or portal entry point reaches the repositories except through requireTenant", () => {
     const leaks: string[] = [];
-    for (const file of [...office, ...api, ...portal, ...parent]) {
+    for (const file of [...office, ...api, ...portal]) {
       const r = rel(file);
       const src = readFileSync(file, "utf8");
       // A file may fetch the repositories only once requireTenant has authorised the request on that same path.

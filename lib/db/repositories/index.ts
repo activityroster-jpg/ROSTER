@@ -52,7 +52,6 @@ export function createTenantRepositories(db: Database) {
     notification: repo(t.notification),
     auditLog: repo(t.auditLog),
     deletionLog: repo(t.deletionLog),
-    guardianLink: repo(t.guardianLink),
     welfareDuty: repo(t.welfareDuty),
     helpQuestion: repo(t.helpQuestion),
   } as const;
@@ -98,7 +97,6 @@ export const TENANT_TABLES = [
   t.notification,
   t.auditLog,
   t.deletionLog,
-  t.guardianLink,
   t.welfareDuty,
   t.helpQuestion,
 ] as const;

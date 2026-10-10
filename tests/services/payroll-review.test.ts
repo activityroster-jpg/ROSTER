@@ -24,7 +24,7 @@ describe("payroll review: rate changes, approval snapshots, volunteers, holiday 
     roleId = (await repos.tenant.roleType.list(ctx)).find((r) => r.countsTowardRatio)!.id;
     courseTypeId = (await repos.tenant.courseType.list(ctx))[0]!.id;
     const st = (await repos.tenant.orgSettings.list(ctx))[0]!;
-    await repos.tenant.orgSettings.update(ctx, st.id, { enforceAvailabilityChecks: false, requireParentApproval: false });
+    await repos.tenant.orgSettings.update(ctx, st.id, { enforceAvailabilityChecks: false });
     workerId = (await repos.tenant.instructor.insert(ctx, { name: "Worker", email: null, employmentType: "freelance", status: "active" })).id;
   });
 
