@@ -14,7 +14,6 @@ import { sweepQueuedInvites } from "@/lib/auth/invite-link";
 import { createRepositories } from "@/lib/db/repositories";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/security/rate-limit";
 import { checkCronSecret } from "@/lib/security/cron-secret";
-import { runLinkedinFinder } from "@/lib/marketing/linkedin-finder";
 
 export const dynamic = "force-dynamic";
 
@@ -53,9 +52,7 @@ async function tick(req: Request) {
   // Data retention: one sweep per centre per day, with the 14-day notice first.
   const rateLimitsPurged = await new ControlPlaneRepository(db).purgeRateLimits().catch(() => 0);
   const retention = await sweepRetention(db, env).catch((e: Error) => ({ centres: 0, ran: 0, reminded: 0, platform: {}, error: e.message }));
-  // Prospects' LinkedIn tab: read the next few centres' own websites for LinkedIn links.
-  const linkedin = await runLinkedinFinder(p).catch((e: Error) => ({ checked: 0, pages: 0, people: 0, remaining: -1, error: e.message }));
-  return NextResponse.json({ ok: true, campaigns: running.length, research, sends, digests, leaving, trialSurvey, inviteReminders, queuedInvites, mail, push, pushPurged, retention, rateLimitsPurged, linkedin });
+  return NextResponse.json({ ok: true, campaigns: running.length, research, sends, digests, leaving, trialSurvey, inviteReminders, queuedInvites, mail, push, pushPurged, retention, rateLimitsPurged });
 }
 
 export async function POST(req: Request) { return tick(req); }

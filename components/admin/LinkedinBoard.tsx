@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { LINKEDIN_META, linkedinSearchUrls, type LinkedinContact } from "@/lib/marketing";
 import { LINKEDIN_STATUSES, type LinkedinStatus } from "@/lib/db/schema";
-import { addLinkedinContactAction, findLinkedinNowAction, removeLinkedinContactAction, setLinkedinPageAction, setLinkedinStatusAction } from "@/app/admin/marketing/actions";
+import { addLinkedinContactAction, removeLinkedinContactAction, setLinkedinPageAction, setLinkedinStatusAction } from "@/app/admin/marketing/actions";
 
 export interface LinkedinRow {
   id: string;
@@ -16,8 +16,6 @@ export interface LinkedinRow {
   pageUrl: string;
   contacts: LinkedinContact[];
   status: LinkedinStatus;
-  /** The finder has read their website. */
-  checked: boolean;
 }
 
 const PAGE_SIZE = 150;
@@ -64,7 +62,7 @@ export function LinkedinBoard({ rows: serverRows }: { rows: LinkedinRow[] }) {
       (!needle || `${r.name} ${r.region} ${r.city}`.toLowerCase().includes(needle)) &&
       (!status || r.status === status) &&
       (!top || r.topRank !== null) &&
-      (!has || (has === "found" ? Boolean(r.pageUrl || r.contacts.length) : has === "none" ? !r.pageUrl && r.contacts.length === 0 : !r.checked && Boolean(r.website))));
+      (!has || (has === "found" ? Boolean(r.pageUrl || r.contacts.length) : !r.pageUrl && r.contacts.length === 0)));
     return [...kept].sort((a, b) => (top ? (a.topRank ?? 1e6) - (b.topRank ?? 1e6) : 0) || a.name.localeCompare(b.name, "en", { sensitivity: "base" }));
   }, [rows, q, status, top, has]);
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -99,15 +97,11 @@ export function LinkedinBoard({ rows: serverRows }: { rows: LinkedinRow[] }) {
           <option value="">Found or not</option>
           <option value="found">LinkedIn found</option>
           <option value="none">Nothing found yet</option>
-          <option value="unchecked">Website not read yet</option>
         </select>
         <span className="text-xs text-slate-500">{filtered.length} of {rows.length}</span>
         <span className="ml-auto flex items-center gap-2">
           {msg ? <span className="text-xs text-slate-500">{msg}</span> : null}
           {pending ? <span className="text-xs text-slate-400">Saving…</span> : null}
-          <button type="button" disabled={pending} onClick={() => save(() => findLinkedinNowAction())} className="rounded-lg bg-teal px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-700 disabled:opacity-50" title="Read the next 8 centres' websites now (the finder also runs by itself every hour)">
-            🔎 Find on websites now
-          </button>
         </span>
       </div>
       <div className="overflow-x-auto">
@@ -129,7 +123,7 @@ export function LinkedinBoard({ rows: serverRows }: { rows: LinkedinRow[] }) {
                   <td className="px-2 py-1.5">
                     {r.topRank !== null ? <span className="mr-1 rounded bg-navy/10 px-1 py-px text-[9px] font-bold text-navy" title="Top 250 by estimated size">#{r.topRank}</span> : null}
                     <a href={`/admin/marketing/${r.id}`} target="_blank" rel="noreferrer" className="font-medium text-navy hover:text-teal hover:underline">{r.name}</a>
-                    <p className="text-[10px] text-slate-400">{[r.region, r.city].filter(Boolean).join(" · ")}{r.website ? <> · <span title={r.checked ? "The finder has read their website" : "The finder hasn't read their website yet"}>{r.checked ? "website read" : "website not read yet"}</span></> : " · no website"}</p>
+                    <p className="text-[10px] text-slate-400">{[r.region, r.city].filter(Boolean).join(" · ")}{r.website ? <> · <a href={ext(r.website)} target="_blank" rel="noreferrer" className="hover:text-teal">website ↗</a></> : null}</p>
                   </td>
                   <td className="px-2 py-1.5">
                     {editingPage === r.id ? (

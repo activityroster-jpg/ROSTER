@@ -29,10 +29,7 @@ export default async function LinkedinProspectsPage() {
     pageUrl: p.linkedinUrl ?? "",
     contacts: parseLinkedinContacts(p.linkedinContacts),
     status: p.linkedinStatus ?? "not_contacted",
-    checked: Boolean(p.linkedinCheckedAt),
   }));
-  const withWebsite = rows.filter((r) => r.website).length;
-  const checked = rows.filter((r) => r.checked).length;
   const counts = LINKEDIN_STATUSES.map((s) => ({ s, n: rows.filter((r) => r.status === s).length }));
 
   return (
@@ -42,9 +39,8 @@ export default async function LinkedinProspectsPage() {
           <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Outreach CRM</p>
           <h1 className="font-display text-2xl font-bold text-navy">LinkedIn</h1>
           <p className="mt-1 text-sm text-slate-500">
-            Every centre, its LinkedIn page and the people to contact, with where things stand. The finder reads each centre&apos;s own
-            website for LinkedIn links, 8 centres an hour, biggest first ({checked} of {withWebsite} websites read so far). It never visits
-            LinkedIn itself, which LinkedIn&apos;s terms forbid, so use the search links to find the rest and add them here.
+            Every centre, its LinkedIn page and the people to contact, with where things stand. Add pages and contacts by hand,
+            or use the search links to look them up on LinkedIn.
           </p>
         </div>
         <Link href="/admin/marketing" className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-navy hover:border-teal hover:text-teal">← Prospects list</Link>

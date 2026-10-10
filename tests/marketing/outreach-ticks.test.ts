@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { isNoAction, letterPrinted, parseProspectStatuses, sizeScore, toggleOutreach, topRanks } from "@/lib/marketing";
-import { extractLinkedin } from "@/lib/marketing/linkedin-finder";
 
 describe("outreach tickboxes", () => {
   it("several can be ticked; No action is ticked when none are, and clears them", () => {
@@ -37,33 +36,5 @@ describe("top 250 by estimated size", () => {
     ];
     const r = topRanks(list, 3);
     expect([...r.entries()]).toEqual([["4", 1], ["1", 2], ["2", 3]]);
-  });
-});
-
-describe("LinkedIn finder", () => {
-  it("keeps the first company page and each profile once, ignoring share links", () => {
-    const html = `<a href="https://www.linkedin.com/shareArticle?x=1">s</a>
-      <a href="https://uk.linkedin.com/company/alpha-yacht-club/">Follow</a>
-      <a href="https://www.linkedin.com/company/other">x</a>
-      <a href="https://www.linkedin.com/in/jane-smith-1a2b3c">Jane</a>
-      <a href="https://linkedin.com/in/jane-smith-1a2b3c/">again</a>`;
-    expect(extractLinkedin(html)).toEqual({ companyUrl: "https://www.linkedin.com/company/alpha-yacht-club", people: [{ name: "Jane Smith", role: "", url: "https://www.linkedin.com/in/jane-smith-1a2b3c" }] });
-  });
-});
-
-describe("LinkedIn finder on a website", () => {
-  it("reads the home page, then the contact page it links to", async () => {
-    const { findLinkedinOnWebsite } = await import("@/lib/marketing/linkedin-finder");
-    const pages: Record<string, string> = {
-      "https://alpha-yc.example/": `<a href="https://www.linkedin.com/company/alpha-yc">in</a><a href="/contact-us">Contact</a>`,
-      "https://alpha-yc.example/contact-us": `<p>Commodore</p><a href="https://www.linkedin.com/in/sam-jones">Sam</a>`,
-    };
-    const fake = (async (url: string | URL | Request) => {
-      const html = pages[String(url)];
-      return new Response(html ?? "", { status: html ? 200 : 404, headers: { "content-type": "text/html" } });
-    }) as typeof fetch;
-    const found = await findLinkedinOnWebsite("alpha-yc.example", fake);
-    expect(found).toEqual({ companyUrl: "https://www.linkedin.com/company/alpha-yc", people: [{ name: "Sam Jones", role: "", url: "https://www.linkedin.com/in/sam-jones" }] });
-    expect(await findLinkedinOnWebsite("http://127.0.0.1/admin", fake)).toBeNull();
   });
 });

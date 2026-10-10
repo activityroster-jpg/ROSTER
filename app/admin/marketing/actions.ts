@@ -7,7 +7,6 @@ import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { z } from "zod";
 import { LINKEDIN_STATUSES, PROSPECT_INTERACTION_KINDS, PROSPECT_STATUSES, type NewMarketingProspect, type ProspectStatus } from "@/lib/db/schema";
 import { OUTREACH_TICKS, PIPELINE_META, PIPELINE_STAGES, PROSPECT_STATUS_META, letterPrinted, parseLinkedinContacts, primaryProspectStatus, stageOf, statusesForStage, toggleOutreach, topRanks, type OutreachTick, type PipelineStage } from "@/lib/marketing";
-import { runLinkedinFinder } from "@/lib/marketing/linkedin-finder";
 import { parseCsv } from "@/lib/import/parse";
 import { addressComplete, parseProspectStatuses, primaryProspectStatus as primaryOf } from "@/lib/marketing";
 import RYA_DIRECTORY from "@/lib/marketing/rya-directory.json";
@@ -472,13 +471,6 @@ export async function removeLinkedinContactAction(id: string, index: number): Pr
   return { ok: true };
 }
 
-/** Run the website finder now for the next few centres (it also runs by itself every hour). */
-export async function findLinkedinNowAction(): Promise<ProspectResult> {
-  const repo = await platform();
-  const r = await runLinkedinFinder(repo);
-  revalidateLinkedin();
-  return { ok: true, count: r.checked, message: r.checked ? `Checked ${r.checked} website${r.checked === 1 ? "" : "s"}: ${r.pages} LinkedIn page${r.pages === 1 ? "" : "s"} and ${r.people} contact${r.people === 1 ? "" : "s"} found. ${r.remaining} still to check.` : "Every centre with a website has been checked." };
-}
 
 /** Lawful basis and sole-trader flag for one prospect (UK GDPR / PECR bookkeeping). */
 export async function setProspectBasisAction(id: string, input: { soleTrader: boolean; lawfulBasis: string; basisNote?: string }): Promise<ProspectResult> {
