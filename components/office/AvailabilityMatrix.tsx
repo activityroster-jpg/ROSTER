@@ -44,12 +44,24 @@ const BRUSHES: { value: Brush; label: string; cls: string }[] = [
 type Quick = { kind: "row"; instructorId: string; name: string } | { kind: "day"; date: string; label: string } | { kind: "slot"; date: string; slot: string; label: string } | { kind: "week" };
 const SET_BY: Record<string, string> = { office: "set by the office", leave: "approved leave", self: "" };
 
+/** Counts as free for assigning: Free, Maybe, or office-managed and not marked busy. */
+function isFreeCell(r: MatrixRow, key: string): boolean {
+  const src = r.sources[key] ?? "default";
+  const st = r.cells[key];
+  return src === "assumed" || (src !== "default" && src !== "unasked" && (st === "available" || st === "tentative"));
+}
+
 interface Selected { instructorId: string; name: string; date: string; slot: string; dayLabel: string }
 
 export function AvailabilityMatrix({ days, rows, availableCounts, staffManagedBy = "staff" }: { days: string[]; rows: MatrixRow[]; availableCounts: Record<string, number>; staffManagedBy?: "staff" | "office" }) {
   const router = useRouter();
   const [pending, start] = useTransition();
+  // Two jobs on one page: assign people who are free (default, nothing edits by
+  // accident), or edit availability. Remembered on this device.
+  const [mode, setModeState] = useState<"assign" | "edit">("assign");
+  useEffect(() => { try { if (window.localStorage.getItem("ar.avail.mode") === "edit") setModeState("edit"); } catch { /* blocked storage */ } }, []);
   const [brush, setBrush] = useState<Brush | null>(null);
+  const editing = mode === "edit";
   const [painted, setPainted] = useState<Record<string, Brush>>({});
   const stroke = useRef<{ instructorId: string; date: string; slot: string }[] | null>(null);
   const [quick, setQuick] = useState<Quick | null>(null);
@@ -86,9 +98,10 @@ export function AvailabilityMatrix({ days, rows, availableCounts, staffManagedBy
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [brush]);
 
-  const applyQuick = (b: Brush) => {
+  const applyQuick = async (b: Brush) => {
     if (!quick) return;
     const status = statusOf(b);
+    if (quick.kind === "week" && !(await askConfirm(`Set everyone's whole week to ${BRUSHES.find((x) => x.value === b)?.label}? Approved leave is left as it is.`))) return;
     if (quick.kind === "row") runBulk({ instructorIds: [quick.instructorId], dates: days, slots: [...SLOTS], status });
     else if (quick.kind === "day") runBulk({ everyone: true, dates: [quick.date], slots: [...SLOTS], status });
     else if (quick.kind === "slot") runBulk({ everyone: true, dates: [quick.date], slots: [quick.slot], status });
@@ -104,6 +117,9 @@ export function AvailabilityMatrix({ days, rows, availableCounts, staffManagedBy
   const openCell = (instructorId: string, name: string, date: string, slot: string, dayLabel: string) => {
     setSel({ instructorId, name, date, slot, dayLabel });
     setCands(null); setMsg(null); setRole("");
+    if (mode === "edit") return; // edit mode: the panel only sets availability
+    const row = rows.find((x) => x.instructorId === instructorId);
+    if (row && !isFreeCell(row, `${date}|${slot}`)) { setCands([]); return; }
     start(async () => {
       const res = await assignableForCellAction(date, slot, instructorId);
       if (res.ok) { setCands(res.candidates); setRoles(res.roles); setRole(res.roles[0]?.id ?? ""); }
@@ -134,6 +150,12 @@ export function AvailabilityMatrix({ days, rows, availableCounts, staffManagedBy
     });
   };
 
+  const setMode = (m: "assign" | "edit") => {
+    setModeState(m); setBrush(null); setQuick(null); setQuickMsg(null); setSel(null); setCands(null); setMsg(null);
+    try { window.localStorage.setItem("ar.avail.mode", m); } catch { /* ignore */ }
+  };
+  const openQuick = (q: Quick) => { if (!editing) return; setBrush(null); setQuick(q); setQuickMsg(null); };
+
   const selRow = sel ? rows.find((r) => r.instructorId === sel.instructorId) : null;
   const selKey = sel ? `${sel.date}|${sel.slot}` : "";
   const selStatus = selRow?.cells[selKey] ?? "unavailable";
@@ -142,35 +164,43 @@ export function AvailabilityMatrix({ days, rows, availableCounts, staffManagedBy
 
   return (
     <div>
-      <div className="mb-3 rounded-card border border-teal/30 bg-teal/5 p-3 text-sm">
-        <p className="font-semibold text-navy">Set availability for lots of slots at once</p>
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          <span className="flex h-5 w-5 flex-none items-center justify-center rounded-full bg-navy text-[11px] font-bold text-white">1</span>
-          <span className="text-slate-600">Choose:</span>
-          {BRUSHES.map((b) => (
-            <button key={b.value} type="button" aria-pressed={brush === b.value} onClick={() => setBrush(brush === b.value ? null : b.value)} className={`rounded-full px-3 py-1 text-xs font-semibold ${b.cls} ${brush === b.value ? "ring-2 ring-navy" : "opacity-80 hover:opacity-100"}`}>{b.label}</button>
+      {/* The page's two jobs: assign people who are free, or edit availability. */}
+      <div className="mb-3 flex flex-wrap items-center gap-3">
+        <div role="tablist" aria-label="What do you want to do?" className="inline-flex rounded-full border border-slate-300 bg-white p-1 text-sm font-semibold">
+          {([["assign", "Assign staff"], ["edit", "Edit availability"]] as const).map(([m, label]) => (
+            <button key={m} type="button" role="tab" aria-selected={mode === m} onClick={() => setMode(m)} className={`rounded-full px-4 py-1.5 transition ${mode === m ? "bg-navy text-white" : "text-slate-600 hover:text-navy"}`}>{label}</button>
           ))}
         </div>
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          <span className={`flex h-5 w-5 flex-none items-center justify-center rounded-full text-[11px] font-bold text-white ${brush ? "bg-navy" : "bg-slate-300"}`}>2</span>
-          {brush ? (
-            <>
-              <span className="text-slate-700">Click or drag across the grid to paint slots <strong>{BRUSHES.find((b) => b.value === brush)?.label}</strong>, or</span>
-              <button type="button" disabled={pending} onClick={async () => { if (await askConfirm(`Set everyone's whole week to ${BRUSHES.find((b) => b.value === brush)?.label}? Approved leave is left as it is.`)) runBulk({ everyone: true, dates: days, slots: [...SLOTS], status: statusOf(brush) }); }} className="rounded-full border border-navy/30 bg-white px-3 py-1 text-xs font-semibold text-navy hover:bg-slate-50 disabled:opacity-50">apply to everyone, this week</button>
-              <button type="button" onClick={() => setBrush(null)} className="text-xs text-slate-500 underline hover:text-navy">stop</button>
-            </>
-          ) : (
-            <span className="text-slate-500">Then click or drag across the grid, or apply it to everyone for the week.</span>
-          )}
-        </div>
-        <p className="mt-2 text-xs text-slate-500">Or click a <strong>name</strong> to set that person&rsquo;s whole week, or a <strong>day</strong> or <strong>AM / PM / EV</strong> heading to set everyone then. With nothing chosen, clicking one slot opens it to set or fill a shift.</p>
+        <p className="text-sm text-slate-500">
+          {editing ? "Changes are saved as set by the office. Approved leave is never changed." : "Click a free slot to see the sessions that person can do, and assign them. Nothing in the grid changes by accident."}
+        </p>
       </div>
 
-      {quick ? (
+      {editing ? (
+        <div className="mb-3 grid gap-3 md:grid-cols-2">
+          <div className="rounded-card border border-teal/30 bg-teal/5 p-3 text-sm">
+            <p className="font-semibold text-navy"><span className="mr-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-navy text-[11px] font-bold text-white">1</span>A whole week or day at once</p>
+            <p className="mt-1.5 text-slate-600">Click a <strong>person&rsquo;s name</strong> to set their whole week, or a <strong>day</strong> or <strong>AM / PM / EV</strong> heading to set everyone then. Then pick Free, Maybe or Busy.</p>
+            <button type="button" onClick={() => openQuick({ kind: "week" })} className="mt-2 rounded-full border border-navy/30 bg-white px-3 py-1 text-xs font-semibold text-navy hover:bg-slate-50">Everyone, this whole week…</button>
+          </div>
+          <div className={`rounded-card border p-3 text-sm ${brush ? "border-navy/40 bg-white" : "border-teal/30 bg-teal/5"}`}>
+            <p className="font-semibold text-navy"><span className="mr-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-navy text-[11px] font-bold text-white">2</span>Slot by slot</p>
+            <p className="mt-1.5 text-slate-600">Pick one, then click or drag across slots in the grid to paint them:</p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              {BRUSHES.map((b) => (
+                <button key={b.value} type="button" aria-pressed={brush === b.value} onClick={() => { setQuick(null); setSel(null); setBrush(brush === b.value ? null : b.value); }} className={`rounded-full px-3 py-1 text-xs font-semibold ${b.cls} ${brush === b.value ? "ring-2 ring-navy" : "opacity-80 hover:opacity-100"}`}>{b.label}</button>
+              ))}
+              {brush ? <button type="button" onClick={() => setBrush(null)} className="text-xs text-slate-500 underline hover:text-navy">stop painting</button> : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {editing && quick ? (
         <div className="mb-3 flex flex-wrap items-center gap-2 rounded-card border border-navy/20 bg-white px-3 py-2 text-xs shadow-sm">
           <span className="font-semibold text-navy">{quickTitle}:</span>
           {BRUSHES.map((b) => (
-            <button key={b.value} type="button" disabled={pending} onClick={() => applyQuick(b.value)} className={`rounded-full px-2.5 py-1 font-semibold disabled:opacity-50 ${b.cls}`}>{b.label}</button>
+            <button key={b.value} type="button" disabled={pending} onClick={() => void applyQuick(b.value)} className={`rounded-full px-2.5 py-1 font-semibold disabled:opacity-50 ${b.cls}`}>{b.label}</button>
           ))}
           {quick.kind === "row" ? <a href={`/office/staff/${quick.instructorId}#availability`} className="text-teal hover:underline">Usual week and more →</a> : null}
           <button type="button" onClick={() => { setQuick(null); setQuickMsg(null); }} className="ml-auto text-slate-400 hover:text-navy">✕ Close</button>
@@ -186,14 +216,18 @@ export function AvailabilityMatrix({ days, rows, availableCounts, staffManagedBy
               <th rowSpan={3} className="sticky left-0 z-10 border-r border-slate-200 bg-slate-50 px-4 text-left text-sm font-semibold">Instructor</th>
               {DAY_LABELS.map((d, i) => (
                 <th key={d} colSpan={3} className="border-l border-slate-200 p-0 text-sm font-bold text-navy">
-                  <button type="button" onClick={() => { setQuick({ kind: "day", date: days[i]!, label: `${d} ${days[i]?.slice(8)}` }); setQuickMsg(null); }} className="w-full px-1 py-2 hover:bg-slate-100" title={`Set everyone's availability for ${d}`}>{d} <span className="font-normal text-slate-400">{days[i]?.slice(8)}</span></button>
+                  {editing ? (
+                    <button type="button" onClick={() => openQuick({ kind: "day", date: days[i]!, label: `${d} ${days[i]?.slice(8)}` })} className="w-full px-1 py-2 underline decoration-dotted underline-offset-4 hover:bg-teal/10" title={`Set everyone's availability for ${d}`}>{d} <span className="font-normal text-slate-400">{days[i]?.slice(8)}</span></button>
+                  ) : <span className="block px-1 py-2">{d} <span className="font-normal text-slate-400">{days[i]?.slice(8)}</span></span>}
                 </th>
               ))}
             </tr>
             <tr className="bg-slate-50 text-xs text-slate-400">
               {days.map((d, di) => SLOTS.map((s, si) => (
                 <th key={`${di}-${s}`} className={`w-12 p-0 font-semibold ${si === 0 ? "border-l border-slate-200" : ""}`}>
-                  <button type="button" onClick={() => { setQuick({ kind: "slot", date: d, slot: s, label: `${DAY_LABELS[di]} ${d.slice(8)} ${s}` }); setQuickMsg(null); }} className="w-full px-1 py-1 hover:bg-slate-100 hover:text-navy" title={`Set everyone's availability for ${DAY_LABELS[di]} ${s}`}>{s}</button>
+                  {editing ? (
+                    <button type="button" onClick={() => openQuick({ kind: "slot", date: d, slot: s, label: `${DAY_LABELS[di]} ${d.slice(8)} ${s}` })} className="w-full px-1 py-1 underline decoration-dotted underline-offset-2 hover:bg-teal/10 hover:text-navy" title={`Set everyone's availability for ${DAY_LABELS[di]} ${s}`}>{s}</button>
+                  ) : <span className="block px-1 py-1">{s}</span>}
                 </th>
               )))}
             </tr>
@@ -208,10 +242,17 @@ export function AvailabilityMatrix({ days, rows, availableCounts, staffManagedBy
             {rows.map((r) => (
               <tr key={r.instructorId} className="hover:bg-slate-50/40">
                 <td className="sticky left-0 z-10 whitespace-nowrap border-r border-slate-200 bg-white p-0 text-left text-sm font-semibold text-navy">
-                  <button type="button" onClick={() => { setQuick({ kind: "row", instructorId: r.instructorId, name: r.name }); setQuickMsg(null); }} className="flex w-full items-center gap-1.5 px-4 py-1.5 text-left hover:bg-slate-50" title={`Set ${r.name}'s whole week`}>
-                    {r.name}
-                    {r.officeManaged ? <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-slate-500" title="The office keeps their availability">office</span> : null}
-                  </button>
+                  {editing ? (
+                    <button type="button" onClick={() => openQuick({ kind: "row", instructorId: r.instructorId, name: r.name })} className="flex w-full items-center gap-1.5 px-4 py-1.5 text-left underline decoration-dotted underline-offset-4 hover:bg-teal/10" title={`Set ${r.name}'s whole week`}>
+                      {r.name}
+                      {r.officeManaged ? <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-slate-500 no-underline" title="The office keeps their availability">office</span> : null}
+                    </button>
+                  ) : (
+                    <span className="flex items-center gap-1.5 px-4 py-1.5">
+                      {r.name}
+                      {r.officeManaged ? <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-slate-500" title="The office keeps their availability">office</span> : null}
+                    </span>
+                  )}
                 </td>
                 {days.map((d, di) => SLOTS.map((s, si) => {
                   const key = `${d}|${s}`;
@@ -224,17 +265,17 @@ export function AvailabilityMatrix({ days, rows, availableCounts, staffManagedBy
                   const note = si === 0 ? r.notes[d] : undefined;
                   const by = SET_BY[r.setBy[key] ?? "self"];
                   const isSel = sel?.instructorId === r.instructorId && sel?.date === d && sel?.slot === s;
-                  const cellLabel = `${r.name}, ${DAY_LABELS[di]} ${s}: ${cfg.word}${source === "pattern" ? " (usual week)" : ""}${by ? ` (${by})` : ""}${r.notes[d] ? ` · note: ${r.notes[d]}` : ""}${rosterLabel ? ` · ${rosterLabel}` : ""} — click to set or fill a shift`;
+                  const cellLabel = `${r.name}, ${DAY_LABELS[di]} ${s}: ${cfg.word}${source === "pattern" ? " (usual week)" : ""}${by ? ` (${by})` : ""}${r.notes[d] ? ` · note: ${r.notes[d]}` : ""}${rosterLabel ? ` · ${rosterLabel}` : ""}${editing ? (brush ? " — click or drag to paint" : " — click to set") : isFreeCell(r, key) ? " — click to assign to a session" : ""}`;
                   return (
                     <td key={`${r.instructorId}-${di}-${s}`} className={`p-0 ${si === 0 ? "border-l border-slate-200" : ""}`}>
                       <button
                         type="button"
-                        onClick={() => { if (!brush) openCell(r.instructorId, r.name, d, s, `${DAY_LABELS[di]} ${days[di]?.slice(8) ?? ""}`); }}
-                        onPointerDown={(e) => { if (!brush) return; e.preventDefault(); stroke.current = []; paint(r.instructorId, d, s); }}
+                        onClick={() => { if (!brush) { setQuick(null); openCell(r.instructorId, r.name, d, s, `${DAY_LABELS[di]} ${days[di]?.slice(8) ?? ""}`); } }}
+                        onPointerDown={(e) => { if (!brush || !editing) return; e.preventDefault(); stroke.current = []; paint(r.instructorId, d, s); }}
                         onPointerEnter={() => paint(r.instructorId, d, s)}
                         title={cellLabel}
                         aria-label={cellLabel}
-                        className={`relative flex h-10 w-12 items-center justify-center text-base font-semibold transition ${cfg.cls} ${isSel ? "ring-2 ring-inset ring-navy" : ""} ${brush ? "cursor-crosshair select-none" : ""}`}
+                        className={`relative flex h-10 w-12 items-center justify-center text-base font-semibold transition ${cfg.cls} ${isSel ? "ring-2 ring-inset ring-navy" : ""} ${brush ? "cursor-crosshair select-none" : ""} ${!editing && !isFreeCell(r, key) ? "cursor-default" : ""}`}
                       >
                         <span aria-hidden="true">{cfg.label}</span>
                         {source === "pattern" ? <span aria-hidden="true" className="absolute right-0.5 top-0.5 text-[7px] font-bold uppercase leading-none opacity-60">usual</span> : null}
@@ -260,6 +301,7 @@ export function AvailabilityMatrix({ days, rows, availableCounts, staffManagedBy
             <button type="button" onClick={() => { setSel(null); setCands(null); setMsg(null); }} className="text-sm text-slate-400 hover:text-navy">✕ Close</button>
           </div>
 
+          {editing ? (<>
           <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
             <span className="text-xs font-medium text-slate-500">Availability:</span>
             <span className="text-xs text-slate-600">
@@ -272,9 +314,13 @@ export function AvailabilityMatrix({ days, rows, availableCounts, staffManagedBy
             ))}
             {selSource === "set" ? <button type="button" disabled={pending} onClick={() => setStatus(null)} className="text-xs text-slate-400 hover:text-navy disabled:opacity-50">remove answer</button> : null}
           </div>
+          </>) : null}
           {selNote ? <p className="mt-2 text-xs text-slate-600">✎ Note from {sel.name} for {sel.dayLabel}: “{selNote}”</p> : null}
 
-          <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">Fill a shift</p>
+          {editing ? null : selRow && !isFreeCell(selRow, selKey) ? (
+            <p className="mt-3 text-sm text-slate-600">{sel.name} isn&rsquo;t free {sel.dayLabel} {sel.slot} ({selSource === "default" ? "not answered yet" : selSource === "unasked" ? "not asked yet" : CELL[selStatus]?.word.toLowerCase() ?? "busy"}). To change that, switch to <button type="button" onClick={() => setMode("edit")} className="font-semibold text-teal hover:underline">Edit availability</button>.</p>
+          ) : (<>
+          <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">Sessions they can be assigned to</p>
           {pending && cands === null ? (
             <p className="mt-2 text-sm text-slate-400">Finding sessions they can cover…</p>
           ) : cands && cands.length > 0 ? (
@@ -301,6 +347,7 @@ export function AvailabilityMatrix({ days, rows, availableCounts, staffManagedBy
           ) : cands ? (
             <p className="mt-2 text-sm text-slate-500">No sessions {sel.dayLabel} {sel.slot} that {sel.name} can be assigned to (nothing scheduled they can teach, or they&apos;re already on them). Create the course in <a href="/office/courses" className="text-teal hover:underline">Courses</a> first.</p>
           ) : null}
+          </>)}
 
           {msg ? <p className={`mt-3 text-sm ${msg.ok ? "text-starboard" : "text-port"}`}>{msg.text}</p> : null}
         </div>

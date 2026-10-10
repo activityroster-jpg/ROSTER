@@ -38,16 +38,16 @@ export default async function AvailabilityPage({ searchParams }: { searchParams:
       </div>
       {officeMode ? (
         <p className="mb-4 text-sm text-slate-500">
-          The office keeps availability here, so staff don&apos;t need to sign up. Everyone counts as <span className="font-medium text-starboard">free</span> unless you mark them busy: use a brush to paint the days people can&apos;t work, click a name for their whole week, or set their usual week on their page in Staff. <a href="/office/settings#staff-managed-by" className="text-teal hover:underline">Change this in Settings</a>.
+          The office keeps availability here, so staff don&apos;t need to sign up. Everyone counts as <span className="font-medium text-starboard">free</span> unless you mark them busy: switch to <span className="font-medium text-navy">Edit availability</span> to mark the days people can&apos;t work, or set their usual week on their page in Staff. <a href="/office/settings#staff-managed-by" className="text-teal hover:underline">Change this in Settings</a>.
         </p>
       ) : (
         <p className="mb-4 text-sm text-slate-500">
-          Who&apos;s free — from the instructor app, their usual week, or entered here by the office. A slot is Busy until it&apos;s marked Free or Maybe. Hover a <span className="font-medium text-navy">●</span> to see what they&apos;re rostered on, or <span className="font-medium text-navy">click any slot</span> to set their availability or fill an open shift. Running it all from the office instead? <a href="/office/settings#staff-managed-by" className="text-teal hover:underline">Staff don&apos;t have to sign up</a>.
+          Who&apos;s free — from the instructor app, their usual week, or entered here by the office. A slot is Busy until it&apos;s marked Free or Maybe. Hover a <span className="font-medium text-navy">●</span> to see what they&apos;re rostered on. Use <span className="font-medium text-navy">Assign staff</span> to put free people on sessions, or <span className="font-medium text-navy">Edit availability</span> to change who&apos;s free. Running it all from the office instead? <a href="/office/settings#staff-managed-by" className="text-teal hover:underline">Staff don&apos;t have to sign up</a>.
         </p>
       )}
       {beyondWindow ? (
         <p className="mb-4 rounded-lg border border-amber/40 bg-amber/10 px-3 py-2 text-xs text-navy">
-          Instructors haven&apos;t been asked about this week yet: they can set availability {horizon.weeksAhead} week{horizon.weeksAhead === 1 ? "" : "s"} ahead. <Link href="/office/settings#availability-window" className="font-medium text-teal hover:underline">Lengthen the window in Settings</Link> to ask further out. You can still enter availability for anyone by clicking a slot.
+          Instructors haven&apos;t been asked about this week yet: they can set availability {horizon.weeksAhead} week{horizon.weeksAhead === 1 ? "" : "s"} ahead. <Link href="/office/settings#availability-window" className="font-medium text-teal hover:underline">Lengthen the window in Settings</Link> to ask further out. You can still enter availability for anyone with Edit availability.
         </p>
       ) : null}
 
@@ -75,7 +75,7 @@ export default async function AvailabilityPage({ searchParams }: { searchParams:
       ) : (
         <AvailabilityMatrix days={days} rows={rows} availableCounts={availableCounts} staffManagedBy={staffManagedBy} />
       )}
-      <p className="mt-2 text-xs text-slate-400">The number under each slot is how many instructors are free then. Click a slot to set that person&apos;s availability (recorded as set by the office) or fill an open shift with them. Approved leave always shows as busy.</p>
+      <p className="mt-2 text-xs text-slate-400">The number under each slot is how many instructors are free then. Approved leave always shows as busy.</p>
     </div>
   );
 }
