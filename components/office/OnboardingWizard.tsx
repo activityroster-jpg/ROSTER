@@ -3,6 +3,9 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { RotaTemplateForm } from "./RotaTemplateForm";
+import { OnboardingTrackerEditor } from "./OnboardingTrackerEditor";
+import { saveOnboardingTrackerAction } from "@/app/(app)/office/settings/actions";
+import type { TrackerConfig } from "@/lib/domain/onboarding-tracker";
 import { DEFAULT_ROTA_TEMPLATE } from "@/lib/rota/template";
 import {
   addCustomCourseAction,
@@ -34,7 +37,7 @@ const AUDIENCE_ORDER: { key: CourseAudience; label: string; hint: string }[] = [
   { key: "all", label: "All ages", hint: "Runs for any age group" },
 ];
 
-const STEP_LABELS = ["How you run", "Courses", "Team", "Roster PDF", "Finish"];
+const STEP_LABELS = ["How you run", "Courses", "Team", "Onboarding", "Roster PDF", "Finish"];
 
 export function OnboardingWizard({
   centreName,
@@ -45,6 +48,7 @@ export function OnboardingWizard({
   initialSlotStyle,
   initialWeeksAhead,
   initialStaffManagedBy = "staff",
+  initialTracker,
 }: {
   centreName: string;
   courseTypes: CourseTypeOpt[];
@@ -54,6 +58,7 @@ export function OnboardingWizard({
   initialSlotStyle: string;
   initialWeeksAhead?: number;
   initialStaffManagedBy?: "staff" | "office";
+  initialTracker: TrackerConfig;
 }) {
   const [quals, setQuals] = useState<QualOpt[]>(initialQuals);
   const router = useRouter();
@@ -67,6 +72,9 @@ export function OnboardingWizard({
   const [weeksAhead, setWeeksAhead] = useState(initialWeeksAhead ?? 4);
   const [managedBy, setManagedBy] = useState<"staff" | "office">(initialStaffManagedBy);
   const toggleFeature = (f: OptionalFeature) => setFeatures((s) => { const n = new Set(s); n.has(f) ? n.delete(f) : n.add(f); return n; });
+
+  // Step 4 — instructor onboarding tracker (recommended steps ticked)
+  const [tracker, setTracker] = useState<TrackerConfig>(initialTracker);
 
   // Step 2 — courses (local list so custom additions appear immediately)
   const [allCourses, setAllCourses] = useState<CourseTypeOpt[]>(courseTypes);
@@ -194,6 +202,14 @@ export function OnboardingWizard({
         setName(""); setEmail(""); setChosenQuals(new Set()); setChosenTeach(new Set());
         setMsg(res.message ?? null);
       } else setMsg(res.error ?? "Could not add");
+    });
+  };
+
+  const saveTrackerThenNext = () => {
+    setMsg(null);
+    startTransition(async () => {
+      const res = await saveOnboardingTrackerAction(tracker);
+      if (res.ok) setStep(5); else setMsg(res.error ?? "Could not save");
     });
   };
 
@@ -450,26 +466,40 @@ export function OnboardingWizard({
 
           <div className="mt-6 flex justify-between">
             <button onClick={() => setStep(2)} className="text-sm font-semibold text-slate-500 hover:text-navy">← Back</button>
-            <button onClick={() => setStep(4)} className="rounded-lg bg-teal px-5 py-2.5 font-semibold text-white hover:bg-teal-700">Continue →</button>
+            <button onClick={() => { setMsg(null); setStep(4); }} className="rounded-lg bg-teal px-5 py-2.5 font-semibold text-white hover:bg-teal-700">Continue →</button>
           </div>
         </div>
       ) : null}
 
-      {/* STEP 4 — roster PDF layout */}
+      {/* STEP 4 — instructor onboarding tracker */}
       {step === 4 ? (
+        <div className="rounded-card border border-slate-200 bg-white p-6">
+          <h2 className="font-display text-lg font-semibold text-navy">Track each new instructor&apos;s onboarding?</h2>
+          <p className="mt-1 text-sm text-slate-500">A checklist on each instructor&apos;s page showing how far through getting started they are. We&apos;ve ticked the steps we recommend; most of them tick themselves as the person signs up and their details go in. Add your own, or change it later in Settings.</p>
+          <div className="mt-4"><OnboardingTrackerEditor value={tracker} onChange={setTracker} payOn={features.has("payroll")} /></div>
+          {msg ? <p className="mt-3 text-sm text-port">{msg}</p> : null}
+          <div className="mt-6 flex justify-between">
+            <button onClick={() => setStep(3)} className="text-sm font-semibold text-slate-500 hover:text-navy">← Back</button>
+            <button onClick={saveTrackerThenNext} disabled={pending} className="rounded-lg bg-teal px-5 py-2.5 font-semibold text-white hover:bg-teal-700 disabled:opacity-60">{pending ? "Saving…" : "Continue →"}</button>
+          </div>
+        </div>
+      ) : null}
+
+      {/* STEP 5 — roster PDF layout */}
+      {step === 5 ? (
         <div className="rounded-card border border-slate-200 bg-white p-6">
           <h2 className="font-semibold text-navy">Your roster PDF</h2>
           <p className="mb-4 mt-1 text-sm text-slate-500">The roster you download and pin up or email. Choose what goes on it and how it is laid out; you can change this later under Settings → Roster PDF.</p>
-          <RotaTemplateForm initial={DEFAULT_ROTA_TEMPLATE} compact onSaved={() => setStep(5)} />
+          <RotaTemplateForm initial={DEFAULT_ROTA_TEMPLATE} compact onSaved={() => setStep(6)} />
           <div className="mt-6 flex justify-between">
-            <button onClick={() => setStep(3)} className="text-sm font-semibold text-slate-500 hover:text-navy">← Back</button>
-            <button onClick={() => setStep(5)} className="text-sm font-semibold text-slate-500 hover:text-navy">Keep the defaults →</button>
+            <button onClick={() => setStep(4)} className="text-sm font-semibold text-slate-500 hover:text-navy">← Back</button>
+            <button onClick={() => setStep(6)} className="text-sm font-semibold text-slate-500 hover:text-navy">Keep the defaults →</button>
           </div>
         </div>
       ) : null}
 
-      {/* STEP 5 — finish + funnel for chosen extras */}
-      {step === 5 ? (
+      {/* STEP 6 — finish + funnel for chosen extras */}
+      {step === 6 ? (
         <div className="rounded-card border border-slate-200 bg-white p-8">
           <p className="text-center font-display text-2xl font-semibold text-navy">🎉 You&apos;re ready to roster</p>
           <p className="mx-auto mt-2 max-w-md text-center text-sm text-slate-600">

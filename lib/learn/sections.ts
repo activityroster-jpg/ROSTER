@@ -29,11 +29,12 @@ export const SECTIONS: Section[] = [
     blurb: "Set your centre up in a few minutes with the guided wizard.",
     blocks: [
       { kind: "p", text: "When you first sign in you land on the onboarding wizard. It only asks for what it needs to get you rostering — everything else can wait." },
-      { kind: "sub", text: "The five steps" },
+      { kind: "sub", text: "The six steps" },
       { kind: "steps", items: [
         "How you run — pick the extra features you want (equipment, locations, operating areas, payroll, info) and choose whether your sessions run as Morning/Afternoon/Evening slots or with explicit start & end times.",
         "Courses — tick the RYA courses you offer (grouped by youth and adult), or add your own. Use “Add all RYA courses” if you run a lot of them.",
         "Team — add each instructor, tick the qualifications they hold and the courses they can teach, and add their email to send an invite.",
+        "Onboarding — choose whether each instructor's page shows an onboarding checklist, and which steps it has. The recommended steps come ticked, and most of them tick themselves (see “Onboarding tracker”).",
         "Roster PDF — choose what your printable roster shows (times, staff, students, locations, equipment), its style and whether it is portrait or landscape. You can change it later under Settings.",
         "Finish — you're ready to roster. Any optional features you switched on appear here with a “set up” link.",
       ] },
@@ -241,6 +242,27 @@ export const SECTIONS: Section[] = [
         "Employment type is read loosely (e.g. 'casual' → freelance) and defaults to employed.",
       ] },
       { kind: "tip", text: "Start simple: a sheet of just names and emails is enough to get everyone in and invited — you can fill in certs and courses afterwards." },
+    ],
+  },
+  {
+    id: "onboarding-tracker",
+    icon: "✅",
+    label: "Onboarding tracker",
+    blurb: "A checklist on each instructor's page for getting new people ready, most of which ticks itself.",
+    blocks: [
+      { kind: "p", text: "The onboarding tracker is a checklist on each instructor's page, with a bar showing how far through it they are. You choose it when you set up your centre, and can change it any time under Settings → General → Instructor onboarding tracker, or switch it off." },
+      { kind: "sub", text: "Steps that tick themselves" },
+      { kind: "bullets", items: [
+        "Added to the app: when they accept their invite and sign in.",
+        "Licences they hold set, and Courses they can teach set: once at least one of each is on their profile.",
+        "Pay rate set (only if you use Pay & payroll): when a pay rate applies to them, their own or your standard rate.",
+        "First aid certificate added, and DBS or vetting check recorded: when they are recorded under Licences & documents.",
+        "Set their availability in the app: the first time they mark when they're free themselves.",
+      ] },
+      { kind: "p", text: "These show a round tick rather than a tickbox: they follow the person's record, so they can't fall out of date. A step that isn't done yet says what it needs, with a link to the right card on their page." },
+      { kind: "sub", text: "Steps the office ticks" },
+      { kind: "p", text: "Contract signed, induction & site tour, safeguarding training, kit issued and added to payroll are there to tick if you want them, and you can add up to 12 steps of your own (say “Boat handling check”). Each tick is written to your change log." },
+      { kind: "tip", text: "Take a step out and its ticks are kept, not deleted: put it back and they return. Centres that set up before the tracker could be chosen keep their original six-step checklist until they change it." },
     ],
   },
   {
@@ -792,7 +814,7 @@ export const SECTIONS: Section[] = [
 export const GUIDE_STAGES: { label: string; ids: string[] }[] = [
   { label: "Set up your centre", ids: ["getting-started", "settings", "locations", "equipment"] },
   { label: "Add your courses", ids: ["courses", "import", "integrations"] },
-  { label: "Add your instructors", ids: ["staff", "staff-import", "roles", "licences", "app"] },
+  { label: "Add your instructors", ids: ["staff", "staff-import", "onboarding-tracker", "roles", "licences", "app"] },
   { label: "Build the roster", ids: ["availability", "office-managed", "dashboard", "board", "rostering", "bulk", "problems", "rota"] },
   { label: "Run the season", ids: ["leave", "time", "pay-rates", "notifications"] },
   { label: "Account, billing & data", ids: ["plans", "billing", "trial-survey", "admin-security", "data", "retention"] },

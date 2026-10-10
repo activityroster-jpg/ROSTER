@@ -7,7 +7,8 @@ import { can } from "@/lib/auth/rbac";
 import { retentionPlan } from "@/lib/services/retention";
 import Link from "next/link";
 import { requireTenant } from "@/lib/tenant/require";
-import { ensureOnboarding, getStaffProfile } from "@/lib/services/hr";
+import { getStaffProfile } from "@/lib/services/hr";
+import { trackerFor } from "@/lib/services/onboarding-tracker";
 import { fitReason } from "@/lib/services/staff";
 import { OnboardingChecklist } from "@/components/office/OnboardingChecklist";
 import { DocumentManager, type DocItem } from "@/components/DocumentManager";
@@ -34,7 +35,6 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
   const { id } = await params;
   const { ctx, repos } = await requireTenant({ permission: "staff.view" });
 
-  await ensureOnboarding(repos, ctx, id);
   const profile = await getStaffProfile(repos, ctx, id);
 
   if (!profile) {
@@ -46,11 +46,18 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
     );
   }
 
-  const { instructor, fit, documents, approvedCourses, onboarding } = profile;
+  const { instructor, fit, documents, approvedCourses } = profile;
   const [rates, centreRates, roles, settings] = await Promise.all([listPayRates(repos, ctx, id), listCentreRates(repos, ctx), repos.tenant.roleType.list(ctx), repos.tenant.orgSettings.list(ctx)]);
   const SYMBOL: Record<string, string> = { GBP: "£", EUR: "€", USD: "$" };
   const currency = SYMBOL[settings[0]?.currency ?? "GBP"] ?? "£";
   const payOn = hasFeature(settings[0]?.enabledFeatures, "payroll");
+  const tracker = await trackerFor(repos, ctx, id);
+  // Where to sort out an automatic onboarding step: the matching card on this page.
+  const STEP_ANCHOR: Record<string, string | undefined> = {
+    app: "#access", licences: "#licences", courses: "#licences", "first-aid": "#documents", vetting: "#documents",
+    pay: payOn && can(ctx, "finance.view") ? "#pay" : undefined,
+    availability: can(ctx, "roster.edit") ? "#availability" : undefined,
+  };
   const left = instructor.status === "inactive";
   const membership = instructor.userId ? await repos.control.membershipFor(instructor.userId, ctx.organisationId) : null;
   const inviteStatus = !instructor.userId ? "none" : membership?.status === "active" ? "accepted" : "pending";
@@ -93,14 +100,14 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
       <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
         <div className="space-y-6">
           <Card>
-            <h2 className="mb-1 font-semibold text-navy">Licences &amp; documents</h2>
+            <h2 id="documents" className="mb-1 scroll-mt-6 font-semibold text-navy">Licences &amp; documents</h2>
             <WhoCanSee repos={repos} ctx={ctx} feature="staff" className="mb-3" />
             <DocumentManager items={docItems} admin />
           </Card>
 
 
           <Card>
-            <h2 className="mb-2 font-semibold text-navy">Licences &amp; courses they can teach</h2>
+            <h2 id="licences" className="mb-2 scroll-mt-6 font-semibold text-navy">Licences &amp; courses they can teach</h2>
             {canEdit && !left ? (
               <StaffLicencesCourses
                 instructorId={instructor.id}
@@ -140,7 +147,7 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
           ) : null}
           {payOn && can(ctx, "finance.view") ? (
             <Card>
-              <div className="mb-1 flex items-center justify-between"><h2 className="font-semibold text-navy">Pay</h2><a href="/learn?topic=pay-rates" target="_blank" rel="noreferrer" className="text-xs font-medium text-teal hover:underline">📖 Read the guide</a></div>
+              <div id="pay" className="mb-1 flex scroll-mt-6 items-center justify-between"><h2 className="font-semibold text-navy">Pay</h2><a href="/learn?topic=pay-rates" target="_blank" rel="noreferrer" className="text-xs font-medium text-teal hover:underline">📖 Read the guide</a></div>
               <p className="mb-3 text-xs text-slate-500">How {instructor.name.split(" ")[0] ?? instructor.name} is paid. Everyone&rsquo;s rates, and the standard rate for each role, are in <a href="/office/settings?tab=pay#pay-rates" className="font-medium text-teal hover:underline">Settings → Pay rates</a>.</p>
               <PersonPayRates
                 currency={currency}
@@ -152,17 +159,25 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
               />
             </Card>
           ) : null}
-          <Card>
-            <h2 className="mb-3 font-semibold text-navy">Onboarding</h2>
-            <OnboardingChecklist items={onboarding.map((o) => ({ id: o.id, label: o.label, done: o.done }))} />
-          </Card>
+          {tracker.on && tracker.total > 0 ? (
+            <Card>
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <h2 className="font-semibold text-navy">Onboarding</h2>
+                <span className="flex items-center gap-3 text-xs">
+                  {can(ctx, "settings.edit") ? <a href="/office/settings#onboarding-tracker" className="text-slate-500 hover:text-teal hover:underline">Change steps</a> : null}
+                  <a href="/learn?topic=onboarding-tracker" target="_blank" rel="noreferrer" className="font-medium text-teal hover:underline">📖 Read the guide</a>
+                </span>
+              </div>
+              <OnboardingChecklist items={tracker.items.map((t) => ({ key: t.key, label: t.label, done: t.done, auto: t.auto, hint: t.hint, rowId: t.rowId, href: STEP_ANCHOR[t.key] }))} />
+            </Card>
+          ) : null}
         </div>
       </div>
 
       {/* Access, contacts and data tools: needed now and then, so they sit at the bottom. */}
       <div className="mt-6 space-y-6">
           <Card>
-            <div className="mb-2 flex items-center justify-between"><h2 className="font-semibold text-navy">Access</h2><GuideLink topic="roles" className="text-xs" /></div>
+            <div id="access" className="mb-2 flex scroll-mt-6 items-center justify-between"><h2 className="font-semibold text-navy">Access</h2><GuideLink topic="roles" className="text-xs" /></div>
             <AccessCard linked={Boolean(instructor.userId)} role={membership?.role ?? null} />
           </Card>
 

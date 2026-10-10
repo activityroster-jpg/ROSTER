@@ -15,6 +15,8 @@ import { rotaTemplateSchema } from "@/lib/rota/template";
 import { settingsPatch } from "@/lib/validation/settings-sections";
 import { parseRetention, RETENTION_DEFAULTS } from "@/lib/services/retention";
 import { SLOT_CODES } from "@/lib/db/schema";
+import { cleanTrackerConfig } from "@/lib/validation/onboarding-tracker";
+import { saveTracker } from "@/lib/services/onboarding-tracker";
 
 export type ActionState = { ok: boolean; error?: string; message?: string };
 
@@ -290,4 +292,15 @@ export async function setRetentionAction(input: Record<string, number>): Promise
   await writeAudit(repos, ctx, { action: "update_retention", entity: "org_settings", after: policy });
   revalidatePath("/office/settings");
   return { ok: true, message: "Retention periods saved" };
+}
+
+/** The instructor onboarding tracker: on or off, the built-in steps followed and the centre's own (setup wizard and Settings). */
+export async function saveOnboardingTrackerAction(input: unknown): Promise<ActionState> {
+  const { ctx, repos } = await requireTenant({ permission: "settings.edit" });
+  const r = cleanTrackerConfig(input);
+  if (!r.ok) return { ok: false, error: r.error };
+  if (!(await saveTracker(repos, ctx, r.config))) return { ok: false, error: "Settings not found" };
+  revalidatePath("/office/settings");
+  revalidatePath("/office/staff", "layout");
+  return { ok: true, message: r.config.on ? "Onboarding tracker saved" : "Onboarding tracker switched off" };
 }

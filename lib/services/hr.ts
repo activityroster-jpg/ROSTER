@@ -12,8 +12,10 @@ import {
 } from "@/lib/db/schema";
 import { evaluateFit, type ComplianceRequirement, type HeldCompliance, type FitResult } from "@/lib/domain";
 import { writeAudit } from "./audit";
+import { ensureManualRows, loadTracker } from "./onboarding-tracker";
+import { manualLabels } from "@/lib/domain/onboarding-tracker";
 
-/** The default onboarding checklist seeded for a new staff member. */
+/** The original onboarding checklist: what centres that never chose a tracker still follow (LEGACY_TRACKER). */
 export const DEFAULT_ONBOARDING = [
   "Contract signed",
   "Induction & site tour",
@@ -47,20 +49,15 @@ export interface StaffProfile {
   onboardingPct: number;
 }
 
-/** Seed the default onboarding checklist for an instructor if they have none. */
+/** Make sure an instructor has a row for each manual step of the centre's onboarding tracker. */
 export async function ensureOnboarding(
   repos: Repositories,
   ctx: AnyTenantContext,
   instructorId: string,
 ): Promise<OnboardingItem[]> {
-  const existing = await repos.tenant.onboardingItem.list(ctx, eq(onboardingTable.instructorId, instructorId));
-  if (existing.length > 0) return existing.sort((a, b) => a.sortOrder - b.sortOrder);
-
-  const created = await repos.tenant.onboardingItem.insertMany(
-    ctx,
-    DEFAULT_ONBOARDING.map((label, i) => ({ instructorId, label, done: false, sortOrder: i, completedAt: null })),
-  );
-  return created.sort((a, b) => a.sortOrder - b.sortOrder);
+  const { config, payOn } = await loadTracker(repos, ctx);
+  const rows = await ensureManualRows(repos, ctx, instructorId, manualLabels(config, payOn));
+  return rows.sort((a, b) => a.sortOrder - b.sortOrder);
 }
 
 /** Tick / untick an onboarding step. Tenant scoped, audited. */

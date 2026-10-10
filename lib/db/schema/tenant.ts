@@ -170,6 +170,8 @@ export const orgSettings = sqliteTable("org_settings", {
   welfareOfficers: text("welfare_officers").notNull().default("[]"),
   /** Default welfare-on-duty pattern (JSON {weekday 0-6, slot, name}[]); a welfare_duty row overrides it for one date+slot. */
   welfareDuty: text("welfare_duty").notNull().default("[]"),
+  /** Instructor onboarding tracker (JSON TrackerConfig, lib/domain/onboarding-tracker). Empty = never chosen: the original checklist. */
+  onboardingTracker: text("onboarding_tracker").notNull().default(""),
   /** Retired 10 Oct 2026 with parent approval: not read. Stays until a later migration drops it. */
   requireParentApproval: boolCol("require_parent_approval").default(true),
   /** Minutes of inactivity before an admin is asked for their PIN again (5–240). Applied from the next PIN entry. */

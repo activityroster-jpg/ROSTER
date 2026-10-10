@@ -12,6 +12,8 @@ import { parseDefaultSchedule } from "@/lib/domain";
 import { RotaTemplateForm } from "@/components/office/RotaTemplateForm";
 import { parseRotaTemplate } from "@/lib/rota/template";
 import { RetentionForm } from "@/components/office/RetentionForm";
+import { OnboardingTrackerForm } from "@/components/office/OnboardingTrackerEditor";
+import { loadTracker } from "@/lib/services/onboarding-tracker";
 import { retentionPlan } from "@/lib/services/retention";
 import { WelfareSettingsForm } from "@/components/office/WelfareSettingsForm";
 import { parseWelfareSettings } from "@/lib/services/welfare";
@@ -96,6 +98,7 @@ export default async function SettingsPage() {
   const welfare = parseWelfareSettings(s?.welfareOfficers, s?.welfareDuty);
   const joinCode = await repos.control.ensureJoinCode(ctx.organisationId);
   const retention = await retentionPlan(repos, ctx, s, new Date());
+  const tracker = await loadTracker(repos, ctx);
 
   const toItems = <T extends { id: string; active: boolean }>(rows: T[], label: (r: T) => string, meta?: (r: T) => string, edit?: (r: T) => string): ConfigItem[] =>
     rows.map((r) => ({ id: r.id, label: label(r), active: r.active, meta: meta?.(r), editValue: edit?.(r) }));
@@ -158,6 +161,17 @@ export default async function SettingsPage() {
           holidayPayPercent={s?.holidayPayPercent ?? null}
         />
       </Card>
+
+      <div id="onboarding-tracker" className="scroll-mt-6">
+      <Card className="mb-6">
+        <div className="mb-1 flex items-center justify-between">
+          <h2 className="font-semibold text-navy">Instructor onboarding tracker</h2>
+          <a href="/learn?topic=onboarding-tracker" target="_blank" rel="noreferrer" className="text-xs font-medium text-teal hover:underline">📖 Read the guide</a>
+        </div>
+        <p className="mb-3 text-xs text-slate-500">A checklist on each instructor&apos;s page for getting new people ready. Steps marked as ticking themselves follow their record; the rest the office ticks.</p>
+        <OnboardingTrackerForm initial={tracker.config} payOn={tracker.payOn} />
+      </Card>
+      </div>
 
           </>),
           roster: (<>

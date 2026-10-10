@@ -1,6 +1,7 @@
 import { requireTenant } from "@/lib/tenant/require";
 import { OnboardingWizard, type CourseTypeOpt, type QualOpt, type TeamMember } from "@/components/office/OnboardingWizard";
 import { parseFeatures } from "@/lib/features";
+import { trackerOffer } from "@/lib/services/onboarding-tracker";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +34,7 @@ export default async function OnboardingPage() {
       initialSlotStyle={s?.slotStyle ?? "slots"}
       initialWeeksAhead={s?.availabilityWeeksAhead ?? 4}
       initialStaffManagedBy={s?.staffManagedBy ?? "staff"}
+      initialTracker={await trackerOffer(repos, ctx)}
     />
   );
 }

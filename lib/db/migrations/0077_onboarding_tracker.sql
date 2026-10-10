@@ -1,0 +1,1 @@
+ALTER TABLE `org_settings` ADD `onboarding_tracker` text DEFAULT '' NOT NULL;
