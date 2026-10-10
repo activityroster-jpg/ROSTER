@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createTaskAction, setTaskStatusAction, deleteTaskAction, updateTaskAction } from "@/app/admin/tasks/actions";
 
@@ -28,6 +28,63 @@ const COLUMNS: { key: TaskRow["status"]; label: string; accent: string }[] = [
   { key: "complete", label: "Complete", accent: "border-starboard" },
 ];
 
+const NEW = "__new__";
+
+/** Categories already used on the board, once each (first spelling wins), A–Z. */
+function usedCategories(tasks: readonly TaskRow[]): string[] {
+  const seen = new Map<string, string>();
+  for (const t of tasks) {
+    const c = (t.category ?? "").trim();
+    if (c && !seen.has(c.toLowerCase())) seen.set(c.toLowerCase(), c);
+  }
+  return [...seen.values()].sort((a, b) => a.localeCompare(b));
+}
+
+/**
+ * A dropdown of the categories already used, with "+ New category…" for typing
+ * a new one. In the add form it reports every change; on a card (onDone given)
+ * it saves on pick, Enter or leaving the box, and Escape cancels.
+ */
+function CategoryPicker({ value, options, onChange, className, onDone }: { value: string; options: string[]; onChange: (v: string) => void; className: string; onDone?: () => void }) {
+  const inline = Boolean(onDone);
+  const match = options.find((o) => o.toLowerCase() === value.trim().toLowerCase());
+  const [typing, setTyping] = useState(Boolean(value.trim()) && !match);
+  const [draft, setDraft] = useState(match ? "" : value);
+  const switching = useRef(false);
+  if (typing) {
+    const commit = () => { if (draft.trim()) onChange(draft.trim()); onDone?.(); };
+    const backToList = () => { setTyping(false); setDraft(""); if (!inline) onChange(""); };
+    return (
+      <span className="flex min-w-0 items-center gap-1">
+        <input autoFocus value={draft} maxLength={60} placeholder="New category" aria-label="New category"
+          onChange={(e) => { setDraft(e.target.value); if (!inline) onChange(e.target.value); }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") { e.preventDefault(); if (inline) commit(); }
+            if (e.key === "Escape") { if (inline) onDone?.(); else backToList(); }
+          }}
+          onBlur={() => { if (inline) commit(); }}
+          className={`${className} min-w-0 flex-1`} />
+        <button type="button" title="Pick from the list instead" onMouseDown={(e) => e.preventDefault()} onClick={backToList} className="text-xs text-slate-400 hover:text-port">✕</button>
+      </span>
+    );
+  }
+  return (
+    <select autoFocus={inline} aria-label="Category" value={match ?? ""}
+      onChange={(e) => {
+        if (e.target.value === NEW) { switching.current = true; setDraft(""); setTyping(true); return; }
+        onChange(e.target.value);
+        onDone?.();
+      }}
+      onKeyDown={(e) => { if (e.key === "Escape") onDone?.(); }}
+      onBlur={() => { if (!switching.current) onDone?.(); }}
+      className={className}>
+      <option value="">No category</option>
+      {options.map((o) => <option key={o} value={o}>{o}</option>)}
+      <option value={NEW}>+ New category…</option>
+    </select>
+  );
+}
+
 const fmtDue = (iso: string | null) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }) : null);
 const isOverdue = (iso: string | null, status: string) => Boolean(iso && status !== "complete" && iso < new Date().toISOString().slice(0, 10));
 
@@ -40,6 +97,11 @@ export function TaskPlanner({ tasks: initial }: { tasks: TaskRow[] }) {
   const [dragId, setDragId] = useState<string | null>(null);
   const [overCol, setOverCol] = useState<TaskRow["status"] | null>(null);
   const [editingDate, setEditingDate] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState<string | null>(null);
+  const [titleDraft, setTitleDraft] = useState("");
+  const [editingCategory, setEditingCategory] = useState<string | null>(null);
+  const [pickerKey, setPickerKey] = useState(0);
+  const categories = usedCategories(tasks);
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("");
   const [priority, setPriority] = useState("medium");
@@ -68,9 +130,27 @@ export function TaskPlanner({ tasks: initial }: { tasks: TaskRow[] }) {
     run(() => updateTaskAction(id, { dueDate }));
   };
 
+  const startTitle = (t: TaskRow) => { setEditingTitle(t.id); setTitleDraft(t.title); };
+  const saveTitle = (id: string) => {
+    const next = titleDraft.replace(/\s+/g, " ").trim();
+    setEditingTitle(null);
+    const t = tasks.find((x) => x.id === id);
+    if (!t || !next || next === t.title) return;
+    setTasks((list) => list.map((x) => (x.id === id ? { ...x, title: next } : x)));
+    run(() => updateTaskAction(id, { title: next }));
+  };
+
+  const setCategoryOf = (id: string, category: string) => {
+    const t = tasks.find((x) => x.id === id);
+    const next = category.trim() || null;
+    if (!t || (t.category ?? null) === next) return;
+    setTasks((list) => list.map((x) => (x.id === id ? { ...x, category: next } : x)));
+    run(() => updateTaskAction(id, { category: next }));
+  };
+
   const add = () => {
     if (!title.trim()) { setErr("Enter a task"); return; }
-    run(() => createTaskAction({ title, category, priority, dueDate }), () => { setTitle(""); setCategory(""); setDueDate(""); setPriority("medium"); });
+    run(() => createTaskAction({ title, category, priority, dueDate }), () => { setTitle(""); setCategory(""); setDueDate(""); setPriority("medium"); setPickerKey((k) => k + 1); });
   };
 
   const sortTasks = (list: TaskRow[]) =>
@@ -84,7 +164,7 @@ export function TaskPlanner({ tasks: initial }: { tasks: TaskRow[] }) {
       <div className="mb-6 rounded-card border border-slate-200 bg-white p-4">
         <div className="grid gap-2 sm:grid-cols-[1fr_10rem_9rem_9rem_auto]">
           <input value={title} onChange={(e) => setTitle(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") add(); }} placeholder="New task…" className={field} />
-          <input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Category" className={field} />
+          <CategoryPicker key={pickerKey} value={category} options={categories} onChange={setCategory} className={field} />
           <select value={priority} onChange={(e) => setPriority(e.target.value)} className={field}>
             <option value="urgent">Urgent</option>
             <option value="high">High</option>
@@ -98,7 +178,7 @@ export function TaskPlanner({ tasks: initial }: { tasks: TaskRow[] }) {
       </div>
 
       {/* Board */}
-      <p className="mb-2 text-xs text-slate-400">Drag a card to another column, or use its buttons. Click a date to change it.</p>
+      <p className="mb-2 text-xs text-slate-400">Drag a card to another column, or use its buttons. Click a title, category or date to change it.</p>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {COLUMNS.map((col) => {
           const list = sortTasks(tasks.filter((t) => t.status === col.key));
@@ -118,18 +198,37 @@ export function TaskPlanner({ tasks: initial }: { tasks: TaskRow[] }) {
                 {list.length === 0 ? <p className="px-1 py-4 text-center text-xs text-slate-400">Nothing here.</p> : list.map((t) => (
                   <div
                     key={t.id}
-                    draggable
+                    draggable={editingTitle !== t.id && editingCategory !== t.id}
                     onDragStart={(e) => { e.dataTransfer.setData("text/plain", t.id); e.dataTransfer.effectAllowed = "move"; setDragId(t.id); }}
                     onDragEnd={() => { setDragId(null); setOverCol(null); }}
                     className={`cursor-grab rounded-lg border border-slate-200 bg-white p-3 active:cursor-grabbing ${t.status === "complete" ? "opacity-70" : ""} ${dragId === t.id ? "opacity-40" : ""}`}
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <p className={`text-sm font-medium text-navy ${t.status === "complete" ? "line-through" : ""}`}>{t.title}</p>
+                      {editingTitle === t.id ? (
+                        <input
+                          autoFocus
+                          value={titleDraft}
+                          maxLength={200}
+                          aria-label="Task title"
+                          onChange={(e) => setTitleDraft(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); saveTitle(t.id); } if (e.key === "Escape") setEditingTitle(null); }}
+                          onBlur={() => saveTitle(t.id)}
+                          className="min-w-0 flex-1 rounded border border-teal px-1.5 py-0.5 text-sm font-medium text-navy outline-none"
+                        />
+                      ) : (
+                        <button type="button" onClick={() => startTitle(t)} title="Edit the title" className={`min-w-0 flex-1 cursor-text rounded text-left text-sm font-medium text-navy hover:bg-slate-50 ${t.status === "complete" ? "line-through" : ""}`}>{t.title}</button>
+                      )}
                       <button onClick={() => run(() => deleteTaskAction(t.id))} disabled={pending} title="Delete" className="text-slate-300 hover:text-port">✕</button>
                     </div>
                     <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                       <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${PRIORITY[t.priority]?.cls}`}>{PRIORITY[t.priority]?.label}</span>
-                      {t.category ? <span className="rounded bg-navy/5 px-1.5 py-0.5 text-[10px] font-medium text-navy/70">{t.category}</span> : null}
+                      {editingCategory === t.id ? (
+                        <CategoryPicker value={t.category ?? ""} options={categories} onChange={(v) => setCategoryOf(t.id, v)} onDone={() => setEditingCategory(null)} className="rounded border border-slate-300 px-1 py-0.5 text-[11px] outline-none focus:border-teal" />
+                      ) : t.category ? (
+                        <button type="button" onClick={() => setEditingCategory(t.id)} title="Change the category" className="rounded bg-navy/5 px-1.5 py-0.5 text-[10px] font-medium text-navy/70 hover:ring-1 hover:ring-teal/40">{t.category}</button>
+                      ) : (
+                        <button type="button" onClick={() => setEditingCategory(t.id)} className="rounded border border-dashed border-slate-300 px-1.5 py-0.5 text-[10px] font-medium text-slate-400 hover:border-teal hover:text-teal">+ category</button>
+                      )}
                       {editingDate === t.id ? (
                         <span className="inline-flex items-center gap-1">
                           <input
