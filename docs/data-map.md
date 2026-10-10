@@ -47,7 +47,7 @@ retired on 10 October 2026: hours are the centre's to manage.
 | `security_event`, `trusted_device` | Logins, failures, new devices (IP, country, user agent) | Every signed-in person | Legitimate interests (security) | 12 months |
 | `push_token` | Mobile push tokens | Instructors using the app | Contract | Until the app signs out |
 | `lead` | Marketing-site enquiries (email, centre, message) | Prospective customers | Legitimate interests / consent | 24 months |
-| `marketing_prospect`, `outreach_*` | Business contacts at centres and clubs, outreach history, do-not-email list | Business contacts (B2B) | Legitimate interests (B2B marketing); suppression list kept indefinitely | 24 months since last contact; suppression forever |
+| `marketing_prospect`, `outreach_*` | Business contacts at centres and clubs, outreach history, do-not-email list; since 10 Oct 2026 also LinkedIn company pages and the names, roles and public LinkedIn profile links of club officers (found on the club's own website, or added by hand) | Business contacts (B2B) | Legitimate interests (B2B marketing); suppression list kept indefinitely | 24 months since last contact; suppression forever |
 | `ai_usage` | Token counts and cost per Claude call | – | – | 24 months |
 | `error_report` | Error messages with emails scrubbed, reporter's account id | Users who report | Legitimate interests | 12 months |
 | `privacy_request` | Data requests and complaints from the public form | Requesters | Legal obligation | 3 years after closure |

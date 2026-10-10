@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, inArray, lt, lte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, getTableColumns, gte, inArray, lt, lte, sql } from "drizzle-orm";
 import type { Database } from "@/lib/db/client";
 import { inList, rowsPerInsert } from "@/lib/db/params";
 import {
@@ -178,14 +178,13 @@ export class PlatformRepository {
 
   /**
    * Bulk-insert prospects, chunked to stay under Cloudflare D1's hard limit of
-   * 100 bound parameters per query. Each row binds ~17 parameters (14 supplied
-   * columns + the id/created_at/updated_at generated defaults), so a batch of 5
-   * rows (~85 params) is safely inside the ceiling. Without chunking a large
-   * paste (e.g. the 400-row RYA directory) would exceed the cap and fail.
+   * 100 bound parameters per query. A row can bind one parameter per column, so
+   * the batch size follows the column count (3 rows at 27 columns): adding a
+   * column with a default once pushed a fixed batch of 5 over the limit.
    */
   async insertProspects(rows: Omit<NewMarketingProspect, "id" | "createdAt" | "updatedAt">[]): Promise<number> {
     if (rows.length === 0) return 0;
-    const CHUNK = 5;
+    const CHUNK = Math.max(1, Math.floor(100 / Object.keys(getTableColumns(marketingProspect)).length));
     let total = 0;
     for (let i = 0; i < rows.length; i += CHUNK) {
       const batch = rows.slice(i, i + CHUNK);

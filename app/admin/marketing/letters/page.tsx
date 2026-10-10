@@ -28,7 +28,7 @@ export default async function LettersBatchPage({ searchParams }: { searchParams:
       <div className="no-print mx-auto mb-4 flex max-w-[210mm] items-center justify-between gap-3 px-2">
         <div>
           <p className="text-sm font-semibold text-navy">{prospects.length} letter{prospects.length === 1 ? "" : "s"} ready</p>
-          <p className="text-xs text-slate-500">One A4 sheet each, addresses positioned for a DL/C5 window envelope. The print dialog opens automatically — choose “Save as PDF”. These centres are now marked <strong>Letter sent</strong>. <Link href="/admin/marketing" className="font-medium text-teal hover:underline">Back to marketing</Link></p>
+          <p className="text-xs text-slate-500">One A4 sheet each, addresses positioned for a DL/C5 window envelope. The print dialog opens automatically — choose “Save as PDF”. These centres are now marked <strong>Ready to send</strong>; tick <strong>Letter sent</strong> once they are posted. <Link href="/admin/marketing" className="font-medium text-teal hover:underline">Back to marketing</Link></p>
         </div>
         <PrintButton label="Print / save as PDF" downloadName={name} />
       </div>

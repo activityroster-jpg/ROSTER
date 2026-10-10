@@ -13,10 +13,9 @@ export interface PipelineTile {
   stage: PipelineStage;
   engaged: boolean;
   hasEmail: boolean;
-  hasLinkedin: boolean;
 }
 
-/** Tiles shown per column before "Show more": a couple of thousand centres sit in "No letter sent". */
+/** Tiles shown per column before "Show more": a couple of thousand centres sit in "No action". */
 const CHUNK = 60;
 
 export function ProspectPipeline({ tiles: initial }: { tiles: PipelineTile[] }) {
@@ -28,13 +27,13 @@ export function ProspectPipeline({ tiles: initial }: { tiles: PipelineTile[] }) 
   const [dragId, setDragId] = useState<string | null>(null);
   const [overCol, setOverCol] = useState<PipelineStage | null>(null);
   const [query, setQuery] = useState("");
-  const [shown, setShown] = useState<Record<PipelineStage, number>>({ rejected: CHUNK, none: CHUNK, letter: CHUNK, linkedin: CHUNK, signed_up: CHUNK });
+  const [shown, setShown] = useState<Record<PipelineStage, number>>(() => Object.fromEntries(PIPELINE_STAGES.map((s) => [s, CHUNK])) as Record<PipelineStage, number>);
   const [err, setErr] = useState<string | null>(null);
 
   const q = query.trim().toLowerCase();
   const visible = useMemo(() => (q ? tiles.filter((t) => `${t.name} ${t.region} ${t.city}`.toLowerCase().includes(q)) : tiles), [tiles, q]);
   const byStage = useMemo(() => {
-    const m: Record<PipelineStage, PipelineTile[]> = { rejected: [], none: [], letter: [], linkedin: [], signed_up: [] };
+    const m = Object.fromEntries(PIPELINE_STAGES.map((s) => [s, [] as PipelineTile[]])) as Record<PipelineStage, PipelineTile[]>;
     for (const t of visible) m[t.stage].push(t);
     for (const s of PIPELINE_STAGES) m[s].sort((a, b) => Number(b.engaged) - Number(a.engaged) || a.name.localeCompare(b.name, "en", { sensitivity: "base" }));
     return m;
@@ -71,7 +70,7 @@ export function ProspectPipeline({ tiles: initial }: { tiles: PipelineTile[] }) 
         {err ? <span className="text-xs text-port">{err}</span> : null}
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-7">
         {PIPELINE_STAGES.map((stage) => {
           const list = byStage[stage];
           const n = shown[stage];

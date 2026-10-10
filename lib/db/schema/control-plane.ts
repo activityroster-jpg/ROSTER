@@ -349,8 +349,16 @@ export const PROSPECT_STATUSES = [
   "called",
   "purchased",
   "rejected",
+  // The outreach tickboxes (10 Oct 2026): printed and waiting to post, then what was posted.
+  "ready_to_send",
+  "flyer_sent",
+  "booklet_sent",
 ] as const;
 export type ProspectStatus = (typeof PROSPECT_STATUSES)[number];
+
+/** The LinkedIn tab's tracker for a prospect (kept apart from the postal statuses). */
+export const LINKEDIN_STATUSES = ["not_contacted", "no_response", "responded", "rejected"] as const;
+export type LinkedinStatus = (typeof LINKEDIN_STATUSES)[number];
 
 /**
  * A prospective centre/club for the platform owner's marketing outreach — a
@@ -388,6 +396,12 @@ export const marketingProspect = sqliteTable("marketing_prospect", {
   soleTrader: boolCol("sole_trader").default(false),
   /** When they first showed interest (replied, met, asked for more): the orange "engaged" vibe. */
   engagedAt: integer("engaged_at", { mode: "timestamp_ms" }),
+  /** LinkedIn tab: where contact stands, the people found (JSON [{name, role, url}]) and when the finder last read their website. */
+  linkedinStatus: text("linkedin_status", { enum: LINKEDIN_STATUSES }).notNull().default("not_contacted"),
+  linkedinContacts: text("linkedin_contacts"),
+  linkedinCheckedAt: integer("linkedin_checked_at", { mode: "timestamp_ms" }),
+  /** Top 250 by hand: true keeps them in, false keeps them out, null follows the size estimate (lib/marketing topRanks). */
+  topPick: integer("top_pick", { mode: "boolean" }),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 }, (t) => [

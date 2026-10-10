@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Pipeline · Prospects" };
 
 /**
- * The outreach pipeline as a board: five columns, every centre a tile. Moving
+ * The outreach pipeline as a board: a column per furthest tick, every centre a tile. Moving
  * a tile changes the same stage the Prospects list shows in its Status column.
  */
 export default async function ProspectPipelinePage() {
@@ -25,7 +25,6 @@ export default async function ProspectPipelinePage() {
       stage: stageOf(statuses),
       engaged: Boolean(p.engagedAt),
       hasEmail: Boolean(p.email),
-      hasLinkedin: Boolean(p.linkedinUrl),
     };
   });
 

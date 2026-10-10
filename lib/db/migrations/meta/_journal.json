@@ -547,6 +547,20 @@
       "when": 1791627245605,
       "tag": "0077_onboarding_tracker",
       "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "6",
+      "when": 1791629404832,
+      "tag": "0078_prospect_linkedin_top",
+      "breakpoints": true
+    },
+    {
+      "idx": 79,
+      "version": "6",
+      "when": 1791629434918,
+      "tag": "0079_prospect_status_update_20261010",
+      "breakpoints": true
     }
   ]
 }

@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { requirePlatformAdmin } from "@/lib/platform/admin";
 import { getDb } from "@/lib/cf/bindings";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
-import { parseProspectStatuses, stageOf } from "@/lib/marketing";
+import { LINKEDIN_META, parseProspectStatuses, stageOf } from "@/lib/marketing";
 import { ProspectDetail, type InteractionRow, type ProspectDetailData } from "@/components/admin/ProspectDetail";
 
 export const dynamic = "force-dynamic";
@@ -40,7 +40,7 @@ export default async function ProspectPage({ params }: { params: Promise<{ id: s
     country: p.country ?? "United Kingdom",
     email: p.email ?? "",
     website: p.website ?? "",
-    linkedinUrl: p.linkedinUrl ?? "",
+    linkedinLabel: LINKEDIN_META[p.linkedinStatus ?? "not_contacted"].label,
     contactName: p.contactName ?? "",
     contactRole: p.contactRole ?? "",
     notes: p.notes ?? "",

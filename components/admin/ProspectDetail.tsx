@@ -4,8 +4,6 @@ import { askConfirm } from "@/lib/ui/ask-confirm";
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
-  PIPELINE_META,
-  PIPELINE_STAGES,
   PROSPECT_STATUS_META,
   VIBE_META,
   addressComplete,
@@ -14,12 +12,12 @@ import {
   type PipelineStage,
 } from "@/lib/marketing";
 import type { ProspectInteractionKind, ProspectStatus } from "@/lib/db/schema";
+import { StatusTicks } from "@/components/admin/StatusTicks";
 import {
   addInteractionAction,
   deleteInteractionAction,
   setEngagedAction,
   setProspectBasisAction,
-  setProspectStageAction,
   updateProspectAction,
 } from "@/app/admin/marketing/actions";
 
@@ -34,7 +32,8 @@ export interface ProspectDetailData {
   country: string;
   email: string;
   website: string;
-  linkedinUrl: string;
+  /** LinkedIn tab tracker label, e.g. "Contacted, no response". */
+  linkedinLabel: string;
   contactName: string;
   contactRole: string;
   notes: string;
@@ -63,8 +62,8 @@ const KIND_META: Record<ProspectInteractionKind, { label: string; icon: string; 
   letter_sent: { label: "Letter sent", icon: "✉", effect: "ticks Letter sent" },
   email_out: { label: "Email sent", icon: "📧", effect: "ticks Email sent" },
   email_in: { label: "Email received", icon: "📨", effect: "marks them engaged" },
-  linkedin_out: { label: "LinkedIn message sent", icon: "in", effect: "ticks LinkedIn contacted" },
-  linkedin_in: { label: "LinkedIn reply", icon: "in", effect: "marks them engaged" },
+  linkedin_out: { label: "LinkedIn message sent", icon: "in", effect: "sets LinkedIn to Contacted, no response" },
+  linkedin_in: { label: "LinkedIn reply", icon: "in", effect: "sets LinkedIn to Contacted, responded and marks them engaged" },
   call: { label: "Phone call", icon: "📞", effect: "ticks Called" },
   meeting: { label: "Meeting / demo", icon: "🤝", effect: "marks them engaged" },
   note: { label: "Note", icon: "📝" },
@@ -84,7 +83,6 @@ const FIELDS: { key: keyof ProspectDetailData; label: string; wide?: boolean; ty
   { key: "postcode", label: "Postcode" },
   { key: "country", label: "Country" },
   { key: "website", label: "Website" },
-  { key: "linkedinUrl", label: "LinkedIn URL", wide: true },
 ];
 type Draft = Record<(typeof FIELDS)[number]["key"] | "notes", string>;
 const toDraft = (p: ProspectDetailData): Draft => {
@@ -96,7 +94,7 @@ const toDraft = (p: ProspectDetailData): Draft => {
 
 const today = () => new Date().toISOString().slice(0, 10);
 const fmtDay = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
-const fmtWhen = (ms: number) => new Date(ms).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" });
+const fmtWhen = (ms: number) => new Date(ms).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/London" });
 const external = (url: string) => (url.startsWith("http") ? url : `https://${url}`);
 
 export function ProspectDetail({ prospect: p, interactions }: { prospect: ProspectDetailData; interactions: InteractionRow[] }) {
@@ -140,7 +138,7 @@ export function ProspectDetail({ prospect: p, interactions }: { prospect: Prospe
   const complete = addressComplete(p);
   const gmail = () => { const { subject, body } = draftProspectEmail(p, { signature: false }); return `https://mail.google.com/mail/?${new URLSearchParams({ view: "cm", fs: "1", to: p.email, su: subject, body })}`; };
   const mailto = () => { const { subject, body } = draftProspectEmail(p); return `mailto:${encodeURIComponent(p.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`; };
-  const touchpoints = p.statuses.filter((s) => s !== "new");
+  const touchpoints = p.statuses.filter((s) => s === "email_sent" || s === "called" || s === "purchased");
 
   const input = "w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none focus:border-teal";
   const label = "mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500";
@@ -168,21 +166,12 @@ export function ProspectDetail({ prospect: p, interactions }: { prospect: Prospe
             </p>
             <p className="mt-1 text-xs text-slate-400">
               Added {fmtWhen(p.createdAt)} · {p.source.replace(/_/g, " ")}
-              {touchpoints.length ? <> · Touchpoints: {touchpoints.map((s) => PROSPECT_STATUS_META[s].label).join(", ")}</> : null}
+              {touchpoints.length ? <> · Also: {touchpoints.map((s) => PROSPECT_STATUS_META[s].label).join(", ")}</> : null}
+              {" · "}<a href="/admin/marketing/linkedin" className="text-teal hover:underline">LinkedIn: {p.linkedinLabel}</a>
             </p>
           </div>
           <div className="flex flex-col items-end gap-2">
-            <label className="flex items-center gap-2 text-xs font-medium text-slate-500">
-              Stage
-              <select
-                value={p.stage}
-                disabled={pending}
-                onChange={(e) => run(() => setProspectStageAction(p.id, e.target.value as PipelineStage), undefined, (er) => setMsg({ ok: false, text: er }))}
-                className={`rounded-lg border border-transparent px-2 py-1 text-sm font-semibold outline-none hover:border-slate-300 focus:border-teal ${PIPELINE_META[p.stage].chip}`}
-              >
-                {PIPELINE_STAGES.map((s) => <option key={s} value={s}>{PIPELINE_META[s].label}</option>)}
-              </select>
-            </label>
+            <StatusTicks id={p.id} name={p.name} statuses={p.statuses} />
             {p.stage !== "signed_up" && p.stage !== "rejected" ? (
               <button
                 type="button"
@@ -203,7 +192,6 @@ export function ProspectDetail({ prospect: p, interactions }: { prospect: Prospe
           {complete ? <a href={`/admin/marketing/${p.id}/letter`} target="_blank" rel="noreferrer" className={linkBtn}>✉ Letter</a> : <span className={`${linkBtn} cursor-not-allowed text-slate-300`} title="Add street, town and postcode first">✉ Letter (address incomplete)</span>}
           <a href={`/admin/marketing/${p.id}/mockup`} target="_blank" rel="noreferrer" className={linkBtn}>📄 Mock-up PDF</a>
           {p.website ? <a href={external(p.website)} target="_blank" rel="noreferrer" className={linkBtn}>Website ↗</a> : null}
-          {p.linkedinUrl ? <a href={external(p.linkedinUrl)} target="_blank" rel="noreferrer" className={linkBtn}>LinkedIn ↗</a> : null}
         </div>
         <p className="mt-2 text-[11px] text-slate-400">
           Gmail drafts leave the signature off so it is not doubled: set the logo signature once in Gmail (Settings → See all settings → Signature → insert image → paste <span className="font-mono">https://activityroster.com/brand/email-signature.png</span>) and Gmail adds it to every email. The mail-app draft carries the text version.

@@ -12,7 +12,7 @@ import {
   seedSampleProspectsAction,
   type ProspectResult,
 } from "@/app/admin/marketing/actions";
-import { PROSPECT_STATUS_META, PROSPECT_STATUS_ORDER } from "@/lib/marketing";
+import { OUTREACH_TICKS, PROSPECT_STATUS_META } from "@/lib/marketing";
 
 const initial: ProspectResult = { ok: false };
 
@@ -27,7 +27,6 @@ const FIELDS: { name: string; label: string; wide?: boolean }[] = [
   { name: "city", label: "City / town" },
   { name: "postcode", label: "Postcode" },
   { name: "website", label: "Website" },
-  { name: "linkedinUrl", label: "LinkedIn URL", wide: true },
 ];
 
 export function ProspectTools({ hasRows }: { hasRows: boolean }) {
@@ -127,7 +126,7 @@ export function ProspectTools({ hasRows }: { hasRows: boolean }) {
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <label className="text-sm text-slate-600">Status
               <select value={bulkStatus} onChange={(e) => setBulkStatus(e.target.value)} className="ml-2 rounded-lg border border-slate-300 px-2 py-1.5 text-sm">
-                {PROSPECT_STATUS_ORDER.filter((s) => s !== "new").map((s) => <option key={s} value={s}>{PROSPECT_STATUS_META[s].label}</option>)}
+                {OUTREACH_TICKS.map((s) => <option key={s} value={s}>{PROSPECT_STATUS_META[s].label}</option>)}
               </select>
             </label>
             <button onClick={() => doBulk("remove")} disabled={pending || !bulkText.trim()} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-navy hover:bg-slate-50 disabled:opacity-50">{pending ? "Working…" : "Mark as NOT done (remove status)"}</button>

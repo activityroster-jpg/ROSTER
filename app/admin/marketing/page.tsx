@@ -5,7 +5,7 @@ import { Card } from "@/components/ui";
 import { ProspectsTable, type ProspectRow } from "@/components/admin/ProspectsTable";
 import { ProspectTools } from "@/components/admin/ProspectTools";
 import Link from "next/link";
-import { PIPELINE_META, PIPELINE_STAGES, parseProspectStatuses, stageOf } from "@/lib/marketing";
+import { PIPELINE_META, PIPELINE_STAGES, letterPrinted, parseProspectStatuses, stageOf, topRanks } from "@/lib/marketing";
 import { addressComplete } from "@/lib/marketing";
 
 export const dynamic = "force-dynamic";
@@ -14,8 +14,10 @@ export const dynamic = "force-dynamic";
 const STRIP: Record<string, string> = {
   rejected: "border-l-port",
   none: "border-l-slate-300",
+  ready: "border-l-slate-500",
   letter: "border-l-amber",
-  linkedin: "border-l-teal",
+  flyer: "border-l-amber",
+  booklet: "border-l-teal",
   signed_up: "border-l-starboard",
 };
 
@@ -29,6 +31,7 @@ export default async function AdminMarketingPage() {
   const platform = new PlatformRepository(await getDb());
   const prospects = await platform.listProspects(10_000, 0);
   const total = prospects.length;
+  const ranks = topRanks(prospects);
 
   const rows: ProspectRow[] = prospects.map((p) => {
     const statuses = parseProspectStatuses(p.statuses, p.status);
@@ -41,11 +44,12 @@ export default async function AdminMarketingPage() {
     postcode: p.postcode ?? "",
     email: p.email ?? "",
     website: p.website ?? "",
-    linkedinUrl: p.linkedinUrl ?? "",
     contactName: p.contactName ?? "",
     contactRole: p.contactRole ?? "",
     statuses,
     stage: stageOf(statuses),
+    topRank: ranks.get(p.id) ?? null,
+    topPick: p.topPick ?? null,
     engaged: Boolean(p.engagedAt),
     source: p.source,
     soleTrader: Boolean(p.soleTrader),
@@ -55,7 +59,8 @@ export default async function AdminMarketingPage() {
   });
 
   const counts = PIPELINE_STAGES.map((s) => ({ s, n: rows.filter((r) => r.stage === s).length }));
-  const contacted = rows.filter((r) => r.statuses.some((s) => s === "letter_sent" || s === "email_sent" || s === "linkedin_contacted" || s === "called")).length;
+  const contacted = rows.filter((r) => r.statuses.some((s) => s === "letter_sent" || s === "flyer_sent" || s === "booklet_sent" || s === "email_sent" || s === "called")).length;
+  const topUnprinted = rows.filter((r) => r.topRank !== null && !letterPrinted(r.statuses) && !r.statuses.includes("rejected")).length;
   const engaged = rows.filter((r) => r.engaged && r.stage !== "signed_up" && r.stage !== "rejected").length;
   const signedUp = rows.filter((r) => r.stage === "signed_up").length;
   const incomplete = rows.filter((r) => !addressComplete(r)).length;
@@ -77,24 +82,26 @@ export default async function AdminMarketingPage() {
             <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-white/60">Outreach CRM</p>
             <h1 className="font-display text-2xl font-bold">Marketing outreach</h1>
             <p className="mt-2 text-sm text-white/80">
-              Your prospect list of RYA centres &amp; clubs — track every touchpoint, generate window-envelope letters,
-              draft emails and LinkedIn messages, and filter any column. Click a centre to open its page and log what happened.
+              Your prospect list of RYA centres &amp; clubs: tick what has gone out (several can apply), print window-envelope
+              letters, draft emails, and filter any column. Click a centre to open its page and log what happened. LinkedIn has its own tab.
             </p>
-            <Link href="/admin/marketing/pipeline" className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-white/15 px-3 py-1.5 text-sm font-semibold text-white ring-1 ring-white/25 hover:bg-white/25">
-              Open the pipeline board →
-            </Link>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Link href="/admin/marketing/pipeline" className="inline-flex items-center gap-1.5 rounded-lg bg-white/15 px-3 py-1.5 text-sm font-semibold text-white ring-1 ring-white/25 hover:bg-white/25">Open the pipeline board →</Link>
+              <Link href="/admin/marketing/linkedin" className="inline-flex items-center gap-1.5 rounded-lg bg-white/15 px-3 py-1.5 text-sm font-semibold text-white ring-1 ring-white/25 hover:bg-white/25">LinkedIn tab →</Link>
+            </div>
           </div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
             {kpi("Prospects", total)}
             {kpi("Contacted", contacted)}
+            {kpi("Top 250 to print", topUnprinted, "letter not printed")}
             {kpi("Engaged", engaged, "orange vibe")}
             {kpi("Signed up", signedUp)}
           </div>
         </div>
       </div>
 
-      {/* Pipeline strip: the five stages, in board order */}
-      <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-5">
+      {/* Pipeline strip: the board's columns, in board order */}
+      <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
         {counts.map(({ s, n }) => (
           <Link key={s} href={`/admin/marketing/pipeline#${s}`} className={`rounded-lg border border-slate-200 border-l-4 bg-white px-3 py-2 shadow-sm hover:border-teal ${STRIP[s]}`} title="Open this column on the board">
             <p className="text-[11px] font-medium text-slate-500">{PIPELINE_META[s].label}</p>

@@ -5,8 +5,9 @@ import { requirePlatformAdmin } from "@/lib/platform/admin";
 import { getDb } from "@/lib/cf/bindings";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { z } from "zod";
-import { PROSPECT_INTERACTION_KINDS, PROSPECT_STATUSES, type NewMarketingProspect, type ProspectStatus } from "@/lib/db/schema";
-import { PIPELINE_META, PIPELINE_STAGES, primaryProspectStatus, stageOf, statusesForStage, type PipelineStage } from "@/lib/marketing";
+import { LINKEDIN_STATUSES, PROSPECT_INTERACTION_KINDS, PROSPECT_STATUSES, type NewMarketingProspect, type ProspectStatus } from "@/lib/db/schema";
+import { OUTREACH_TICKS, PIPELINE_META, PIPELINE_STAGES, PROSPECT_STATUS_META, letterPrinted, parseLinkedinContacts, primaryProspectStatus, stageOf, statusesForStage, toggleOutreach, topRanks, type OutreachTick, type PipelineStage } from "@/lib/marketing";
+import { runLinkedinFinder } from "@/lib/marketing/linkedin-finder";
 import { parseCsv } from "@/lib/import/parse";
 import { addressComplete, parseProspectStatuses, primaryProspectStatus as primaryOf } from "@/lib/marketing";
 import RYA_DIRECTORY from "@/lib/marketing/rya-directory.json";
@@ -87,7 +88,36 @@ export async function setProspectStatusesAction(id: string, statuses: string[]):
 }
 
 /**
- * Move a prospect to one of the five pipeline stages: the Status dropdown on
+ * Tick or untick one outreach box on the Prospects list (null = "No action",
+ * which clears the postal ticks). The change is written to the prospect's log.
+ */
+export async function setProspectTickAction(id: string, tick: string | null, on: boolean): Promise<ProspectResult> {
+  const { repo, email } = await platformAs();
+  if (tick !== null && !(OUTREACH_TICKS as readonly string[]).includes(tick)) return { ok: false, error: "Unknown status" };
+  const p = await repo.prospectById(id);
+  if (!p) return { ok: false, error: "Not found" };
+  const current = parseProspectStatuses(p.statuses, p.status);
+  const next = toggleOutreach(current, tick as OutreachTick | null, Boolean(on));
+  if (JSON.stringify([...next].sort()) === JSON.stringify([...current].sort())) return { ok: true };
+  await repo.setProspectStatuses(id, next, primaryProspectStatus(next));
+  const label = tick === null ? "No action" : PROSPECT_STATUS_META[tick as OutreachTick].label;
+  await repo.addInteraction({ prospectId: id, kind: "stage", occurredOn: today(), summary: tick === null ? "Marked No action" : `${on ? "Ticked" : "Unticked"} ${label}`, author: email });
+  revalidateProspects(id);
+  return { ok: true };
+}
+
+/** Keep a centre in (true) or out of (false) the top 250 by hand; null follows the size estimate. */
+export async function setTopPickAction(id: string, pick: boolean | null): Promise<ProspectResult> {
+  const repo = await platform();
+  const updated = await repo.updateProspect(id, { topPick: pick === null ? null : Boolean(pick) });
+  if (!updated) return { ok: false, error: "Not found" };
+  revalidateProspects(id);
+  revalidatePath("/admin/marketing/linkedin");
+  return { ok: true };
+}
+
+/**
+ * Move a prospect to one of the board's columns: the Status dropdown on
  * the list and a drag on the board both land here, so the two always agree.
  * The move is written to the prospect's log.
  */
@@ -161,7 +191,6 @@ const InteractionInput = z.object({
 const TOUCHPOINT_FOR: Partial<Record<(typeof PROSPECT_INTERACTION_KINDS)[number], ProspectStatus>> = {
   letter_sent: "letter_sent",
   email_out: "email_sent",
-  linkedin_out: "linkedin_contacted",
   call: "called",
 };
 const ENGAGING = new Set<(typeof PROSPECT_INTERACTION_KINDS)[number]>(["email_in", "linkedin_in", "meeting"]);
@@ -183,11 +212,14 @@ export async function addInteractionAction(prospectId: string, input: unknown): 
   if (touch) {
     const current = parseProspectStatuses(p.statuses, p.status);
     if (!current.includes(touch) && !current.includes("purchased") && !current.includes("rejected")) {
-      const next = Array.from(new Set([...current.filter((s) => s !== "new"), touch]));
+      const next = Array.from(new Set([...current, touch]));
       await repo.setProspectStatuses(prospectId, next, primaryProspectStatus(next));
     }
   }
   if (ENGAGING.has(kind) && !p.engagedAt) await repo.updateProspect(prospectId, { engagedAt: new Date() });
+  // LinkedIn messages move the LinkedIn tab's tracker instead of a postal tick.
+  if (kind === "linkedin_out" && p.linkedinStatus === "not_contacted") await repo.updateProspect(prospectId, { linkedinStatus: "no_response" });
+  if (kind === "linkedin_in" && p.linkedinStatus !== "rejected") await repo.updateProspect(prospectId, { linkedinStatus: "responded" });
   revalidateProspects(prospectId);
   return { ok: true };
 }
@@ -347,31 +379,105 @@ export async function loadRyaDirectoryAction(): Promise<ProspectResult> {
 }
 
 /**
- * Pick the next N prospects that have a complete postal address and no letter
- * yet, mark them "letter sent" NOW (so the batch is reserved), and return their
- * ids for the printable batch page.
+ * Pick the next N prospects with a complete postal address whose letter has not
+ * been printed (not Ready to send or Letter sent, not rejected), optionally
+ * only from the top 250 (biggest first). They are marked Ready to send NOW, so
+ * the batch is reserved; tick Letter sent once they are posted.
  */
-export async function prepareNextLettersAction(count = 10): Promise<{ ok: boolean; ids?: string[]; error?: string }> {
+export async function prepareNextLettersAction(count = 10, opts: { top250?: boolean } = {}): Promise<{ ok: boolean; ids?: string[]; error?: string }> {
   const { repo, email } = await platformAs();
   const n = Math.max(1, Math.min(50, Math.round(Number(count) || 10)));
   const all = await repo.listProspects(10_000, 0);
-  // Centres that already had a letter — by row AND by name, so a duplicate row
-  // for the same centre (e.g. imported twice) is never lettered a second time.
+  const ranks = topRanks(all);
+  // Centres already printed — by row AND by name, so a duplicate row for the
+  // same centre (e.g. imported twice) is never lettered a second time.
   const norm = (v: string) => v.trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
-  const letteredNames = new Set(all.filter((p) => parseProspectStatuses(p.statuses, p.status).includes("letter_sent")).map((p) => norm(p.name)));
+  const printedNames = new Set(all.filter((p) => letterPrinted(parseProspectStatuses(p.statuses, p.status))).map((p) => norm(p.name)));
   const next = all
+    .filter((p) => !opts.top250 || ranks.has(p.id))
     .filter((p) => addressComplete({ addressLine1: p.addressLine1 ?? "", city: p.city ?? "", postcode: p.postcode ?? "" }))
-    .filter((p) => !parseProspectStatuses(p.statuses, p.status).includes("letter_sent") && !letteredNames.has(norm(p.name)))
-    .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime() || a.name.localeCompare(b.name))
+    .filter((p) => { const st = parseProspectStatuses(p.statuses, p.status); return !letterPrinted(st) && !st.includes("rejected") && !st.includes("purchased") && !printedNames.has(norm(p.name)); })
+    .sort((a, b) => (opts.top250 ? (ranks.get(a.id) ?? 1e6) - (ranks.get(b.id) ?? 1e6) : 0) || a.createdAt.getTime() - b.createdAt.getTime() || a.name.localeCompare(b.name))
     .slice(0, n);
-  if (next.length === 0) return { ok: false, error: "Everyone with a complete address already has a letter marked as sent." };
+  if (next.length === 0) return { ok: false, error: opts.top250 ? "Every top-250 centre with a complete address has had its letter printed." : "Everyone with a complete address has had a letter printed." };
   for (const p of next) {
-    const statuses = Array.from(new Set([...parseProspectStatuses(p.statuses, p.status), "letter_sent" as const]));
+    const statuses = toggleOutreach(parseProspectStatuses(p.statuses, p.status), "ready_to_send", true);
     await repo.setProspectStatuses(p.id, statuses, primaryOf(statuses));
   }
-  await repo.addInteractions(next.map((p) => ({ prospectId: p.id, kind: "letter_sent" as const, occurredOn: today(), summary: "Letter prepared in a batch of next letters", author: email })));
+  await repo.addInteractions(next.map((p) => ({ prospectId: p.id, kind: "stage" as const, occurredOn: today(), summary: "Letter printed in a batch: Ready to send", author: email })));
   revalidateProspects();
   return { ok: true, ids: next.map((p) => p.id) };
+}
+
+// --- LinkedIn tab --------------------------------------------------------------
+
+const urlText = z.string().trim().max(300).refine((v) => v === "" || /^(https?:\/\/)?([a-z]{2,3}\.)?linkedin\.com\//i.test(v), "Use a linkedin.com address");
+const ContactInput = z.object({ name: z.string().trim().max(120), role: z.string().trim().max(120), url: urlText }).refine((c) => c.name || c.url, "Give a name or a LinkedIn link");
+const withScheme = (v: string) => (v && !/^https?:\/\//i.test(v) ? `https://${v}` : v);
+
+function revalidateLinkedin(id?: string) {
+  revalidatePath("/admin/marketing/linkedin");
+  if (id) revalidatePath(`/admin/marketing/${id}`);
+}
+
+/** The LinkedIn tracker for one centre. Written to its log. */
+export async function setLinkedinStatusAction(id: string, status: string): Promise<ProspectResult> {
+  const { repo, email } = await platformAs();
+  if (!(LINKEDIN_STATUSES as readonly string[]).includes(status)) return { ok: false, error: "Unknown status" };
+  const p = await repo.prospectById(id);
+  if (!p) return { ok: false, error: "Not found" };
+  if (p.linkedinStatus === status) return { ok: true };
+  await repo.updateProspect(id, { linkedinStatus: status as (typeof LINKEDIN_STATUSES)[number] });
+  await repo.addInteraction({ prospectId: id, kind: "stage", occurredOn: today(), summary: `LinkedIn: ${status.replace(/_/g, " ")}`, author: email });
+  revalidateLinkedin(id);
+  return { ok: true };
+}
+
+/** A centre's LinkedIn company page (empty clears it). */
+export async function setLinkedinPageAction(id: string, url: string): Promise<ProspectResult> {
+  const repo = await platform();
+  const parsed = urlText.safeParse(url ?? "");
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Check the link" };
+  const updated = await repo.updateProspect(id, { linkedinUrl: withScheme(parsed.data) || null });
+  if (!updated) return { ok: false, error: "Not found" };
+  revalidateLinkedin(id);
+  return { ok: true };
+}
+
+/** Add a person found on LinkedIn for a centre (name, role, profile link). */
+export async function addLinkedinContactAction(id: string, input: unknown): Promise<ProspectResult> {
+  const repo = await platform();
+  const parsed = ContactInput.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Check the contact" };
+  const p = await repo.prospectById(id);
+  if (!p) return { ok: false, error: "Not found" };
+  const contacts = parseLinkedinContacts(p.linkedinContacts);
+  if (contacts.length >= 20) return { ok: false, error: "Up to 20 contacts per centre" };
+  contacts.push({ name: parsed.data.name, role: parsed.data.role, url: withScheme(parsed.data.url) });
+  await repo.updateProspect(id, { linkedinContacts: JSON.stringify(contacts) });
+  revalidateLinkedin(id);
+  return { ok: true };
+}
+
+/** Remove one person from a centre's LinkedIn contacts (by position). */
+export async function removeLinkedinContactAction(id: string, index: number): Promise<ProspectResult> {
+  const repo = await platform();
+  const p = await repo.prospectById(id);
+  if (!p) return { ok: false, error: "Not found" };
+  const contacts = parseLinkedinContacts(p.linkedinContacts);
+  if (!Number.isInteger(index) || index < 0 || index >= contacts.length) return { ok: false, error: "Already removed" };
+  contacts.splice(index, 1);
+  await repo.updateProspect(id, { linkedinContacts: contacts.length ? JSON.stringify(contacts) : null });
+  revalidateLinkedin(id);
+  return { ok: true };
+}
+
+/** Run the website finder now for the next few centres (it also runs by itself every hour). */
+export async function findLinkedinNowAction(): Promise<ProspectResult> {
+  const repo = await platform();
+  const r = await runLinkedinFinder(repo, 15);
+  revalidateLinkedin();
+  return { ok: true, count: r.checked, message: r.checked ? `Checked ${r.checked} website${r.checked === 1 ? "" : "s"}: ${r.pages} LinkedIn page${r.pages === 1 ? "" : "s"} and ${r.people} contact${r.people === 1 ? "" : "s"} found. ${r.remaining} still to check.` : "Every centre with a website has been checked." };
 }
 
 /** Lawful basis and sole-trader flag for one prospect (UK GDPR / PECR bookkeeping). */

@@ -4,16 +4,19 @@ import { askConfirm } from "@/lib/ui/ask-confirm";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
-  PIPELINE_META,
-  PIPELINE_STAGES,
+  OUTREACH_TICKS,
+  PROSPECT_STATUS_META,
   VIBE_META,
   addressComplete,
   draftProspectEmail,
+  isNoAction,
+  letterPrinted,
   stageRank,
   vibeOf,
   type PipelineStage,
 } from "@/lib/marketing";
-import { deleteProspectAction, prepareNextLettersAction, setProspectStageAction, setProspectBasisAction } from "@/app/admin/marketing/actions";
+import { deleteProspectAction, prepareNextLettersAction, setProspectBasisAction, setTopPickAction } from "@/app/admin/marketing/actions";
+import { StatusTicks } from "@/components/admin/StatusTicks";
 import type { ProspectStatus } from "@/lib/db/schema";
 
 export interface ProspectRow {
@@ -25,12 +28,15 @@ export interface ProspectRow {
   postcode: string;
   email: string;
   website: string;
-  linkedinUrl: string;
   contactName: string;
   contactRole: string;
   statuses: ProspectStatus[];
-  /** One of the five pipeline stages, worked out from `statuses` (lib/marketing stageOf). */
+  /** The board column, worked out from `statuses` (lib/marketing stageOf): used for sorting and the vibe. */
   stage: PipelineStage;
+  /** 1–250 when among the biggest by the size estimate (or pinned in), else null. */
+  topRank: number | null;
+  /** Pinned in (true) or out (false) of the top 250 by hand; null follows the estimate. */
+  topPick: boolean | null;
   /** They replied, met us or asked for more: the orange vibe. */
   engaged: boolean;
   source: string;
@@ -40,8 +46,8 @@ export interface ProspectRow {
   createdAt: number;
 }
 
-type Filters = { name: string; region: string; email: string; contact: string; status: string };
-const EMPTY: Filters = { name: "", region: "", email: "", contact: "", status: "" };
+type Filters = { name: string; region: string; email: string; contact: string; status: string; top: string };
+const EMPTY: Filters = { name: "", region: "", email: "", contact: "", status: "", top: "" };
 
 type SortKey = "name" | "region" | "email" | "addr" | "vibe" | "status" | "added";
 type Sort = { key: SortKey; dir: "asc" | "desc" };
@@ -68,7 +74,6 @@ const gmailHref = (r: ProspectRow) => {
   const q = new URLSearchParams({ view: "cm", fs: "1", to: r.email, su: subject, body });
   return `https://mail.google.com/mail/?${q.toString()}`;
 };
-const linkedinHref = (url: string) => (url.startsWith("http") ? url : `https://${url}`);
 const cmp = (a: string, b: string) => a.localeCompare(b, "en", { sensitivity: "base" });
 
 /** Order rows by a column. Pure, so it can be unit-tested. */
@@ -88,6 +93,23 @@ export function sortProspects(rows: ProspectRow[], sort: Sort | null): ProspectR
   return [...rows].sort((a, b) => sign * f(a, b));
 }
 
+/** Does a row pass the Status filter? */
+function statusMatch(r: ProspectRow, f: string): boolean {
+  if (!f) return true;
+  if (f === "unprinted") return !letterPrinted(r.statuses) && addressComplete(r) && !r.statuses.includes("rejected");
+  if (f === "engaged") return r.engaged;
+  if (f === "none") return isNoAction(r.statuses);
+  if (f === "signed_up") return r.statuses.includes("purchased");
+  return r.statuses.includes(f as ProspectStatus);
+}
+
+/** Does a row pass the Top 250 filter? */
+function topMatch(r: ProspectRow, f: string): boolean {
+  if (!f) return true;
+  if (r.topRank === null) return false;
+  return f === "top" || (!letterPrinted(r.statuses) && !r.statuses.includes("rejected"));
+}
+
 /**
  * Compact prospect list: one line per centre. Every column filters and sorts
  * across the WHOLE list (the server hands over every prospect); the table pages
@@ -100,10 +122,7 @@ export function sortProspects(rows: ProspectRow[], sort: Sort | null): ProspectR
 export function ProspectsTable({ rows: serverRows }: { rows: ProspectRow[] }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  // A stage change shows at once; the server copy replaces it after the refresh.
-  const [stageOverride, setStageOverride] = useState<Record<string, PipelineStage>>({});
-  useEffect(() => { setStageOverride({}); }, [serverRows]);
-  const rows = useMemo(() => serverRows.map((r) => (stageOverride[r.id] && stageOverride[r.id] !== r.stage ? { ...r, stage: stageOverride[r.id]! } : r)), [serverRows, stageOverride]);
+  const rows = serverRows;
   const [filters, setFilters] = useState<Filters>(EMPTY);
   const [sort, setSort] = useState<Sort | null>(null);
   const [page, setPage] = useState(1);
@@ -121,8 +140,11 @@ export function ProspectsTable({ rows: serverRows }: { rows: ProspectRow[] }) {
       (!filters.region || has(r.region, filters.region)) &&
       (!filters.email || has(r.email, filters.email)) &&
       (!filters.contact || has(`${r.contactName} ${r.contactRole}`, filters.contact)) &&
-      (!filters.status || (filters.status === "unsent" ? !r.statuses.includes("letter_sent") && addressComplete(r) : filters.status === "engaged" ? r.engaged : r.stage === filters.status)),
+      statusMatch(r, filters.status) &&
+      topMatch(r, filters.top),
     );
+    // The top 250 read biggest first unless another sort is chosen.
+    if (!sort && filters.top) return [...kept].sort((a, b) => (a.topRank ?? 1e6) - (b.topRank ?? 1e6));
     return sortProspects(kept, sort);
   }, [rows, filters, sort]);
 
@@ -133,16 +155,9 @@ export function ProspectsTable({ rows: serverRows }: { rows: ProspectRow[] }) {
   const start = (page - 1) * PAGE_SIZE;
   const visible = filtered.slice(start, start + PAGE_SIZE);
 
-  const setStage = (r: ProspectRow, stage: PipelineStage) => {
-    if (stage === r.stage) return;
-    setStageOverride((m) => ({ ...m, [r.id]: stage }));
+  const pin = (r: ProspectRow, pick: boolean | null) => {
     setBusyId(r.id);
-    startTransition(async () => {
-      const res = await setProspectStageAction(r.id, stage);
-      if (!res.ok) { setStageOverride((m) => { const { [r.id]: _dropped, ...rest } = m; return rest; }); setBatchMsg(res.error ?? "Couldn't change the stage"); }
-      router.refresh();
-      setBusyId(null);
-    });
+    startTransition(async () => { await setTopPickAction(r.id, pick); router.refresh(); setBusyId(null); });
   };
 
   const remove = async (id: string, name: string) => {
@@ -151,14 +166,14 @@ export function ProspectsTable({ rows: serverRows }: { rows: ProspectRow[] }) {
     startTransition(async () => { await deleteProspectAction(id); router.refresh(); setBusyId(null); });
   };
 
-  const nextLetters = async () => {
-    if (!await askConfirm("Prepare the next 10 letters? Those centres will be marked “Letter sent” and the batch opens in a new tab to print or save as PDF.")) return;
+  const nextLetters = async (top250: boolean) => {
+    if (!await askConfirm(`Print the next 10 letters${top250 ? " for the top 250 (biggest first)" : ""}? Those centres are marked “Ready to send” and the batch opens in a new tab to print or save as PDF. Tick “Letter sent” once they're posted.`)) return;
     setBatchMsg(null);
     startTransition(async () => {
-      const r = await prepareNextLettersAction(10);
+      const r = await prepareNextLettersAction(10, { top250 });
       if (!r.ok || !r.ids?.length) { setBatchMsg(r.error ?? "Nothing to prepare"); return; }
       window.open(`/admin/marketing/letters?ids=${r.ids.join(",")}`, "_blank", "noopener");
-      setBatchMsg(`${r.ids.length} letter${r.ids.length === 1 ? "" : "s"} prepared and marked as sent.`);
+      setBatchMsg(`${r.ids.length} letter${r.ids.length === 1 ? "" : "s"} ready to print, marked Ready to send.`);
       router.refresh();
     });
   };
@@ -203,8 +218,16 @@ export function ProspectsTable({ rows: serverRows }: { rows: ProspectRow[] }) {
         <div className="flex items-center gap-3">
           {pager}
           {batchMsg ? <span className="text-xs text-slate-500">{batchMsg}</span> : null}
-          <button type="button" onClick={nextLetters} disabled={pending} className="rounded-lg bg-teal px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-700 disabled:opacity-50">
-            ✉ Download next 10 letters
+          <select value={filters.top} onChange={(e) => set("top", e.target.value)} aria-label="Top 250 filter" className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs font-medium text-navy outline-none focus:border-teal">
+            <option value="">All centres</option>
+            <option value="top">Top 250 (biggest)</option>
+            <option value="top-unprinted">Top 250 · letter not printed</option>
+          </select>
+          <button type="button" onClick={() => nextLetters(true)} disabled={pending} className="rounded-lg bg-navy px-3 py-1.5 text-xs font-semibold text-white hover:bg-navy-700 disabled:opacity-50" title="The next 10 of the top 250, biggest first, whose letter hasn't been printed">
+            ✉ Print next 10 · Top 250
+          </button>
+          <button type="button" onClick={() => nextLetters(false)} disabled={pending} className="rounded-lg bg-teal px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-700 disabled:opacity-50">
+            ✉ Print next 10
           </button>
         </div>
       </div>
@@ -226,7 +249,7 @@ export function ProspectsTable({ rows: serverRows }: { rows: ProspectRow[] }) {
               <Th k="email">Email · contact</Th>
               <Th k="addr" title="Postal address complete? Click to sort">Addr</Th>
               <Th k="vibe" title="Red: rejected · Orange: engaged · Green: signed up. Click to sort">Vibe</Th>
-              <Th k="status" title="Click to sort by how far along they are">Status</Th>
+              <Th k="status" title="Tick several if they apply. Click to sort by how far along they are">Status</Th>
               <Th k="added" title="Click to sort by when they were added" align="right">Actions</Th>
             </tr>
             <tr className="bg-white">
@@ -238,9 +261,11 @@ export function ProspectsTable({ rows: serverRows }: { rows: ProspectRow[] }) {
               <th className="px-2 pb-1.5">
                 <select value={filters.status} onChange={(e) => set("status", e.target.value)} className="w-full rounded border border-slate-200 bg-white px-1 py-0.5 text-[11px] outline-none focus:border-teal">
                   <option value="">All</option>
-                  <option value="unsent">No letter yet (address ok)</option>
+                  <option value="none">No action</option>
+                  {OUTREACH_TICKS.map((t) => <option key={t} value={t}>{PROSPECT_STATUS_META[t].label}</option>)}
+                  <option value="signed_up">Signed up</option>
+                  <option value="unprinted">Letter not printed (address ok)</option>
                   <option value="engaged">Engaged (orange)</option>
-                  {PIPELINE_STAGES.map((s) => <option key={s} value={s}>{PIPELINE_META[s].label}</option>)}
                 </select>
               </th>
               <th className="px-2 pb-1.5"></th>
@@ -256,6 +281,7 @@ export function ProspectsTable({ rows: serverRows }: { rows: ProspectRow[] }) {
               return (
                 <tr key={r.id} className={`hover:bg-slate-50/60 ${busyId === r.id ? "opacity-50" : ""}`}>
                   <td className="truncate px-2 py-1">
+                    {r.topRank !== null ? <span className={`mr-1 rounded px-1 py-px text-[9px] font-bold ${r.topPick ? "bg-navy text-white" : "bg-navy/10 text-navy"}`} title={r.topPick ? "Kept in the top 250 by hand" : "Top 250 by estimated size"}>#{r.topRank}</span> : null}
                     <a href={`/admin/marketing/${r.id}`} target="_blank" rel="noreferrer" className="font-medium text-navy hover:text-teal hover:underline" title={`${r.name}${place ? ` — ${place}` : ""}. Opens their page in a new tab`}>{r.name}</a>
                     {r.source === "sample" ? <span className="ml-1 rounded bg-amber/15 px-1 py-px text-[9px] font-semibold text-amber">sample</span> : null}
                     {r.soleTrader ? <span className="ml-1 rounded bg-port/10 px-1 py-px text-[9px] font-semibold text-port" title={r.lawfulBasis === "consent" ? "Sole trader with consent: may be emailed" : "Sole trader: no marketing email without consent (PECR)"}>sole trader{r.lawfulBasis === "consent" ? " · consent" : ""}</span> : r.lawfulBasis === "consent" ? <span className="ml-1 rounded bg-starboard/10 px-1 py-px text-[9px] font-semibold text-starboard">consent</span> : null}
@@ -273,15 +299,7 @@ export function ProspectsTable({ rows: serverRows }: { rows: ProspectRow[] }) {
                     <span className={`inline-block h-2.5 w-2.5 rounded-full align-middle ${vibe.dot}`} title={vibe.label} aria-label={`Vibe: ${vibe.label}`} />
                   </td>
                   <td className="px-2 py-1">
-                    <select
-                      value={r.stage}
-                      disabled={pending && busyId === r.id}
-                      onChange={(e) => setStage(r, e.target.value as PipelineStage)}
-                      aria-label={`Stage for ${r.name}`}
-                      className={`w-full cursor-pointer rounded border border-transparent px-1 py-0.5 text-[11px] font-semibold outline-none hover:border-slate-300 focus:border-teal ${PIPELINE_META[r.stage].chip}`}
-                    >
-                      {PIPELINE_STAGES.map((s) => <option key={s} value={s}>{PIPELINE_META[s].label}</option>)}
-                    </select>
+                    <StatusTicks id={r.id} name={r.name} statuses={r.statuses} compact />
                   </td>
                   <td className="px-2 py-1 text-right">
                     <details className="relative inline-block text-left">
@@ -293,7 +311,12 @@ export function ProspectsTable({ rows: serverRows }: { rows: ProspectRow[] }) {
                         <a href={`/admin/marketing/${r.id}/mockup`} target="_blank" rel="noreferrer" className={menuItem}>📄 Mock-up PDF</a>
                         {r.email ? <a href={gmailHref(r)} target="_blank" rel="noreferrer" className={menuItem}>📧 Draft in Gmail</a> : <span className={`${menuItem} cursor-not-allowed text-slate-300`}>📧 Email (none)</span>}
                         {r.email ? <a href={mailtoHref(r)} className={menuItem}>✉️ Draft in mail app</a> : null}
-                        {r.linkedinUrl ? <a href={linkedinHref(r.linkedinUrl)} target="_blank" rel="noreferrer" className={menuItem}>in LinkedIn ↗</a> : null}
+                        {r.topPick === true || (r.topPick === null && r.topRank === null)
+                          ? null
+                          : <button type="button" onClick={() => pin(r, true)} className={menuItem}>★ Keep in top 250</button>}
+                        {r.topPick === null && r.topRank === null ? <button type="button" onClick={() => pin(r, true)} className={menuItem}>★ Add to top 250</button> : null}
+                        {r.topPick !== false && r.topRank !== null ? <button type="button" onClick={() => pin(r, false)} className={menuItem}>☆ Take out of top 250</button> : null}
+                        {r.topPick !== null ? <button type="button" onClick={() => pin(r, null)} className={menuItem}>↺ Top 250: follow the estimate</button> : null}
                         <button type="button" onClick={() => startTransition(async () => { await setProspectBasisAction(r.id, { soleTrader: !r.soleTrader, lawfulBasis: r.lawfulBasis }); router.refresh(); })} className={menuItem}>{r.soleTrader ? "☑ Sole trader" : "☐ Sole trader"}</button>
                         <button type="button" onClick={() => startTransition(async () => { await setProspectBasisAction(r.id, { soleTrader: r.soleTrader, lawfulBasis: r.lawfulBasis === "consent" ? "legitimate_interests" : "consent" }); router.refresh(); })} className={menuItem}>{r.lawfulBasis === "consent" ? "Basis: consent → legitimate interests" : "Basis: legitimate interests → consent"}</button>
                         <button type="button" onClick={() => remove(r.id, r.name)} className={`${menuItem} text-port hover:bg-port/5`}>Remove</button>
