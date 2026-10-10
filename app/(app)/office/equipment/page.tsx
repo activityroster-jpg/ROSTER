@@ -26,8 +26,10 @@ export default async function EquipmentPage() {
   const retiredUnits = equipment.filter((e) => e.status === "retired").sort((a, b) => a.name.localeCompare(b.name));
   const activeTypes = types.filter((t) => t.active).map((t) => ({ id: t.id, name: t.name }));
   const enabled = hasFeature(settings[0]?.enabledFeatures, "equipment");
+  const listed = new Map<string, number>();
+  for (const e of current) listed.set(e.equipmentTypeId, (listed.get(e.equipmentTypeId) ?? 0) + 1);
   const typeRows: EquipmentTypeRow[] = types
-    .map((t) => ({ id: t.id, name: t.name, quantity: t.quantity ?? null, inventoryTracked: Boolean(t.inventoryTracked), active: Boolean(t.active) }))
+    .map((t) => ({ id: t.id, name: t.name, quantity: t.quantity ?? null, inventoryTracked: Boolean(t.inventoryTracked), active: Boolean(t.active), listed: listed.get(t.id) ?? 0 }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
   return (
@@ -39,16 +41,19 @@ export default async function EquipmentPage() {
       <FeatureNotice feature="equipment" enabled={enabled} />
 
       <h2 className="mb-1 font-semibold text-navy">Equipment types</h2>
-      <p className="mb-3 text-xs text-slate-500">Your kinds of kit and how many of each you have. Tracked types are booked unit by unit and clash-checked; bulk types are shared.</p>
+      <p className="mb-3 text-xs text-slate-500">Your kinds of kit, and how you count each one. <strong className="font-semibold text-slate-600">Each one by name</strong>: list every boat or board under Add equipment; courses book them one by one and a clash is flagged. <strong className="font-semibold text-slate-600">Just a number</strong>: a shared pool, like wetsuits; courses ask for how many they need and you&apos;re warned if they need more than you have.</p>
       <div className="mb-8"><EquipmentTypeManager rows={typeRows} /></div>
 
       {summary.length ? (
         <p className="mb-4 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600">{summary.join(" · ")}</p>
       ) : null}
+      <div id="add-equipment" className="scroll-mt-6" />
       <Card className="mb-6">
-        <h2 className="mb-3 font-semibold text-navy">Add equipment</h2>
+        <h2 className="mb-1 font-semibold text-navy">Add equipment</h2>
+        <p className="mb-3 text-xs text-slate-500">For types you count by name: add each boat or board here.</p>
         <AddEquipmentForm types={activeTypes} />
       </Card>
+      <div id="equipment-list" className="scroll-mt-6" />
       <Card className="overflow-hidden p-0">
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">

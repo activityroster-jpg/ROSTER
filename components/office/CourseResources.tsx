@@ -92,7 +92,7 @@ export function CourseResources({ courseId, locations, units, types, initial, sh
                   {context.unitBusy[u.id] ? <span className="rounded bg-amber/15 px-1 text-[10px] font-semibold text-amber">on {context.unitBusy[u.id]} at the same time</span> : null}
                 </label>
               ))}
-              {bulkTypes.length ? <p className="pt-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Bulk kit (how many)</p> : null}
+              {bulkTypes.length ? <p className="pt-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Shared kit (how many)</p> : null}
               {suggestedKit.length && !Object.values(bulk).some((q) => q > 0) ? (
                 <p className="text-xs text-slate-500">Kit rules suggest {suggestedKit.map((k) => `${k.quantity} × ${typeName.get(k.equipmentTypeId) ?? "kit"}`).join(", ")}. <button type="button" onClick={() => setBulk(Object.fromEntries(suggestedKit.map((k) => [k.equipmentTypeId, k.quantity])))} className="font-medium text-teal hover:underline">Use these</button></p>
               ) : null}

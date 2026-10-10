@@ -46,23 +46,25 @@ const typeSchema = z.object({
 
 export interface EquipmentTypeInput { name: string; quantity: number | string | null; inventoryTracked: boolean }
 
-/** Add (id = null) or edit an equipment type — name, quantity and tracked/bulk. */
+/** Add (id = null) or edit an equipment type: its name, and whether each one is listed by name or it is just a number. */
 export async function saveEquipmentTypeAction(id: string | null, input: EquipmentTypeInput): Promise<ActionState> {
   const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const parsed = typeSchema.safeParse({ ...input, quantity: input.quantity ?? "" });
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Please check the values" };
+  // A type counted by name is counted from its listed units, so it keeps no number of its own.
+  const data = parsed.data.inventoryTracked ? { ...parsed.data, quantity: null } : parsed.data;
   const t = repos.tenant.equipmentType;
   if (id) {
-    const updated = await t.update(ctx, id, parsed.data);
+    const updated = await t.update(ctx, id, data);
     if (!updated) return { ok: false, error: "Not found" };
-    await writeAudit(repos, ctx, { action: "update", entity: "equipment_type", entityId: id, after: parsed.data });
+    await writeAudit(repos, ctx, { action: "update", entity: "equipment_type", entityId: id, after: data });
   } else {
-    const created = await t.insert(ctx, { ...parsed.data, active: true });
-    await writeAudit(repos, ctx, { action: "create", entity: "equipment_type", entityId: created.id, after: parsed.data });
+    const created = await t.insert(ctx, { ...data, active: true });
+    await writeAudit(repos, ctx, { action: "create", entity: "equipment_type", entityId: created.id, after: data });
   }
   revalidatePath("/office/equipment");
   revalidatePath("/office/settings");
-  return { ok: true, message: id ? "Saved" : `${parsed.data.name} added` };
+  return { ok: true, message: id ? "Saved" : `${data.name} added` };
 }
 
 /** Retire / bring back an equipment type (deactivate-never-delete). */
