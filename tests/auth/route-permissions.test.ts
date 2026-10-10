@@ -84,7 +84,6 @@ describe("role by route", () => {
       "app/api/office/export": ["data.export"],
       "app/api/office/audit-export": ["data.export"],
       "app/api/office/finance": ["data.export"],
-      "app/api/office/young-worker-register": ["protected.view"],
       "app/api/office/emergency-sheet": ["rota.view"],
       "app/api/office/rota.pdf": ["rota.view"],
     };

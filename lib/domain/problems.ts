@@ -19,8 +19,6 @@ export type ProblemKind =
   | "declined"
   | "not-fit"
   | "not-qualified"
-  | "working-time"
-  | "parent-approval"
   | "unstaffed"
   | "no-safety-cover"
   | "equipment-clash"
@@ -86,8 +84,6 @@ const KIND_LABEL: Record<ProblemKind, string> = {
   declined: "Declined, needs cover",
   "not-fit": "Not cleared to roster",
   "not-qualified": "Not an instructor for this course type",
-  "working-time": "Young worker's hours",
-  "parent-approval": "Parental permission",
   unstaffed: "Short of instructors",
   "no-safety-cover": "No safety cover",
   "equipment-clash": "Equipment on two courses at once",
@@ -170,9 +166,9 @@ export function declinedProblems(sessions: readonly ProblemSession[], assignment
   return out;
 }
 
-/** A per-instructor finding (not fit, not qualified, working time, parental permission) applied to each course they are on. */
+/** A per-instructor finding (not fit, not qualified) applied to each course they are on. */
 export function perAssignmentProblems(
-  kind: Extract<ProblemKind, "not-fit" | "not-qualified" | "working-time" | "parent-approval">,
+  kind: Extract<ProblemKind, "not-fit" | "not-qualified">,
   severity: ProblemSeverity,
   sessions: readonly ProblemSession[],
   assignments: readonly ProblemAssignment[],

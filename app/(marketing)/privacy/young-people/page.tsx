@@ -11,16 +11,16 @@ export const metadata: Metadata = {
 /**
  * Compliance P1-G: the under-18 privacy page. Written for a 14-year-old assistant
  * and their parent, not for a lawyer. Keep it true to the code: the defaults it
- * describes live in lib/auth/rbac.ts, lib/services/guardians.ts,
- * lib/services/protected-contacts.ts, lib/services/retention.ts and the portal.
+ * describes live in lib/auth/rbac.ts, lib/services/protected-contacts.ts,
+ * lib/services/retention.ts and the portal.
  */
 export default function YoungPeoplePrivacyPage() {
   return (
-    <LegalPage title="Your information if you are under 18" updated="4 October 2026">
+    <LegalPage title="Your information if you are under 18" updated="10 October 2026">
       <P>If you help out or teach at a sailing or watersports centre that uses ActivityRoster, the centre keeps some information about you on it: your roster, your certificates and how to reach you. This page says, as plainly as we can, what that is, who can see it and what you and your parents can ask for. You do not need to read anything else to understand it.</P>
 
       <H2>Who is responsible for your information</H2>
-      <P>Your centre is. ActivityRoster is the tool they use, the way a school might use a register app. We keep the information safe and only do with it what the centre asks. If you have a question about what your centre holds, ask whoever runs it or your centre&rsquo;s welfare officer first. If you have a question about ActivityRoster itself, email <a className="text-teal hover:underline" href={`mailto:${PRIVACY_CONTACT}`}>{PRIVACY_CONTACT}</a>.</P>
+      <P>Your centre is. ActivityRoster is the tool they use, the way a school might use a register app. We keep the information safe and only do with it what the centre asks. Your centre is also responsible for keeping your hours within the legal limits for your age. If you have a question about what your centre holds, ask whoever runs it or your centre&rsquo;s welfare officer first. If you have a question about ActivityRoster itself, email <a className="text-teal hover:underline" href={`mailto:${PRIVACY_CONTACT}`}>{PRIVACY_CONTACT}</a>.</P>
 
       <H2>What is kept about you</H2>
       <UL items={[
@@ -36,15 +36,13 @@ export default function YoungPeoplePrivacyPage() {
       <UL items={[
         <>The <strong>people who run your centre</strong> (admins) can see everything above, because they roster you and have to look after you.</>,
         <>The <strong>welfare officer</strong> can see your profile and your emergency and guardian contacts, and nothing about pay or billing.</>,
-        <>Your <strong>colleagues</strong> see your first name and which sessions you are on. They cannot see your phone number or email unless you switch on &ldquo;Let colleagues see my phone and email&rdquo; in your own settings. It is off until you choose otherwise.</>,
-        <>Your <strong>parent or guardian</strong> can be given a read-only view of your roster: the dates, courses, times and places. Nothing else, and nobody else&rsquo;s details. The centre records that you were told.</>,
+        <>Your <strong>colleagues</strong> see your first name and which sessions you are on. They cannot see your phone number or email: sharing them with colleagues is not offered to anyone under 18.</>,
         <><strong>ActivityRoster staff</strong> do not browse centres&rsquo; data. A support view exists for fixing problems; every use of it is logged and visible to your centre.</>,
       ]} />
 
       <H2>Things we do differently because you are under 18</H2>
       <UL items={[
         "Your contact details are hidden from colleagues by default.",
-        "Your centre can only roster you within the legal hours for your age. The app checks every shift against those rules and stops a breach.",
         "We never send you marketing, newsletters or offers, and we never build anything that profiles young people.",
         "Vetting checks are recorded by status and reference only; no certificate about you is stored as a file.",
         "When you leave the centre, your personal details are removed after the period your centre has set (12 months unless they chose otherwise); the roster history keeps only that someone did the shift.",

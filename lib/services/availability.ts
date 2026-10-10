@@ -9,6 +9,7 @@ import {
   course as courseTable,
   courseSession as courseSessionTable,
   courseStaff as courseStaffTable,
+  sessionStaffOverride as sessionStaffOverrideTable,
   SLOT_CODES,
   type AvailabilitySetBy,
   type CourseSession,
@@ -18,6 +19,7 @@ import {
 import { addDays } from "./schedule";
 import { writeAudit } from "./audit";
 import { liveSessions } from "@/lib/domain/sessions";
+import { effectiveStaffBySession } from "@/lib/domain/session-staff";
 import { todayIso } from "@/lib/domain/time";
 import {
   addDaysIso,
@@ -277,6 +279,8 @@ export interface AvailabilityMatrixRow {
   setBy: Record<string, AvailabilitySetBy>;
   /** The instructor's note per date. */
   notes: Record<string, string>;
+  /** Minutes rostered this week (declines excluded), shown beside their name. */
+  assignedMinutes: number;
   /** Courses this instructor is rostered on, keyed `${dateIso}|${slot}`. */
   assigned: Record<string, string[]>;
 }
@@ -309,9 +313,10 @@ export async function getWeekAvailabilityMatrix(repos: Repositories, ctx: AnyTen
   const settings = settingsRows[0];
   const horizon = availabilityHorizon(settings);
   const weekCourseIds = [...new Set(sessions.map((s) => s.courseId))];
-  const [staff, courses] = await Promise.all([
+  const [staff, courses, dayOverrides] = await Promise.all([
     repos.tenant.courseStaff.listIn(ctx, courseStaffTable.courseId, weekCourseIds),
     repos.tenant.course.listIn(ctx, courseTable.id, weekCourseIds),
+    sessions.length ? repos.tenant.sessionStaffOverride.listIn(ctx, sessionStaffOverrideTable.courseSessionId, sessions.map((x) => x.id)) : Promise.resolve([]),
   ]);
   const days: string[] = [];
   for (let i = 0; i < 7; i++) days.push(addDays(mondayIso, i));
@@ -328,18 +333,23 @@ export async function getWeekAvailabilityMatrix(repos: Repositories, ctx: AnyTen
 
   // Assignments in this week: instructor → "date|slot" → course names.
   const courseName = new Map(courses.map((c) => [c.id, c.name ?? courseTypes.find((t) => t.id === c.courseTypeId)?.name ?? "Course"]));
-  const instructorsByCourse = new Map<string, string[]>();
-  for (const a of staff) instructorsByCourse.set(a.courseId, [...(instructorsByCourse.get(a.courseId) ?? []), a.instructorId]);
+  // Who is actually on each session: the course's people minus per-day skips, plus per-day adds; declines don't count.
+  const onSession = effectiveStaffBySession(sessions, staff, dayOverrides);
   const fmtT = (v: Date | number) => new Date(v instanceof Date ? v.getTime() : Number(v)).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
+  const toMs = (v: Date | number) => (v instanceof Date ? v.getTime() : Number(v));
   const assignedByInstructor = new Map<string, Record<string, string[]>>();
+  // Minutes rostered this week, shown beside each name.
+  const minutesByInstructor = new Map<string, number>();
   for (const s of sessions) {
     if (s.date < mondayIso || s.date >= sunday) continue;
     const key = keyOf(s.date, s.slot);
     const label = `${courseName.get(s.courseId) ?? "Course"} (${fmtT(s.startAt)}–${fmtT(s.endAt)})`;
-    for (const insId of instructorsByCourse.get(s.courseId) ?? []) {
+    const people = new Set((onSession.get(s.id) ?? []).filter((m) => m.status !== "declined").map((m) => m.instructorId));
+    for (const insId of people) {
       const map = assignedByInstructor.get(insId) ?? {};
       map[key] = [...(map[key] ?? []), label];
       assignedByInstructor.set(insId, map);
+      minutesByInstructor.set(insId, (minutesByInstructor.get(insId) ?? 0) + Math.max(0, toMs(s.endAt) - toMs(s.startAt)) / 60000);
     }
   }
 
@@ -360,7 +370,7 @@ export async function getWeekAvailabilityMatrix(repos: Repositories, ctx: AnyTen
       sources[k] = e.source;
       if (e.status === "available") availableCounts[k] = (availableCounts[k] ?? 0) + 1;
     }
-    return { instructorId: i.id, name: i.name, officeManaged, hasLogin: Boolean(i.userId), cells, sources, setBy, notes: notesByInstructor.get(i.id) ?? {}, assigned: assignedByInstructor.get(i.id) ?? {} };
+    return { instructorId: i.id, name: i.name, officeManaged, hasLogin: Boolean(i.userId), cells, sources, setBy, notes: notesByInstructor.get(i.id) ?? {}, assigned: assignedByInstructor.get(i.id) ?? {}, assignedMinutes: Math.round(minutesByInstructor.get(i.id) ?? 0) };
   });
   return { days, rows: out, availableCounts, horizon, staffManagedBy: settings?.staffManagedBy ?? "staff" };
 }

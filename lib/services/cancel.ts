@@ -18,7 +18,7 @@ import { publishedWeeks, weekOf } from "./roster";
  * Cancelling (weather, no bookings, an instructor off sick) is the everyday
  * reality of a sailing school, so it is a first-class action, not a label:
  * a cancelled session stays on record but leaves the roster, the PDF, the
- * app, the emergency sheet, the clash and young-worker checks and, per the
+ * app, the emergency sheet, the clash checks and, per the
  * chosen pay rule, payroll; everyone rostered is told. A course whose
  * sessions are all cancelled is a cancelled course. Delete is only for drafts
  * nobody was ever rostered on (see canDeleteCourse).

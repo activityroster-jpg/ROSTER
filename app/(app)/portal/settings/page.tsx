@@ -15,7 +15,6 @@ import { getAuth } from "@/lib/auth";
 import { eq } from "drizzle-orm";
 import { instructor as instructorTable } from "@/lib/db/schema";
 import { DetailsCard } from "@/components/portal/DetailsCard";
-import { guardianLinksFor } from "@/lib/services/guardians";
 import { CalendarFeedCard } from "@/components/portal/CalendarFeedCard";
 
 export const dynamic = "force-dynamic";
@@ -34,7 +33,6 @@ export default async function PortalSettingsPage() {
     const accounts = await (await getAuth()).api.listUserAccounts({ headers: new Headers(await headers()) });
     hasPassword = accounts.some((a) => a.providerId === "credential");
   } catch { hasPassword = false; }
-  const parentInvited = me ? (await guardianLinksFor(repos, ctx, me.id)).some((l) => l.status === "active") : false;
   const settingsRow = (await repos.tenant.orgSettings.list(ctx))[0];
   const centres = ms
     .filter((m) => m.role === "instructor" || m.status === "active")
@@ -55,7 +53,7 @@ export default async function PortalSettingsPage() {
         <Card>
           <h2 className="mb-3 font-semibold text-navy">About you</h2>
           <ProfileCard name={me.name} phone={me.phone} email={me.email} />
-          <div className="mt-4 border-t border-slate-100 pt-3"><DetailsCard dateOfBirth={me.dateOfBirth} parentInvited={parentInvited} approvalRequired={settingsRow?.requireParentApproval !== false} /></div>
+          <div className="mt-4 border-t border-slate-100 pt-3"><DetailsCard dateOfBirth={me.dateOfBirth} /></div>
           {!isUnder18(me.dateOfBirth) ? <div className="mt-4 border-t border-slate-100 pt-3"><ShareContactPref initial={Boolean(me.shareContact)} /></div> : null}
         </Card>
       ) : null}

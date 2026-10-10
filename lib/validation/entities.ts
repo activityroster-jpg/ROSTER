@@ -7,7 +7,6 @@ import {
   MANAGED_BY,
   SCHEDULING_MODES,
   SLOT_CODES,
-  WORKING_TIME_MODES,
 } from "@/lib/db/schema";
 
 /**
@@ -37,14 +36,7 @@ export const orgSettingsSchema = z.object({
   privacyNoticeUrl: z.string().trim().url("Enter a full web address, starting with https://").max(500).refine((u) => /^https:\/\//i.test(u), "Use a secure web address, starting with https://").optional().or(z.literal("")),
   dailyDigestEnabled: z.boolean().optional(),
   dailyDigestHour: z.number().int().min(0).max(23).optional(),
-  workingTimeMode: z.enum(WORKING_TIME_MODES).optional(),
   idleTimeoutMinutes: z.number().int().min(5).max(240).optional(),
-  requireParentApproval: z.boolean().optional(),
-  termDates: z.array(z.object({
-    from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Term dates are YYYY-MM-DD"),
-    to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Term dates are YYYY-MM-DD"),
-    label: z.string().trim().max(60).optional(),
-  }).refine((r) => r.from <= r.to, "A term can't end before it starts")).max(60).optional(),
 });
 
 export const sessionSlotSchema = z.object({

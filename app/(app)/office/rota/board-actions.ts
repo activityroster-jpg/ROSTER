@@ -7,7 +7,6 @@ import { assignStaff, assignBlockMessage, notifyRosterChange } from "@/lib/servi
 import { clearDayStaff, setDayStaff } from "@/lib/services/session-staff";
 import { syncHoursForCourse } from "@/lib/services/hours";
 import { writeAudit } from "@/lib/services/audit";
-import { checkWorkingTime, describeFindings } from "@/lib/services/working-time";
 import { courseSession as courseSessionTable } from "@/lib/db/schema";
 import { idSchema } from "@/lib/validation/actions";
 
@@ -63,12 +62,4 @@ export async function boardRemoveAction(input: { sessionId: string; courseId: st
   await notifyRosterChange(repos, ctx, assignment.instructorId, course?.name ?? "a course", sessions.map((s) => s.date), "removed");
   refresh();
   return { ok: true, message: "Removed from the course" };
-}
-
-/** What the young-worker rules say about this person on this course (for the side panel, before assigning). */
-export async function boardWorkingTimeAction(courseId: string, instructorId: string): Promise<{ ok: boolean; active: boolean; blocks: string; warns: string }> {
-  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
-  if (!idSchema.safeParse(courseId).success || !idSchema.safeParse(instructorId).success) return { ok: false, active: false, blocks: "", warns: "" };
-  const r = await checkWorkingTime(repos, ctx, { instructorId, courseId });
-  return { ok: true, active: r.active, blocks: describeFindings(r.blocks), warns: describeFindings(r.warns) };
 }

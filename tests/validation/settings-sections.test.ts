@@ -24,10 +24,8 @@ describe("settings saved one card at a time", () => {
     expect(settingsPatch("basics", form({ alertLeadDays: "30", currency: "GBP", staffManagedBy: "parents" })).ok).toBe(false);
   });
 
-  it("term dates are stored as JSON and bad dates are refused", () => {
-    const ok = settingsPatch("young", form({ workingTimeMode: "warn", termDates: JSON.stringify([{ from: "2026-09-01", to: "2026-12-18", label: "Autumn" }]) }));
-    expect(ok).toEqual({ ok: true, patch: { workingTimeMode: "warn", requireParentApproval: false, termDates: '[{"from":"2026-09-01","to":"2026-12-18","label":"Autumn"}]' } });
-    expect(settingsPatch("young", form({ termDates: "not json" })).ok).toBe(false);
+  it("the young workers' hours card is gone: working hours are the centre's to manage", () => {
+    expect(settingsPatch("young", form({ workingTimeMode: "warn" })).ok).toBe(false);
   });
 
   it("an unknown card is refused", () => {

@@ -17,6 +17,7 @@ Effort is a rough guide: S = under half a day, M = one to two days, L = a week o
 | C5 | Vetting certificate uploads | Keep; restrict, encrypt and log in Phase 2. |
 | C6 | Emergency contacts | Add for staff, encrypted, admin-only. Students stay out. |
 | C7 | Anthropic | Listed as a sub-processor (prospect data only). Done. |
+| C8 | Working-time checks and parent features (10 October 2026) | Removed at Conor's request: hours, breaks, rest, term dates, permits and parental consent are the centre's to manage as employer, and the checks were getting in the way of rostering. Gone: the rules engine and rule packs (Dev Center → Rules), the Young workers settings card, under-18 and adult hour checks on assignment and in the problems list, the young-worker time register, parent accounts, parent approval, the parent view and the parental-permission slot. Kept: the under-18 flag, contact details hidden from colleagues, no contact sharing or marketing for under-18s, and the parent or guardian emergency contact. Added: each person's rostered hours for the week beside their name on the roster (People × days) and on Availability. Old `guardian_link` rows (parent emails, consent notes) and the unused settings columns and `rule_pack` table stay until a cleanup migration Conor approves, tested on staging first. |
 
 ## Phase 1 (P0): before onboarding more customers
 
@@ -83,7 +84,7 @@ Effort is a rough guide: S = under half a day, M = one to two days, L = a week o
   upload slot and date. Parent accounts themselves are Phase 2 (they depend on roles).
 - Emergency contact fields for all staff, encrypted at rest, admin-only, every view logged.
 
-### P0-F Working-time rules engine, under-18 scope (L) — built 3 October; figures await verification
+### P0-F Working-time rules engine, under-18 scope (L) — built 3 October; withdrawn 10 October (decision C8)
 
 - Done: rule packs for Great Britain, Northern Ireland and Ireland as versioned data with
   citations and per-figure verified flags; Dev Center → Rules to view, edit and reset them;
@@ -191,7 +192,7 @@ Effort is a rough guide: S = under half a day, M = one to two days, L = a week o
 - Still to do: a way for a centre to mark one of its own custom check types as vetting
   (Settings → Checks), noted for P1-G.
 
-### P1-F Roles and families — built 4 October
+### P1-F Roles and families — built 4 October; parent accounts withdrawn 10 October (decision C8)
 - Roles: admin, senior instructor (office roster, no pay/billing/settings/exports), welfare
   officer (staff profiles, protected contacts, emergency sheet, young-worker register),
   instructor, parent. Matrix in `lib/auth/rbac.ts`; `requireTenant({ permission })`;

@@ -33,7 +33,7 @@ processors in `docs/subprocessors.md`.
 | Loss of data (provider failure, bad change) | Low | High | Time Travel, *planned:* nightly encrypted exports, off-site copy, restore tests, staging-first changes | Low after P0-C |
 | Over-retention | Medium | Medium | Documented defaults; *planned Phase 2:* per-centre retention settings and scheduled deletion | Medium until Phase 2 |
 | Email misdelivery or interception | Low | Medium | Minimal content in emails, links into the app, authenticated domain, planned separate subdomains | Low |
-| Unlawful young-worker hours rostered | Medium | Medium | *Planned P0-F:* rules engine with jurisdiction packs, block-with-override default, disclaimer that the centre remains responsible | Low after P0-F |
+| Unlawful young-worker hours rostered | Medium | Medium | The centre, as employer, is responsible for working-time law (Conor's decision, 10 Oct 2026: the P0-F rules engine was removed because it got in the way of rostering). Each person's rostered hours for the week show beside their name on the roster and on Availability, so long weeks are visible. The terms should say the centre remains responsible (solicitor review) | Centre's risk; Medium |
 | B2B outreach contacting the wrong people | Low | Low | Prospect list separate from users; business contacts only; suppression list; sender identity and opt-out in every email | Low |
 
 ## 4. Consultation

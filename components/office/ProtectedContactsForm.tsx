@@ -2,12 +2,12 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { addParentalPermissionAction, updateProtectedContactsAction } from "@/app/(app)/office/staff/actions";
+import { updateProtectedContactsAction } from "@/app/(app)/office/staff/actions";
 
 export interface ProtectedContactsValues { guardianName: string; guardianPhone: string; guardianEmail: string; emergencyName: string; emergencyPhone: string; emergencyRelationship: string }
 
 /** Admin-only: emergency contact for everyone, parent or guardian for under-18s. Stored encrypted; every view is logged. */
-export function ProtectedContactsForm({ instructorId, initial, under18, hasPermissionSlot, visibleTo }: { instructorId: string; initial: ProtectedContactsValues; under18: boolean; hasPermissionSlot: boolean; visibleTo?: string }) {
+export function ProtectedContactsForm({ instructorId, initial, under18, visibleTo }: { instructorId: string; initial: ProtectedContactsValues; under18: boolean; visibleTo?: string }) {
   const router = useRouter();
   const [v, setV] = useState(initial);
   const [edit, setEdit] = useState(false);
@@ -16,13 +16,12 @@ export function ProtectedContactsForm({ instructorId, initial, under18, hasPermi
   const set = (k: keyof ProtectedContactsValues) => (e: React.ChangeEvent<HTMLInputElement>) => setV((s) => ({ ...s, [k]: e.target.value }));
   const field = "mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal";
   const save = () => start(async () => { const r = await updateProtectedContactsAction(instructorId, v); setMsg(r.ok ? "Saved" : r.error ?? "Could not save"); if (r.ok) { setEdit(false); router.refresh(); } });
-  const addSlot = () => start(async () => { const r = await addParentalPermissionAction(instructorId); setMsg(r.ok ? r.message ?? "Added" : r.error ?? "Could not add"); router.refresh(); });
   const missingGuardian = under18 && !initial.guardianName && !initial.guardianPhone;
   const missingEmergency = !initial.emergencyName && !initial.emergencyPhone;
 
   return (
     <div>
-      {missingGuardian ? <p className="mb-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">Under 18: add a parent or guardian contact and their written permission to work.</p> : null}
+      {missingGuardian ? <p className="mb-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">Under 18: add a parent or guardian contact for emergencies.</p> : null}
       {missingEmergency && !missingGuardian ? <p className="mb-2 text-xs text-slate-500">No emergency contact yet.</p> : null}
       {edit ? (
         <div className="grid gap-2 sm:grid-cols-2">
@@ -55,7 +54,6 @@ export function ProtectedContactsForm({ instructorId, initial, under18, hasPermi
       )}
       <div className="mt-3 flex flex-wrap items-center gap-2">
         {!edit ? <button type="button" onClick={() => setEdit(true)} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-navy hover:bg-slate-50">Edit contacts</button> : null}
-        {under18 && !hasPermissionSlot ? <button type="button" disabled={pending} onClick={addSlot} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-navy hover:bg-slate-50 disabled:opacity-50">Add parental permission slot</button> : null}
         {msg ? <span className="text-xs text-slate-500">{msg}</span> : null}
       </div>
       <p className="mt-2 text-[11px] text-slate-400">Stored encrypted. {visibleTo ?? "Visible to centre admins with contacts access."} Each time this card shows a contact it is written to the change log.</p>

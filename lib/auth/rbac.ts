@@ -23,7 +23,7 @@ export type OfficeFeature = (typeof OFFICE_FEATURES)[number];
 export const FEATURE_LABEL: Record<OfficeFeature, { label: string; hint: string }> = {
   roster: { label: "Roster & courses", hint: "Courses, the roster, availability, leave and cover, equipment, locations, course setup, imports and booking systems." },
   staff: { label: "Staff", hint: "The instructor list and profiles, certs, invitations." },
-  protected: { label: "Emergency & guardian contacts", hint: "Emergency contacts, parents and guardians, the young-worker register. Every view is logged." },
+  protected: { label: "Emergency & guardian contacts", hint: "Emergency contacts, including an under-18's parent or guardian to call. Every view is logged." },
   payroll: { label: "Payroll", hint: "Pay rates, hours, the payroll page and the time clock." },
   settings: { label: "Settings", hint: "Centre settings, onboarding and the change log." },
   billing: { label: "Billing", hint: "The plan, payments and invoices." },
@@ -36,7 +36,7 @@ export const PERMISSIONS = [
   "roster.edit",      // courses, assignments, availability grid, leave and cover, publishing, equipment, locations, course setup
   "staff.view",       // instructors list and profiles (no pay, no data tools)
   "staff.edit",       // edit profiles, certs, invites
-  "protected.view",   // guardian and emergency contacts, young-worker register
+  "protected.view",   // emergency contacts (and an under-18's guardian to call)
   "finance.view",     // payroll, pay rates, time clock
   "settings.edit",    // settings, onboarding, change log
   "billing.manage",   // plan, payments, invoices, the trial survey

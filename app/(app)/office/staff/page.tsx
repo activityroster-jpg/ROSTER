@@ -12,7 +12,6 @@ import { StaffTable, type StaffRow } from "@/components/office/StaffTable";
 import { GuideLink } from "@/components/GuideLink";
 import { OfficeAccess } from "@/components/office/OfficeAccess";
 import { listOfficeMembers } from "@/lib/services/office-access";
-import { parentApprovalFromLinks } from "@/lib/services/guardians";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +39,6 @@ export default async function StaffPage() {
   const inviteSent = await repos.control.inviteSentByUser(ctx.organisationId);
   const inviteQueued = await repos.control.inviteQueuedUsers(ctx.organisationId);
   const officeMembers = await listOfficeMembers(repos, ctx);
-  const links = await repos.tenant.guardianLink.list(ctx);
   const settingsRow = (await repos.tenant.orgSettings.list(ctx))[0];
   const withAvailability = new Set((await repos.tenant.availability.distinct(ctx, availabilityTable.instructorId)) as string[]);
   const inviteStatusFor = (userId: string | null): StaffRow["inviteStatus"] => {
@@ -76,14 +74,12 @@ export default async function StaffPage() {
       teachesAdult: teach.some((c) => c.audience === "adult" || c.audience === "all"),
       status: instructor.status,
       under18: isUnder18(instructor.dateOfBirth),
-      parentApproval: parentApprovalFromLinks(instructor.dateOfBirth, links.filter((l) => l.instructorId === instructor.id)),
       hasDob: Boolean(instructor.dateOfBirth),
       restricted: Boolean(instructor.restrictedAt),
       anonymised: Boolean(instructor.anonymisedAt),
     };
   });
   const currentCount = rows.filter((r) => r.status !== "inactive").length;
-  const missingDob = rows.filter((r) => r.status !== "inactive" && !r.hasDob).length;
   const under18Count = rows.filter((r) => r.status !== "inactive" && r.under18).length;
 
   return (
@@ -92,7 +88,6 @@ export default async function StaffPage() {
         <div>
           <h1 className="font-display text-2xl font-bold text-navy">Instructors</h1>
           <p className="text-sm text-slate-500">{currentCount} instructor{currentCount === 1 ? "" : "s"}{under18Count ? ` · ${under18Count} under 18` : ""} · whether each has set availability and whose licences need updating</p>
-          {missingDob ? <p className="mt-1 text-xs text-amber-700">{missingDob} {missingDob === 1 ? "person has" : "people have"} no date of birth yet. Add it from their profile so under-18 protections and working-hours rules apply correctly.</p> : null}
         </div>
         <div className="flex flex-none items-center gap-3">
           <GuideLink topic="staff" />

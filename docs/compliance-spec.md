@@ -153,7 +153,7 @@ Instructors aged 15 to 17 are children under GDPR, so the platform applies highe
 - **Automatic under-18 flag (P0):** date of birth is required on staff profiles. The flag is calculated from it daily and lifts automatically on the 18th birthday.
 - **Hidden contact details (P0):** under-18s' phone, email and address are visible only to Owner, Admin and Welfare officer roles.
 - **No private adult-to-minor messages (P0):** messaging stays limited to group and rota announcements. Do not add one-to-one messaging unless welfare-officer visibility and a copy-to-parent option are built at the same time.
-- **Parent or guardian details (P0):** a required parent or guardian contact for under-18s. Store a record of written parental permission with an upload slot. This is required for under-16 employment in Ireland and for child employment permits in Northern Ireland. Parent accounts are linked to specific children by the school. They are used only to give or withdraw consents (photos and permission to work), and cannot see rotas, bookings or other records.
+- **Parent or guardian details (P0):** *Changed by Conor, 10 October 2026: parent accounts, parent approval and the parental-permission slot were removed (they were causing problems; consent paperwork is the centre's to keep). The parent or guardian contact stays on under-18 profiles as an emergency contact. Every other under-18 default in this section still applies.* Original brief: a required parent or guardian contact for under-18s. Store a record of written parental permission with an upload slot. This is required for under-16 employment in Ireland and for child employment permits in Northern Ireland. Parent accounts are linked to specific children by the school. They are used only to give or withdraw consents (photos and permission to work), and cannot see rotas, bookings or other records.
 - **No marketing or profiling (P0):** no marketing, nudges, profiling or location tracking for under-18 users.
 - **Photos off by default (P1):** under-18 profile photos are off by default and never shown outside the school's own account.
 - **Vetting tracker for adults (P1):** DBS (England and Wales), PVG (Scotland), AccessNI (Northern Ireland) or Garda vetting (Ireland) status, date and expiry, with renewal reminders. Store the status only, never certificate contents, because that is criminal-offence data. Each school chooses at onboarding whether missing or expired vetting gives a warning or blocks rostering to sessions involving under-18s.
@@ -161,6 +161,8 @@ Instructors aged 15 to 17 are children under GDPR, so the platform applies highe
 - **Plain-English privacy explanation (P1):** written so a 15-year-old can understand what is held and who sees it.
 
 ## Working-time rules engine
+
+> **Withdrawn by Conor, 10 October 2026.** Keeping to working-time law (young workers' and adults' hours, breaks, rest, term-time caps, permits and time registers) is the centre's responsibility as employer. The checks were getting in the way of rostering, so the rules engine, rule packs, term dates, breach settings and the young-worker time register were removed from the app. Instead, each person's rostered hours for the week show beside their name on the roster (People × days) and on Availability. The text below is kept as the original brief.
 
 The rota builder checks every shift against the worker's age, the school's jurisdiction and whether the date falls in school term or holidays. What happens on a breach is a school setting (P0 for under-18s, P1 for adults).
 
@@ -301,7 +303,7 @@ Claude Code's work is done when every box below is ticked and each document exis
 - [ ] First restore test completed and logged
 - [ ] Audit log live
 - [ ] Under-18 controls live
-- [ ] Working-time rules engine live, with rules stored as editable data
+- [ ] ~~Working-time rules engine live, with rules stored as editable data~~ (withdrawn 10 Oct 2026)
 - [ ] Email authentication done, with separate system and marketing subdomains
 - [ ] Daily rota digest and emergency sheet live
 - [ ] External uptime monitoring and status page live
@@ -329,7 +331,7 @@ These tasks need a person, a signature or a solicitor, not code.
 - [ ] Confirm where the company is registered. If it is in the UK, ask the solicitor whether an EU GDPR representative is needed for Irish and other EU customers
 - [ ] Sign off the DPIA once Claude Code drafts it, and a written legitimate-interests assessment for holding the sales prospect list
 - [ ] Accept the DPAs offered by Cloudflare, Resend, the backup email provider, GitHub, Stripe and the backup storage provider
-- [ ] Count RYA clubs and training centres per jurisdiction and give Claude Code the qualifying list (more than 5). Then get each rule pack verified: the Workplace Relations Commission (Ireland), the Education Authority (NI), GOV.UK (Great Britain), and official sources or a local lawyer elsewhere
+- [ ] (No longer needed: working-time checks withdrawn 10 Oct 2026.) ~~Count RYA clubs and training centres per jurisdiction and give Claude Code the qualifying list (more than 5). Then get each rule pack verified: the Workplace Relations Commission (Ireland), the Education Authority (NI), GOV.UK (Great Britain), and official sources or a local lawyer elsewhere~~
 - [ ] Cyber insurance and professional indemnity insurance
 - [ ] Cyber Essentials certification (P1), then ISO 27001 or SOC 2 later if larger organisations or councils ask (P2)
 - [ ] Add a contract clause on service levels and what happens if Activity Roster stops trading (notice period plus full data export)

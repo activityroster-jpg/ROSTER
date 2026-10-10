@@ -5,7 +5,7 @@ import { orgSettingsSchema } from "./entities";
  * card posts only its own fields and only those columns are written, so two
  * office admins saving different cards never undo each other's changes.
  */
-export const SETTINGS_SECTIONS = ["basics", "digest", "young", "security", "checks"] as const;
+export const SETTINGS_SECTIONS = ["basics", "digest", "security", "checks"] as const;
 export type SettingsSection = (typeof SETTINGS_SECTIONS)[number];
 
 type Get = (name: string) => FormDataEntryValue | null;
@@ -15,11 +15,6 @@ const num = (v: FormDataEntryValue | null, fallback?: number): number | undefine
   return Number(v);
 };
 const on = (v: FormDataEntryValue | null): boolean => v === "on";
-
-function termDatesField(v: FormDataEntryValue | null): unknown {
-  if (typeof v !== "string" || !v.trim()) return [];
-  try { return JSON.parse(v); } catch { return "invalid"; }
-}
 
 /** The raw values one card posts, keyed by column. */
 function rawFor(section: SettingsSection, get: Get): Record<string, unknown> {
@@ -35,8 +30,6 @@ function rawFor(section: SettingsSection, get: Get): Record<string, unknown> {
       };
     case "digest":
       return { dailyDigestEnabled: on(get("dailyDigestEnabled")), dailyDigestHour: num(get("dailyDigestHour"), 6) };
-    case "young":
-      return { workingTimeMode: get("workingTimeMode") ?? "block_override", requireParentApproval: on(get("requireParentApproval")), termDates: termDatesField(get("termDates")) };
     case "security":
       return { idleTimeoutMinutes: num(get("idleTimeoutMinutes"), 30) };
     case "checks":
@@ -62,10 +55,7 @@ export function settingsPatch(section: string, get: Get): { ok: true; patch: Set
   const patch: SettingsPatch = {};
   for (const key of Object.keys(raw)) {
     const v = (parsed.data as Record<string, unknown>)[key];
-    if (key === "termDates") {
-      const terms = (v ?? []) as { from: string; to: string; label?: string }[];
-      patch.termDates = JSON.stringify(terms.map((r) => ({ from: r.from, to: r.to, ...(r.label ? { label: r.label } : {}) })));
-    } else if (key === "privacyNoticeUrl") {
+    if (key === "privacyNoticeUrl") {
       patch.privacyNoticeUrl = (v as string | undefined) || null;
     } else if (v !== undefined) {
       patch[key] = v as string | number | boolean | null;

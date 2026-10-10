@@ -233,7 +233,7 @@ export const platformPricing = sqliteTable("platform_pricing", {
  * owner       the superadmin: set the centre up and pays; everything. One per centre.
  * admin       an office admin; what they can reach is the `features` list the owner sets (lib/auth/rbac).
  * instructor  the instructor app (senior instructors and volunteers included).
- * parent      read-only view of their under-18 child's roster and the parental permission answer.
+ * parent      retired 10 Oct 2026 (the parent view was removed): never granted now; an existing one sees a notice.
  * senior_instructor / welfare_officer: legacy, migrated to instructor in 0059; never granted now.
  */
 export const MEMBERSHIP_ROLES = ["owner", "admin", "instructor", "parent", "senior_instructor", "welfare_officer"] as const;
@@ -823,17 +823,16 @@ export const pushToken = sqliteTable("push_token", {
 export type PushToken = typeof pushToken.$inferSelect;
 
 // A tiny re-export so migrations pick up the raw-sql helper if needed.
-// --- Rule packs (working-time law as data) -----------------------------------
-// One row per pack key ("gb", "ni", "ie") when Conor has edited the built-in
-// figures in the Dev Center. No row = the built-in pack in
-// lib/rules/working-time/packs.ts applies. Legal figures are never hard-coded
-// in the checks themselves; they are read from the pack at run time.
+// --- Rule packs: retired 10 Oct 2026 ------------------------------------------
+// Held edited working-time figures per jurisdiction ("gb", "ni", "ie"). The
+// working-time checks were removed and nothing reads this table; it stays
+// until a later migration drops it.
 export const rulePack = sqliteTable("rule_pack", {
   key: text("key").primaryKey(),
   name: text("name").notNull(),
   version: text("version").notNull(),
   verified: boolCol("verified").default(false),
-  /** The full WorkingTimePack as JSON (validated with workingTimePackSchema before it is stored). */
+  /** The pack as JSON. */
   json: text("json").notNull(),
   updatedBy: text("updated_by"),
   createdAt: createdAt(),

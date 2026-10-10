@@ -40,7 +40,7 @@ The spec's draft data map needs these corrections (`lib/db/schema/tenant.ts`,
 | Spec says | What the database actually holds |
 | --- | --- |
 | Staff profiles include date of birth | **No date of birth field.** `instructor` holds name, email, phone, employment type, status. Under-18 status cannot be derived today. |
-| Parent and guardian accounts | Since P1-F: `parent` role plus `guardian_link` with the consent record; read-only `/parent` rota view. |
+| Parent and guardian accounts | Since P1-F: `parent` role plus `guardian_link` with the consent record; read-only `/parent` rota view. Withdrawn 10 October 2026 (decision C8): no parent accounts are created; old `guardian_link` rows await a cleanup migration. |
 | Vetting status: store status only | Since P1-E (4 October): vetting types (`compliance_type.is_vetting`) take no file, uploads are refused and any stored file is removed; the certificate number is encrypted at rest. Other checks (first aid, safeguarding) still carry an uploaded copy. |
 | Student and course records | Courses and sessions hold **headcounts, not names**. The retired `booking` table does hold `customerName` and `customerEmail` (feature removed from the UI, table kept). |
 | Emergency contacts | **Not stored anywhere.** The emergency sheet in the spec needs new fields first. |
@@ -142,7 +142,7 @@ counts only, no content.
 | Required date of birth, automatic under-18 flag | P0 | Done | `instructor.dateOfBirth` (required for new staff, prompted for existing on the staff list); under-18 computed on read from `lib/domain/age.ts`, so it lifts at 18 without a job; badges on the staff list, profile and dashboard. Migration 0042. |
 | Under-18 contact details hidden except Owner/Admin/Welfare | P0 | Done | Confirmed: the portal and mobile app show colleagues' names and shift times only; contact details appear in the admin office alone (`app/(app)/portal`, `app/api/mobile`). Welfare officer role since P1-F. |
 | No private adult-to-minor messaging | P0 | Done | No messaging feature at all; notifications are rota/system announcements. |
-| Parent/guardian contact, written permission upload, parent accounts | P0 | Partial | Guardian name, phone (sealed) and email (sealed) on under-18 profiles; "Parental permission to work" compliance slot with upload, date and verified flag (seeded for new centres, one click for existing). Parent accounts since P1-F: invited from the under-18's profile with a consent note; read-only rota at `/parent`. |
+| Parent/guardian contact, written permission upload, parent accounts | P0 | Withdrawn 10 Oct except the guardian emergency contact (decision C8); was Partial | Guardian name, phone (sealed) and email (sealed) on under-18 profiles; "Parental permission to work" compliance slot with upload, date and verified flag (seeded for new centres, one click for existing). Parent accounts since P1-F: invited from the under-18's profile with a consent note; read-only rota at `/parent`. |
 | No marketing or profiling of under-18s | P0 | Done | Marketing is B2B to centres only (`lib/outreach`); platform users are never emailed marketing. |
 | Under-18 photos off by default | P1 | Done (by absence) | No profile photos exist. |
 | Vetting tracker: status, date, expiry, reminders; store status only; warn or block | P1 | Conflict C5 | `compliance_item` tracks DBS/first aid/safeguarding with expiry and feeds the fit-to-roster check (warn or block via the licence setting). It also allows uploading the certificate file. The spec says never store certificate contents. |
@@ -150,6 +150,11 @@ counts only, no content.
 | Plain-English privacy explanation for 15-year-olds | P1 | Missing | |
 
 ## Working-time rules engine
+
+**Withdrawn 10 October 2026 (Conor; plan decision C8).** Working-time law is the centre's
+to manage; the engine, packs, settings and register below were removed from the code. The
+rows are kept as the record of what was built. Each person's rostered hours for the week
+now show beside their name on the roster (People × days) and on Availability.
 
 Built 3 October 2026 (plan P0-F). Engine: `lib/domain/working-time.ts` (pure); packs:
 `lib/rules/working-time/packs.ts` with Dev Center edits in the `rule_pack` table

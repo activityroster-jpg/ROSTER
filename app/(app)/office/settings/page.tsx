@@ -9,9 +9,6 @@ import { CompanyCodeCard } from "@/components/office/CompanyCodeCard";
 import { CourseScheduleDefaults } from "@/components/office/CourseScheduleDefaults";
 import { TimeclockSettingsForm } from "@/components/office/TimeclockSettingsForm";
 import { parseDefaultSchedule } from "@/lib/domain";
-import { packKeyFor } from "@/lib/rules/working-time/packs";
-import { loadPack } from "@/lib/rules/working-time/load";
-import { termRangesOf } from "@/lib/services/working-time";
 import { RotaTemplateForm } from "@/components/office/RotaTemplateForm";
 import { parseRotaTemplate } from "@/lib/rota/template";
 import { RetentionForm } from "@/components/office/RetentionForm";
@@ -99,11 +96,6 @@ export default async function SettingsPage() {
   const welfare = parseWelfareSettings(s?.welfareOfficers, s?.welfareDuty);
   const joinCode = await repos.control.ensureJoinCode(ctx.organisationId);
   const retention = await retentionPlan(repos, ctx, s, new Date());
-  const packKey = packKeyFor(organisation.jurisdiction);
-  const loaded = packKey ? await loadPack(repos.db, packKey) : null;
-  const packStatus = loaded
-    ? { name: loaded.pack.name, version: loaded.pack.version, verified: loaded.pack.verified, unverifiedCount: loaded.pack.bands.reduce((n, b) => n + b.unverified.length, 0), source: loaded.source }
-    : null;
 
   const toItems = <T extends { id: string; active: boolean }>(rows: T[], label: (r: T) => string, meta?: (r: T) => string, edit?: (r: T) => string): ConfigItem[] =>
     rows.map((r) => ({ id: r.id, label: label(r), active: r.active, meta: meta?.(r), editValue: edit?.(r) }));
@@ -156,11 +148,7 @@ export default async function SettingsPage() {
           privacyNoticeUrl={s?.privacyNoticeUrl ?? ""}
           dailyDigestEnabled={Boolean(s?.dailyDigestEnabled)}
           dailyDigestHour={s?.dailyDigestHour ?? 6}
-          workingTimeMode={s?.workingTimeMode ?? "block_override"}
-          termDates={termRangesOf(s)}
-          packStatus={packStatus}
           idleTimeoutMinutes={s?.idleTimeoutMinutes ?? 30}
-          requireParentApproval={s?.requireParentApproval ?? true}
           enforceLicenceChecks={Boolean(s?.enforceLicenceChecks)}
           enforceRatioChecks={Boolean(s?.enforceRatioChecks)}
           enforceConflictChecks={Boolean(s?.enforceConflictChecks)}

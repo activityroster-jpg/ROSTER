@@ -7,9 +7,6 @@ import { getStaffProfile } from "@/lib/services/hr";
 import { DocumentManager, type DocItem } from "@/components/DocumentManager";
 import { SetPasswordCard } from "@/components/portal/SetPasswordCard";
 import { Card } from "@/components/ui";
-import { DetailsCard } from "@/components/portal/DetailsCard";
-import { guardianLinksFor } from "@/lib/services/guardians";
-import { isUnder18 } from "@/lib/domain/age";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +32,6 @@ export default async function PortalWelcomePage() {
     kind: d.kind, itemId: d.itemId, name: d.name, expiryDate: d.expiryDate, mandatory: d.mandatory, hasFile: d.hasFile, docKey: d.docKey, verified: d.verified,
   }));
   const outstanding = docs.filter((d) => !d.hasFile).length;
-  const parentInvited = (await guardianLinksFor(repos, ctx, me.id)).some((l) => l.status === "active");
   const settings = (await repos.tenant.orgSettings.list(ctx))[0];
   // Invites now set the password on the "Create your account" page; the card is only for older invites.
   const hasPassword = await repos.control.hasCredentialPassword(ctx.userId);
@@ -57,13 +53,6 @@ export default async function PortalWelcomePage() {
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Get started</p>
 
         {hasPassword ? null : <SetPasswordCard />}
-
-        {!me.dateOfBirth || (isUnder18(me.dateOfBirth) && !parentInvited) ? (
-          <Card>
-            <p className="mb-2 font-semibold text-navy">About you</p>
-            <DetailsCard dateOfBirth={me.dateOfBirth} parentInvited={parentInvited} approvalRequired={settings?.requireParentApproval !== false} />
-          </Card>
-        ) : null}
 
         <div className="flex items-start gap-3 rounded-card border border-slate-200 bg-white p-4">
           <span className="mt-0.5 flex h-9 w-9 flex-none items-center justify-center rounded-full bg-teal/15 text-teal"><FileCheck className="h-5 w-5" /></span>

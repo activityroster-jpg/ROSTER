@@ -54,16 +54,6 @@ const ROWS: Row[] = [
     us: "yes", general: "no", club: "partial", sheets: "partial",
   },
   {
-    feature: "Young workers' hours checked",
-    detail: "Under-18s checked against the legal hours, start and finish times and rest for their age; adults warned over 48 hours.",
-    us: "yes", general: "partial", club: "no", sheets: "no",
-  },
-  {
-    feature: "Parent / guardian view for under-18 staff",
-    detail: "A read-only roster for a young instructor's parent, with the consent recorded.",
-    us: "yes", general: "no", club: "partial", sheets: "no",
-  },
-  {
     feature: "Instructor app",
     detail: "Shifts, availability, swaps, leave, hours and documents on their phone, with notifications.",
     us: "yes", general: "yes", club: "partial", sheets: "no",

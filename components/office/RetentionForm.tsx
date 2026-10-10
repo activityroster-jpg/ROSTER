@@ -11,7 +11,7 @@ const ROWS: { key: keyof RetentionPolicy; label: string; help: string; min: numb
   { key: "leaveMonths", label: "Leave requests", help: "Months after the leave ended.", min: 1 },
   { key: "availabilityMonths", label: "Availability entries", help: "Months after the date they refer to.", min: 1 },
   { key: "notificationsMonths", label: "Notifications", help: "In-app messages to your team.", min: 1 },
-  { key: "clockMonths", label: "Clock and payroll records", help: "Statutory minimum 6 years for payroll (HMRC / Revenue); young-worker time records need 3.", min: 72 },
+  { key: "clockMonths", label: "Clock and payroll records", help: "Statutory minimum 6 years for payroll (HMRC / Revenue).", min: 72 },
   { key: "auditMonths", label: "Change log", help: "Minimum 3 years; the database refuses earlier deletion.", min: 36 },
 ];
 const OPTIONS = [1, 3, 6, 12, 18, 24, 36, 48, 60, 72, 84, 96, 120];

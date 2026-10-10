@@ -3,7 +3,6 @@ import { RetentionBanner } from "@/components/office/RetentionBanner";
 import { AccessCard } from "@/components/office/AccessCard";
 import { PersonDataTools } from "@/components/office/PersonDataTools";
 import { GuideLink } from "@/components/GuideLink";
-import { guardianLinksFor } from "@/lib/services/guardians";
 import { can } from "@/lib/auth/rbac";
 import { retentionPlan } from "@/lib/services/retention";
 import Link from "next/link";
@@ -22,7 +21,6 @@ import { hasFeature } from "@/lib/features";
 import { ageOn, isUnder18 } from "@/lib/domain/age";
 import { readProtectedContacts } from "@/lib/services/protected-contacts";
 import { ProtectedContactsForm } from "@/components/office/ProtectedContactsForm";
-import { parentApprovalFromLinks } from "@/lib/services/guardians";
 import { StaffAvailabilityCard } from "@/components/office/StaffAvailabilityCard";
 import { StaffLicencesCourses } from "@/components/office/StaffLicencesCourses";
 import { eq } from "drizzle-orm";
@@ -69,10 +67,8 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
   const canEdit = can(ctx, "staff.edit");
   const canProtected = can(ctx, "protected.view");
   const contacts = canProtected ? await readProtectedContacts(repos, ctx, instructor) : { guardianName: "", guardianPhone: "", guardianEmail: "", emergencyName: "", emergencyPhone: "", emergencyRelationship: "" };
-  const guardians = under18 ? await guardianLinksFor(repos, ctx, instructor.id) : [];
   const retention = left && !instructor.anonymisedAt ? await retentionPlan(repos, ctx, settings[0], new Date()) : null;
   const scheduled = retention?.staffDue.find((x) => x.id === instructor.id) ?? null;
-  const hasPermissionSlot = documents.some((d) => /parental permission/i.test(d.name));
   const docItems: DocItem[] = documents.map((d) => ({
     kind: d.kind, itemId: d.itemId, name: d.name, expiryDate: d.expiryDate, mandatory: d.mandatory, hasFile: d.hasFile, docKey: d.docKey, verified: d.verified, noFile: d.noFile,
   }));
@@ -167,13 +163,13 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
       <div className="mt-6 space-y-6">
           <Card>
             <div className="mb-2 flex items-center justify-between"><h2 className="font-semibold text-navy">Access</h2><GuideLink topic="roles" className="text-xs" /></div>
-            <AccessCard instructorId={instructor.id} linked={Boolean(instructor.userId)} role={membership?.role ?? null} canManageGuardians={can(ctx, "protected.view")} parentApproval={parentApprovalFromLinks(instructor.dateOfBirth, guardians)} under18={under18} guardianEmailOnFile={Boolean(contacts.guardianEmail)} guardians={guardians.map((g) => ({ id: g.id, email: g.email, status: g.status, consentGivenAt: g.consentGivenAt?.toISOString() ?? null, consentNote: g.consentNote, createdAt: g.createdAt.toISOString() }))} />
+            <AccessCard linked={Boolean(instructor.userId)} role={membership?.role ?? null} />
           </Card>
 
           {canProtected ? (
           <Card>
             <h2 className="mb-1 font-semibold text-navy">Emergency &amp; guardian contacts <span className="text-xs font-normal text-slate-400">logged on every view</span></h2>
-            <ProtectedContactsForm instructorId={instructor.id} initial={contacts} under18={under18} hasPermissionSlot={hasPermissionSlot} visibleTo={await whoCanSeeText(repos, ctx, "protected")} />
+            <ProtectedContactsForm instructorId={instructor.id} initial={contacts} under18={under18} visibleTo={await whoCanSeeText(repos, ctx, "protected")} />
           </Card>
           ) : null}
 

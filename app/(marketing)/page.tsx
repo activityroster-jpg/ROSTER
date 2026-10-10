@@ -3,7 +3,7 @@ import { BuiltWithCentres } from "@/components/marketing/BuiltWithCentres";
 import {
   AlertTriangle, Anchor, CalendarCheck, LifeBuoy, ShieldCheck, Ship, Users, Waves, Wallet, FileCheck,
   Clock, CalendarOff, Smartphone, ClipboardCheck,
-  GitCompare, BookOpen, Newspaper, Tag, ArrowRight, Baby, KeyRound, FileText, Upload,
+  GitCompare, BookOpen, Newspaper, Tag, ArrowRight, KeyRound, FileText, Upload,
 } from "lucide-react";
 import { LeadCapture } from "@/components/marketing/LeadCapture";
 import { ComplianceFlow } from "@/components/marketing/ComplianceFlow";
@@ -24,8 +24,7 @@ const PLATFORM = [
   { icon: CalendarCheck, title: "Roster builder", body: "Build the week; every assignment is checked for licences, ratios and clashes." },
   { icon: Smartphone, title: "Instructor app", body: "Shifts, availability, swaps, hours and documents on their phone, with notifications." },
   { icon: FileCheck, title: "Certs & vetting", body: "Every RYA licence, first aid and DBS/PVG/AccessNI/Garda check, with expiry reminders." },
-  { icon: Baby, title: "Young workers' hours", body: "Under-18s checked against the legal hours for their age; adults warned over 48 a week." },
-  { icon: Users, title: "Parent & guardian view", body: "A read-only roster for the parents of under-18 staff. Nothing else, nobody else's details." },
+  { icon: Clock, title: "Hours at a glance", body: "Each person's rostered hours for the week, beside their name on the roster and the availability sheet." },
   { icon: KeyRound, title: "Roles for your team", body: "Admin, senior instructor and welfare officer, each seeing only what they need." },
   { icon: FileText, title: "Printable roster", body: "A day-by-day PDF in the layout you choose, ready for the noticeboard." },
   { icon: LifeBuoy, title: "Emergency sheet", body: "Today's staff and emergency contacts on one page for the duty officer." },
@@ -373,7 +372,7 @@ export default function MarketingHome() {
               ["Which jurisdictions are supported?", "England, Wales, Scotland, Northern Ireland and Ireland — DBS, PVG, AccessNI or Garda vetting set up automatically."],
               ["Can we tailor it to how we run?", "Yes. Grades, roles, checks, session times and course types are all yours to edit."],
               ["Do our instructors need to install anything?", "They get the instructor app on their phone for shifts, availability, swaps, hours and documents. It also works in any phone browser, so nobody is left out."],
-              ["We have under-18 assistants. Is that covered?", "Yes. Their hours are checked against the legal limits for their age, their contact details stay private, and a parent or guardian can be given a read-only view of their roster."],
+              ["We have under-18 assistants. Can they use it?", "Yes. Add their date of birth and they're marked as under 18, with their contact details kept private from colleagues. Each person's hours for the week show beside their name, so you can keep an eye on them."],
               ["Can we bring our existing schedule across?", "Yes. Import courses and staff from a spreadsheet or calendar, check what was read, then save. Most centres are set up in an afternoon."],
               ["Will the platform keep improving?", "Yes. ActivityRoster is a live platform, updated continuously with nothing to install. Centres request features from inside the platform and vote for each other's ideas, and we build around what centres vote for."],
               ["What does it cost after the free month?", "£35 a month for up to 10 people or £65 a month for unlimited instructors and volunteers (fair use applies, see our terms). No per-user fees, and annual billing gives you months free."],

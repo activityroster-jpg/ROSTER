@@ -38,7 +38,6 @@ export function adminSections(opts: { staging: boolean }): NavSection[] {
     { id: "trust", label: "Trust & compliance", pages: [
       { href: "/admin/security", label: "Security", hint: "sign-in events, alerts and incidents" },
       { href: "/admin/privacy", label: "Privacy requests", hint: "access, erasure and restriction requests" },
-      { href: "/admin/rules", label: "Rule packs", hint: "young workers' hours and other legal figures" },
     ] },
   ];
 }

@@ -157,12 +157,12 @@ export const orgSettings = sqliteTable("org_settings", {
   /** Opt-in morning email of the day's roster to every admin (offline fallback). Hour is London time, 0–23. */
   dailyDigestEnabled: boolCol("daily_digest_enabled").default(false),
   dailyDigestHour: integer("daily_digest_hour").notNull().default(6),
-  // --- Young workers' hours (compliance block F) ----------------------------
-  // What happens when rostering an under-18 would break their jurisdiction's
-  // working-time rules: warn only, block unless an admin overrides with a note
-  // (the default), or block outright. The figures themselves are rule-pack data.
+  // --- Young workers' hours: retired 10 Oct 2026 ------------------------------
+  // The working-time checks were removed (hours are the centre's to manage) and
+  // nothing reads these two columns. They stay until a later migration drops
+  // them (migrations are additive: add, migrate, remove later).
   workingTimeMode: text("working_time_mode", { enum: WORKING_TIME_MODES }).notNull().default("block_override"),
-  /** JSON array of {from,to,label?} ISO date ranges that count as school term time. Empty = treat every week as term time (the stricter caps). */
+  /** Retired with the working-time checks: JSON array of {from,to,label?} school term dates. Not read. */
   termDates: text("term_dates").notNull().default("[]"),
   /** JSON RotaTemplateSettings (lib/rota/template): range, orientation and fields for the roster PDF. */
   rotaTemplate: text("rota_template").notNull().default("{}"),
@@ -170,7 +170,7 @@ export const orgSettings = sqliteTable("org_settings", {
   welfareOfficers: text("welfare_officers").notNull().default("[]"),
   /** Default welfare-on-duty pattern (JSON {weekday 0-6, slot, name}[]); a welfare_duty row overrides it for one date+slot. */
   welfareDuty: text("welfare_duty").notNull().default("[]"),
-  /** Under-18 instructors need a parent's approval (recorded on their guardian_link) before they can be rostered. On by default; a centre may switch it off. */
+  /** Retired 10 Oct 2026 with parent approval: not read. Stays until a later migration drops it. */
   requireParentApproval: boolCol("require_parent_approval").default(true),
   /** Minutes of inactivity before an admin is asked for their PIN again (5–240). Applied from the next PIN entry. */
   idleTimeoutMinutes: integer("idle_timeout_minutes").notNull().default(30),
@@ -349,9 +349,9 @@ export const instructor = sqliteTable("instructor", {
   notifyEmail: boolCol("notify_email").default(true),
   /** Who keeps this person's availability (see MANAGED_BY); null follows the centre's setting. */
   managedBy: text("managed_by", { enum: MANAGED_BY }),
-  /** YYYY-MM-DD. Drives the under-18 flag (computed on read, lifts at 18) and the working-time rules. */
+  /** YYYY-MM-DD. Drives the under-18 flag (computed on read, lifts at 18) and its higher-privacy defaults. */
   dateOfBirth: text("date_of_birth"),
-  /** Parent or guardian for under-18s. Phone and email are sealed (AES-GCM) at rest. */
+  /** Parent or guardian emergency contact for under-18s. Phone and email are sealed (AES-GCM) at rest. */
   guardianName: text("guardian_name"),
   guardianPhone: text("guardian_phone"),
   guardianEmail: text("guardian_email"),
@@ -890,9 +890,10 @@ export const deletionLog = sqliteTable("deletion_log", {
 export type DeletionLog = typeof deletionLog.$inferSelect;
 
 /**
- * A parent or guardian's read-only access to an under-18 instructor's roster,
- * with the consent record behind it. The guardian is a `parent` member of
- * the centre; this row says whose roster they may see.
+ * Retired 10 Oct 2026: a parent or guardian's read-only access to an under-18
+ * instructor's roster and their approval. The parent view and parent approval
+ * were removed and no code reads these rows; they go with the instructor
+ * (cascade) and the table stays until a later migration clears and drops it.
  */
 export const GUARDIAN_LINK_STATUSES = ["active", "revoked"] as const;
 export const PARENT_DECISIONS = ["approved", "declined", "withdrawn"] as const;

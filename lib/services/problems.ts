@@ -4,7 +4,6 @@ import type { AnyTenantContext } from "@/lib/tenant/context";
 import { availability as availabilityTable, course as courseTable, courseEquipment as courseEquipmentTable, courseSession as courseSessionTable, courseStaff as courseStaffTable, sessionStaffOverride as overrideTable } from "@/lib/db/schema";
 import { evaluateFit, evaluateRatio, type AssignedRole, type ComplianceRequirement, type HeldCompliance } from "@/lib/domain";
 import { liveSessions } from "@/lib/domain/sessions";
-import { isUnder18 } from "@/lib/domain/age";
 import { indexAvailability, keyOf, managedByOffice } from "@/lib/domain/availability";
 import {
   availabilityProblems,
@@ -24,8 +23,6 @@ import {
 import { availabilityHorizon } from "./availability";
 import { fitReason } from "./staff";
 import { getTeachingMatrix } from "./teaching";
-import { checkWorkingTime, describeFindings } from "./working-time";
-import { parentApprovalFor } from "./guardians";
 import { addDays } from "./schedule";
 import { todayIso } from "@/lib/domain/time";
 
@@ -58,7 +55,7 @@ const ms = (v: Date | number) => (v instanceof Date ? v.getTime() : Number(v));
  * Everything wrong with the roster in a date range, judged against the checks
  * the centre has switched on: double-bookings, rostered while Busy or on leave,
  * declines without cover, expired mandatory checks, the wrong course type for
- * an instructor's qualifications, young workers' hours, parental permission,
+ * an instructor's qualifications,
  * ratio and safety cover, and equipment clashes or maintenance. Tenant scoped;
  * the decisions are the pure functions in lib/domain/problems.
  */
@@ -70,7 +67,7 @@ export async function findProblems(repos: Repositories, ctx: AnyTenantContext, o
   const to = opts.to ?? addDays(from, 56);
 
   // Bounded read (audit C2): the range plus a week either side, which is all the
-  // weekly young-worker limits and clash checks ever look at.
+  // clash checks ever look at.
   const windowFrom = addDays(from, -7);
   const windowTo = addDays(to, 7);
   const allSessions = await t.courseSession.list(ctx, and(gte(courseSessionTable.date, windowFrom), lt(courseSessionTable.date, windowTo))).then(liveSessions);
@@ -156,30 +153,6 @@ export async function findProblems(repos: Repositories, ctx: AnyTenantContext, o
     const gap = qualificationGap(teaching.get(instructorId) ?? [], holdsAny.has(instructorId), course.courseTypeId);
     return gap.known && !gap.qualified ? `Their qualifications don't cover ${courseTypes.find((ct) => ct.id === course.courseTypeId)?.name ?? "this course type"}` : null;
   }));
-
-  // Young workers' hours and parental permission: under-18s only.
-  const young = instructorRows.filter((i) => isUnder18(i.dateOfBirth));
-  if (young.length) {
-    const byId = new Map(young.map((i) => [i.id, i]));
-    const wtCache = new Map<string, string | null>();
-    const paCache = new Map<string, string | null>();
-    for (const a of assignments) {
-      const who = byId.get(a.instructorId);
-      if (!who || a.status === "declined") continue;
-      const k = `${a.instructorId}|${a.courseId}`;
-      if (!wtCache.has(k)) {
-        const others = assignmentRows.filter((x) => x.instructorId === a.instructorId && x.courseId !== a.courseId);
-        const check = await checkWorkingTime(repos, ctx, { instructorId: a.instructorId, courseId: a.courseId, settings, allSessions: allSessions, existingAssignments: others });
-        wtCache.set(k, check.blocks.length ? describeFindings(check.blocks) : null);
-      }
-      if (!paCache.has(a.instructorId) && settings?.requireParentApproval !== false) {
-        const state = await parentApprovalFor(repos, ctx, a.instructorId, who.dateOfBirth);
-        paCache.set(a.instructorId, state === "approved" || state === "not-needed" ? null : state === "none" ? "No parent or guardian has been invited to approve" : state === "pending" ? "Their parent or guardian hasn't approved yet" : `Their parent or guardian ${state} it`);
-      }
-    }
-    problems.push(...perAssignmentProblems("working-time", settings?.workingTimeMode === "warn" ? "warn" : "block", sessions, assignments, courses, instructors, (instructorId, course) => wtCache.get(`${instructorId}|${course.id}`) ?? null));
-    problems.push(...perAssignmentProblems("parent-approval", "block", sessions, assignments, courses, instructors, (instructorId) => paCache.get(instructorId) ?? null));
-  }
 
   // Ratio and safety cover: when the centre flags them.
   if (settings?.enforceRatioChecks ?? false) {

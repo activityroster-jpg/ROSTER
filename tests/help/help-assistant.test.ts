@@ -17,7 +17,7 @@ describe("help assistant search (no AI: the guides only)", () => {
     expect(topicOf("publish the roster")).toBe("rota");
     expect(topicOf("connect booking system")).toBe("integrations");
     expect(topicOf("how do i add a boat to the system")).toBe("equipment");
-    expect(topicOf("under 18 hours")).toBe("young-workers");
+    expect(topicOf("under 18 hours")).toBe("staff");
     expect(topicOf("export my data")).toBe("data");
     expect(topicOf("forgot my password")).toBe("getting-started");
     expect(topicOf("who can see payroll")).toBe("roles");

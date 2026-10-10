@@ -114,9 +114,6 @@ export function defaultComplianceTypes(jurisdiction: Jurisdiction): ComplianceSe
     { name: "Safeguarding Training", code: "SAFEGUARDING", mandatory: false, expiryTracked: true },
     vettingFor(jurisdiction),
     { name: "RYA Instructor Revalidation", code: "REVALIDATION", mandatory: false, expiryTracked: true },
-    // Under-18 instructors: written parental permission (and, where the law
-    // requires, the child employment permit) with an upload slot and a date.
-    { name: "Parental permission to work (under 18)", code: "PARENTAL_PERMISSION", mandatory: false, expiryTracked: true },
   ];
 }
 

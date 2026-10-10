@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { askConfirm } from "@/lib/ui/ask-confirm";
 import { useRouter } from "next/navigation";
+import { WeekHours } from "@/components/office/WeekHours";
 import { assignableForCellAction, assignFromAvailabilityAction, setAvailabilityBulkAction, setAvailabilityForStaffAction, type CellCandidate } from "@/app/(app)/office/availability/actions";
 
 export interface MatrixRow {
@@ -20,6 +21,8 @@ export interface MatrixRow {
   setBy: Record<string, string>;
   notes: Record<string, string>;
   assigned: Record<string, string[]>;
+  /** Minutes rostered this week, shown beside the name. */
+  assignedMinutes?: number;
 }
 
 const SLOTS = ["AM", "PM", "EV"] as const;
@@ -246,11 +249,13 @@ export function AvailabilityMatrix({ days, rows, availableCounts, staffManagedBy
                     <button type="button" onClick={() => openQuick({ kind: "row", instructorId: r.instructorId, name: r.name })} className="flex w-full items-center gap-1.5 px-4 py-1.5 text-left underline decoration-dotted underline-offset-4 hover:bg-teal/10" title={`Set ${r.name}'s whole week`}>
                       {r.name}
                       {r.officeManaged ? <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-slate-500 no-underline" title="The office keeps their availability">office</span> : null}
+                      <WeekHours minutes={r.assignedMinutes ?? 0} />
                     </button>
                   ) : (
                     <span className="flex items-center gap-1.5 px-4 py-1.5">
                       {r.name}
                       {r.officeManaged ? <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-slate-500" title="The office keeps their availability">office</span> : null}
+                      <WeekHours minutes={r.assignedMinutes ?? 0} />
                     </span>
                   )}
                 </td>

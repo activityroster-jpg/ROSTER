@@ -361,28 +361,6 @@ export async function updateProtectedContactsAction(instructorId: string, input:
   return { ok: true, message: "Saved" };
 }
 
-/**
- * Give an under-18 a "Parental permission to work" slot: a compliance item
- * (upload + date + verified flag) against a compliance type with code
- * PARENTAL_PERMISSION, created for the centre if it doesn't have one yet.
- */
-export async function addParentalPermissionAction(instructorId: string): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ permission: "protected.view" });
-  const inst = await repos.tenant.instructor.findById(ctx, instructorId);
-  if (!inst) return { ok: false, error: "Instructor not found" };
-  const types = await repos.tenant.complianceType.list(ctx);
-  let type = types.find((t) => t.code === "PARENTAL_PERMISSION");
-  if (!type) {
-    type = await repos.tenant.complianceType.insert(ctx, { name: "Parental permission to work (under 18)", code: "PARENTAL_PERMISSION", mandatory: false, expiryTracked: true, active: true });
-    await writeAudit(repos, ctx, { action: "create", entity: "compliance_type", entityId: type.id, after: { name: type.name } });
-  }
-  const existing = (await repos.tenant.complianceItem.list(ctx)).find((c) => c.instructorId === instructorId && c.complianceTypeId === type!.id);
-  if (existing) return { ok: true, message: "Already on their record" };
-  const item = await repos.tenant.complianceItem.insert(ctx, { instructorId, complianceTypeId: type.id, reference: null, expiryDate: null, verified: false });
-  await writeAudit(repos, ctx, { action: "create", entity: "compliance_item", entityId: item.id, after: { type: type.name } });
-  revalidatePath(`/office/staff/${instructorId}`);
-  return { ok: true, message: "Added. Upload the signed permission and set its date." };
-}
 
 // --- Per-person data rights (P1-A) -------------------------------------------
 import { anonymisePerson, setRestriction } from "@/lib/services/person-data";
@@ -434,30 +412,6 @@ async function sealIfVetting(repos: Repositories, ctx: AnyTenantContext, itemId:
   if (!reference) return null;
   const item = await repos.tenant.complianceItem.findById(ctx, itemId);
   return item ? sealForType(repos, ctx, item.complianceTypeId, reference) : reference;
-}
-
-// --- Roles and guardian access (P1-F) ---------------------------------------
-import { inviteGuardian, revokeGuardian } from "@/lib/services/guardians";
-
-
-/** Give an under-18's parent or guardian read-only access to their roster, recording the consent. */
-export async function inviteGuardianAction(instructorId: string, consentNote: string): Promise<ActionState> {
-  const { ctx, repos, organisation } = await requireTenant({ permission: "protected.view" });
-  const r = await inviteGuardian(repos, ctx, instructorId, (consentNote ?? "").trim().slice(0, 300));
-  if (!r.ok) return { ok: false, error: r.error };
-  try {
-    const auth = await getAuth();
-    await auth.api.signInMagicLink({ body: { email: r.email, callbackURL: centreUrl(organisation.slug, "/parent") }, headers: new Headers(await headers()) });
-  } catch (err) { console.error("[guardian] magic link failed:", (err as Error).message); }
-  revalidatePath(`/office/staff/${instructorId}`);
-  return { ok: true, message: `Invitation sent to ${r.email}` };
-}
-
-export async function revokeGuardianAction(instructorId: string, linkId: string): Promise<ActionState> {
-  const { ctx, repos } = await requireTenant({ permission: "protected.view" });
-  const ok = await revokeGuardian(repos, ctx, linkId);
-  revalidatePath(`/office/staff/${instructorId}`);
-  return ok ? { ok: true, message: "Guardian access removed" } : { ok: false, error: "Not found" };
 }
 
 /**

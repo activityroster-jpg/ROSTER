@@ -1,11 +1,12 @@
 "use client";
 
+import { WeekHours } from "@/components/office/WeekHours";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import type { BoardData, BoardInstructor, OpenRole } from "@/lib/services/board";
 import type { RotaDay, RotaSession } from "@/lib/services/schedule";
-import { boardAssignAction, boardRemoveAction, boardWorkingTimeAction } from "@/app/(app)/office/rota/board-actions";
+import { boardAssignAction, boardRemoveAction } from "@/app/(app)/office/rota/board-actions";
 import { setCourseStaffingAction } from "@/app/(app)/office/courses/actions";
 import { ConfirmDialog } from "./ConfirmDialog";
 
@@ -27,7 +28,7 @@ interface Selected { session: RotaSession; day: RotaDay }
  * The roster board (audit Part E, decision 6): layout (a) course cards per day
  * with their open roles and a side list of instructors to drag onto them; a
  * switch to layout (b) instructor rows across the days. Click a session for the
- * side panel: who is on it, availability, clashes and the young-worker result,
+ * side panel: who is on it, availability and clashes,
  * add, remove or swap in place, on the whole course or this day only.
  */
 export function RosterBoard({ data, canEdit }: { data: BoardData; canEdit: boolean }) {
@@ -143,9 +144,14 @@ function CoursesByDay({ data, canEdit, picked, dropTarget, setDropTarget, onDrop
 /* ---------- Layout (b): people down the side, days across ---------- */
 function PeopleByDay({ data, onOpen }: { data: BoardData; onOpen: (sessionId: string) => void }) {
   const cell = new Map<string, { id: string; name: string; status: string; dayOnly: boolean }[]>();
+  // Hours each person is rostered this week (declined sessions don't count), shown beside their name.
+  const minutes = new Map<string, number>();
+  const counted = new Set<string>();
   for (const d of data.days) for (const s of d.sessions) for (const m of s.staff) {
     const k = `${m.instructorId}|${d.date}|${s.slot}`;
     cell.set(k, [...(cell.get(k) ?? []), { id: s.sessionId, name: s.courseName, status: m.status, dayOnly: Boolean(m.dayOnly) }]);
+    const once = `${m.instructorId}|${s.sessionId}`;
+    if (m.status !== "declined" && !counted.has(once)) { counted.add(once); minutes.set(m.instructorId, (minutes.get(m.instructorId) ?? 0) + Math.max(0, s.endAt - s.startAt) / 60000); }
   }
   const slots = SLOTS.filter((code) => data.days.some((d) => d.sessions.some((s) => s.slot === code)));
   const rows = slots.length ? slots : (["AM", "PM"] as const);
@@ -165,7 +171,10 @@ function PeopleByDay({ data, onOpen }: { data: BoardData; onOpen: (sessionId: st
         <tbody className="divide-y divide-slate-100">
           {data.instructors.map((i) => (
             <tr key={i.id}>
-              <td className="sticky left-0 z-10 whitespace-nowrap border-r border-slate-200 bg-white px-3 py-1.5 font-semibold text-navy">{i.name}{i.under18 ? <span className="ml-1 rounded bg-amber/15 px-1 text-[9px] font-semibold text-amber">U18</span> : null}</td>
+              <td className="sticky left-0 z-10 whitespace-nowrap border-r border-slate-200 bg-white px-3 py-1.5 font-semibold text-navy">
+                {i.name}{i.under18 ? <span className="ml-1 rounded bg-amber/15 px-1 text-[9px] font-semibold text-amber">U18</span> : null}
+                <WeekHours minutes={minutes.get(i.id) ?? 0} />
+              </td>
               {data.days.map((d) => rows.map((code, ci) => {
                 const items = cell.get(`${i.id}|${d.date}|${code}`) ?? [];
                 const a = i.availability[`${d.date}|${code}`];
@@ -207,16 +216,9 @@ function optionLabel(i: BoardInstructor, slotKey: string, courseTypeId: string |
 function SlotRow({ roleTypeId, roleName, member, extra, candidates, byId, slotKey, dayWord, slot, courseTypeId, courseId, canEdit, multiDay, pending, preselect, onAssign, onRemove, onAskRemove }: SlotRowProps) {
   const [changing, setChanging] = useState(false);
   const [pick, setPick] = useState(!member && preselect ? preselect : "");
-  const [wt, setWt] = useState<{ blocks: string; warns: string } | null>(null);
   const chosen = pick ? byId.get(pick) : undefined;
   const chosenAvail = chosen?.availability[slotKey];
   const qualified = chosen && courseTypeId ? (chosen.knownQualifications ? chosen.teaches.includes(courseTypeId) : null) : null;
-  useEffect(() => {
-    if (!pick || !chosen?.under18 || !courseId) { setWt(null); return; }
-    let live = true;
-    boardWorkingTimeAction(courseId, pick).then((r) => { if (live && r.ok && r.active) setWt({ blocks: r.blocks, warns: r.warns }); }).catch(() => {});
-    return () => { live = false; };
-  }, [pick, chosen?.under18, courseId]);
   const field = "min-w-0 flex-1 rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal";
   const showPicker = canEdit && (!member || changing);
 
@@ -259,7 +261,6 @@ function SlotRow({ roleTypeId, roleName, member, extra, candidates, byId, slotKe
           <p className={chosenAvail?.status === "available" ? "text-starboard" : chosenAvail?.status === "unavailable" ? "text-port" : "text-slate-500"}>Availability {dayWord} {slot}: {(chosenAvail ? AVAIL[chosenAvail.status] ?? AVAIL.unasked! : AVAIL.unasked!).word}{chosenAvail?.source === "default" ? " (hasn't answered; counts as busy)" : chosenAvail?.source === "pattern" ? " (usual week)" : chosenAvail?.source === "assumed" ? " (office keeps their availability)" : ""}</p>
           {!chosen.fit ? <p className="text-port">Not cleared to roster: {chosen.fitReason}</p> : null}
           {qualified === false ? <p className="text-port">Their licences don&apos;t cover this course (override needed).</p> : qualified === null ? <p className="text-slate-400">No licences recorded for them.</p> : null}
-          {chosen.under18 ? (wt ? (wt.blocks ? <p className="text-port">Young worker&apos;s hours: {wt.blocks}</p> : wt.warns ? <p className="text-amber">Young worker&apos;s hours: {wt.warns}</p> : <p className="text-starboard">Young worker&apos;s hours: within the limits.</p>) : <p className="text-slate-400">Checking young worker&apos;s hours…</p>) : null}
         </div>
       ) : null}
     </li>

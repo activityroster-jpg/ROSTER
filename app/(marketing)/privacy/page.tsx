@@ -4,7 +4,7 @@ export const metadata = { title: "Privacy Policy" };
 
 export default function PrivacyPage() {
   return (
-    <LegalPage title="Privacy Policy" updated="4 October 2026">
+    <LegalPage title="Privacy Policy" updated="10 October 2026">
       <P>This policy explains what personal data ActivityRoster (&ldquo;we&rdquo;) processes, why, and your rights under the UK GDPR and the EU GDPR. It covers the ActivityRoster website and the rostering platform used by sailing &amp; watersports centres.</P>
 
       <H2>Who is the data controller</H2>
@@ -37,7 +37,7 @@ export default function PrivacyPage() {
       <P>We do not sell personal data. We share it only with the sub-processors needed to run the service (hosting, payments, email) and where legally required. The current list, with every change dated, is at <a className="text-teal hover:underline" href="/subprocessors">activityroster.com/subprocessors</a>; centres are told before a new one is added.</P>
 
       <H2>Under-18s</H2>
-      <P>Some instructors and assistants are under 18. They get higher-privacy defaults, their parents or guardians can be given a read-only view of their roster, and nothing we build markets to them. The plain-English version for young people and their families is at <a className="text-teal hover:underline" href="/privacy/young-people">activityroster.com/privacy/young-people</a>.</P>
+      <P>Some instructors and assistants are under 18. They get higher-privacy defaults and nothing we build markets to them. The plain-English version for young people and their families is at <a className="text-teal hover:underline" href="/privacy/young-people">activityroster.com/privacy/young-people</a>.</P>
 
       <H2>Your rights</H2>
       <P>You have the right to access, correct, delete, restrict or object to processing, and to data portability. Centres can export their data at any time from Settings. To exercise a right, email <a className="text-teal hover:underline" href="mailto:privacy@activityroster.com">privacy@activityroster.com</a>. You may also complain to the UK Information Commissioner&apos;s Office (ICO) or your local supervisory authority.</P>

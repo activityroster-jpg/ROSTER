@@ -7,7 +7,7 @@ import { FAQ } from "./faq";
 
 /** Which guides fit the page someone is on, to nudge the answers and suggest questions. */
 const PAGE_TOPICS: { prefix: string; topics: string[] }[] = [
-  { prefix: "/office/staff", topics: ["staff", "staff-import", "roles", "licences", "young-workers"] },
+  { prefix: "/office/staff", topics: ["staff", "staff-import", "roles", "licences"] },
   { prefix: "/office/courses", topics: ["courses", "rostering", "import", "integrations", "equipment"] },
   { prefix: "/office/course-setup", topics: ["courses", "equipment", "settings"] },
   { prefix: "/office/import", topics: ["import"] },
@@ -19,7 +19,7 @@ const PAGE_TOPICS: { prefix: string; topics: string[] }[] = [
   { prefix: "/office/equipment", topics: ["equipment"] },
   { prefix: "/office/locations", topics: ["locations"] },
   { prefix: "/office/finance", topics: ["time", "settings"] },
-  { prefix: "/office/settings", topics: ["settings", "young-workers", "admin-security", "retention", "data"] },
+  { prefix: "/office/settings", topics: ["settings", "pay-rates", "admin-security", "retention", "data"] },
   { prefix: "/office/billing", topics: ["billing", "plans"] },
   { prefix: "/office/onboarding", topics: ["getting-started", "staff", "courses"] },
   { prefix: "/office", topics: ["dashboard", "getting-started", "problems"] },

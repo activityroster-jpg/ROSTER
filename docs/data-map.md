@@ -23,19 +23,19 @@ in `docs/retention.md`. Sub-processors in `docs/subprocessors.md`.
 | `notification` | In-app notices to a person | Staff | Low | Contract | The recipient |
 | `onboarding_item`, `org_settings`, `session_slot`, `role_type`, `qualification_type`, `compliance_type`, `equipment_type`, `location_type`, `course_type*`, `equipment`, `location` | Configuration | – | None | – | Admins |
 | `integration` | Connected calendar/accounting tokens (AES-GCM encrypted) | – | Secret | Contract | Nobody directly |
-| `guardian_link` | A parent or guardian's read-only access to an under-18 instructor's rota: guardian email, consent note, who recorded it and when | Guardians of under-18 staff | Standard | Consent / legitimate interests (safeguarding) | Admins, welfare officers; the guardian sees only their own link |
+| `guardian_link` | Retired 10 Oct 2026 (the parent view and parent approval were removed): rows created before then still hold the guardian email, consent note, who recorded it and when. No screen shows them; they go when the instructor is deleted, and a cleanup that clears and drops the table is proposed | Guardians of under-18 staff | Standard | None now: due for deletion | Nobody (no code reads them) |
 | `deletion_log` | One-way hash and summary of each anonymisation, so it can be re-applied after a restore | Nobody identifiable | Standard | Legal obligation (erasure) | Admins (via replay) |
 | `email_outbox` (control plane) | Each outgoing email while it is being sent or retried: recipient, subject, body; the body is cleared once sent or finally failed; rows purge after 7 days (sent) or 30 (failed) | Anyone we email | Standard; a sign-in code is in the body briefly | Contract / legitimate interests | Platform admin (Dev Center → Email: recipient masked, no bodies) |
 | `push_outbox` (control plane) | Each phone notification sent to many people at once (a published week) while it waits for the two-minute delivery job: user id, title, short body; purged 7 days after sending | Staff with the app | Standard | Contract | Nobody reads it; the delivery job only |
 | `audit_log` | Who changed what and when in the centre; append-only (database triggers) | Staff (actor), subjects of changes | Standard | Legitimate interests (accountability) | Admins (plain-English change log) |
 | R2 bucket `activityroster-docs` | Uploaded certificate and vetting documents, keyed by centre | Staff | High | As `compliance_item` | Admins, via authenticated download only |
 
-Held since P0-E (3 October 2026): dates of birth, parent or guardian details and
-encrypted emergency contacts on `instructor`. Not held: student names, medical
-information, photos. Exports that list children's working patterns (the young-worker
-time register CSV) and views of guardian or emergency contacts are each written to
-`audit_log`. The `rule_pack` table (control plane) holds legal figures only, no
-personal data.
+Held since P0-E (3 October 2026): dates of birth, parent or guardian emergency
+contacts and encrypted emergency contacts on `instructor`. Not held: student names,
+medical information, photos. Views of guardian or emergency contacts are each written
+to `audit_log`. The young-worker time register export, the working-time checks and
+the `rule_pack` table (legal figures only, no personal data; no longer read) were
+retired on 10 October 2026: hours are the centre's to manage.
 
 ## ActivityRoster's own data (ActivityRoster = controller)
 

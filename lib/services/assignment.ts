@@ -17,9 +17,7 @@ import { auditStatement } from "./audit";
 import { planHoursForCourse } from "./hours";
 import { notifyInstructor } from "./notifications";
 import { publishedWeeks, weekOf } from "./roster";
-import { checkWorkingTime, describeFindings } from "./working-time";
 import { liveSessions } from "@/lib/domain/sessions";
-import { parentApprovalFor } from "./guardians";
 import { getTeachingMatrix } from "./teaching";
 import { qualificationGap } from "./problems";
 import { sessionsForInstructor } from "./session-staff";
@@ -34,10 +32,10 @@ export interface AssignInput {
   overrideNote?: string;
 }
 
-export type AssignBlockReason = "not-fit" | "not-qualified" | "conflict" | "unavailable" | "working-time" | "parent-approval" | "invalid";
+export type AssignBlockReason = "not-fit" | "not-qualified" | "conflict" | "unavailable" | "invalid";
 
 export type AssignResult =
-  | { ok: true; courseStaffId: string; overridden: boolean; /** Non-blocking notes (e.g. an unverified young-worker figure, a missing break). */ warnings: string[] }
+  | { ok: true; courseStaffId: string; overridden: boolean; /** Non-blocking notes for the office. */ warnings: string[] }
   | { ok: false; reason: AssignBlockReason; detail: string; /** True when the centre's setting forbids overriding this block. */ noOverride?: boolean };
 
 function toMs(v: Date | number): number {
@@ -50,8 +48,6 @@ export function assignBlockMessage(reason: AssignBlockReason, detail: string): s
   if (reason === "not-qualified") return `Not an instructor for this course type: ${detail}`;
   if (reason === "conflict") return `Double-booked: ${detail}`;
   if (reason === "unavailable") return `${detail} in their availability`;
-  if (reason === "working-time") return `Young worker's hours: ${detail}`;
-  if (reason === "parent-approval") return `Parental permission: ${detail}`;
   return detail;
 }
 
@@ -60,13 +56,11 @@ export function assignBlockMessage(reason: AssignBlockReason, detail: string): s
  *   1. FIT — instructor blocked if any mandatory check is missing/expired.
  *   2. CONFLICT — instructor already booked on an overlapping session.
  *   3. AVAILABILITY — the instructor marked the slot busy.
- *   4. WORKING TIME — an under-18 would exceed their jurisdiction's hour, rest
- *      or start/finish rules (figures from the rule pack; the centre's setting
- *      decides warn / block-with-override / block).
- * Each block can be overridden by an admin WITH a note, which is recorded to
- * the audit log with the overriding user — except a working-time block when the
- * centre has chosen "block". Ratio/safety-cover is a course-level flag surfaced
- * elsewhere, not a hard block here.
+ * Each block can be overridden by an admin, which is recorded to the audit log
+ * with the overriding user. Working hours (including under-18s') are the
+ * centre's to manage: the roster and availability show each person's hours for
+ * the week, and nothing here checks them. Ratio/safety-cover is a course-level
+ * flag surfaced elsewhere, not a hard block here.
  */
 /** A course's own sessions plus every session from 14 days before its first to 14 days after its last. */
 export async function sessionsAround(repos: Repositories, ctx: AnyTenantContext, courseId: string, days = 14) {
@@ -146,14 +140,6 @@ export async function assignStaff(
     return { ok: false, reason: "not-qualified", detail: `${instructorRow.name}'s qualifications don't cover ${ctName}` };
   }
 
-  // --- 1b. Under-18: a parent's approval first (centre setting, on by default) ---
-  const parentApproval = settings?.requireParentApproval !== false ? await parentApprovalFor(repos, ctx, input.instructorId, instructorRow.dateOfBirth) : "not-needed";
-  const parentBlocked = parentApproval !== "not-needed" && parentApproval !== "approved";
-  if (parentBlocked && !input.override) {
-    const detail = parentApproval === "none" ? "no parent or guardian has been invited to approve yet" : parentApproval === "pending" ? "their parent or guardian hasn't approved yet" : `their parent or guardian ${parentApproval} it`;
-    return { ok: false, reason: "parent-approval", detail };
-  }
-
   // --- 2. Conflict check ---------------------------------------------------
   const existingAssignments = await t.courseStaff.list(
     ctx,
@@ -203,31 +189,10 @@ export async function assignStaff(
     return { ok: false, reason: "unavailable", detail: busy.why };
   }
 
-  // --- 4. Young workers' hours (rule pack for the jurisdiction) ----------
-  const wt = await checkWorkingTime(repos, ctx, {
-    instructorId: input.instructorId,
-    courseId: input.courseId,
-    settings: settings ?? null,
-    allSessions: thisCourseSessions,
-    existingAssignments: existingAssignments,
-  });
-  const wtBlocked = wt.blocks.length > 0 && wt.mode !== "warn";
-  if (wtBlocked && (wt.mode === "block" || !input.override)) {
-    const detail = describeFindings(wt.blocks);
-    return {
-      ok: false,
-      reason: "working-time",
-      detail: wt.mode === "block" ? `${detail}. This centre blocks these outright (Settings → Young workers' hours)` : detail,
-      noOverride: wt.mode === "block",
-    };
-  }
-  const warnings = [
-    ...(wt.blocks.length > 0 && !wtBlocked ? wt.blocks : []),
-    ...wt.warns,
-  ].map((f) => (f.verified ? f.message : `${f.message} (figure not yet verified)`));
+  const warnings: string[] = [];
 
-  // --- 5. Persist ----------------------------------------------------------
-  const overridden = Boolean(input.override && (!fit.fit || notQualified || clashing || busy || wtBlocked || parentBlocked));
+  // --- 4. Persist ----------------------------------------------------------
+  const overridden = Boolean(input.override && (!fit.fit || notQualified || clashing || busy));
   // The assignment, its pay lines and the change-log entry are written in one
   // batch: all of it lands or none of it does.
   const row = {
@@ -250,7 +215,6 @@ export async function assignStaff(
     entityId: row.id,
     after: {
       courseId: input.courseId, instructorId: input.instructorId, overridden, note: input.overrideNote,
-      ...(wt.findings.length ? { workingTime: wt.findings.map((f) => `${f.severity}:${f.code}:${f.message}`) } : {}),
     },
   });
   try {

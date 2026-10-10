@@ -9,7 +9,6 @@ import { seedFullOrg } from "@/tests/helpers/seed-fixtures";
 import { defaultWelfareFor, parseWelfareSettings, setWelfareDuty, welfareForRange } from "@/lib/services/welfare";
 import { getWeekRota } from "@/lib/services/schedule";
 import { assignStaff } from "@/lib/services/assignment";
-import { inviteGuardian, parentApprovalFromLinks, recordParentDecision } from "@/lib/services/guardians";
 import type { Repositories } from "@/lib/db/repositories";
 import type { SystemTenantContext } from "@/lib/tenant/context";
 
@@ -40,63 +39,23 @@ describe("welfare officers: names, a default pattern, per-day overrides", () => 
   });
 });
 
-describe("parental approval before an under-18 is rostered", () => {
+describe("under-18s are rostered like anyone else", () => {
   let repos: Repositories;
   let ctx: SystemTenantContext;
-  let instructorId: string;
-  let roleTypeId: string;
-  let courseId: string;
 
   beforeEach(async () => {
     const { db } = createTestDb();
-    const seeded = await seedFullOrg(db, { name: "Alpha", slug: "alpha", jurisdiction: "england" });
-    repos = seeded.repos; ctx = seeded.ctx;
-    const a = (await repos.tenant.courseStaff.list(ctx))[0]!;
-    roleTypeId = a.roleTypeId;
+    ({ repos, ctx } = await seedFullOrg(db, { name: "Alpha", slug: "alpha", jurisdiction: "england" }));
+  });
+
+  it("no parent approval or working-hours check stands in the way (the centre manages those)", async () => {
+    const roleTypeId = (await repos.tenant.courseStaff.list(ctx))[0]!.roleTypeId;
     const ct = (await repos.tenant.courseType.list(ctx))[0]!;
     const course = await repos.tenant.course.insert(ctx, { courseTypeId: ct.id, name: "Youth week", capacity: 6, ratio: 6, status: "scheduled" });
-    courseId = course.id;
-    // A 16-year-old with a parent's email on file.
     const dob = new Date(); dob.setUTCFullYear(dob.getUTCFullYear() - 16);
-    const young = await repos.tenant.instructor.insert(ctx, { name: "Kai Young", email: "kai@alpha.test", employmentType: "employed", status: "active", dateOfBirth: dob.toISOString().slice(0, 10), guardianName: "Pat Young", guardianEmail: "pat@alpha.test", notifyEmail: true });
-    instructorId = young.id;
-  });
-
-  it("blocks until a parent approves, allows an override with a note, and follows the parent's later answer", async () => {
-    expect(parentApprovalFromLinks("2010-01-01", [])).toBe("none");
-    const first = await assignStaff(repos, ctx, { courseId, instructorId, roleTypeId });
-    expect(first.ok).toBe(false);
-    if (!first.ok) expect(first.reason).toBe("parent-approval");
-
-    const inv = await inviteGuardian(repos, ctx, instructorId, "asked at sign-up");
-    expect(inv.ok).toBe(true);
-    if (!inv.ok) return;
-    const pending = await assignStaff(repos, ctx, { courseId, instructorId, roleTypeId });
-    expect(pending.ok).toBe(false);
-    if (!pending.ok) expect(pending.detail).toMatch(/hasn't approved yet/);
-
-    const r = await recordParentDecision(repos, ctx, inv.linkId, inv.userId, "approved");
+    const young = await repos.tenant.instructor.insert(ctx, { name: "Kai Young", email: "kai@alpha.test", employmentType: "employed", status: "active", dateOfBirth: dob.toISOString().slice(0, 10) });
+    const r = await assignStaff(repos, ctx, { courseId: course.id, instructorId: young.id, roleTypeId });
     expect(r.ok).toBe(true);
-    const ok = await assignStaff(repos, ctx, { courseId, instructorId, roleTypeId });
-    expect(ok.ok).toBe(true);
-    if (ok.ok) expect(ok.overridden).toBe(false);
-
-    // Withdrawn later: blocked again, but an admin may override with a note (recorded).
-    await recordParentDecision(repos, ctx, inv.linkId, inv.userId, "withdrawn");
-    const course2 = await repos.tenant.course.insert(ctx, { courseTypeId: (await repos.tenant.courseType.list(ctx))[0]!.id, name: "Another", capacity: 6, ratio: 6, status: "scheduled" });
-    const blocked = await assignStaff(repos, ctx, { courseId: course2.id, instructorId, roleTypeId });
-    expect(blocked.ok).toBe(false);
-    const forced = await assignStaff(repos, ctx, { courseId: course2.id, instructorId, roleTypeId, override: true, overrideNote: "Signed paper form on file" });
-    expect(forced.ok).toBe(true);
-    if (forced.ok) expect(forced.overridden).toBe(true);
-    // Someone else's link cannot be answered.
-    expect((await recordParentDecision(repos, ctx, inv.linkId, "someone-else", "approved")).ok).toBe(false);
-  });
-
-  it("the centre can switch the requirement off", async () => {
-    const settings = (await repos.tenant.orgSettings.list(ctx))[0]!;
-    await repos.tenant.orgSettings.update(ctx, settings.id, { requireParentApproval: false });
-    const r = await assignStaff(repos, ctx, { courseId, instructorId, roleTypeId });
-    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.overridden).toBe(false);
   });
 });
