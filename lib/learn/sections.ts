@@ -212,6 +212,13 @@ export const SECTIONS: Section[] = [
       ] },
       { kind: "sub", text: "Courses each person can teach" },
       { kind: "p", text: "Each staff profile shows the courses they're approved to teach. This drives the fit checks when you roster — and you can see it at a glance on their profile." },
+      { kind: "sub", text: "Reminding people" },
+      { kind: "bullets", items: [
+        "The list shows whether each person has set their availability and whether any licence or check needs updating.",
+        "Press Remind on a row to send that person a notice in the app (with a phone notification) and an email: to mark when they're free, or listing the licences that are missing, expired or running out.",
+        "“Everyone who hasn't set availability” and “Everyone who needs a licence update”, above the list, remind them all at once after you confirm.",
+        "Each person gets at most one reminder of each kind a day, however often it's pressed. People who haven't signed up need an invite before an availability reminder can reach them; people whose availability the office keeps are never asked.",
+      ] },
     ],
   },
   {

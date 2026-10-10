@@ -6,6 +6,7 @@ import type { AnyTenantContext } from "@/lib/tenant/context";
 import { escapeHtml, sendEmail } from "@/lib/mail";
 
 import { notifyInstructor } from "@/lib/services/notifications";
+import { remindStaff } from "@/lib/services/staff-reminders";
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
@@ -544,4 +545,25 @@ export async function setTeachableCoursesAction(input: unknown): Promise<{ ok: b
   revalidatePath(`/office/staff/${person.id}`);
   revalidatePath("/office/staff");
   return { ok: true, message: `Saved: ${wanted.size} course${wanted.size === 1 ? "" : "s"}` };
+}
+
+const remindSchema = z.object({ kind: z.enum(["availability", "licences"]), instructorIds: z.array(idSchema).min(1).max(1000) });
+
+/**
+ * Remind people to set their availability, or to update licences and checks
+ * that are missing, expired or running out: a notice in the app (and a phone
+ * push) plus an email. At most once a day per person for each kind.
+ */
+export async function remindStaffAction(input: unknown): Promise<ActionState & { sent?: number }> {
+  const { ctx, repos, organisation } = await requireTenant({ permission: "staff.edit" });
+  const parsed = remindSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Invalid request" };
+  const r = await remindStaff(repos, ctx, parsed.data.kind, parsed.data.instructorIds, organisation.name);
+  revalidatePath("/office/staff");
+  const extra = [
+    r.recent ? `${r.recent} already reminded in the last day` : "",
+    r.unreachable ? `${r.unreachable} not signed up or without an email (invite them first)` : "",
+  ].filter(Boolean).join("; ");
+  if (r.sent === 0) return { ok: true, sent: 0, message: extra ? `No reminder sent: ${extra}.` : "Nobody needs a reminder now." };
+  return { ok: true, sent: r.sent, message: `Reminder sent to ${r.sent} ${r.sent === 1 ? "person" : "people"}, in the app and by email${extra ? ` (${extra})` : ""}.` };
 }

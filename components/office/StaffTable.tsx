@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Search, ChevronsUpDown } from "lucide-react";
 import { StatusPill } from "@/components/ui";
 import { InviteInstructorButton } from "@/components/office/InviteInstructorButton";
+import { RemindButton } from "@/components/office/RemindButton";
 
 export interface StaffRow {
   id: string;
@@ -67,6 +68,13 @@ export function StaffTable({ rows }: { rows: StaffRow[] }) {
     [rows, current],
   );
 
+  // Who a reminder can reach: availability needs the app; licences go by app or email.
+  const canRemind = (r: StaffRow) => r.status === "active" && !r.restricted && !r.anonymised;
+  const needsAvailability = (r: StaffRow) => canRemind(r) && !r.officeManaged && !r.hasAvailability && r.inviteStatus === "accepted";
+  const needsLicences = (r: StaffRow) => canRemind(r) && (!r.fit || r.warnings > 0) && (r.inviteStatus === "accepted" || r.hasEmail);
+  const availabilityTodo = useMemo(() => current.filter(needsAvailability).map((r) => r.id), [current]);
+  const licencesTodo = useMemo(() => current.filter(needsLicences).map((r) => r.id), [current]);
+
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
     return rows.filter((r) => {
@@ -111,6 +119,14 @@ export function StaffTable({ rows }: { rows: StaffRow[] }) {
         </div>
       </div>
 
+      {tab !== "left" && (availabilityTodo.length || licencesTodo.length) ? (
+        <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 bg-slate-50/60 px-4 py-2 text-xs text-slate-600">
+          <span className="font-medium">Send reminders:</span>
+          {availabilityTodo.length ? <RemindButton variant="button" kind="availability" instructorIds={availabilityTodo} label={`Everyone who hasn't set availability (${availabilityTodo.length})`} confirm={`Remind ${availabilityTodo.length} ${availabilityTodo.length === 1 ? "person" : "people"} to mark when they're free? They get a notice in the app and an email.`} /> : null}
+          {licencesTodo.length ? <RemindButton variant="button" kind="licences" instructorIds={licencesTodo} label={`Everyone who needs a licence update (${licencesTodo.length})`} confirm={`Remind ${licencesTodo.length} ${licencesTodo.length === 1 ? "person" : "people"} to update their licences? They get a notice in the app and an email listing what's missing or running out.`} /> : null}
+        </div>
+      ) : null}
+
       {/* table */}
       <div className="overflow-x-auto">
         <table className="w-full min-w-[640px] text-left text-sm">
@@ -144,7 +160,12 @@ export function StaffTable({ rows }: { rows: StaffRow[] }) {
                     {r.status === "inactive" ? <span className="text-xs text-slate-400">—</span>
                       : r.officeManaged ? <span className="text-slate-500" title="The office keeps their availability">Office keeps it</span>
                       : r.hasAvailability ? <span className="text-starboard">✓ Yes</span>
-                      : <span className="text-amber">Not yet</span>}
+                      : (
+                        <span className="flex flex-wrap items-center gap-2">
+                          <span className="text-amber">Not yet</span>
+                          {needsAvailability(r) ? <RemindButton kind="availability" instructorIds={[r.id]} /> : r.inviteStatus !== "accepted" && canRemind(r) ? <span className="text-xs text-slate-400" title="They need the app to mark when they're free: invite them under App access">not signed up</span> : null}
+                        </span>
+                      )}
                   </td>
                   <td className="px-4 py-3">
                     {r.status === "inactive" ? <StatusPill tone="neutral">Left</StatusPill> : (
@@ -152,6 +173,7 @@ export function StaffTable({ rows }: { rows: StaffRow[] }) {
                         {!r.fit ? <StatusPill tone="conflict">{r.blockText || "Missing a licence or check"}</StatusPill> : null}
                         {r.warnings > 0 ? <span title={r.expiringText}><StatusPill tone="attention">{r.expiringText ? `${r.expiringText} expiring` : `${r.warnings} expiring`}</StatusPill></span> : null}
                         {r.fit && r.warnings === 0 ? <span className="text-sm text-starboard">✓ Up to date</span> : null}
+                        {needsLicences(r) ? <RemindButton kind="licences" instructorIds={[r.id]} /> : null}
                         {r.parentApproval && r.parentApproval !== "not-needed" ? (
                           <span title="Parent or guardian's approval to work"><StatusPill tone={r.parentApproval === "approved" ? "covered" : r.parentApproval === "pending" ? "attention" : "conflict"}>{r.parentApproval === "approved" ? "Parent approved" : r.parentApproval === "pending" ? "Parent approval pending" : r.parentApproval === "none" ? "No parent invited" : `Parent ${r.parentApproval}`}</StatusPill></span>
                         ) : null}

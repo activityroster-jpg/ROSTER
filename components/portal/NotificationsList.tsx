@@ -1,5 +1,6 @@
 "use client";
 
+import { stripMarkers } from "@/lib/notify/markers";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { markAllReadAction, markReadAction } from "@/app/(app)/portal/notifications/actions";
@@ -53,7 +54,7 @@ export function NotificationsList({ items: initial }: { items: NotificationUi[] 
                 <p className={`text-sm ${n.read ? "font-medium text-navy" : "font-semibold text-navy"}`}>{n.title}</p>
                 {!n.read ? <span className="mt-1 h-2 w-2 flex-none rounded-full bg-teal" /> : null}
               </div>
-              {n.body ? <p className="mt-0.5 text-sm text-slate-600">{n.body}</p> : null}
+              {n.body ? <p className="mt-0.5 text-sm text-slate-600">{stripMarkers(n.body)}</p> : null}
               <p className="mt-1 text-xs text-slate-400">{n.when}</p>
             </button>
           </li>

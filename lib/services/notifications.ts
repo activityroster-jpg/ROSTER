@@ -6,6 +6,7 @@ import { queueEmails, sendEmail } from "@/lib/mail";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { getEnv } from "@/lib/cf/bindings";
 import { sendPush } from "@/lib/push/fcm";
+import { stripMarkers } from "@/lib/notify/markers";
 
 export interface NotifyInput {
   title: string;
@@ -47,7 +48,7 @@ export async function notifyInstructor(
     try {
       const tokens = await repos.control.pushTokensForUser(instructor.userId);
       if (tokens.length) {
-        const { dead } = await sendPush(getEnv(), tokens.map((t) => t.token), { title: input.title, body: input.body ?? null, url: "/portal/notifications" });
+        const { dead } = await sendPush(getEnv(), tokens.map((t) => t.token), { title: input.title, body: stripMarkers(input.body), url: "/portal/notifications" });
         await Promise.all(dead.map((t) => repos.control.deletePushToken(t).catch(() => {})));
       }
     } catch (err) {
@@ -69,7 +70,7 @@ export async function notifyInstructor(
   return row;
 }
 
-const noticeHtml = (input: NotifyInput) => `<p>${escapeHtml(input.title)}</p>${input.body ? `<p>${escapeHtml(input.body)}</p>` : ""}${input.detailLines?.length ? `<ul>${input.detailLines.map((l) => `<li>${escapeHtml(l)}</li>`).join("")}</ul>` : ""}<p style="color:#64748b;font-size:12px">Sent by ActivityRoster</p>`;
+const noticeHtml = (input: NotifyInput) => `<p>${escapeHtml(input.title)}</p>${input.body ? `<p>${escapeHtml(stripMarkers(input.body))}</p>` : ""}${input.detailLines?.length ? `<ul>${input.detailLines.map((l) => `<li>${escapeHtml(l)}</li>`).join("")}</ul>` : ""}<p style="color:#64748b;font-size:12px">Sent by ActivityRoster</p>`;
 
 /**
  * Notify many instructors at once (publishing a week), each with their own
@@ -94,7 +95,7 @@ export async function notifyInstructors(
   const now = new Date();
   await repos.tenant.notification.insertMany(ctx, live.map(({ p, input }) => ({ userId: p.userId ?? null, instructorId: p.id, channel: "in_app" as const, title: input.title, body: input.body ?? null, readAt: null, sentAt: now })));
 
-  const pushes = live.flatMap(({ p, input }) => (p.userId ? [{ userId: p.userId, title: input.title, body: input.body ?? null, url: "/portal/notifications" }] : []));
+  const pushes = live.flatMap(({ p, input }) => (p.userId ? [{ userId: p.userId, title: input.title, body: stripMarkers(input.body), url: "/portal/notifications" }] : []));
   try {
     if (pushes.length) await new PlatformRepository(repos.db).enqueuePushes(pushes);
   } catch (err) {
