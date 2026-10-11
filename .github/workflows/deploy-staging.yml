@@ -74,7 +74,9 @@ jobs:
         run: |
           for i in 1 2 3 4 5 6; do
             home="$(curl -sS -L -o /dev/null -w '%{http_code} %{url_effective}' https://staging.activityroster.com/ || true)"
-            if curl -fsS https://staging.activityroster.com/api/health | grep -q '"ok":true' && [ "$home" = "200 https://staging.activityroster.com/" ]; then echo "staging healthy, home page served"; exit 0; fi
+            diving="$(curl -sS -o /dev/null -w '%{http_code}' https://staging.activityroster.com/diving || true)"
+            if curl -fsS https://staging.activityroster.com/api/health | grep -q '"ok":true' && [ "$home" = "200 https://staging.activityroster.com/" ] && [ "$diving" = "200" ]; then echo "staging healthy, home page and /diving served"; exit 0; fi
+            echo "/diving check: $diving"
             echo "home page check: $home"
             sleep 10
           done
