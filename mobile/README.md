@@ -124,15 +124,25 @@ Settings → App, Face ID on the PIN screen, 📷 on Documents, 📍 on clock-in
    company code here — reviewers need a way in.
 4. Submit. Typical review 1–3 days.
 
-**Google Play** (Android Studio → Build → Generate Signed Bundle → .aab; keep
-the keystore safe, you can never change it):
-1. https://play.google.com/console → **Create app** → *ActivityRoster*, App, Free.
-2. Complete *Dashboard* tasks: privacy policy URL
+**Google Play** — no Android Studio needed. GitHub builds the app:
+1. GitHub → **Actions → Android build → Run workflow**, type the version (e.g.
+   `1.0.0`). About 10 minutes later the run's **Artifacts** hold
+   `ActivityRoster-<version>.aab` (for Google Play) and `.apk` (install on a
+   phone to try it). The run's summary shows the upload key's SHA-256.
+   Secrets the workflow uses: `ANDROID_KEYSTORE_BASE64` and
+   `ANDROID_KEYSTORE_PASSWORD` (the upload key, kept in the password manager
+   too) and `GOOGLE_SERVICES_JSON` (the Firebase file; without it the app works
+   but phone notifications stay off). The key is never in the repo.
+2. https://play.google.com/console → **Create app** → *ActivityRoster*, App, Free.
+3. Complete *Dashboard* tasks: privacy policy URL
    (`https://activityroster.com/privacy`), app access (give the same demo
    instructions + company code), ads (none), content rating (questionnaire,
-   Business), target audience (18+), data safety (same as Apple).
-3. **Production → Create release** → upload the .aab → roll out. First review
-   can take up to a week.
+   Business), target audience (16–17 and 18+: some instructors are 16–17; no
+   under-13s, so the children's rules don't apply), data safety (same as Apple).
+4. **Testing → Internal testing → Create release** → upload the .aab → add your
+   own Google account as a tester → install it from the link on your phone.
+5. **Production → Create release** → upload the same .aab → roll out. First
+   review can take up to a week.
 
 ### Listing copy
 
@@ -168,11 +178,8 @@ environment variables — set them and the links start opening in the app.
    Domains → add `applinks:activityroster.com` and
    `webcredentials:activityroster.com` (also add `applinks:*.activityroster.com`
    so centre subdomains work).
-3. **Android** (`android/app/src/main/AndroidManifest.xml`, inside the main
-   activity): an intent filter with `android:autoVerify="true"`, action VIEW,
-   categories DEFAULT + BROWSABLE, and `<data android:scheme="https"
-   android:host="activityroster.com" />` plus one with
-   `android:host="*.activityroster.com"`.
+3. **Android**: already in `android/app/src/main/AndroidManifest.xml` (an
+   `autoVerify` intent filter for `activityroster.com` and `*.activityroster.com`).
 4. The Capacitor `App` plugin’s `appUrlOpen` listener routes the opened URL
    inside the web view (see `lib/mobile/native.ts`), so no further code is
    needed.

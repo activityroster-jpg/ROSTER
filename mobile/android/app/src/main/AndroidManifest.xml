@@ -18,6 +18,15 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Our email links (sign-in, device check, rota changes) open in the app once
+                 /.well-known/assetlinks.json lists this app's certificate (ANDROID_SHA256_FINGERPRINTS). -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="activityroster.com" />
+                <data android:scheme="https" android:host="*.activityroster.com" />
+            </intent-filter>
         </activity>
 
         <provider

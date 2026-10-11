@@ -1,0 +1,127 @@
+name: Android build
+
+# Builds the ActivityRoster instructor app for Android (mobile/). Press "Run workflow"
+# in GitHub Actions; the files appear under the run's Artifacts:
+#   - ActivityRoster-<version>.aab  → upload to Google Play Console
+#   - ActivityRoster-<version>.apk  → install straight on an Android phone to try it
+# Signing uses the upload key held only in GitHub secrets (ANDROID_KEYSTORE_BASE64 and
+# ANDROID_KEYSTORE_PASSWORD); without them a debug APK is built for testing only.
+# Push notifications need GOOGLE_SERVICES_JSON (the Firebase file); without it the app
+# works but sends no phone notifications. Nothing here touches the website or database.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: "Version shown in the Play Store, e.g. 1.0.0"
+        required: true
+        default: "1.0.0"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-build
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: Check the version
+        env:
+          VERSION: ${{ inputs.version_name }}
+        run: |
+          if ! printf '%s' "$VERSION" | grep -Eq '^[0-9]+(\.[0-9]+){1,2}$'; then echo "::error::Version must look like 1.0.0"; exit 1; fi
+
+      - name: Install the app shell
+        run: npm ci && npx cap sync android
+
+      - name: Firebase file (phone notifications)
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
+            printf '%s' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+          else
+            echo "::warning::GOOGLE_SERVICES_JSON is not set: the app builds, but phone notifications stay off."
+          fi
+
+      - name: Upload key
+        id: key
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ] && [ -n "$KEYSTORE_PASSWORD" ]; then
+            printf '%s' "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/upload.jks"
+            echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/upload.jks" >> "$GITHUB_ENV"
+            echo "signed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::ANDROID_KEYSTORE_BASE64 / ANDROID_KEYSTORE_PASSWORD are not set: building a debug APK for testing only (not for Google Play)."
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build
+        working-directory: mobile/android
+        env:
+          ANDROID_VERSION_CODE: ${{ github.run_number }}
+          ANDROID_VERSION_NAME: ${{ inputs.version_name }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: upload
+        run: |
+          chmod +x gradlew
+          mkdir -p "$RUNNER_TEMP/out"
+          V="${ANDROID_VERSION_NAME}"
+          if [ "${{ steps.key.outputs.signed }}" = "true" ]; then
+            ./gradlew --no-daemon bundleRelease assembleRelease
+            cp app/build/outputs/bundle/release/app-release.aab "$RUNNER_TEMP/out/ActivityRoster-$V.aab"
+            cp app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/out/ActivityRoster-$V.apk"
+          else
+            ./gradlew --no-daemon assembleDebug
+            cp app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/out/ActivityRoster-$V-test.apk"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ActivityRoster-android-${{ inputs.version_name }}-build${{ github.run_number }}
+          path: ${{ runner.temp }}/out/*
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Summary
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          {
+            echo "### Android build ${{ inputs.version_name }} (version code ${{ github.run_number }})"
+            echo
+            if [ "${{ steps.key.outputs.signed }}" = "true" ]; then
+              echo "Signed with the upload key. Download the files under **Artifacts** below."
+              echo
+              echo "Upload key certificate SHA-256 (for ANDROID_SHA256_FINGERPRINTS, so email links open in the app):"
+              echo
+              echo '```'
+              keytool -list -v -keystore "$ANDROID_KEYSTORE_PATH" -alias upload -storepass "$KEYSTORE_PASSWORD" | sed -n 's/^[[:space:]]*SHA256: //p'
+              echo '```'
+            else
+              echo "Debug build for testing on a phone only. Add the upload key secrets to build for Google Play."
+            fi
+            [ -f android/app/google-services.json ] && echo "Phone notifications: on." || echo "Phone notifications: off (no GOOGLE_SERVICES_JSON yet)."
+          } >> "$GITHUB_STEP_SUMMARY"
