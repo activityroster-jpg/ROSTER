@@ -1,5 +1,5 @@
 import { ACTIVITY_TYPES, type ActivityType } from "@/lib/db/schema";
-import { RYA_CENTRE_PACK, SAILING_CLUB_PACK } from "./rya";
+import { RYA_CENTRE_PACK } from "./rya";
 import { PADI_CENTRE_PACK } from "./padi";
 import type { ActivityPack } from "./types";
 
@@ -12,7 +12,6 @@ export type { ActivityPack, PackWording } from "./types";
  */
 export const PACKS: Record<ActivityType, ActivityPack> = {
   rya_centre: RYA_CENTRE_PACK,
-  sailing_club: SAILING_CLUB_PACK,
   padi_centre: PADI_CENTRE_PACK,
 };
 

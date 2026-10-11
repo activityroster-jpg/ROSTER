@@ -12,8 +12,7 @@ const JURISDICTIONS = [
 ] as const;
 
 const ACTIVITY_TYPES = [
-  { value: "rya_centre", label: "RYA training centre" },
-  { value: "sailing_club", label: "Sailing club" },
+  { value: "rya_centre", label: "RYA centre / school" },
   { value: "padi_centre", label: "PADI dive centre" },
 ] as const;
 

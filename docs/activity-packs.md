@@ -1,7 +1,7 @@
 # Activity packs
 
-One platform, one login, one app. What differs between an RYA training centre, a
-sailing club and a PADI dive centre is only the **starting set** a new centre
+One platform, one login, one app. What differs between an RYA centre / school
+and a PADI dive centre is only the **starting set** a new centre
 gets and the **words** it sees. That starting set is an *activity pack*
 (`lib/packs`).
 

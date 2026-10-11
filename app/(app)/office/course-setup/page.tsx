@@ -47,7 +47,7 @@ export default async function CourseSetupPage() {
       </p>
       <a href="/learn?topic=courses" target="_blank" rel="noreferrer" className="mb-4 inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-navy hover:bg-slate-50">📖 Read the guide</a>
       <CourseTypeTable rows={rows} schemePlaceholder={pack.wording.schemePlaceholder} />
-      <AddPackLists others={PACK_OPTIONS.filter((o) => o.id !== pack.id && o.id !== "sailing_club")} />
+      <AddPackLists others={PACK_OPTIONS.filter((o) => o.id !== pack.id)} />
       <OneOffCourseTypes items={oneOffs} listed={listedChoices} />
       <KitRules
         courseTypes={listedChoices}

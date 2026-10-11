@@ -29,7 +29,7 @@ export const SECTIONS: Section[] = [
     blurb: "Set your centre up in a few minutes with the guided wizard.",
     blocks: [
       { kind: "p", text: "When you first sign in you land on the onboarding wizard. It only asks for what it needs to get you rostering — everything else can wait." },
-      { kind: "p", text: "At sign-up you said what kind of centre you run: an RYA training centre, a sailing club or a PADI dive centre. That choice set up your starting lists (courses, instructor certificates, roles, kit and checks) and the words you see; the platform underneath is the same for everyone. Every list is yours to change." },
+      { kind: "p", text: "At sign-up you said what kind of centre you run: an RYA centre or school (that includes clubs), or a PADI dive centre. That choice set up your starting lists (courses, instructor certificates, roles, kit and checks) and the words you see; the platform underneath is the same for everyone. Every list is yours to change." },
       { kind: "sub", text: "The six steps" },
       { kind: "steps", items: [
         "How you run — pick the extra features you want (equipment, locations, operating areas, payroll, info) and choose whether your sessions run as Morning/Afternoon/Evening slots or with explicit start & end times.",

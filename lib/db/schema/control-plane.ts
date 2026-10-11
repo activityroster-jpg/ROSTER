@@ -123,7 +123,7 @@ export type Jurisdiction = (typeof JURISDICTIONS)[number];
  * starting lists, default settings and wording. Chosen at sign-up; every
  * centre from before packs existed is an RYA training centre.
  */
-export const ACTIVITY_TYPES = ["rya_centre", "sailing_club", "padi_centre"] as const;
+export const ACTIVITY_TYPES = ["rya_centre", "padi_centre"] as const;
 export type ActivityType = (typeof ACTIVITY_TYPES)[number];
 
 export const ORG_STATUSES = ["active", "suspended", "pending", "cancelled"] as const;

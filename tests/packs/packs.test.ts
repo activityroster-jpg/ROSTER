@@ -17,7 +17,7 @@ describe("activity packs", () => {
     expect(packFor(null).id).toBe("rya_centre");
     expect(packFor("nonsense").id).toBe("rya_centre");
     expect(packFor("padi_centre").id).toBe("padi_centre");
-    expect(isActivityType("sailing_club")).toBe(true);
+    expect(isActivityType("rya_centre")).toBe(true);
     expect(isActivityType("ski_school")).toBe(false);
   });
 
@@ -69,12 +69,5 @@ describe("activity packs", () => {
     expect(padi.compliance("england").map((c) => c.code)).toContain("PADI_RENEWAL");
     expect(padi.compliance("england").map((c) => c.code)).toContain("DIVE_MEDICAL");
     expect(padi.roles.find((r) => r.isSafetyCover)?.name).toBe("Boat Skipper");
-  });
-
-  it("the sailing club shares the RYA lists with club roles added", () => {
-    const club = PACKS.sailing_club;
-    expect(club.grades).toBe(PACKS.rya_centre.grades);
-    expect(club.roles.map((r) => r.code)).toContain("DUTY_OFFICER");
-    expect(club.courseTypes.map((c) => c.name)).toEqual(expect.arrayContaining(PACKS.rya_centre.courseTypes.map((c) => c.name)));
   });
 });
