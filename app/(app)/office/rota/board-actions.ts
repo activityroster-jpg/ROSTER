@@ -9,6 +9,9 @@ import { syncHoursForCourse } from "@/lib/services/hours";
 import { writeAudit } from "@/lib/services/audit";
 import { courseSession as courseSessionTable } from "@/lib/db/schema";
 import { idSchema } from "@/lib/validation/actions";
+import { getBoard } from "@/lib/services/board";
+import { weekStart } from "@/lib/services/schedule";
+import { planAutoRoster, type AutoInstructor, type AutoSession } from "@/lib/domain/auto-roster";
 
 type Result = { ok: boolean; error?: string; message?: string };
 
@@ -62,4 +65,59 @@ export async function boardRemoveAction(input: { sessionId: string; courseId: st
   await notifyRosterChange(repos, ctx, assignment.instructorId, course?.name ?? "a course", sessions.map((s) => s.date), "removed");
   refresh();
   return { ok: true, message: "Removed from the course" };
+}
+
+/**
+ * Auto-roster one week: fill every open role from the people who are Free (then
+ * Maybe), spreading sessions evenly, through the same checks as assigning by
+ * hand. Never forces anything: roles nobody suitable is free for stay open and
+ * are counted back. One-day courses get the person on the course; a day of a
+ * multi-day course gets them for that day only.
+ */
+export async function autoRosterAction(input: { monday: string }): Promise<Result & { filled?: number; open?: number }> {
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
+  if (typeof input?.monday !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(input.monday)) return { ok: false, error: "Invalid week" };
+  const monday = weekStart(new Date(`${input.monday}T00:00:00Z`));
+  const board = await getBoard(repos, ctx, monday);
+
+  const load = new Map<string, number>();
+  const sessions: AutoSession[] = [];
+  for (const d of board.days) {
+    for (const s of d.sessions) {
+      const on = s.staff.filter((m) => m.status !== "declined").map((m) => m.instructorId);
+      for (const id of on) load.set(id, (load.get(id) ?? 0) + 1);
+      const open = (board.openRoles[s.sessionId] ?? []).map((r) => ({ roleTypeId: r.roleTypeId, missing: r.missing }));
+      if (open.length && s.status !== "cancelled") sessions.push({ sessionId: s.sessionId, courseId: s.courseId, courseTypeId: board.sessionMeta[s.sessionId]?.courseTypeId ?? "", date: d.date, slot: s.slot, open, onSession: on });
+    }
+  }
+  const people: AutoInstructor[] = board.instructors.map((i) => ({
+    id: i.id, name: i.name, fit: i.fit, teaches: i.teaches, knownQualifications: i.knownQualifications,
+    availability: Object.fromEntries(Object.entries(i.availability).map(([k, v]) => [k, v.status])),
+    load: load.get(i.id) ?? 0,
+  }));
+  const plan = planAutoRoster(sessions, people);
+  if (plan.picks.length === 0) {
+    return sessions.length === 0
+      ? { ok: true, message: "Every role is already filled.", filled: 0, open: 0 }
+      : { ok: true, message: `Nobody suitable is free for the ${plan.unfilled.reduce((n, u) => n + u.missing, 0)} open role${plan.unfilled.length === 1 ? "" : "s"}; nothing was changed.`, filled: 0, open: plan.unfilled.reduce((n, u) => n + u.missing, 0) };
+  }
+
+  // Apply through the normal checks (no override): a pick the checks refuse is left open.
+  let filled = 0;
+  const refused: string[] = [];
+  for (const p of plan.picks) {
+    const multiDay = board.sessionMeta[p.sessionId]?.multiDay ?? true;
+    const r = multiDay
+      ? await setDayStaff(repos, ctx, { sessionId: p.sessionId, instructorId: p.instructorId, roleTypeId: p.roleTypeId, mode: "add" })
+      : await assignStaff(repos, ctx, { courseId: p.courseId, instructorId: p.instructorId, roleTypeId: p.roleTypeId });
+    if (r.ok) filled++;
+    else refused.push("error" in r ? r.error : assignBlockMessage(r.reason, r.detail));
+  }
+  const stillOpen = plan.unfilled.reduce((n, u) => n + u.missing, 0) + (plan.picks.length - filled);
+  await writeAudit(repos, ctx, { action: "auto_roster", entity: "roster", entityId: monday, after: { week: monday, filled, stillOpen, refused: refused.slice(0, 20) } });
+  refresh();
+  const msg = stillOpen === 0
+    ? `Filled ${filled} role${filled === 1 ? "" : "s"}. Every role is now covered.`
+    : `Filled ${filled} role${filled === 1 ? "" : "s"}; ${stillOpen} still open — not enough suitable people free. Those stay marked open on the board.`;
+  return { ok: true, message: msg, filled, open: stillOpen };
 }

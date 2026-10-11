@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import type { BoardData, BoardInstructor, OpenRole } from "@/lib/services/board";
 import type { RotaDay, RotaSession } from "@/lib/services/schedule";
-import { boardAssignAction, boardRemoveAction } from "@/app/(app)/office/rota/board-actions";
+import { autoRosterAction, boardAssignAction, boardRemoveAction } from "@/app/(app)/office/rota/board-actions";
 import { setCourseStaffingAction } from "@/app/(app)/office/courses/actions";
 import { ConfirmDialog } from "./ConfirmDialog";
 
@@ -38,6 +38,15 @@ export function RosterBoard({ data, canEdit }: { data: BoardData; canEdit: boole
   const [picked, setPicked] = useState<string | null>(null); // instructor chosen in the side list (click-to-assign fallback)
   const [dropTarget, setDropTarget] = useState<string | null>(null);
   const [pendingDrop, setPendingDrop] = useState<{ session: RotaSession; day: RotaDay; instructorId: string } | null>(null);
+  const [autoOpen, setAutoOpen] = useState(false);
+  const [autoBusy, startAuto] = useTransition();
+  const [autoMsg, setAutoMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const runAuto = () => startAuto(async () => {
+    const r = await autoRosterAction({ monday: data.monday });
+    setAutoOpen(false);
+    setAutoMsg({ ok: r.ok, text: r.ok ? r.message ?? "Done" : r.error ?? "Couldn't auto-roster" });
+    if (r.ok) router.refresh();
+  });
 
   useEffect(() => {
     try { const v = window.localStorage.getItem(STORAGE); if (v === "people" || v === "courses") setLayout(v); } catch { /* ignore */ }
@@ -70,7 +79,17 @@ export function RosterBoard({ data, canEdit }: { data: BoardData; canEdit: boole
           {data.problemCounts.total ? <> · <span className="font-semibold text-port">{data.problemCounts.total} problem{data.problemCounts.total === 1 ? "" : "s"}</span></> : null}
           {canEdit ? <span className="ml-2 text-slate-400">Click a session to see its roles and assign people.</span> : null}
         </p>
+        {canEdit ? (
+          <div className="flex items-center gap-2">
+            <button type="button" disabled={autoBusy || totalOpen === 0} onClick={() => setAutoOpen(true)} title={totalOpen ? "Fill the open roles from whoever is free, spread evenly" : "Nothing open this week"}
+              className="rounded-lg bg-teal px-3 py-1.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{autoBusy ? "Filling…" : "✨ Auto-roster"}</button>
+            <a href="/learn?topic=rostering" target="_blank" rel="noreferrer" className="text-xs font-medium text-teal hover:underline">📖 Read the guide</a>
+          </div>
+        ) : null}
       </div>
+      {autoMsg ? <p role="status" className={`mb-3 rounded-lg border px-3 py-2 text-sm ${autoMsg.ok ? "border-starboard/40 bg-starboard/10 text-navy" : "border-port/40 bg-port/10 text-port"}`}>{autoMsg.text}</p> : null}
+      <ConfirmDialog open={autoOpen} title={`Auto-roster the ${totalOpen} open role${totalOpen === 1 ? "" : "s"} this week?`} tone="teal" confirmLabel="Fill them" busy={autoBusy} onConfirm={runAuto} onCancel={() => setAutoOpen(false)}
+        consequences={["Each open role goes to someone who is Free (then Maybe) for that session, cleared to roster and able to teach the course type; sessions are shared out as evenly as possible.", "The usual checks run; nothing is overridden, and roles nobody suitable is free for stay open.", "People already on the roster keep their sessions.", "You can change any of it afterwards by hand."]} />
 
       <div className={sel ? "lg:mr-[28rem]" : ""}>
         {layout === "courses" ? (
