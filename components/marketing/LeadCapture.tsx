@@ -29,10 +29,13 @@ export function LeadCapture({
   source = "marketing",
   variant = "card",
   apex = "activityroster.com",
+  defaultActivityType = "rya_centre",
 }: {
   source?: string;
   variant?: "card" | "inline";
   apex?: string;
+  /** Preselected kind of centre (a sales page for one activity). */
+  defaultActivityType?: (typeof ACTIVITY_TYPES)[number]["value"];
 }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -42,7 +45,7 @@ export function LeadCapture({
   const [slug, setSlug] = useState("");
   const [slugEdited, setSlugEdited] = useState(false);
   const [jurisdiction, setJurisdiction] = useState<(typeof JURISDICTIONS)[number]["value"]>("england");
-  const [activityType, setActivityType] = useState<(typeof ACTIVITY_TYPES)[number]["value"]>("rya_centre");
+  const [activityType, setActivityType] = useState<(typeof ACTIVITY_TYPES)[number]["value"]>(defaultActivityType);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [status, setStatus] = useState<"idle" | "busy" | "done" | "error">("idle");
   const [error, setError] = useState<string | null>(null);

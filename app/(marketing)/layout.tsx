@@ -38,6 +38,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
             <Link href="/subprocessors" className="hover:text-navy">Sub-processors</Link>
             <Link href="/accessibility" className="hover:text-navy">Accessibility</Link>
             <Link href="/cookies" className="hover:text-navy">Cookies</Link>
+            <Link href="/diving" className="hover:text-navy">Dive centres</Link>
           </nav>
           <div className="mb-3 flex items-center gap-3">
             <a
