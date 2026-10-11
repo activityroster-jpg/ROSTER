@@ -118,6 +118,7 @@ export default function MarketingHome() {
         url: site,
         description: "RYA sailing school software: compliance-aware staff rostering, qualification tracking and course administration for RYA sailing and watersports centres, schools and clubs.",
         areaServed: "GB",
+        sameAs: [COMPANY.social.linkedin, COMPANY.social.facebook],
       },
       {
         "@type": "WebSite",

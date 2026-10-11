@@ -22,6 +22,8 @@ export const COMPANY = {
   companyNumber: "17505500",
   registeredIn: "England & Wales",
   addressLines: ["71-75 Shelton Street", "London", "WC2H 9JQ", "United Kingdom"],
+  /** Our own pages on social networks (plain links; no tracking scripts). */
+  social: { linkedin: "https://www.linkedin.com/company/activity-roster", facebook: "https://www.facebook.com/activityroster" },
   get addressInline() {
     return this.addressLines.join(", ");
   },
