@@ -5,6 +5,7 @@ import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { LINKEDIN_META, parseLinkedinContacts, topRanks } from "@/lib/marketing";
 import { LinkedinBoard, type LinkedinRow } from "@/components/admin/LinkedinBoard";
 import { LINKEDIN_STATUSES } from "@/lib/db/schema";
+import { LinkedinImport } from "@/components/admin/LinkedinImport";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "LinkedIn · Prospects" };
@@ -39,11 +40,14 @@ export default async function LinkedinProspectsPage() {
           <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Outreach CRM</p>
           <h1 className="font-display text-2xl font-bold text-navy">LinkedIn</h1>
           <p className="mt-1 text-sm text-slate-500">
-            Every centre, its LinkedIn page and the people to contact, with where things stand. Add pages and contacts by hand,
-            or use the search links to look them up on LinkedIn.
+            Every centre, its LinkedIn page and the people to contact, with where things stand. Add pages and contacts by hand, use the search links to look them up on LinkedIn,
+            or import a spreadsheet of them (saved as CSV). Importing adds to what is here and never removes anything.
           </p>
         </div>
-        <Link href="/admin/marketing" className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-navy hover:border-teal hover:text-teal">← Prospects list</Link>
+        <div className="flex flex-wrap items-start gap-2">
+          <LinkedinImport />
+          <Link href="/admin/marketing" className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-navy hover:border-teal hover:text-teal">← Prospects list</Link>
+        </div>
       </div>
       <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
         {counts.map(({ s, n }) => (

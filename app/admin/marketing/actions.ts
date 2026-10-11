@@ -11,6 +11,7 @@ import { parseCsv } from "@/lib/import/parse";
 import { addressComplete, parseProspectStatuses, primaryProspectStatus as primaryOf } from "@/lib/marketing";
 import RYA_DIRECTORY from "@/lib/marketing/rya-directory.json";
 import { LETTER_BATCH_SUMMARY } from "@/lib/marketing/letter-batches";
+import { matchProspect, mergeLinkedin, normName } from "@/lib/marketing/linkedin-import";
 
 export type ProspectResult = { ok: boolean; error?: string; message?: string; count?: number };
 
@@ -480,4 +481,41 @@ export async function setProspectBasisAction(id: string, input: { soleTrader: bo
   await repo.updateProspect(id, { soleTrader: Boolean(input.soleTrader), lawfulBasis: basis, basisNote: (input.basisNote ?? "").trim().slice(0, 200) || null });
   revalidateProspects(id);
   return { ok: true };
+}
+
+const ImportContact = z.object({ name: z.string().max(120), role: z.string().max(120), url: z.string().max(300).refine((v) => v === "" || /^https:\/\/([a-z]{2,3}\.)?linkedin\.com\//i.test(v), "Not a LinkedIn link") });
+const ImportRows = z.array(z.object({ name: z.string().trim().min(1).max(200), postcode: z.string().max(12), pageUrl: ImportContact.shape.url, contacts: z.array(ImportContact).max(3) })).min(1).max(300);
+
+/**
+ * LinkedIn research from a spreadsheet, one slice at a time (the page sends
+ * a few hundred rows per call). Matches centres by name (postcode when two
+ * share a name), sets the company page and adds people not already listed.
+ * Nothing is removed. Each centre that changes gets a line in its log.
+ */
+export async function importLinkedinAction(input: unknown): Promise<{ ok: boolean; error?: string; matched?: number; updated?: number; unmatched?: string[] }> {
+  const { repo, email } = await platformAs();
+  const parsed = ImportRows.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Couldn't read those rows" };
+  const all = await repo.listProspects(10_000, 0);
+  const byName = new Map<string, typeof all>();
+  for (const p of all) { const k = normName(p.name); byName.set(k, [...(byName.get(k) ?? []), p]); }
+  let matched = 0;
+  const unmatched: string[] = [];
+  const logs: { prospectId: string; kind: "note"; occurredOn: string; summary: string; author: string }[] = [];
+  const done = new Set<string>();
+  for (const row of parsed.data) {
+    const p = matchProspect(row, byName);
+    if (!p || done.has(p.id)) { if (!p) unmatched.push(row.name); continue; }
+    done.add(p.id);
+    matched++;
+    const m = mergeLinkedin({ pageUrl: p.linkedinUrl ?? "", contacts: parseLinkedinContacts(p.linkedinContacts) }, row);
+    if (!m.pageChanged && m.added === 0) continue;
+    await repo.updateProspect(p.id, { linkedinUrl: m.pageUrl || null, linkedinContacts: m.contacts.length ? JSON.stringify(m.contacts) : null });
+    const bits = [m.pageChanged ? "company page" : "", m.added ? `${m.added} contact${m.added === 1 ? "" : "s"}` : ""].filter(Boolean).join(" and ");
+    logs.push({ prospectId: p.id, kind: "note", occurredOn: today(), summary: `LinkedIn research imported: ${bits}`, author: email });
+  }
+  if (logs.length) await repo.addInteractions(logs);
+  revalidateLinkedin();
+  revalidatePath("/admin/marketing");
+  return { ok: true, matched, updated: logs.length, unmatched: unmatched.slice(0, 100) };
 }
