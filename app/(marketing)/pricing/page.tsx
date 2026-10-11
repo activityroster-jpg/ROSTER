@@ -16,6 +16,7 @@ export const metadata = {
 
 const INCLUDED = [
   "Roster builder with RYA ratio, licence and safety-cover checks on every assignment",
+  "Auto-roster: one click fills the week's open roles evenly from who's available",
   "Instructor app: shifts, availability, swaps, leave, hours and documents",
   "Certificate and vetting tracking (DBS, PVG, AccessNI, Garda) with expiry reminders",
   "Roles for admins, senior instructors and a welfare officer",

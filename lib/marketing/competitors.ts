@@ -38,6 +38,7 @@ const RYA_ROWS = (them: Partial<Record<string, Cell>>): CompareRow[] => {
     ["Course-based multi-session scheduling", "partial"],
     ["Visual week calendar & planner", "yes"],
     ["Bulk assign one instructor to many courses", "partial"],
+    ["Auto-roster: fills open roles evenly from availability", "no"],
     ["Instructor availability collection", "yes"],
     ["Clock in/out & payroll-ready hours", "yes"],
     ["Printable weekly roster (PDF)", "partial"],

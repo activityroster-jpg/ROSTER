@@ -1,10 +1,6 @@
 import Link from "next/link";
 import { BuiltWithCentres } from "@/components/marketing/BuiltWithCentres";
-import {
-  AlertTriangle, Anchor, CalendarCheck, LifeBuoy, ShieldCheck, Ship, Users, Waves, Wallet, FileCheck,
-  Clock, CalendarOff, Smartphone, ClipboardCheck,
-  GitCompare, BookOpen, Newspaper, Tag, ArrowRight, KeyRound, FileText, Upload,
-} from "lucide-react";
+import { AlertTriangle, Anchor, ArrowRight, BookOpen, CalendarCheck, CalendarOff, ClipboardCheck, Clock, FileCheck, FileText, GitCompare, KeyRound, LifeBuoy, Newspaper, ShieldCheck, Ship, Smartphone, Sparkles, Tag, Upload, Users, Wallet, Waves } from "lucide-react";
 import { LeadCapture } from "@/components/marketing/LeadCapture";
 import { ComplianceFlow } from "@/components/marketing/ComplianceFlow";
 import { ScreenShot } from "@/components/marketing/ScreenShot";
@@ -22,6 +18,7 @@ export const metadata = {
 // Keep this in step with what is built (and with INCLUDED on the pricing page).
 const PLATFORM = [
   { icon: CalendarCheck, title: "Roster builder", body: "Build the week; every assignment is checked for licences, ratios and clashes." },
+  { icon: Sparkles, title: "Auto-roster", body: "One click fills every open role from who's free, shared out evenly. Not enough people? It fills what it can and shows you the gaps." },
   { icon: Smartphone, title: "Instructor app", body: "Shifts, availability, swaps, hours and documents on their phone, with notifications." },
   { icon: FileCheck, title: "Certs & vetting", body: "Every RYA licence, first aid and DBS/PVG/AccessNI/Garda check, with expiry reminders." },
   { icon: Clock, title: "Hours at a glance", body: "Each person's rostered hours for the week, beside their name on the roster and the availability sheet." },
