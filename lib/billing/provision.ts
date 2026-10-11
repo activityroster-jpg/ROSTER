@@ -4,6 +4,7 @@ import type { Repositories } from "@/lib/db/repositories";
 import type { CloudflareEnv } from "@/lib/cf/bindings";
 import { JURISDICTIONS, PLANS, SETUP_MODES, type Jurisdiction, type Plan, type SetupMode, type SubscriptionStatus } from "@/lib/db/schema";
 import { seedOrganisationDefaults } from "@/lib/seed/seed";
+import { isActivityType, packFor } from "@/lib/packs";
 import type { SystemTenantContext } from "@/lib/tenant/context";
 import { escapeHtml, sendEmail } from "@/lib/mail";
 
@@ -12,6 +13,8 @@ export interface ProvisionParams {
   centreName: string;
   ownerEmail: string;
   jurisdiction: string;
+  /** Which activity pack sets the centre up (lib/packs); unknown → RYA centre. */
+  activityType?: string;
   plan: string;
   stripeCustomerId: string | null;
   stripeSubscriptionId: string | null;
@@ -42,7 +45,7 @@ function coercePlan(v: string): Plan {
  * than once for the same slug (the webhook layer also dedupes on event id): if
  * the org already exists we only backfill Stripe ids and return.
  *
- * Steps: create organisation → owner user + admin membership → seed RYA defaults
+ * Steps: create organisation → owner user + admin membership → seed the activity pack's defaults
  * → release the slug reservation → email the owner a sign-in link.
  */
 export async function provisionCentre(
@@ -70,10 +73,12 @@ export async function provisionCentre(
   const plan = coercePlan(params.plan);
   const setupMode = coerceSetupMode(params.setupMode);
 
+  const activityType = isActivityType(params.activityType) ? params.activityType : "rya_centre";
   const org = await control.createOrganisation({
     name: params.centreName,
     slug,
     jurisdiction,
+    activityType,
     plan,
     status: "active",
     subscriptionStatus: params.subscriptionStatus ?? "active",
@@ -93,7 +98,7 @@ export async function provisionCentre(
     system: true,
     reason: "stripe-provisioning",
   };
-  await seedOrganisationDefaults(tenant, ctx, jurisdiction);
+  await seedOrganisationDefaults(tenant, ctx, jurisdiction, packFor(activityType));
 
   // Record how the centre chose to start (basic ready-to-use vs full config).
   const settings = (await tenant.orgSettings.list(ctx))[0];

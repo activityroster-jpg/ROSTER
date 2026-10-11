@@ -97,7 +97,7 @@ function Row({ row, onMsg }: { row: CourseTypeRow; onMsg: (m: { ok: boolean; tex
 }
 
 /** Editable course-type catalogue: edit fields inline, add, and delete/retire. */
-export function CourseTypeTable({ rows }: { rows: CourseTypeRow[] }) {
+export function CourseTypeTable({ rows, schemePlaceholder = "e.g. RYA Youth Sailing" }: { rows: CourseTypeRow[]; schemePlaceholder?: string }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -132,7 +132,7 @@ export function CourseTypeTable({ rows }: { rows: CourseTypeRow[] }) {
             {active.map((r) => <Row key={`${r.id}-${r.active}`} row={r} onMsg={setMsg} />)}
             <tr className="bg-teal/5">
               <td className="px-4 py-2"><input aria-label="New course type name" value={nv.name} onChange={(e) => setNv({ ...nv, name: e.target.value })} placeholder="Add a course type…" className={`${cell} w-full min-w-[10rem]`} /></td>
-              <td className="px-4 py-2"><input aria-label="New scheme" value={nv.scheme ?? ""} onChange={(e) => setNv({ ...nv, scheme: e.target.value })} placeholder="e.g. RYA Youth Sailing" className={`${cell} w-full min-w-[8rem]`} /></td>
+              <td className="px-4 py-2"><input aria-label="New scheme" value={nv.scheme ?? ""} onChange={(e) => setNv({ ...nv, scheme: e.target.value })} placeholder={schemePlaceholder} className={`${cell} w-full min-w-[8rem]`} /></td>
               <td className="px-4 py-2">
                 <select aria-label="New audience" value={nv.audience} onChange={(e) => setNv({ ...nv, audience: e.target.value })} className={cell}>
                   {AUDIENCES.map((a) => <option key={a.v} value={a.v}>{a.l}</option>)}

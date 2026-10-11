@@ -1,3 +1,4 @@
+import { packFor } from "@/lib/packs";
 import { requireTenant } from "@/lib/tenant/require";
 import { OnboardingWizard, type CourseTypeOpt, type QualOpt, type TeamMember } from "@/components/office/OnboardingWizard";
 import { parseFeatures } from "@/lib/features";
@@ -27,6 +28,7 @@ export default async function OnboardingPage() {
   return (
     <OnboardingWizard
       centreName={organisation.name}
+      wording={packFor(organisation.activityType).wording}
       courseTypes={courseOpts}
       quals={qualOpts}
       existingStaff={staff}

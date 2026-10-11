@@ -108,7 +108,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
 
       <Card className="mb-6">
         <h2 className="mb-1 font-semibold text-navy">Staffing</h2>
-        <p className="mb-3 text-xs text-slate-500">Students booked, what the RYA ratio implies, and the roles you want filled. The number of staff needed follows from the roles.</p>
+        <p className="mb-3 text-xs text-slate-500">Students booked, what the course type's ratio implies, and the roles you want filled. The number of staff needed follows from the roles.</p>
         <StaffingPanel courseId={course.id} staffing={staffing} />
       </Card>
 

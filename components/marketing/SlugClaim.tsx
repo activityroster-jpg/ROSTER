@@ -8,6 +8,13 @@ const JURISDICTIONS = [
   { value: "scotland", label: "Scotland" },
   { value: "northern_ireland", label: "Northern Ireland" },
   { value: "ireland", label: "Ireland" },
+  { value: "other", label: "Other / outside UK & Ireland" },
+] as const;
+
+const ACTIVITY_TYPES = [
+  { value: "rya_centre", label: "RYA training centre" },
+  { value: "sailing_club", label: "Sailing club" },
+  { value: "padi_centre", label: "PADI dive centre" },
 ] as const;
 
 type Availability = "idle" | "checking" | "available" | "taken" | "invalid";
@@ -17,6 +24,7 @@ export function SlugClaim({ apex, plan = "rostering" }: { apex: string; plan?: "
   const [centreName, setCentreName] = useState("");
   const [ownerEmail, setOwnerEmail] = useState("");
   const [jurisdiction, setJurisdiction] = useState<(typeof JURISDICTIONS)[number]["value"]>("england");
+  const [activityType, setActivityType] = useState<(typeof ACTIVITY_TYPES)[number]["value"]>("rya_centre");
   const [availability, setAvailability] = useState<Availability>("idle");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,7 +63,7 @@ export function SlugClaim({ apex, plan = "rostering" }: { apex: string; plan?: "
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug, centreName, ownerEmail, jurisdiction, plan }),
+        body: JSON.stringify({ slug, centreName, ownerEmail, jurisdiction, activityType, plan }),
       });
       const data = (await res.json()) as { url?: string; error?: string };
       if (!res.ok || !data.url) {
@@ -124,6 +132,18 @@ export function SlugClaim({ apex, plan = "rostering" }: { apex: string; plan?: "
           {JURISDICTIONS.map((j) => (
             <option key={j.value} value={j.value}>
               {j.label}
+            </option>
+          ))}
+        </select>
+        <select
+          value={activityType}
+          onChange={(e) => setActivityType(e.target.value as typeof activityType)}
+          className="rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-teal"
+          aria-label="What kind of centre"
+        >
+          {ACTIVITY_TYPES.map((a) => (
+            <option key={a.value} value={a.value}>
+              {a.label}
             </option>
           ))}
         </select>

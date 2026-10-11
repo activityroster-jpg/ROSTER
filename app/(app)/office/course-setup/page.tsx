@@ -1,4 +1,6 @@
 import { requireTenant } from "@/lib/tenant/require";
+import { PACK_OPTIONS, packFor } from "@/lib/packs";
+import { AddPackLists } from "@/components/office/AddPackLists";
 import { CourseTypeTable, type CourseTypeRow } from "@/components/office/CourseTypeTable";
 import { OneOffCourseTypes } from "@/components/office/OneOffCourseTypes";
 import { KitRules } from "@/components/office/KitRules";
@@ -9,7 +11,8 @@ import { course as courseTable } from "@/lib/db/schema";
 export const dynamic = "force-dynamic";
 
 export default async function CourseSetupPage() {
-  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
+  const { ctx, repos, organisation } = await requireTenant({ permission: "roster.edit" });
+  const pack = packFor(organisation.activityType);
   const courseTypes = await repos.tenant.courseType.list(ctx);
 
   const rows: CourseTypeRow[] = courseTypes
@@ -43,7 +46,8 @@ export default async function CourseSetupPage() {
         that&apos;s already used by courses is retired rather than deleted, so past courses still show it.
       </p>
       <a href="/learn?topic=courses" target="_blank" rel="noreferrer" className="mb-4 inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-navy hover:bg-slate-50">📖 Read the guide</a>
-      <CourseTypeTable rows={rows} />
+      <CourseTypeTable rows={rows} schemePlaceholder={pack.wording.schemePlaceholder} />
+      <AddPackLists others={PACK_OPTIONS.filter((o) => o.id !== pack.id && o.id !== "sailing_club")} />
       <OneOffCourseTypes items={oneOffs} listed={listedChoices} />
       <KitRules
         courseTypes={listedChoices}

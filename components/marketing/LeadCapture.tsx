@@ -15,6 +15,13 @@ const JURISDICTIONS = [
   { value: "other", label: "Other / outside UK & Ireland" },
 ] as const;
 
+/** Kept in step with lib/packs (PACK_OPTIONS): the kind of centre, which sets up its starting lists. */
+const ACTIVITY_TYPES = [
+  { value: "rya_centre", label: "RYA training centre" },
+  { value: "sailing_club", label: "Sailing club" },
+  { value: "padi_centre", label: "PADI dive centre" },
+] as const;
+
 const slugify = (s: string) =>
   s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 63);
 
@@ -35,6 +42,7 @@ export function LeadCapture({
   const [slug, setSlug] = useState("");
   const [slugEdited, setSlugEdited] = useState(false);
   const [jurisdiction, setJurisdiction] = useState<(typeof JURISDICTIONS)[number]["value"]>("england");
+  const [activityType, setActivityType] = useState<(typeof ACTIVITY_TYPES)[number]["value"]>("rya_centre");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [status, setStatus] = useState<"idle" | "busy" | "done" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
@@ -78,7 +86,7 @@ export function LeadCapture({
       const res = await fetch("/api/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ownerEmail: email, password, centreName, slug, jurisdiction, acceptedTerms, source, turnstileToken, timeZone: (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { return undefined; } })() }),
+        body: JSON.stringify({ ownerEmail: email, password, centreName, slug, jurisdiction, activityType, acceptedTerms, source, turnstileToken, timeZone: (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { return undefined; } })() }),
       });
       const data = (await res.json()) as { ok?: boolean; error?: string; url?: string; emailSent?: boolean };
       if (!res.ok || !data.ok) {
@@ -156,6 +164,10 @@ export function LeadCapture({
         <select value={jurisdiction} onChange={(e) => setJurisdiction(e.target.value as typeof jurisdiction)} className={field} aria-label="Jurisdiction">
           {JURISDICTIONS.map((j) => <option key={j.value} value={j.value}>{j.label}</option>)}
         </select>
+        <select value={activityType} onChange={(e) => setActivityType(e.target.value as typeof activityType)} className={field} aria-label="What kind of centre">
+          {ACTIVITY_TYPES.map((a) => <option key={a.value} value={a.value}>{a.label}</option>)}
+        </select>
+        <p className="-mt-1 text-xs text-slate-500">This sets up your course list, instructor certificates and roles. Run more than one? Add the other lists later in Course setup.</p>
 
       </div>
 

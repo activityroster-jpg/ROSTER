@@ -10,7 +10,7 @@ const initial: ActionState = { ok: false };
 export interface CourseChoice { id: string; name: string; audience: "youth" | "adult" | "all"; scheme?: string | null; category?: string | null }
 export interface Choice { id: string; name: string; mandatory?: boolean }
 
-export function AddInstructorForm({ courses, quals, checks }: { courses: CourseChoice[]; quals: Choice[]; checks: Choice[] }) {
+export function AddInstructorForm({ courses, quals, checks, certsLabel = "RYA licences and qualifications" }: { courses: CourseChoice[]; quals: Choice[]; checks: Choice[]; certsLabel?: string }) {
   const [state, action, pending] = useActionState(setupInstructorAction, initial);
   const [selCourses, setSelCourses] = useState<Set<string>>(new Set());
   const [selQuals, setSelQuals] = useState<Set<string>>(new Set());
@@ -73,7 +73,7 @@ export function AddInstructorForm({ courses, quals, checks }: { courses: CourseC
         </div>
       </div>
 
-      <Field title="Certs they hold" hint="RYA licences and qualifications. Pick them and we'll suggest the courses they can teach below. They upload a photo of each for you to verify.">
+      <Field title="Certs they hold" hint={`${certsLabel}. Pick them and we'll suggest the courses they can teach below. They upload a photo of each for you to verify.`}>
         <MultiSelect placeholder="Select certs…" options={quals} selected={selQuals} onToggle={toggleQual} onSelectAll={allOf(quals, setSelQuals)} onClear={clear(setSelQuals)} />
       </Field>
 

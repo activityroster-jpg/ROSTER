@@ -29,10 +29,11 @@ export const SECTIONS: Section[] = [
     blurb: "Set your centre up in a few minutes with the guided wizard.",
     blocks: [
       { kind: "p", text: "When you first sign in you land on the onboarding wizard. It only asks for what it needs to get you rostering — everything else can wait." },
+      { kind: "p", text: "At sign-up you said what kind of centre you run: an RYA training centre, a sailing club or a PADI dive centre. That choice set up your starting lists (courses, instructor certificates, roles, kit and checks) and the words you see; the platform underneath is the same for everyone. Every list is yours to change." },
       { kind: "sub", text: "The six steps" },
       { kind: "steps", items: [
         "How you run — pick the extra features you want (equipment, locations, operating areas, payroll, info) and choose whether your sessions run as Morning/Afternoon/Evening slots or with explicit start & end times.",
-        "Courses — tick the RYA courses you offer (grouped by youth and adult), or add your own. Use “Add all RYA courses” if you run a lot of them.",
+        "Courses — tick the courses you offer from your activity's standard list (grouped by youth and adult), or add your own. Use “Add all … courses” if you run a lot of them.",
         "Team — add each instructor, tick the qualifications they hold and the courses they can teach, and add their email to send an invite.",
         "Onboarding — choose whether each instructor's page shows an onboarding checklist, and which steps it has. The recommended steps come ticked, and most of them tick themselves (see “Onboarding tracker”).",
         "Roster PDF — choose what your printable roster shows (times, staff, students, locations, equipment), its style and whether it is portrait or landscape. You can change it later under Settings.",
@@ -134,7 +135,8 @@ export const SECTIONS: Section[] = [
       { kind: "bullets", items: [
         "Open a course to rename it, change its status (draft, scheduled, confirmed, completed, cancelled), set how many students are booked (this drives the ratio check), add or remove sessions, and assign instructors.",
         "The search box above the list finds a course by its name or type, in Upcoming or Past.",
-        "If your course list is ever empty (everything unticked in the setup wizard), the Courses page offers “Restore RYA courses” to bring the standard list back.",
+        "If your course list is ever empty (everything unticked in the setup wizard), the Courses page offers “Restore the course list” to bring your standard list back.",
+        "Run more than one kind of activity (RYA and PADI, say)? At the bottom of Course setup, add the other activity's course list and instructor types to yours; nothing you already have changes.",
         "Each course card shows its audience (youth/adult), the date/times of its sessions, and its staffing status (covered / under-staffed / no safety cover).",
         "Open a course card to see each role it needs and how many are filled, e.g. “Instructor 1/2”.",
       ] },

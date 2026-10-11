@@ -16,9 +16,12 @@ export interface InstructorTeaching {
   courses: TeachableCourse[];
 }
 
-/** Map an RYA scheme name to the qualification discipline that covers it. */
+/** Map a scheme name (RYA, PADI, …) to the qualification discipline that covers it. */
 function schemeDiscipline(scheme: string | null): string | null {
   const s = (scheme ?? "").toLowerCase();
+  if (s.includes("freedive")) return "freediving";
+  if (s.includes("efr") || s.includes("first aid")) return "first_aid";
+  if (s.includes("padi") || s.includes("scuba") || s.includes("dive") || s.includes("ssi") || s.includes("bsac")) return "diving";
   if (s.includes("windsurf")) return "windsurf";
   if (s.includes("paddleboard") || s.includes("sup")) return "sup";
   if (s.includes("powerboat")) return "powerboat";

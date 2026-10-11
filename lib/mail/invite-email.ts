@@ -23,7 +23,7 @@ const STEPS: Record<InviteKind, string[]> = {
   instructor: [
     "Set a password and a 4-digit PIN.",
     "Mark the days you're free, so the office can roster you.",
-    "Upload your certificates (first aid, RYA licences and so on).",
+    "Upload your certificates (first aid, instructor licences or ratings and so on).",
   ],
   office: [
     "Create your account: your name and a password (no account needed beforehand).",

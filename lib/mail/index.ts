@@ -51,7 +51,7 @@ export function renderEmail(bodyHtml: string, opts: { code?: boolean } = {}): st
       <div style="padding:16px 8px 8px;text-align:center;color:#94a3b8;font-size:12px;line-height:1.6">
         <div style="font-weight:600;color:#64748b">${legalName}</div>
         <div>${escapeHtml(COMPANY.registration)}</div>
-        <div>Staff rostering &amp; course administration for RYA sailing &amp; watersports centres.</div>
+        <div>Staff rostering &amp; course administration for activity centres: sailing, watersports and diving.</div>
         ${address}
         <div style="margin-top:8px">
           <a href="${site}" style="color:#0C6B74;text-decoration:none">Website</a> ·

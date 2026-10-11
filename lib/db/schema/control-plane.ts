@@ -118,6 +118,14 @@ export const JURISDICTIONS = [
 ] as const;
 export type Jurisdiction = (typeof JURISDICTIONS)[number];
 
+/**
+ * What kind of centre this is. It picks the activity pack (lib/packs): the
+ * starting lists, default settings and wording. Chosen at sign-up; every
+ * centre from before packs existed is an RYA training centre.
+ */
+export const ACTIVITY_TYPES = ["rya_centre", "sailing_club", "padi_centre"] as const;
+export type ActivityType = (typeof ACTIVITY_TYPES)[number];
+
 export const ORG_STATUSES = ["active", "suspended", "pending", "cancelled"] as const;
 export type OrgStatus = (typeof ORG_STATUSES)[number];
 
@@ -156,6 +164,7 @@ export const organisation = sqliteTable("organisation", {
   name: text("name").notNull(),
   slug: text("slug").notNull(),
   jurisdiction: text("jurisdiction", { enum: JURISDICTIONS }).notNull(),
+  activityType: text("activity_type", { enum: ACTIVITY_TYPES }).notNull().default("rya_centre"),
   plan: text("plan", { enum: PLANS }).notNull().default("rostering"),
   // Pricing tier. Defaults to `standard` (unlimited) so no existing centre is
   // ever retroactively capped; a centre is only limited once put on `small_club`.

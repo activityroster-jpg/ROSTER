@@ -568,6 +568,13 @@
       "when": 1791640859198,
       "tag": "0080_remove_parent_and_hours_data",
       "breakpoints": true
+    },
+    {
+      "idx": 81,
+      "version": "6",
+      "when": 1791720000000,
+      "tag": "0081_activity_type",
+      "breakpoints": true
     }
   ]
 }

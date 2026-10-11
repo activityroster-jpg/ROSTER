@@ -7,6 +7,7 @@ import { isUnder18 } from "@/lib/domain/age";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { requireTenant } from "@/lib/tenant/require";
+import { packFor } from "@/lib/packs";
 import { ONBOARDED_COOKIE } from "@/lib/onboarding";
 import { listStaffWithFit } from "@/lib/services/staff";
 import { addDays, getSessionEvents, getWeekRota, getWeekSchedule, weekStart } from "@/lib/services/schedule";
@@ -107,7 +108,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               <h2 className="font-display text-lg font-semibold text-navy">Finish setting up your centre</h2>
               <p className="text-sm text-slate-600">
                 {setup.setupMode === "basic"
-                  ? "You're on the RYA defaults and can start rostering now — these steps unlock the rest."
+                  ? packFor(organisation.activityType).wording.defaultsNote
                   : "You chose full setup — work through these now to get everything ready."}
               </p>
             </div>

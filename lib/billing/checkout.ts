@@ -36,6 +36,7 @@ export async function createCheckoutSession(
     centre_name: input.centreName,
     owner_email: input.ownerEmail,
     jurisdiction: input.jurisdiction,
+    activity_type: input.activityType,
   };
 
   const session: Stripe.Checkout.Session = await stripe.checkout.sessions.create(

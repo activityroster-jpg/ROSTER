@@ -7,7 +7,7 @@ import { writeAudit } from "@/lib/services/audit";
 import { deleteOrRetireCourseType, moveCoursesToType } from "@/lib/services/course-types";
 import { COURSE_AUDIENCES } from "@/lib/db/schema";
 import { normaliseDefaultSchedule } from "@/lib/domain";
-import { DEFAULT_COURSE_TYPES } from "@/lib/seed/catalogue";
+import { PACKS, isActivityType, packFor } from "@/lib/packs";
 import { setCourseTypeKit } from "@/lib/services/kit";
 
 export type CourseTypeResult = { ok: boolean; error?: string; message?: string };
@@ -87,12 +87,12 @@ export async function reactivateCourseTypeAction(id: string): Promise<CourseType
 }
 
 /**
- * Bring the RYA course list back when a centre has retired or unlisted
+ * Bring the centre's standard course list back when it has retired or unlisted
  * everything (usually by accident in the setup wizard). Reactivates and lists
- * every existing type and re-adds any RYA default that is missing entirely.
+ * every existing type and re-adds any of its pack's defaults that are missing.
  */
 export async function restoreCourseTypesAction(): Promise<CourseTypeResult> {
-  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
+  const { ctx, repos, organisation } = await requireTenant({ permission: "roster.edit" });
   const existing = await repos.tenant.courseType.list(ctx);
   let restored = 0;
   for (const t of existing) {
@@ -102,7 +102,7 @@ export async function restoreCourseTypesAction(): Promise<CourseTypeResult> {
   }
   const have = new Set(existing.map((t) => t.name.trim().toLowerCase()));
   let added = 0;
-  for (const ct of DEFAULT_COURSE_TYPES) {
+  for (const ct of packFor(organisation.activityType).courseTypes) {
     if (have.has(ct.name.trim().toLowerCase())) continue;
     await repos.tenant.courseType.insert(ctx, { ...ct, active: true });
     added++;
@@ -166,4 +166,39 @@ export async function setKitRulesAction(input: { courseTypeId: string; rules: { 
   if (!r.ok) return { ok: false, error: r.error };
   revalidate();
   return { ok: true, message: r.rules.length ? "Kit rules saved" : "Kit rules cleared" };
+}
+
+/**
+ * A centre that runs more than one kind of activity (an RYA centre that also
+ * teaches PADI courses, say) adds another pack's course list and instructor
+ * types here. Nothing already on the centre's lists is touched; names already
+ * present are skipped. Audited.
+ */
+export async function addPackListsAction(packId: string): Promise<CourseTypeResult> {
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
+  if (!isActivityType(packId)) return { ok: false, error: "Unknown activity type" };
+  const pack = PACKS[packId];
+  const [courseTypes, grades] = await Promise.all([repos.tenant.courseType.list(ctx), repos.tenant.qualificationType.list(ctx)]);
+  const haveCourses = new Set(courseTypes.map((t) => t.name.trim().toLowerCase()));
+  const haveGrades = new Set(grades.map((g) => g.name.trim().toLowerCase()));
+  const haveCodes = new Set(grades.map((g) => g.code));
+  let courses = 0, ratings = 0;
+  for (const ct of pack.courseTypes) {
+    if (haveCourses.has(ct.name.trim().toLowerCase())) continue;
+    await repos.tenant.courseType.insert(ctx, { ...ct, active: true });
+    courses++;
+  }
+  for (const g of pack.grades) {
+    if (haveGrades.has(g.name.trim().toLowerCase())) continue;
+    let code = g.code;
+    while (haveCodes.has(code)) code = `${g.code}_${Math.random().toString(36).slice(2, 5).toUpperCase()}`;
+    haveCodes.add(code);
+    await repos.tenant.qualificationType.insert(ctx, { ...g, code, defaultValidMonths: g.defaultValidMonths ?? null, active: true });
+    ratings++;
+  }
+  await writeAudit(repos, ctx, { action: "add_pack_lists", entity: "course_type", after: { pack: packId, courses, ratings } });
+  revalidate();
+  revalidatePath("/office/staff");
+  revalidatePath("/office/settings");
+  return { ok: true, message: courses + ratings ? `Added ${courses} course type${courses === 1 ? "" : "s"} and ${ratings} instructor type${ratings === 1 ? "" : "s"} from the ${pack.label} list` : `Everything from the ${pack.label} list is already here` };
 }

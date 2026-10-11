@@ -16,7 +16,7 @@ import {
 import { writeAudit } from "@/lib/services/audit";
 import { linkInstructorUser } from "@/lib/services/invite";
 import { serializeFeatures } from "@/lib/features";
-import { DEFAULT_COURSE_TYPES, DEFAULT_GRADES } from "@/lib/seed/catalogue";
+import { packFor } from "@/lib/packs";
 import { ONBOARDED_COOKIE } from "@/lib/onboarding";
 import { capUpgradeMessage, instructorCapState } from "@/lib/tenant/limits";
 
@@ -83,7 +83,7 @@ export async function addCustomCourseAction(input: {
   return { ok: true, id: created.id };
 }
 
-/** Set which RYA course types this centre runs (activate selected, retire the rest). */
+/** Set which course types this centre runs (activate selected, retire the rest). */
 export async function setCoursesRunAction(activeIds: string[]): Promise<Result> {
   const { ctx, repos } = await requireTenant({ permission: "settings.edit" });
   const all = await repos.tenant.courseType.list(ctx);
@@ -213,14 +213,15 @@ export async function addQualificationTypeAction(input: {
   return { ok: true, id: created.id, name: created.name, discipline: created.discipline ?? null };
 }
 
-/** Add any RYA default instructor types this centre is missing (by name). */
+/** Add any of the centre's pack's instructor types it is missing (by name). */
 export async function addDefaultGradesAction(): Promise<{ ok: boolean; created: { id: string; name: string; discipline: string | null }[] }> {
-  const { ctx, repos } = await requireTenant({ permission: "settings.edit" });
+  const { ctx, repos, organisation } = await requireTenant({ permission: "settings.edit" });
+  const pack = packFor(organisation.activityType);
   const existing = await repos.tenant.qualificationType.list(ctx);
   const haveNames = new Set(existing.map((q) => q.name.trim().toLowerCase()));
   const haveCodes = new Set(existing.map((q) => q.code));
   const created: { id: string; name: string; discipline: string | null }[] = [];
-  for (const g of DEFAULT_GRADES) {
+  for (const g of pack.grades) {
     if (haveNames.has(g.name.toLowerCase())) continue;
     let code = g.code;
     while (haveCodes.has(code)) code = `${g.code}_${Math.random().toString(36).slice(2, 5).toUpperCase()}`;
@@ -237,13 +238,14 @@ export async function addDefaultGradesAction(): Promise<{ ok: boolean; created: 
   return { ok: true, created };
 }
 
-/** Add any RYA default course types this centre is missing (by name), activated. */
+/** Add any of the centre's pack's course types it is missing (by name), activated. */
 export async function addDefaultCoursesAction(): Promise<{ ok: boolean; created: { id: string; name: string; scheme: string | null; audience: string; category: string | null }[] }> {
-  const { ctx, repos } = await requireTenant({ permission: "settings.edit" });
+  const { ctx, repos, organisation } = await requireTenant({ permission: "settings.edit" });
+  const pack = packFor(organisation.activityType);
   const existing = await repos.tenant.courseType.list(ctx);
   const haveNames = new Set(existing.map((c) => c.name.trim().toLowerCase()));
   const created: { id: string; name: string; scheme: string | null; audience: string; category: string | null }[] = [];
-  for (const c of DEFAULT_COURSE_TYPES) {
+  for (const c of pack.courseTypes) {
     if (haveNames.has(c.name.toLowerCase())) continue;
     const row = await repos.tenant.courseType.insert(ctx, { ...c, active: true });
     created.push({ id: row.id, name: row.name, scheme: row.scheme, audience: row.audience, category: row.category ?? null });

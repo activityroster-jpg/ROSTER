@@ -1,4 +1,5 @@
-import type { Jurisdiction } from "@/lib/db/schema";
+import type { ActivityType, Jurisdiction } from "@/lib/db/schema";
+import { packFor } from "@/lib/packs";
 import { createRepositories, type Repositories } from "@/lib/db/repositories";
 import { seedOrganisationDefaults } from "@/lib/seed/seed";
 import type { SystemTenantContext } from "@/lib/tenant/context";
@@ -13,7 +14,7 @@ const H = 60 * 60 * 1000;
  */
 export async function seedFullOrg(
   db: Database,
-  opts: { name: string; slug: string; jurisdiction: Jurisdiction },
+  opts: { name: string; slug: string; jurisdiction: Jurisdiction; activityType?: ActivityType },
 ): Promise<{ repos: Repositories; organisationId: string; slug: string; ctx: SystemTenantContext }> {
   const repos = createRepositories(db);
 
@@ -21,6 +22,7 @@ export async function seedFullOrg(
     name: opts.name,
     slug: opts.slug,
     jurisdiction: opts.jurisdiction,
+    activityType: opts.activityType ?? "rya_centre",
     plan: "rostering",
     status: "active",
     subscriptionStatus: "active",
@@ -35,7 +37,7 @@ export async function seedFullOrg(
     reason: "test-fixture",
   };
 
-  await seedOrganisationDefaults(repos.tenant, ctx, opts.jurisdiction);
+  await seedOrganisationDefaults(repos.tenant, ctx, opts.jurisdiction, packFor(opts.activityType));
   const t = repos.tenant;
 
   // Grab some seeded config ids to build the operational graph.

@@ -1,0 +1,1 @@
+ALTER TABLE `organisation` ADD `activity_type` text DEFAULT 'rya_centre' NOT NULL;

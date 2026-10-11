@@ -7,6 +7,7 @@ import { OnboardingTrackerEditor } from "./OnboardingTrackerEditor";
 import { saveOnboardingTrackerAction } from "@/app/(app)/office/settings/actions";
 import type { TrackerConfig } from "@/lib/domain/onboarding-tracker";
 import { DEFAULT_ROTA_TEMPLATE } from "@/lib/rota/template";
+import type { PackWording } from "@/lib/packs/types";
 import {
   addCustomCourseAction,
   addDefaultCoursesAction,
@@ -33,7 +34,7 @@ const EMPLOYMENT = [
 
 const AUDIENCE_ORDER: { key: CourseAudience; label: string; hint: string }[] = [
   { key: "youth", label: "Youth", hint: "Under-18 provision — junior club, summer camps, school groups" },
-  { key: "adult", label: "Adult", hint: "Adult courses and RYA cruising / powerboat" },
+  { key: "adult", label: "Adult", hint: "Adult courses" },
   { key: "all", label: "All ages", hint: "Runs for any age group" },
 ];
 
@@ -41,6 +42,7 @@ const STEP_LABELS = ["How you run", "Courses", "Team", "Onboarding", "Roster PDF
 
 export function OnboardingWizard({
   centreName,
+  wording,
   courseTypes,
   quals: initialQuals,
   existingStaff,
@@ -51,6 +53,8 @@ export function OnboardingWizard({
   initialTracker,
 }: {
   centreName: string;
+  /** The centre's activity pack words (RYA / PADI …). */
+  wording: PackWording;
   courseTypes: CourseTypeOpt[];
   quals: QualOpt[];
   existingStaff: TeamMember[];
@@ -330,9 +334,9 @@ export function OnboardingWizard({
         <div className="rounded-card border border-slate-200 bg-white p-6">
           <div className="flex items-start justify-between gap-3">
             <h2 className="font-display text-lg font-semibold text-navy">Which courses do you run?</h2>
-            <button type="button" onClick={addAllCourses} disabled={pending} className="flex-none text-xs font-semibold text-teal hover:underline disabled:opacity-50">+ Add all RYA courses</button>
+            <button type="button" onClick={addAllCourses} disabled={pending} className="flex-none text-xs font-semibold text-teal hover:underline disabled:opacity-50">{wording.addAllCourses}</button>
           </div>
-          <p className="mt-1 text-sm text-slate-500">Grouped by youth and adult. Tick the ones you offer, or add your own below. Missing some? Use &ldquo;Add all RYA courses&rdquo;. Change anytime in Settings.</p>
+          <p className="mt-1 text-sm text-slate-500">Grouped by youth and adult. Tick the ones you offer, or add your own below. Missing some? Use &ldquo;{wording.addAllCourses.replace(/^\+ /, "")}&rdquo;. Change anytime in Settings.</p>
 
           <div className="mt-5 space-y-5">
             {AUDIENCE_ORDER.filter((a) => grouped.has(a.key)).map((a) => (
@@ -404,7 +408,7 @@ export function OnboardingWizard({
             </div>
             <div className="mt-3 flex items-center justify-between">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Certs / instructor type</p>
-              <button type="button" onClick={addAllTypes} disabled={pending} className="text-xs font-semibold text-teal hover:underline disabled:opacity-50">+ Add all RYA types</button>
+              <button type="button" onClick={addAllTypes} disabled={pending} className="text-xs font-semibold text-teal hover:underline disabled:opacity-50">{wording.addAllTypes}</button>
             </div>
             <div className="mt-2 flex flex-wrap gap-2">
               {quals.map((q) => {

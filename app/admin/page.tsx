@@ -1,3 +1,4 @@
+import { packFor } from "@/lib/packs";
 import Link from "next/link";
 import { requirePlatformAdmin } from "@/lib/platform/admin";
 import { getDb } from "@/lib/cf/bindings";
@@ -267,7 +268,7 @@ export default async function AdminOverviewPage({ searchParams }: { searchParams
                   <tr key={o.id} className="hover:bg-slate-50/60">
                     <td className="px-4 py-3">
                       <Link href={`/admin/centres/${o.id}`} className="font-medium text-teal hover:underline">{o.name}</Link>
-                      <span className="block text-xs text-slate-400">{o.slug} · {o.jurisdiction}</span>
+                      <span className="block text-xs text-slate-400">{o.slug} · {o.jurisdiction} · {packFor(o.activityType).label}</span>
                     </td>
                     <td className="px-4 py-3 text-slate-600">
                       {owners.get(o.id)

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { JURISDICTIONS, PLANS, SETUP_MODES } from "@/lib/db/schema";
+import { ACTIVITY_TYPES, JURISDICTIONS, PLANS, SETUP_MODES } from "@/lib/db/schema";
 import { RESERVED_SUBDOMAINS, SLUG_PATTERN } from "@/lib/tenant/reserved";
 
 /**
@@ -17,6 +17,8 @@ export const signupSchema = z.object({
     .refine((s) => !RESERVED_SUBDOMAINS.has(s), "That subdomain is reserved"),
   ownerEmail: z.string().trim().toLowerCase().email(),
   jurisdiction: z.enum(JURISDICTIONS),
+  /** What kind of centre: picks the activity pack (lib/packs). */
+  activityType: z.enum(ACTIVITY_TYPES).default("rya_centre"),
   plan: z.enum(PLANS),
 });
 
@@ -37,6 +39,8 @@ export const trialSignupSchema = z.object({
   ownerEmail: z.string().trim().toLowerCase().email(),
   password: z.string().min(8, "Use at least 8 characters with a mix of letters and numbers.").max(200).regex(/[A-Za-z]/, "Include at least one letter.").regex(/\d/, "Include at least one number."),
   jurisdiction: z.enum(JURISDICTIONS),
+  /** What kind of centre: picks the activity pack (lib/packs). */
+  activityType: z.enum(ACTIVITY_TYPES).default("rya_centre"),
   /** Legacy: the home-page form no longer offers a choice; onboarding in the office covers it. */
   setupMode: z.enum(SETUP_MODES).default("basic"),
   /** Detected by the browser (Intl); validated server-side; optional. */

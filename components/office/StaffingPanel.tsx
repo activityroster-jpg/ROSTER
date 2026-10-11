@@ -44,7 +44,7 @@ export function StaffingPanel({ courseId, staffing, compact = false, onSaved }: 
           <input type="number" min={0} max={500} value={students} onChange={(e) => setStudents(e.target.value)} className={`${field} mt-1 block w-24`} />
         </label>
         <p className="pb-1.5 text-xs text-slate-500">
-          RYA ratio 1:{Math.max(1, staffing.ratio)} → <span className="font-semibold text-navy">{ratioNeeds} instructor{ratioNeeds === 1 ? "" : "s"}</span>
+          Ratio 1:{Math.max(1, staffing.ratio)} → <span className="font-semibold text-navy">{ratioNeeds} instructor{ratioNeeds === 1 ? "" : "s"}</span>
           {staffing.requiresSafetyBoat ? <> + <span className="font-semibold text-navy">safety cover</span></> : null}
         </p>
         {staffing.suggested.length ? <button type="button" onClick={useSuggestion} className="pb-1.5 text-xs font-medium text-teal hover:underline">Use the suggested roles</button> : null}

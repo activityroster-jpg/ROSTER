@@ -183,6 +183,7 @@ async function provisionFromSession(
     centreName: m.centre_name ?? m.slug,
     ownerEmail: m.owner_email ?? (session.customer_email ?? ""),
     jurisdiction: m.jurisdiction ?? "england",
+    activityType: m.activity_type ?? "rya_centre",
     plan: m.plan ?? "rostering",
     stripeCustomerId: typeof session.customer === "string" ? session.customer : null,
     stripeSubscriptionId: typeof session.subscription === "string" ? session.subscription : null,

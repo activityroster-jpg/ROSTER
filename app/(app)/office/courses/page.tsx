@@ -3,6 +3,7 @@ import { coverageForCourses } from "@/lib/services/schedule";
 import { course as courseTable, courseRoleRequirement as courseRoleRequirementTable, courseSession as courseSessionTable, courseStaff as courseStaffTable } from "@/lib/db/schema";
 import Link from "next/link";
 import { requireTenant } from "@/lib/tenant/require";
+import { packFor } from "@/lib/packs";
 import { addDays, getSessionEvents, weekStart } from "@/lib/services/schedule";
 import { fitReason, listStaffWithFit } from "@/lib/services/staff";
 import { getCourseAvailabilityStates } from "@/lib/services/availability";
@@ -21,7 +22,7 @@ import { qualificationGap } from "@/lib/services/problems";
 export const dynamic = "force-dynamic";
 
 export default async function CoursesPage({ searchParams }: { searchParams: Promise<{ view?: string; q?: string; all?: string }> }) {
-  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
+  const { ctx, repos, organisation } = await requireTenant({ permission: "roster.edit" });
   const sp = await searchParams;
   const view: "upcoming" | "past" = sp.view === "past" ? "past" : "upcoming";
   const q = (typeof sp.q === "string" ? sp.q : "").trim().slice(0, 80);
@@ -207,7 +208,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
 
       <CourseUpdatesCheck integrations={connectedIntegrations} />
 
-      {activeTypes.length === 0 ? <RestoreCourseTypes /> : null}
+      {activeTypes.length === 0 ? <RestoreCourseTypes courseListName={packFor(organisation.activityType).wording.courseListName} /> : null}
 
       <CoursePlanner courseTypes={activeTypes} events={events} slotStyle={slotStyle} roles={activeRoles} locations={plannerLocations} equipment={plannerEquipment} />
 

@@ -1,9 +1,8 @@
 import type { CourseAudience, Jurisdiction } from "@/lib/db/schema";
 
 /**
- * RYA-aware default catalogue seeded into every new centre on provisioning.
- *
- * This is the "same from the start" baseline every centre begins with. After
+ * The RYA lists (the first activity pack, lib/packs/rya.ts). Other packs keep
+ * their own lists beside this file. These are the "same from the start" baseline a centre begins with. After
  * provisioning it is theirs to edit (deactivate-never-delete) — that is how a
  * centre "branches off" without any code fork. Nothing here is hard-coded into
  * behaviour; the app reads these rows, so changing them changes the product for
@@ -89,7 +88,7 @@ export interface ComplianceSeed {
 }
 
 /** Jurisdiction-specific vetting check. */
-function vettingFor(jurisdiction: Jurisdiction): ComplianceSeed {
+export function vettingFor(jurisdiction: Jurisdiction): ComplianceSeed {
   switch (jurisdiction) {
     case "scotland":
       return { name: "PVG Scheme Membership", code: "PVG", mandatory: false, expiryTracked: false, isVetting: true };

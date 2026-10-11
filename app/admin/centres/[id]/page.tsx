@@ -1,3 +1,4 @@
+import { packFor } from "@/lib/packs";
 import Link from "next/link";
 import { requirePlatformAdmin } from "@/lib/platform/admin";
 import { getDb } from "@/lib/cf/bindings";
@@ -91,6 +92,7 @@ export default async function CentreDetailPage({ params }: { params: Promise<{ i
           <Row k="Courses" v={String(u.courses)} />
           <Row k="Sessions" v={String(u.sessions)} />
           <Row k="Jurisdiction" v={org.jurisdiction} />
+          <Row k="Activity type" v={packFor(org.activityType).label} />
         </Card>
       </div>
 

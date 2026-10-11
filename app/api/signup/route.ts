@@ -34,7 +34,7 @@ export async function POST(req: Request) {
     const first = parsed.error.issues[0]?.message ?? "Please check your details";
     return NextResponse.json({ error: first }, { status: 400 });
   }
-  const { centreName, slug, ownerEmail, password, jurisdiction, setupMode, timeZone } = parsed.data;
+  const { centreName, slug, ownerEmail, password, jurisdiction, activityType, setupMode, timeZone } = parsed.data;
 
   const env = getEnv();
   const repos = await getRepositories();
@@ -85,6 +85,7 @@ export async function POST(req: Request) {
       centreName,
       ownerEmail,
       jurisdiction,
+      activityType,
       plan: "rostering",
       stripeCustomerId: null,
       stripeSubscriptionId: null,
@@ -117,7 +118,7 @@ export async function POST(req: Request) {
 
   // Best-effort lead capture for the marketing funnel.
   try {
-    await control.captureLead({ email: ownerEmail, centreName, orgType: null, message: `trial:${setupMode}`, source: "signup" });
+    await control.captureLead({ email: ownerEmail, centreName, orgType: null, message: `trial:${setupMode}:${activityType}`, source: "signup" });
   } catch {
     /* ignore */
   }

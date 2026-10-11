@@ -1,6 +1,7 @@
 import { managedByOffice } from "@/lib/domain/availability";
 import { availability as availabilityTable } from "@/lib/db/schema";
 import { requireTenant } from "@/lib/tenant/require";
+import { packFor } from "@/lib/packs";
 import { isUnder18 } from "@/lib/domain/age";
 import { listStaffWithFit } from "@/lib/services/staff";
 import { getTeachingMatrix } from "@/lib/services/teaching";
@@ -16,7 +17,7 @@ import { listOfficeMembers } from "@/lib/services/office-access";
 export const dynamic = "force-dynamic";
 
 export default async function StaffPage() {
-  const { ctx, repos } = await requireTenant({ permission: "staff.view" });
+  const { ctx, repos, organisation } = await requireTenant({ permission: "staff.view" });
   const [staff, qualTypes, teaching, courseTypes, complianceTypes] = await Promise.all([
     listStaffWithFit(repos, ctx),
     repos.tenant.qualificationType.list(ctx),
@@ -111,7 +112,7 @@ export default async function StaffPage() {
         <QuickAddStaff officeMode={settingsRow?.staffManagedBy === "office"} />
         <details className="mt-4 border-t border-slate-100 pt-3">
           <summary className="cursor-pointer text-sm font-medium text-navy">Add with all details (courses, licences, checks)</summary>
-          <div className="mt-3"><AddInstructorForm courses={courseChoices} quals={qualChoices} checks={checkChoices} /></div>
+          <div className="mt-3"><AddInstructorForm courses={courseChoices} quals={qualChoices} checks={checkChoices} certsLabel={packFor(organisation.activityType).wording.certsLabel} /></div>
         </details>
       </Card>
 
