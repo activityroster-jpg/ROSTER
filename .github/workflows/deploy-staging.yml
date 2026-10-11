@@ -75,12 +75,6 @@ jobs:
           for i in 1 2 3 4 5 6; do
             home="$(curl -sS -L -o /dev/null -w '%{http_code} %{url_effective}' https://staging.activityroster.com/ || true)"
             diving="$(curl -sS -o /dev/null -w '%{http_code}' https://staging.activityroster.com/diving || true)"
-            footer="$(curl -sS https://staging.activityroster.com/trust | grep -c 'Dive centres' || true)"; sub="$(curl -sS -o /dev/null -w '%{http_code}' https://probe.staging.activityroster.com/diving || true)"
-            echo "::warning::which build answers staging apex? footer has 'Dive centres' link x$footer (0 = production build); centre-subdomain /diving → $sub"
-            for p in /diving /rya-sailing-school-software /trust; do
-              hd="$(curl -sS -o /tmp/body -D - "https://staging.activityroster.com$p" 2>/dev/null | tr -d '\r' | grep -iE '^(HTTP/|cf-cache-status|cache-control|x-opennext|x-nextjs|content-type|age:)' | tr '\n' ' ')"
-              echo "::warning::probe $p → $hd | body: $(head -c 120 /tmp/body | tr '\n' ' ')"
-            done
             if curl -fsS https://staging.activityroster.com/api/health | grep -q '"ok":true' && [ "$home" = "200 https://staging.activityroster.com/" ] && [ "$diving" = "200" ]; then echo "staging healthy, home page and /diving served"; exit 0; fi
             echo "/diving check: $diving"
             echo "home page check: $home"
