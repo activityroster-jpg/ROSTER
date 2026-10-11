@@ -56,6 +56,10 @@ APP_ENV = "production"
 name = "roster-staging"
 routes = [
   { pattern = "staging.activityroster.com", custom_domain = true },
+  # Explicit, more specific than production's "*.activityroster.com/*": without it
+  # the production worker answers staging.activityroster.com itself (centre
+  # subdomains were already fine), so new public pages looked missing on staging.
+  { pattern = "staging.activityroster.com/*", zone_name = "activityroster.com" },
   { pattern = "*.staging.activityroster.com/*", zone_name = "activityroster.com" },
 ]
 
