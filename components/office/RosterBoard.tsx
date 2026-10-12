@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import type { BoardData, BoardInstructor, OpenRole } from "@/lib/services/board";
 import type { RotaDay, RotaSession } from "@/lib/services/schedule";
-import { autoRosterAction, boardAssignAction, boardRemoveAction } from "@/app/(app)/office/rota/board-actions";
+import { autoRosterAction, boardAssignAction, boardAssignManyAction, boardRemoveAction } from "@/app/(app)/office/rota/board-actions";
 import { setCourseStaffingAction } from "@/app/(app)/office/courses/actions";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { groupCandidates } from "@/lib/domain/assign-order";
@@ -230,8 +230,10 @@ type Member = RotaSession["staff"][number];
 interface SlotRowProps {
   roleTypeId: string; roleName: string; member?: Member; extra?: boolean;
   candidates: BoardInstructor[]; byId: Map<string, BoardInstructor>; slotKey: string; dayWord: string; slot: string;
-  courseTypeId: string | null; courseId: string | null; canEdit: boolean; multiDay: boolean; pending: boolean; preselect: string | null;
+  courseTypeId: string | null; courseId: string | null; canEdit: boolean; multiDay: boolean; pending: boolean;
   elsewhere: Map<string, string>;
+  /** The person picked for this row (the panel holds every row's pick, so one person can't be picked twice). */
+  pick: string; onPick: (instructorId: string) => void;
   onAssign: (instructorId: string, roleTypeId: string, override: boolean, note: string | null, replacing?: Member) => void; onRemove: (m: Member, scope: "course" | "day") => void; onAskRemove: (m: Member) => void;
 }
 
@@ -283,9 +285,9 @@ function elsewhereInSlot(days: RotaDay[], date: string, slot: string, sessionId:
 }
 
 /** One role slot: filled (name, Change, Remove) or empty (pick someone, Assign). */
-function SlotRow({ roleTypeId, roleName, member, extra, candidates, byId, slotKey, dayWord, slot, courseTypeId, courseId, canEdit, multiDay, pending, preselect, elsewhere, onAssign, onRemove, onAskRemove }: SlotRowProps) {
+function SlotRow({ roleTypeId, roleName, member, extra, candidates, byId, slotKey, dayWord, slot, courseTypeId, courseId, canEdit, multiDay, pending, elsewhere, pick, onPick, onAssign, onRemove, onAskRemove }: SlotRowProps) {
   const [changing, setChanging] = useState(false);
-  const [pick, setPick] = useState(!member && preselect ? preselect : "");
+  const setPick = onPick;
   const chosen = pick ? byId.get(pick) : undefined;
   const chosenAvail = chosen?.availability[slotKey];
   const qualified = chosen && courseTypeId ? (chosen.knownQualifications ? chosen.teaches.includes(courseTypeId) : null) : null;
@@ -409,6 +411,9 @@ function SessionPanel({ data, selected, canEdit, preselect, instructors, byId, o
   const [pending, start] = useTransition();
   const [scope, setScope] = useState<"course" | "day">(meta?.multiDay ? "day" : "course");
   const [editing, setEditing] = useState(false);
+  // One pick per row (by row index). Someone picked for one row is left out of the others' lists.
+  const [picks, setPicks] = useState<Record<number, string>>({});
+  const setPickAt = (i: number, id: string) => setPicks((p) => { const n = { ...p }; if (id) n[i] = id; else delete n[i]; return n; });
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [askRemove, setAskRemove] = useState<Member | null>(null);
   const key = `${day.date}|${s.slot}`;
@@ -453,6 +458,17 @@ function SessionPanel({ data, selected, canEdit, preselect, instructors, byId, o
   const elsewhere = elsewhereInSlot(data.days, day.date, s.slot, s.sessionId);
   const preselectRole = open[0]?.roleTypeId;
   const dayWord = day.label.split(" ")[0] ?? "";
+  // A person dropped or clicked onto the session lands in the first open row for the role that needs them.
+  const preselectRow = preselect ? slots.findIndex((sl) => !sl.member && sl.roleTypeId === preselectRole) : -1;
+  const pickFor = (i: number) => picks[i] ?? (i === preselectRow && preselect && !Object.values(picks).includes(preselect) ? preselect : "");
+  const pickedRows = slots.map((sl, i) => ({ i, sl, id: pickFor(i) })).filter((x) => x.id && !x.sl.member);
+  const assignAll = () => run(async () => {
+    const items = pickedRows.map(({ sl, id }) => { const issues = issuesFor(byId.get(id), key, dayWord, s.slot, meta?.courseTypeId ?? null, elsewhere); return { instructorId: id, roleTypeId: sl.roleTypeId, override: issues.length > 0, note: issues.length ? issues.join(" ") : null }; });
+    const r = await boardAssignManyAction({ sessionId: s.sessionId, courseId: s.courseId, scope, items });
+    setPicks({});
+    const failed = (r.results ?? []).filter((x) => !x.ok).map((x) => `${byId.get(x.instructorId)?.name ?? "Someone"}: ${x.message}`);
+    return { ok: r.ok, message: failed.length ? `${r.message}. Not assigned — ${failed.join("; ")}` : r.message, error: r.error };
+  });
   const totalNeeded = (meta?.needs ?? []).reduce((n, x) => n + x.count, 0);
 
   return (
@@ -487,13 +503,20 @@ function SessionPanel({ data, selected, canEdit, preselect, instructors, byId, o
         {slots.length === 0 ? <p className="mb-3 text-xs text-slate-400">This course doesn&apos;t list any roles yet. Use &ldquo;Edit students &amp; roles&rdquo; to add them.</p> : (
           <ul className="mb-3 space-y-1.5">
             {slots.map((sl, i) => (
-              <SlotRow key={`${sl.roleTypeId}-${sl.member?.instructorId ?? "open"}-${i}`} {...sl} candidates={candidates} byId={byId} slotKey={key} dayWord={dayWord} slot={s.slot} elsewhere={elsewhere}
+              <SlotRow key={`${sl.roleTypeId}-${sl.member?.instructorId ?? "open"}-${i}`} {...sl} byId={byId} slotKey={key} dayWord={dayWord} slot={s.slot} elsewhere={elsewhere}
+                candidates={candidates.filter((c) => { const mine = pickFor(i); return c.id === mine || !slots.some((_, j) => j !== i && pickFor(j) === c.id); })}
                 courseTypeId={meta?.courseTypeId ?? null} courseId={meta?.courseId ?? null} canEdit={canEdit} multiDay={Boolean(meta?.multiDay)} pending={pending}
-                preselect={!sl.member && sl.roleTypeId === preselectRole ? preselect : null}
-                onAssign={assign} onRemove={remove} onAskRemove={setAskRemove} />
+                pick={pickFor(i)} onPick={(id) => setPickAt(i, id)}
+                onAssign={(instructorId, roleTypeId, override, note, replacing) => { setPickAt(i, ""); assign(instructorId, roleTypeId, override, note, replacing); }} onRemove={remove} onAskRemove={setAskRemove} />
             ))}
           </ul>
         )}
+        {canEdit && pickedRows.length > 1 ? (
+          <div className="mb-3 flex items-center justify-end gap-2">
+            <span className="text-xs text-slate-500">{pickedRows.length} picked</span>
+            <button type="button" disabled={pending} onClick={assignAll} className="rounded-lg bg-teal px-3 py-1.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{pending ? "Assigning…" : `Assign all ${pickedRows.length}`}</button>
+          </div>
+        ) : null}
         {canEdit && meta ? <div className="mb-3"><AddRolePlace courseId={meta.courseId} roles={data.roles.map((r) => ({ id: r.id, name: r.name }))} onChanged={onChanged} /></div> : null}
         {msg ? <p className={`mt-3 text-xs ${msg.ok ? "text-starboard" : "text-port"}`}>{msg.text}</p> : null}
       </div>

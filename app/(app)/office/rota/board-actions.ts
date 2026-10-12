@@ -43,6 +43,31 @@ export async function boardAssignAction(input: { sessionId: string; courseId: st
   return { ok: true, message: r.warnings.length ? `Assigned — ⚠ ${r.warnings.join("; ")}` : r.overridden ? "Assigned (override recorded)" : "Assigned" };
 }
 
+/**
+ * Several picks in one go ("Assign all"): each runs the same checks as a
+ * single assign, in order; one refusal doesn't stop the rest. Returns what
+ * happened to each so the panel can say who went on and who didn't.
+ */
+export async function boardAssignManyAction(input: { sessionId: string; courseId: string; scope: "course" | "day"; items: { instructorId: string; roleTypeId: string; override?: boolean; note?: string | null }[] }): Promise<Result & { results?: { instructorId: string; ok: boolean; message: string }[] }> {
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
+  if (![input.sessionId, input.courseId].every((v) => idSchema.safeParse(v).success) || !Array.isArray(input.items) || input.items.length === 0 || input.items.length > 20) return { ok: false, error: "Invalid request" };
+  const results: { instructorId: string; ok: boolean; message: string }[] = [];
+  for (const it of input.items) {
+    if (!idSchema.safeParse(it.instructorId).success || !idSchema.safeParse(it.roleTypeId).success) { results.push({ instructorId: it.instructorId, ok: false, message: "Invalid request" }); continue; }
+    const note = typeof it.note === "string" ? it.note.trim().slice(0, 300) || null : null;
+    if (input.scope === "day") {
+      const r = await setDayStaff(repos, ctx, { sessionId: input.sessionId, instructorId: it.instructorId, roleTypeId: it.roleTypeId, mode: "add", override: Boolean(it.override), note });
+      results.push({ instructorId: it.instructorId, ok: r.ok, message: r.ok ? (r.overridden ? "added (override recorded)" : "added") : r.error ?? "not added" });
+    } else {
+      const r = await assignStaff(repos, ctx, { courseId: input.courseId, instructorId: it.instructorId, roleTypeId: it.roleTypeId, override: Boolean(it.override), overrideNote: note ?? undefined });
+      results.push({ instructorId: it.instructorId, ok: r.ok, message: r.ok ? (r.warnings.length ? `assigned — ⚠ ${r.warnings.join("; ")}` : r.overridden ? "assigned (override recorded)" : "assigned") : assignBlockMessage(r.reason, r.detail) });
+    }
+  }
+  refresh();
+  const done = results.filter((r) => r.ok).length;
+  return { ok: done > 0, results, message: `${done} of ${results.length} assigned`, error: done === 0 ? "Nobody could be assigned" : undefined };
+}
+
 /** Take someone off: the whole course (removes the assignment) or this day only (a skip, or undoing a day add). */
 export async function boardRemoveAction(input: { sessionId: string; courseId: string; instructorId: string; roleTypeId: string; assignmentId: string | null; scope: "course" | "day" }): Promise<Result> {
   const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
