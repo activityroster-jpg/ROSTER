@@ -9,8 +9,8 @@ import { Card, StatusPill } from "@/components/ui";
 import { CourseManage } from "@/components/office/CourseManage";
 import { SessionManager, type SessionRow } from "@/components/office/SessionManager";
 import { canDeleteCourse } from "@/lib/services/cancel";
-import { AssignStaffForm } from "@/components/office/AssignStaffForm";
-import { RemoveStaffButton } from "@/components/office/RemoveStaffButton";
+import { CourseSlots } from "@/components/office/CourseSlots";
+import { buildRoleSlots } from "@/lib/domain/role-slots";
 import { StaffingPanel } from "@/components/office/StaffingPanel";
 import { CourseResources } from "@/components/office/CourseResources";
 import { equipmentContextForCourse, getCourseResources, staffingViewFrom } from "@/lib/services/course-resources";
@@ -110,6 +110,13 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
         <h2 className="mb-1 font-semibold text-navy">Staffing</h2>
         <p className="mb-3 text-xs text-slate-500">Students booked, what the course type's ratio implies, and the roles you want filled. The number of staff needed follows from the roles.</p>
         <StaffingPanel courseId={course.id} staffing={staffing} />
+        <div className="mt-4">
+          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">Who&apos;s on it</p>
+          <CourseSlots courseId={course.id} candidates={instructorOptions} slots={buildRoleSlots(
+            staffing.lines.length ? staffing.lines.map((l) => ({ roleTypeId: l.roleTypeId, roleName: l.roleName, count: l.count })) : staffing.suggested.map((l) => ({ roleTypeId: l.roleTypeId, roleName: roleName.get(l.roleTypeId) ?? "Role", count: l.count })),
+            assignments.map((a) => ({ assignmentId: a.id, instructorId: a.instructorId, name: nameById.get(a.instructorId) ?? "Instructor", roleTypeId: a.roleTypeId, roleName: roleName.get(a.roleTypeId) ?? "role", status: a.status, isOverride: Boolean(a.isOverride), declineNote: a.declineNote })),
+          )} />
+        </div>
       </Card>
 
       <Card className="mb-6">
@@ -134,21 +141,6 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
         <SessionManager courseId={course.id} slotStyle={slotStyle} sessions={sessionRows} staffCount={staffCount} dayStaff={dayStaffBySession} instructorOptions={instructors.filter((i) => i.status === "active").map((i) => ({ id: i.id, name: i.name })).sort((a, b) => a.name.localeCompare(b.name))} roleOptions={activeRoles} />
       </Card>
 
-      <Card>
-        <h2 className="mb-3 font-semibold text-navy">Instructors</h2>
-        {assignments.length > 0 ? (
-          <ul className="mb-3 flex flex-wrap gap-2">
-            {assignments.map((a) => (
-              <li key={a.id} className="flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-700">
-                {nameById.get(a.instructorId) ?? "Instructor"} · {roleName.get(a.roleTypeId) ?? "role"}
-                {a.isOverride ? <span className="text-amber">(override)</span> : null}
-                <RemoveStaffButton courseId={course.id} assignmentId={a.id} />
-              </li>
-            ))}
-          </ul>
-        ) : <p className="mb-3 text-xs text-slate-400">No instructors assigned yet.</p>}
-        <AssignStaffForm courseId={course.id} instructors={instructorOptions} roles={activeRoles} />
-      </Card>
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { getWeekSchedule, weekStart } from "@/lib/services/schedule";
 import { getTeachingMatrix } from "@/lib/services/teaching";
 import { assignStaff, assignBlockMessage } from "@/lib/services/assignment";
 import { courseStaff as courseStaffTable } from "@/lib/db/schema";
+import { cleanRoleLines, suggestRoles } from "@/lib/domain/staffing";
 import { BULK_AVAILABILITY_MAX, setAvailability, setAvailabilityBulk, type BulkAvailabilityEntry } from "@/lib/services/availability";
 import { availabilityForStaffSchema, firstIssue, officeAvailabilitySchema } from "@/lib/validation/actions";
 import { instructor as instructorTable } from "@/lib/db/schema";
@@ -18,6 +19,8 @@ export interface CellCandidate {
   needsCover: boolean;
   assigned: number;
   required: number;
+  /** The roles this course needs (its role lines, or what the ratio implies) and how many places are still open in each. */
+  roles: { id: string; name: string; missing: number }[];
 }
 export type CellResult =
   | { ok: true; candidates: CellCandidate[]; roles: { id: string; name: string }[] }
@@ -35,7 +38,7 @@ export async function assignableForCellAction(date: string, slot: string, instru
   const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !instructorId) return { ok: false, error: "Invalid cell" };
 
-  const [sessions, courses, courseTypes, roles, teaching, existing, schedule] = await Promise.all([
+  const [sessions, courses, courseTypes, roles, teaching, existing, schedule, requirements, allStaff] = await Promise.all([
     repos.tenant.courseSession.list(ctx),
     repos.tenant.course.list(ctx),
     repos.tenant.courseType.list(ctx),
@@ -43,7 +46,20 @@ export async function assignableForCellAction(date: string, slot: string, instru
     getTeachingMatrix(repos, ctx),
     repos.tenant.courseStaff.list(ctx, eq(courseStaffTable.instructorId, instructorId)),
     getWeekSchedule(repos, ctx, weekStart(new Date(`${date}T00:00:00Z`))),
+    repos.tenant.courseRoleRequirement.list(ctx),
+    repos.tenant.courseStaff.list(ctx),
   ]);
+  const activeRoles = roles.filter((r) => r.active).map((r) => ({ id: r.id, name: r.name }));
+  const roleName = new Map(roles.map((r) => [r.id, r.name]));
+  // Only the roles this course needs, open places first.
+  const rolesFor = (course: (typeof courses)[number]) => {
+    const ct = courseTypes.find((t) => t.id === course.courseTypeId);
+    const own = cleanRoleLines(requirements.filter((r) => r.courseId === course.id));
+    const lines = own.length ? own : suggestRoles({ students: course.capacity, ratio: course.ratio, requiresSafetyBoat: Boolean(ct?.requiresSafetyBoat), roles });
+    const onCourse = allStaff.filter((a) => a.courseId === course.id && a.status !== "declined");
+    const out = lines.map((l) => ({ id: l.roleTypeId, name: roleName.get(l.roleTypeId) ?? "Role", missing: Math.max(0, l.count - onCourse.filter((a) => a.roleTypeId === l.roleTypeId).length) }));
+    return (out.length ? out : activeRoles.map((r) => ({ ...r, missing: 0 }))).sort((a, b) => Number(b.missing > 0) - Number(a.missing > 0));
+  };
 
   const teachable = new Set((teaching.get(instructorId) ?? []).map((c) => c.courseTypeId));
   const alreadyOn = new Set(existing.map((a) => a.courseId));
@@ -63,6 +79,7 @@ export async function assignableForCellAction(date: string, slot: string, instru
       needsCover: cov ? !cov.ok : true,
       assigned: cov?.ratioCountingStaff ?? 0,
       required: cov?.requiredStaff ?? 0,
+      roles: rolesFor(course),
     });
   }
   // De-dupe by course (a course may have several sessions in the slot) and put gaps first.
@@ -70,7 +87,6 @@ export async function assignableForCellAction(date: string, slot: string, instru
   const unique = candidates.filter((c) => (seen.has(c.courseId) ? false : (seen.add(c.courseId), true)));
   unique.sort((a, b) => Number(b.needsCover) - Number(a.needsCover) || a.courseName.localeCompare(b.courseName));
 
-  const activeRoles = roles.filter((r) => r.active).map((r) => ({ id: r.id, name: r.name }));
   return { ok: true, candidates: unique, roles: activeRoles };
 }
 

@@ -12,6 +12,8 @@ import { RestoreCourseTypes } from "@/components/office/RestoreCourseTypes";
 import { CoursePlanner } from "@/components/office/CoursePlanner";
 import { CourseCard } from "@/components/office/CourseCard";
 import { roleNeedsByCourse } from "@/lib/services/course-editor";
+import { suggestRoles } from "@/lib/domain/staffing";
+import type { SlotLine } from "@/lib/domain/role-slots";
 import { parseDefaultSchedule } from "@/lib/domain";
 import { BulkAssignForm } from "@/components/office/BulkAssignForm";
 import { CourseUpdatesCheck } from "@/components/office/CourseUpdatesCheck";
@@ -73,6 +75,16 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
 
   const allSessions = await repos.tenant.courseSession.listIn(ctx, courseSessionTable.courseId, scope.ids);
   const courseAvail = await getCourseAvailabilityStates(repos, ctx, allSessions);
+  // The required places on each card: the course's role lines, or what the ratio implies.
+  const courseRowById = new Map(courseRows.map((c) => [c.id, c]));
+  const slotLinesFor = (courseId: string): SlotLine[] => {
+    const needs = roleNeeds.get(courseId);
+    if (needs?.length) return needs.map((n) => ({ roleTypeId: n.roleTypeId, roleName: n.roleName, count: n.count }));
+    const row = courseRowById.get(courseId);
+    if (!row) return [];
+    const ct = courseTypes.find((t) => t.id === row.courseTypeId);
+    return suggestRoles({ students: row.capacity, ratio: row.ratio, requiresSafetyBoat: Boolean(ct?.requiresSafetyBoat), roles }).map((l) => ({ roleTypeId: l.roleTypeId, roleName: roleName.get(l.roleTypeId) ?? "Role", count: l.count }));
+  };
   const roleNeeds = roleNeedsByCourse(await repos.tenant.courseRoleRequirement.listIn(ctx, courseRoleRequirementTable.courseId, scope.ids), assignments, (id) => roleName.get(id) ?? "Role");
 
   // Connected booking systems — so "Check for updates" lives next to the calendar.
@@ -149,6 +161,8 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
   const cardFor = (c: Course, shade = false) => {
     const assigned = (assignedByCourse.get(c.courseId) ?? []).map((a) => ({
       id: a.id,
+      instructorId: a.instructorId,
+      roleTypeId: a.roleTypeId,
       instructorName: nameById.get(a.instructorId) ?? "Instructor",
       roleName: roleName.get(a.roleTypeId) ?? "role",
       isOverride: Boolean(a.isOverride),
@@ -168,6 +182,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
         ratio={ratioOn ? { ok: c.ratio.ok, understaffed: c.ratio.understaffed, missingSafetyCover: c.ratio.missingSafetyCover } : undefined}
         computedRequired={c.ratio.requiredStaff}
         roleNeeds={roleNeeds.get(c.courseId)}
+        slotLines={slotLinesFor(c.courseId)}
         shade={shade}
       />
     );

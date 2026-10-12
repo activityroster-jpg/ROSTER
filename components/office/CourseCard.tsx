@@ -1,18 +1,13 @@
 "use client";
 
-import { TIER_DOT, TIER_LABEL, courseStateAvailable, groupCandidates } from "@/lib/domain/assign-order";
 import { useState, useTransition } from "react";
-import { courseAvailLabel, type CourseAvailState } from "@/lib/domain/availability";
 import { useRouter } from "next/navigation";
-import {
-  renameCourseAction,
-  updateSessionTimesAction,
-  removeStaffAction,
-  assignStaffAction,
-} from "@/app/(app)/office/courses/actions";
+import { renameCourseAction, updateSessionTimesAction } from "@/app/(app)/office/courses/actions";
+import { buildRoleSlots, type SlotLine } from "@/lib/domain/role-slots";
+import { CourseSlots } from "./CourseSlots";
 
 export interface CardSession { id: string; date: string; startMs: number; endMs: number }
-export interface CardAssigned { id: string; instructorName: string; roleName: string; isOverride: boolean; status: "assigned" | "confirmed" | "declined"; declineNote?: string | null }
+export interface CardAssigned { id: string; instructorId: string; instructorName: string; roleTypeId: string; roleName: string; isOverride: boolean; status: "assigned" | "confirmed" | "declined"; declineNote?: string | null }
 export interface CardInstructor { id: string; name: string; fit: boolean; reason?: string; avail?: string; qualified?: boolean | null }
 export interface CardRole { id: string; name: string }
 export interface CardRatio { ok: boolean; understaffed: boolean; missingSafetyCover: boolean }
@@ -30,7 +25,7 @@ const fmtDate = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString
 const fmtTime = (ms: number) => new Date(ms).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
 
 export function CourseCard({
-  course, audience, sessions, assigned, instructors, roles, ratioOn, ratio, computedRequired, roleNeeds, staffing, shade, defaultOpen = false, onChanged,
+  course, audience, sessions, assigned, instructors, ratioOn, ratio, computedRequired, roleNeeds, slotLines, staffing, shade, defaultOpen = false, onChanged,
 }: {
   course: { id: string; name: string; courseTypeName: string; status: string; staffRequired: number | null };
   audience: string;
@@ -43,6 +38,8 @@ export function CourseCard({
   computedRequired?: number;
   /** Staff needed by role, e.g. 2× Instructor (1 filled). */
   roleNeeds?: { roleName: string; count: number; filled: number }[];
+  /** The required places when there is no full staffing view (the Courses page): the role lines, or what the ratio implies. */
+  slotLines?: SlotLine[];
   staffing?: StaffingView;
   /** Alternating day shade — true = tinted, false = plain white. */
   shade?: boolean;
@@ -66,10 +63,11 @@ export function CourseCard({
   const [s, setS] = useState(single ? hhmm(single.startMs) : "");
   const [e, setE] = useState(single ? hhmm(single.endMs) : "");
 
-  const [staffingOpen, setStaffingOpen] = useState(false);
-  const [instr, setInstr] = useState("");
-  const [role, setRole] = useState("");
-  const [override, setOverride] = useState(false);
+  // The required places: the role lines, or what the ratio implies when there are none.
+  const lines: SlotLine[] = staffing
+    ? (staffing.lines.length ? staffing.lines.map((l) => ({ roleTypeId: l.roleTypeId, roleName: l.roleName, count: l.count })) : staffing.suggested.map((l) => ({ roleTypeId: l.roleTypeId, roleName: staffing.roles.find((r) => r.id === l.roleTypeId)?.name ?? "Role", count: l.count })))
+    : (slotLines ?? []);
+  const slots = buildRoleSlots(lines, assigned.map((a) => ({ assignmentId: a.id, instructorId: a.instructorId, name: a.instructorName, roleTypeId: a.roleTypeId, roleName: a.roleName, status: a.status, isOverride: a.isOverride, declineNote: a.declineNote })));
 
   const aud = AUD[audience] ?? AUD.all!;
   const run = (fn: () => Promise<{ ok: boolean; error?: string }>) => {
@@ -90,18 +88,6 @@ export function CourseCard({
     setEditingWhen(false);
     run(() => updateSessionTimesAction(course.id, single.id, { date: d, startTime: s, endTime: e }));
   };
-  const assign = () => {
-    if (!instr || !role) { setErr("Pick an instructor and a role"); return; }
-    const fd = new FormData();
-    fd.set("courseId", course.id); fd.set("instructorId", instr); fd.set("roleTypeId", role);
-    if (override) fd.set("override", "on");
-    run(async () => {
-      const res = await assignStaffAction({ ok: false }, fd);
-      if (res.ok) { setInstr(""); setRole(""); setOverride(false); }
-      return res;
-    });
-  };
-
   const inputCls = "rounded border border-slate-300 px-1.5 py-1 text-sm outline-none focus:border-teal";
 
   return (
@@ -158,11 +144,6 @@ export function CourseCard({
           <a href={`/office/courses/${course.id}`} className="text-sm text-slate-600 hover:underline">{sessions.length} sessions · manage →</a>
         ))}
 
-        {open && staffing ? (
-          <button type="button" onClick={(ev) => { ev.stopPropagation(); setStaffingOpen((v) => !v); }} title="Students, ratio and the roles needed" className="flex items-center gap-1 rounded border border-slate-300 px-1.5 py-0.5 text-xs text-slate-600 hover:bg-slate-50">
-            👥 {staffing.students} students · {staffing.lines.length ? staffing.lines.map((l) => `${l.count} ${l.roleName}`).join(", ") : `${staffing.required} needed (ratio)`} {staffingOpen ? "▾" : "▸"}
-          </button>
-        ) : null}
 
         {open && (() => {
           // The same number the staffing panel shows: the role lines, or the ratio's instructors plus safety cover.
@@ -178,12 +159,6 @@ export function CourseCard({
           );
         })()}
 
-        {open && roleNeeds?.length ? roleNeeds.map((r) => (
-          <span key={r.roleName} title={`${r.filled} of ${r.count} ${r.roleName} assigned`}
-            className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${r.filled >= r.count ? "bg-starboard/10 text-starboard" : "bg-slate-100 text-slate-600"}`}>
-            {r.roleName} {r.filled}/{r.count}
-          </span>
-        )) : null}
 
         <span className="ml-auto flex items-center gap-2">
           {ratioOn && ratio ? (
@@ -196,46 +171,11 @@ export function CourseCard({
         </span>
       </div>
 
-      {open && staffingOpen && staffing ? <div className="mt-2"><StaffingPanel courseId={course.id} staffing={staffing} compact onSaved={onChanged} /></div> : null}
-
-      {/* Assigned staff + assign controls — revealed when the row is expanded. */}
       {open ? (
-        <>
-          {assigned.length > 0 ? (
-            <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              {assigned.map((a) => (
-                <span key={a.id} title={a.status === "declined" ? `Can't make it${a.declineNote ? `: ${a.declineNote}` : ""}` : a.status === "confirmed" ? "Confirmed by the instructor" : "Waiting for the instructor to confirm (once the week is published)"} className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs ${a.status === "declined" ? "bg-port/10 text-port" : a.status === "confirmed" ? "bg-starboard/15 text-starboard" : "bg-slate-100 text-slate-700"}`}>
-                  {a.status === "confirmed" ? "✓ " : null}{a.instructorName} · {a.roleName}{a.isOverride ? <span className="text-amber">(o)</span> : null}{a.status === "declined" ? <span className="font-semibold"> · can&apos;t make it</span> : null}
-                  <button type="button" onClick={() => run(() => removeStaffAction(course.id, a.id))} title="Remove" className="ml-0.5 text-slate-400 hover:text-port">✕</button>
-                </span>
-              ))}
-            </div>
-          ) : null}
-
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <select aria-label="Instructor" value={instr} onChange={(ev) => setInstr(ev.target.value)} className={`${inputCls} min-w-[10rem] flex-1`}>
-              <option value="">Instructor…</option>
-              {groupCandidates(instructors, (i) => ({ fit: i.fit, qualified: i.qualified ?? null, available: courseStateAvailable(i.avail) }), (i) => i.name).map((g) => (
-                <optgroup key={g.tier} label={`${TIER_DOT[g.tier]} ${TIER_LABEL[g.tier]}`}>
-                  {g.items.map((i) => (
-                    <option key={i.id} value={i.id}>{TIER_DOT[g.tier]} {i.name}{i.fit ? "" : ` — ${i.reason || "not cleared"}`}{i.qualified === false ? " — not qualified for this type" : ""}{i.avail && i.avail !== "none" ? ` · ${courseAvailLabel(i.avail as CourseAvailState)}` : ""}</option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
-            <select aria-label="Role" value={role} onChange={(ev) => setRole(ev.target.value)} className={`${inputCls} min-w-[8rem]`}>
-              <option value="">Role…</option>
-              {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-            </select>
-            <label className="flex items-center gap-1 text-xs text-slate-500" title="Assign even if a check isn't met">
-              <input type="checkbox" checked={override} onChange={(ev) => setOverride(ev.target.checked)} /> override
-            </label>
-            <button type="button" onClick={assign} disabled={pending} className="rounded-lg bg-teal px-3 py-1.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">
-              {pending ? "…" : "Assign"}
-            </button>
-            {err ? <span role="alert" className="text-xs text-port">{err}</span> : null}
-          </div>
-        </>
+        <div className="mt-2 space-y-2">
+          {staffing ? <StaffingPanel courseId={course.id} staffing={staffing} compact onSaved={onChanged} /> : null}
+          <CourseSlots courseId={course.id} slots={slots} candidates={instructors} onChanged={onChanged} />
+        </div>
       ) : null}
     </div>
   );

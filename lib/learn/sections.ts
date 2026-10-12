@@ -432,7 +432,7 @@ export const SECTIONS: Section[] = [
     label: "Rostering & assigning",
     blurb: "Assign staff with ratio, safety-cover, fit and conflict checks.",
     blocks: [
-      { kind: "p", text: "Assign staff from a course (either the card on the Courses page or the course's own page)." },
+      { kind: "p", text: "Assign staff from a course (the card on the Courses page, the Edit course window, or the course's own page). Under the students booked, every place the course needs is a row: Instructor 1, Instructor 2, Safety Boat Driver and so on, with whoever is in it on the right, a Change and Remove for each, and a picker on any empty place." },
       { kind: "steps", items: [
         "Pick an instructor. The list is in three groups, the same everywhere on the platform: 🟢 qualified for the course type and free for its times, then 🟠 qualified but not free, then 🔴 not qualified or not cleared (with the reason). Auto-roster picks in the same order.",
         "Pick their role (e.g. Senior Instructor, Instructor, Safety Boat).",

@@ -113,19 +113,19 @@ export function AvailabilityMatrix({ days, rows, availableCounts, staffManagedBy
   const quickTitle = !quick ? "" : quick.kind === "row" ? `${quick.name}, this whole week` : quick.kind === "day" ? `Everyone, ${quick.label} (all day)` : quick.kind === "slot" ? `Everyone, ${quick.label}` : "Everyone, this whole week";
   const [sel, setSel] = useState<Selected | null>(null);
   const [cands, setCands] = useState<CellCandidate[] | null>(null);
-  const [roles, setRoles] = useState<{ id: string; name: string }[]>([]);
-  const [role, setRole] = useState("");
+  // The role chosen per course (each course lists only the roles it needs).
+  const [roleFor, setRoleFor] = useState<Record<string, string>>({});
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const openCell = (instructorId: string, name: string, date: string, slot: string, dayLabel: string) => {
     setSel({ instructorId, name, date, slot, dayLabel });
-    setCands(null); setMsg(null); setRole("");
+    setCands(null); setMsg(null); setRoleFor({});
     if (mode === "edit") return; // edit mode: the panel only sets availability
     const row = rows.find((x) => x.instructorId === instructorId);
     if (row && !isFreeCell(row, `${date}|${slot}`)) { setCands([]); return; }
     start(async () => {
       const res = await assignableForCellAction(date, slot, instructorId);
-      if (res.ok) { setCands(res.candidates); setRoles(res.roles); setRole(res.roles[0]?.id ?? ""); }
+      if (res.ok) { setCands(res.candidates); setRoleFor(Object.fromEntries(res.candidates.map((c) => [c.courseId, c.roles[0]?.id ?? ""]))); }
       else { setMsg({ ok: false, text: res.error }); setCands([]); }
     });
   };
@@ -134,7 +134,7 @@ export function AvailabilityMatrix({ days, rows, availableCounts, staffManagedBy
     if (!sel) return;
     setMsg(null);
     start(async () => {
-      const res = await assignFromAvailabilityAction(courseId, sel.instructorId, role);
+      const res = await assignFromAvailabilityAction(courseId, sel.instructorId, roleFor[courseId] ?? "");
       setMsg({ ok: res.ok, text: res.ok ? res.message ?? "Assigned" : res.error ?? "Failed" });
       if (res.ok) {
         setCands((cs) => (cs ? cs.filter((c) => c.courseId !== courseId) : cs));
@@ -333,19 +333,16 @@ export function AvailabilityMatrix({ days, rows, availableCounts, staffManagedBy
             <p className="mt-2 text-sm text-slate-400">Finding sessions they can cover…</p>
           ) : cands && cands.length > 0 ? (
             <>
-              <div className="mt-2 flex items-center gap-2">
-                <label className="text-xs font-medium text-slate-500">Assign as</label>
-                <select value={role} onChange={(e) => setRole(e.target.value)} className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal">
-                  {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-                </select>
-              </div>
-              <ul className="mt-3 space-y-1.5">
+              <ul className="mt-2 space-y-1.5">
                 {cands.map((c) => (
                   <li key={c.courseId} className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm">
                     <span className="font-medium text-navy">{c.courseName}</span>
                     <span className="text-xs text-slate-500">{c.time}</span>
                     {c.needsCover ? <span className="rounded-full bg-amber/15 px-2 py-0.5 text-[10px] font-semibold text-amber">needs cover{c.required ? ` · ${c.assigned}/${c.required}` : ""}</span> : <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">covered</span>}
-                    <button type="button" onClick={() => assign(c.courseId)} disabled={pending || !role} className="ml-auto rounded-lg bg-teal px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-700 disabled:opacity-50">
+                    <select value={roleFor[c.courseId] ?? ""} onChange={(e) => setRoleFor((m) => ({ ...m, [c.courseId]: e.target.value }))} aria-label={`Role on ${c.courseName}`} className="ml-auto rounded-lg border border-slate-300 px-2 py-1 text-xs outline-none focus:border-teal">
+                      {c.roles.map((r) => <option key={r.id} value={r.id}>{r.name}{r.missing > 0 ? ` (${r.missing} open)` : " (filled)"}</option>)}
+                    </select>
+                    <button type="button" onClick={() => assign(c.courseId)} disabled={pending || !roleFor[c.courseId]} className="rounded-lg bg-teal px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-700 disabled:opacity-50">
                       {pending ? "…" : "Assign"}
                     </button>
                   </li>

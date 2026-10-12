@@ -15,7 +15,7 @@ export interface CourseEditorData {
   course: { id: string; name: string; courseTypeName: string; status: string; staffRequired: number | null };
   audience: string;
   sessions: { id: string; date: string; startMs: number; endMs: number }[];
-  assigned: { id: string; instructorName: string; roleName: string; isOverride: boolean; status: "assigned" | "confirmed" | "declined"; declineNote?: string | null }[];
+  assigned: { id: string; instructorId: string; instructorName: string; roleTypeId: string; roleName: string; isOverride: boolean; status: "assigned" | "confirmed" | "declined"; declineNote?: string | null }[];
   instructors: { id: string; name: string; fit: boolean; reason?: string; avail?: string; /** false = their qualifications don't cover this course type; null = nothing recorded for them. */ qualified?: boolean | null }[];
   roles: { id: string; name: string }[];
   ratioOn: boolean;
@@ -26,7 +26,7 @@ export interface CourseEditorData {
 }
 
 /** One "staff needed" line on a course: how many of a role, and how many filled. */
-export interface RoleNeed { roleName: string; count: number; filled: number }
+export interface RoleNeed { roleTypeId: string; roleName: string; count: number; filled: number }
 
 /** Build each course's role-needs lines from its requirements and assignments. */
 export function roleNeedsByCourse(
@@ -37,7 +37,7 @@ export function roleNeedsByCourse(
   const out = new Map<string, RoleNeed[]>();
   for (const r of requirements) {
     const filled = assignments.filter((a) => a.courseId === r.courseId && a.roleTypeId === r.roleTypeId).length;
-    out.set(r.courseId, [...(out.get(r.courseId) ?? []), { roleName: roleName(r.roleTypeId), count: r.count, filled }]);
+    out.set(r.courseId, [...(out.get(r.courseId) ?? []), { roleTypeId: r.roleTypeId, roleName: roleName(r.roleTypeId), count: r.count, filled }]);
   }
   return out;
 }
@@ -109,6 +109,8 @@ export async function getCourseEditorData(
       .sort((a, b) => a.date.localeCompare(b.date) || a.startMs - b.startMs),
     assigned: mine.map((a) => ({
       id: a.id,
+      instructorId: a.instructorId,
+      roleTypeId: a.roleTypeId,
       instructorName: nameById.get(a.instructorId) ?? "Instructor",
       roleName: roleById.get(a.roleTypeId)?.name ?? "role",
       isOverride: Boolean(a.isOverride),

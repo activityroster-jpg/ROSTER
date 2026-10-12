@@ -38,7 +38,7 @@ export function WelfareSettingsForm({ officers, defaults }: { officers: string[]
   return (
     <div className="space-y-4 text-sm">
       <label className="block">
-        <span className="text-xs font-medium text-slate-500">Welfare officers, one per line</span>
+        <span className="block text-xs font-medium text-slate-500">Welfare officers, one per line</span>
         <textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} placeholder={"e.g. Sam Patel\nJo Murphy"} className="mt-1 w-full max-w-md rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal" />
       </label>
       {names.length ? (
