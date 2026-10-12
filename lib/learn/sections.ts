@@ -434,7 +434,7 @@ export const SECTIONS: Section[] = [
     blocks: [
       { kind: "p", text: "Assign staff from a course (the card on the Courses page, the Edit course window, or the course's own page). Under the students booked, every place the course needs is a row: Instructor 1, Instructor 2, Safety Boat Driver and so on, with whoever is in it on the right, a Change and Remove for each, and a picker on any empty place." },
       { kind: "steps", items: [
-        "Pick an instructor. The list is in three groups, the same everywhere on the platform: 🟢 qualified for the course type and free for its times, then 🟠 qualified but not free, then 🔴 not qualified or not cleared (with the reason). Auto-roster picks in the same order.",
+        "Pick an instructor. The list is in three groups, the same everywhere on the platform: 🟢 qualified for the course type and free for its times, then 🟠 qualified but not free (it says whether they are on another course at that time, or said they are busy), then 🔴 not qualified or not cleared (with the reason). The three sections are shaded green, orange and red. Auto-roster picks in the same order.",
         "Pick their role (e.g. Senior Instructor, Instructor, Safety Boat).",
         "Assign. We check they're qualified, not double-booked, and that the course meets its ratio and safety-cover requirements.",
       ] },

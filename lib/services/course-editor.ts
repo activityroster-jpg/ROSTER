@@ -1,3 +1,4 @@
+import { busyElsewhereFor } from "./clashes";
 import { eq } from "drizzle-orm";
 import { courseRoleRequirement as courseRoleRequirementTable, courseSession as courseSessionTable, courseStaff as courseStaffTable } from "@/lib/db/schema";
 import type { Repositories } from "@/lib/db/repositories";
@@ -16,7 +17,7 @@ export interface CourseEditorData {
   audience: string;
   sessions: { id: string; date: string; startMs: number; endMs: number }[];
   assigned: { id: string; instructorId: string; instructorName: string; roleTypeId: string; roleName: string; isOverride: boolean; status: "assigned" | "confirmed" | "declined"; declineNote?: string | null }[];
-  instructors: { id: string; name: string; fit: boolean; reason?: string; avail?: string; /** false = their qualifications don't cover this course type; null = nothing recorded for them. */ qualified?: boolean | null }[];
+  instructors: { id: string; name: string; fit: boolean; reason?: string; avail?: string; /** false = their qualifications don't cover this course type; null = nothing recorded for them. */ qualified?: boolean | null; /** On another course at the same time: "Youth Stage 3 (Mon AM)". */ busyWith?: string }[];
   roles: { id: string; name: string }[];
   ratioOn: boolean;
   ratio?: { ok: boolean; understaffed: boolean; missingSafetyCover: boolean };
@@ -58,7 +59,7 @@ export async function getCourseEditorData(
   const course = await t.course.findById(ctx, courseId);
   if (!course) return null;
 
-  const [courseTypes, sessions, assignments, instructors, roles, settingsRows, staff, availStates, requirements, teaching, quals] = await Promise.all([
+  const [courseTypes, sessions, assignments, instructors, roles, settingsRows, staff, availStates, requirements, teaching, quals, elsewhere] = await Promise.all([
     t.courseType.list(ctx),
     t.courseSession.list(ctx, eq(courseSessionTable.courseId, courseId)).then(liveSessions),
     t.courseStaff.list(ctx, eq(courseStaffTable.courseId, courseId)),
@@ -70,6 +71,7 @@ export async function getCourseEditorData(
     t.courseRoleRequirement.list(ctx, eq(courseRoleRequirementTable.courseId, courseId)),
     getTeachingMatrix(repos, ctx),
     t.qualification.list(ctx),
+    busyElsewhereFor(repos, ctx, courseId),
   ]);
   const holdsAny = new Set(quals.map((q) => q.instructorId));
   const qualifiedFor = (instructorId: string): boolean | null => { const g = qualificationGap(teaching.get(instructorId) ?? [], holdsAny.has(instructorId), course.courseTypeId); return g.known ? g.qualified : null; };
@@ -128,6 +130,7 @@ export async function getCourseEditorData(
           reason: licenceOn && f ? fitReason(f) : "",
           avail: avail?.get(i.id) ?? "none",
           qualified: qualifiedFor(i.id),
+          busyWith: elsewhere.get(i.id),
         };
       }),
     roles: roles.filter((r) => r.active).map((r) => ({ id: r.id, name: r.name })),

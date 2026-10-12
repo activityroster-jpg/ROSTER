@@ -14,6 +14,7 @@ import { CourseCard } from "@/components/office/CourseCard";
 import { roleNeedsByCourse } from "@/lib/services/course-editor";
 import { suggestRoles } from "@/lib/domain/staffing";
 import type { SlotLine } from "@/lib/domain/role-slots";
+import { elsewhereFor } from "@/lib/domain/clash-note";
 import { parseDefaultSchedule } from "@/lib/domain";
 import { BulkAssignForm } from "@/components/office/BulkAssignForm";
 import { CourseUpdatesCheck } from "@/components/office/CourseUpdatesCheck";
@@ -75,6 +76,15 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
 
   const allSessions = await repos.tenant.courseSession.listIn(ctx, courseSessionTable.courseId, scope.ids);
   const courseAvail = await getCourseAvailabilityStates(repos, ctx, allSessions);
+  // Who is on another course at the same time as each course (for the pickers' orange section).
+  const liveScope = allSessions.filter((s) => !s.cancelledAt);
+  const staffOfCourse = new Map<string, string[]>();
+  for (const a of assignments) if (a.status !== "declined") staffOfCourse.set(a.courseId, [...(staffOfCourse.get(a.courseId) ?? []), a.instructorId]);
+  const courseNameOf = new Map(courses.map((c) => [c.courseId, c.courseName]));
+  const busyFor = (courseId: string) => elsewhereFor(
+    liveScope.filter((s) => s.courseId === courseId).map((s) => ({ date: s.date, slot: s.slot })),
+    liveScope.filter((s) => s.courseId !== courseId).map((s) => ({ courseId: s.courseId, courseName: courseNameOf.get(s.courseId) ?? "another course", date: s.date, slot: s.slot, instructorIds: staffOfCourse.get(s.courseId) ?? [] })),
+  );
   // The required places on each card: the course's role lines, or what the ratio implies.
   const courseRowById = new Map(courseRows.map((c) => [c.id, c]));
   const slotLinesFor = (courseId: string): SlotLine[] => {
@@ -176,7 +186,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
         audience={audienceByCourse.get(c.courseId) ?? "all"}
         sessions={sessionsFullByCourse.get(c.courseId) ?? []}
         assigned={assigned}
-        instructors={instructorOptions.map((o) => ({ ...o, avail: courseAvail.get(c.courseId)?.get(o.id) ?? "none", qualified: qualifiedFor(o.id, c.courseId) }))}
+        instructors={(() => { const busy = busyFor(c.courseId); return instructorOptions.map((o) => ({ ...o, avail: courseAvail.get(c.courseId)?.get(o.id) ?? "none", qualified: qualifiedFor(o.id, c.courseId), busyWith: busy.get(o.id) })); })()}
         roles={activeRoles}
         ratioOn={ratioOn}
         ratio={ratioOn ? { ok: c.ratio.ok, understaffed: c.ratio.understaffed, missingSafetyCover: c.ratio.missingSafetyCover } : undefined}

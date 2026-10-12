@@ -8,7 +8,7 @@ import { CourseSlots } from "./CourseSlots";
 
 export interface CardSession { id: string; date: string; startMs: number; endMs: number }
 export interface CardAssigned { id: string; instructorId: string; instructorName: string; roleTypeId: string; roleName: string; isOverride: boolean; status: "assigned" | "confirmed" | "declined"; declineNote?: string | null }
-export interface CardInstructor { id: string; name: string; fit: boolean; reason?: string; avail?: string; qualified?: boolean | null }
+export interface CardInstructor { id: string; name: string; fit: boolean; reason?: string; avail?: string; qualified?: boolean | null; busyWith?: string }
 export interface CardRole { id: string; name: string }
 export interface CardRatio { ok: boolean; understaffed: boolean; missingSafetyCover: boolean }
 import { StaffingPanel } from "./StaffingPanel";

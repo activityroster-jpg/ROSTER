@@ -3,11 +3,26 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { assignStaffAction, removeStaffAction } from "@/app/(app)/office/courses/actions";
-import { TIER_DOT, TIER_LABEL, courseStateAvailable, groupCandidates } from "@/lib/domain/assign-order";
-import { courseAvailLabel, type CourseAvailState } from "@/lib/domain/availability";
+import { courseStateAvailable, groupCandidates } from "@/lib/domain/assign-order";
+import { PeoplePicker } from "./PeoplePicker";
 import type { RoleSlot, SlotPerson } from "@/lib/domain/role-slots";
 
-export interface SlotCandidate { id: string; name: string; fit: boolean; reason?: string; avail?: string; qualified?: boolean | null }
+export interface SlotCandidate { id: string; name: string; fit: boolean; reason?: string; avail?: string; qualified?: boolean | null; /** "Youth Stage 3 (Mon AM)" when they are on another course at the same time. */ busyWith?: string }
+
+/** Why someone sits where they do in the list, in plain words. */
+export function candidateNote(c: SlotCandidate): string {
+  const bits: string[] = [];
+  if (!c.fit) bits.push(c.reason || "not cleared to roster");
+  if (c.qualified === false) bits.push("not qualified for this course type");
+  if (c.busyWith) bits.push(`on another course: ${c.busyWith}`);
+  else if (c.avail === "unavailable") bits.push("said they're busy");
+  else if (c.avail === "partial") bits.push("only partly free");
+  else if (c.avail === "silent") bits.push("hasn't answered (counts as busy)");
+  else if (c.avail === "unset") bits.push("not asked yet");
+  else if (c.avail === "available") bits.push("free");
+  return bits.join(" · ");
+}
+export const candidateFactsOf = (c: SlotCandidate) => ({ fit: c.fit, qualified: c.qualified ?? null, available: courseStateAvailable(c.avail) && !c.busyWith });
 
 /**
  * A course's staffing as two columns: each required place on the left
@@ -85,17 +100,9 @@ function SlotRowView({ slot, candidates, pending, editing, onEdit, onCancel, onA
           </>
         ) : picker ? (
           <>
-            <select value={pick} onChange={(e) => setPick(e.target.value)} aria-label={`Who for ${slot.label}`} className="min-w-0 flex-1 rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal">
-              <option value="">{p ? `Replace ${p.name} with…` : "Choose someone…"}</option>
-              {groupCandidates(candidates, (c) => ({ fit: c.fit, qualified: c.qualified ?? null, available: courseStateAvailable(c.avail) }), (c) => c.name).map((g) => (
-                <optgroup key={g.tier} label={`${TIER_DOT[g.tier]} ${TIER_LABEL[g.tier]}`}>
-                  {g.items.map((c) => (
-                    <option key={c.id} value={c.id}>{TIER_DOT[g.tier]} {c.name}{c.fit ? "" : ` — ${c.reason || "not cleared"}`}{c.qualified === false ? " — not qualified for this type" : ""}{c.avail && c.avail !== "none" ? ` · ${courseAvailLabel(c.avail as CourseAvailState)}` : ""}</option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
-            {chosen && (!chosen.fit || chosen.qualified === false || !courseStateAvailable(chosen.avail)) ? (
+            <PeoplePicker value={pick} onChange={setPick} ariaLabel={`Who for ${slot.label}`} className="flex-1" placeholder={p ? `Replace ${p.name} with…` : "Choose someone…"}
+              groups={groupCandidates(candidates, candidateFactsOf, (c) => c.name).map((g) => ({ tier: g.tier, items: g.items.map((c) => ({ id: c.id, label: c.name, note: candidateNote(c) })) }))} />
+            {chosen && (!chosen.fit || chosen.qualified === false || !candidateFactsOf(chosen).available) ? (
               <label className="flex items-center gap-1 text-xs text-slate-500" title="Assign even though a check isn't met (recorded)">
                 <input type="checkbox" checked={override} onChange={(e) => setOverride(e.target.checked)} /> override
               </label>

@@ -1,6 +1,7 @@
 "use client";
 
 import { groupCandidates } from "@/lib/domain/assign-order";
+import { PeoplePicker } from "./PeoplePicker";
 import { FreeTextHint } from "@/components/FreeTextHint";
 
 import { useMemo, useState, useTransition } from "react";
@@ -82,14 +83,8 @@ export function BulkAssignForm({
       {open ? (
         <div className="border-t border-slate-100 p-4">
           <div className="grid gap-2 sm:grid-cols-2">
-            <select aria-label="Instructor to assign" value={instructorId} onChange={(e) => setInstructorId(e.target.value)} className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal">
-              <option value="">Instructor…</option>
-              {groupCandidates(instructors, (i) => ({ fit: i.fit, qualified: null, available: true }), (i) => i.name).map((g) => (
-                <optgroup key={g.tier} label={g.tier === "ready" ? "🟢 Cleared to roster" : "🔴 Not cleared"}>
-                  {g.items.map((i) => <option key={i.id} value={i.id}>{g.tier === "ready" ? "🟢" : "🔴"} {i.name}{i.fit ? "" : ` — ${i.reason || "not cleared"}`}</option>)}
-                </optgroup>
-              ))}
-            </select>
+            <PeoplePicker value={instructorId} onChange={setInstructorId} ariaLabel="Instructor to assign" placeholder="Instructor…"
+              groups={groupCandidates(instructors, (i) => ({ fit: i.fit, qualified: null, available: true }), (i) => i.name).map((g) => ({ tier: g.tier, items: g.items.map((i) => ({ id: i.id, label: i.name, note: i.fit ? "cleared to roster" : i.reason || "not cleared" })) }))} />
             <select aria-label="Role to assign them in" value={roleTypeId} onChange={(e) => setRoleTypeId(e.target.value)} className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal">
               <option value="">Role…</option>
               {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}

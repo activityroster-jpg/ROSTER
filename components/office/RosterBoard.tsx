@@ -9,7 +9,8 @@ import type { RotaDay, RotaSession } from "@/lib/services/schedule";
 import { autoRosterAction, boardAssignAction, boardRemoveAction } from "@/app/(app)/office/rota/board-actions";
 import { setCourseStaffingAction } from "@/app/(app)/office/courses/actions";
 import { ConfirmDialog } from "./ConfirmDialog";
-import { TIER_DOT, TIER_LABEL, groupCandidates } from "@/lib/domain/assign-order";
+import { groupCandidates } from "@/lib/domain/assign-order";
+import { PeoplePicker } from "./PeoplePicker";
 
 type Layout = "courses" | "people";
 const STORAGE = "ar.board.layout";
@@ -222,24 +223,43 @@ interface SlotRowProps {
   roleTypeId: string; roleName: string; member?: Member; extra?: boolean;
   candidates: BoardInstructor[]; byId: Map<string, BoardInstructor>; slotKey: string; dayWord: string; slot: string;
   courseTypeId: string | null; courseId: string | null; canEdit: boolean; multiDay: boolean; pending: boolean; preselect: string | null;
+  elsewhere: Map<string, string>;
   onAssign: (instructorId: string, roleTypeId: string, replacing?: Member) => void; onRemove: (m: Member, scope: "course" | "day") => void; onAskRemove: (m: Member) => void;
 }
 
 /** Green / orange / red facts for one person on one session, for the pickers' order. */
-function candidateFacts(i: BoardInstructor, slotKey: string, courseTypeId: string | null) {
+function candidateFacts(i: BoardInstructor, slotKey: string, courseTypeId: string | null, elsewhere?: Map<string, string>) {
   const status = i.availability[slotKey]?.status ?? "unasked";
-  return { fit: i.fit, qualified: courseTypeId ? (i.knownQualifications ? i.teaches.includes(courseTypeId) : null) : null, available: status === "available" || status === "unasked" };
+  return { fit: i.fit, qualified: courseTypeId ? (i.knownQualifications ? i.teaches.includes(courseTypeId) : null) : null, available: (status === "available" || status === "unasked") && !elsewhere?.get(i.id) };
 }
 
-function optionLabel(i: BoardInstructor, slotKey: string, courseTypeId: string | null): string {
+/** Why they sit where they do: on another course, or what they said about the slot, plus licence and qualification notes. */
+function candidateNote(i: BoardInstructor, slotKey: string, courseTypeId: string | null, elsewhere?: Map<string, string>): string {
   const a = i.availability[slotKey];
   const av = a ? AVAIL[a.status] ?? AVAIL.unasked! : AVAIL.unasked!;
   const q = courseTypeId ? (i.knownQualifications ? i.teaches.includes(courseTypeId) : null) : null;
-  return `${i.name} · ${av.word}${a?.source === "default" ? " (not answered)" : a?.source === "pattern" ? " (usual)" : ""}${!i.fit ? ` · ${i.fitReason}` : ""}${q === false ? " · not qualified for this course" : ""}`;
+  const bits: string[] = [];
+  if (!i.fit) bits.push(i.fitReason);
+  if (q === false) bits.push("not qualified for this course");
+  const on = elsewhere?.get(i.id);
+  if (on) bits.push(`on another course: ${on}`);
+  else bits.push(`${av.word}${a?.source === "default" ? " (not answered)" : a?.source === "pattern" ? " (usual week)" : ""}`);
+  return bits.join(" · ");
+}
+
+/** Who is on another session in the same slot that day, and which course. */
+function elsewhereInSlot(days: RotaDay[], date: string, slot: string, sessionId: string): Map<string, string> {
+  const out = new Map<string, string>();
+  const day = days.find((d) => d.date === date);
+  for (const s of day?.sessions ?? []) {
+    if (s.sessionId === sessionId || s.slot !== slot) continue;
+    for (const m of s.staff) if (m.status !== "declined" && !out.has(m.instructorId)) out.set(m.instructorId, s.courseName);
+  }
+  return out;
 }
 
 /** One role slot: filled (name, Change, Remove) or empty (pick someone, Assign). */
-function SlotRow({ roleTypeId, roleName, member, extra, candidates, byId, slotKey, dayWord, slot, courseTypeId, courseId, canEdit, multiDay, pending, preselect, onAssign, onRemove, onAskRemove }: SlotRowProps) {
+function SlotRow({ roleTypeId, roleName, member, extra, candidates, byId, slotKey, dayWord, slot, courseTypeId, courseId, canEdit, multiDay, pending, preselect, elsewhere, onAssign, onRemove, onAskRemove }: SlotRowProps) {
   const [changing, setChanging] = useState(false);
   const [pick, setPick] = useState(!member && preselect ? preselect : "");
   const chosen = pick ? byId.get(pick) : undefined;
@@ -271,14 +291,8 @@ function SlotRow({ roleTypeId, roleName, member, extra, candidates, byId, slotKe
           </>
         ) : showPicker ? (
           <>
-            <select value={pick} onChange={(e) => setPick(e.target.value)} aria-label={`Who for ${roleName}`} className={field}>
-              <option value="">{member ? `Replace ${member.name} with…` : "Choose someone…"}</option>
-              {groupCandidates(candidates, (i) => candidateFacts(i, slotKey, courseTypeId), (i) => i.name).map((g) => (
-                <optgroup key={g.tier} label={`${TIER_DOT[g.tier]} ${TIER_LABEL[g.tier]}`}>
-                  {g.items.map((i) => <option key={i.id} value={i.id}>{TIER_DOT[g.tier]} {optionLabel(i, slotKey, courseTypeId)}</option>)}
-                </optgroup>
-              ))}
-            </select>
+            <PeoplePicker value={pick} onChange={setPick} ariaLabel={`Who for ${roleName}`} className="flex-1" placeholder={member ? `Replace ${member.name} with…` : "Choose someone…"}
+              groups={groupCandidates(candidates, (i) => candidateFacts(i, slotKey, courseTypeId, elsewhere), (i) => i.name).map((g) => ({ tier: g.tier, items: g.items.map((i) => ({ id: i.id, label: i.name, note: candidateNote(i, slotKey, courseTypeId, elsewhere) })) }))} />
             <button type="button" disabled={pending || !pick} onClick={() => { onAssign(pick, roleTypeId, changing ? member : undefined); setChanging(false); setPick(""); }} className="rounded-lg bg-teal px-3 py-1.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{member ? "Save" : "Assign"}</button>
             {changing ? <button type="button" onClick={() => { setChanging(false); setPick(""); }} className="text-xs text-slate-400 hover:text-navy">Cancel</button> : null}
           </>
@@ -289,6 +303,7 @@ function SlotRow({ roleTypeId, roleName, member, extra, candidates, byId, slotKe
       {showPicker && chosen ? (
         <div className="mt-1.5 space-y-0.5 pl-[7.5rem] text-xs">
           <p className={chosenAvail?.status === "available" ? "text-starboard" : chosenAvail?.status === "unavailable" ? "text-port" : "text-slate-500"}>Availability {dayWord} {slot}: {(chosenAvail ? AVAIL[chosenAvail.status] ?? AVAIL.unasked! : AVAIL.unasked!).word}{chosenAvail?.source === "default" ? " (hasn't answered; counts as busy)" : chosenAvail?.source === "pattern" ? " (usual week)" : chosenAvail?.source === "assumed" ? " (office keeps their availability)" : ""}</p>
+          {elsewhere.get(chosen.id) ? <p className="text-amber">Already on {elsewhere.get(chosen.id)} in this slot.</p> : null}
           {!chosen.fit ? <p className="text-port">Not cleared to roster: {chosen.fitReason}</p> : null}
           {qualified === false ? <p className="text-port">Their licences don&apos;t cover this course (override needed).</p> : qualified === null ? <p className="text-slate-400">No licences recorded for them.</p> : null}
         </div>
@@ -391,6 +406,7 @@ function SessionPanel({ data, selected, canEdit, preselect, instructors, byId, o
   }
   for (const m of s.staff.filter((x) => !used.has(x))) slots.push({ roleTypeId: m.roleTypeId, roleName: m.role, member: m, extra: true });
   const candidates = instructors.filter((i) => !active.some((m) => m.instructorId === i.id));
+  const elsewhere = elsewhereInSlot(data.days, day.date, s.slot, s.sessionId);
   const preselectRole = open[0]?.roleTypeId;
   const dayWord = day.label.split(" ")[0] ?? "";
   const totalNeeded = (meta?.needs ?? []).reduce((n, x) => n + x.count, 0);
@@ -427,7 +443,7 @@ function SessionPanel({ data, selected, canEdit, preselect, instructors, byId, o
         {slots.length === 0 ? <p className="mb-3 text-xs text-slate-400">This course doesn&apos;t list any roles yet. Use &ldquo;Edit students &amp; roles&rdquo; to add them.</p> : (
           <ul className="mb-3 space-y-1.5">
             {slots.map((sl, i) => (
-              <SlotRow key={`${sl.roleTypeId}-${sl.member?.instructorId ?? "open"}-${i}`} {...sl} candidates={candidates} byId={byId} slotKey={key} dayWord={dayWord} slot={s.slot}
+              <SlotRow key={`${sl.roleTypeId}-${sl.member?.instructorId ?? "open"}-${i}`} {...sl} candidates={candidates} byId={byId} slotKey={key} dayWord={dayWord} slot={s.slot} elsewhere={elsewhere}
                 courseTypeId={meta?.courseTypeId ?? null} courseId={meta?.courseId ?? null} canEdit={canEdit} multiDay={Boolean(meta?.multiDay)} pending={pending}
                 preselect={!sl.member && sl.roleTypeId === preselectRole ? preselect : null}
                 onAssign={assign} onRemove={remove} onAskRemove={setAskRemove} />

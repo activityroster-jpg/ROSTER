@@ -11,6 +11,7 @@ import { SessionManager, type SessionRow } from "@/components/office/SessionMana
 import { canDeleteCourse } from "@/lib/services/cancel";
 import { CourseSlots } from "@/components/office/CourseSlots";
 import { buildRoleSlots } from "@/lib/domain/role-slots";
+import { busyElsewhereFor } from "@/lib/services/clashes";
 import { StaffingPanel } from "@/components/office/StaffingPanel";
 import { CourseResources } from "@/components/office/CourseResources";
 import { equipmentContextForCourse, getCourseResources, staffingViewFrom } from "@/lib/services/course-resources";
@@ -79,10 +80,11 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
   const licenceOn = Boolean(settings[0]?.enforceLicenceChecks);
   const fitObjById = new Map(staffFit.map((s) => [s.instructor.id, s.fit]));
   const availForCourse = (await getCourseAvailabilityStates(repos, ctx)).get(id);
+  const elsewhere = await busyElsewhereFor(repos, ctx, id);
   const instructorOptions = instructors.filter((i) => i.status === "active").map((i) => {
     const f = fitObjById.get(i.id);
     const gap = qualificationGap(teaching.get(i.id) ?? [], holdsAny.has(i.id), course.courseTypeId);
-    return { id: i.id, name: i.name, fit: licenceOn ? (f?.fit ?? true) : true, reason: licenceOn && f ? fitReason(f) : "", avail: availForCourse?.get(i.id) ?? "none" as const, qualified: gap.known ? gap.qualified : null };
+    return { id: i.id, name: i.name, fit: licenceOn ? (f?.fit ?? true) : true, reason: licenceOn && f ? fitReason(f) : "", avail: availForCourse?.get(i.id) ?? "none" as const, qualified: gap.known ? gap.qualified : null, busyWith: elsewhere.get(i.id) };
   });
   const activeRoles = roles.filter((r) => r.active).map((r) => ({ id: r.id, name: r.name }));
   const aud = AUD[ct?.audience ?? "all"]!;

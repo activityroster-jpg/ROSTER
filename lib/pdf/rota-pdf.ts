@@ -1,3 +1,4 @@
+import { roleAbbrev, welfareLine } from "@/lib/domain/role-abbrev";
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage, type RGB } from "pdf-lib";
 import type { RotaDay, RotaSession } from "@/lib/services/schedule";
 import { shortNames, type RotaStyle, type RotaTemplateSettings } from "@/lib/rota/template";
@@ -123,7 +124,7 @@ function cell(key: Col["key"], s: RotaSession, t: RotaTemplateSettings, names: M
     case "staff": {
       const on = s.staff.filter((x) => x.status !== "declined");
       const sorted = [...on].sort((a, b) => (seniority?.get(b.instructorId) ?? 0) - (seniority?.get(a.instructorId) ?? 0) || a.name.localeCompare(b.name));
-      const who = sorted.map((x) => (t.fields.roles ? `${names.get(x.name) ?? x.name} (${x.role})` : names.get(x.name) ?? x.name));
+      const who = sorted.map((x) => (t.fields.roles ? `${names.get(x.name) ?? x.name} (${roleAbbrev(x.role)})` : names.get(x.name) ?? x.name));
       return who.length ? [who.join(", ")] : ["Unassigned"];
     }
     case "students": return [s.students > 0 ? String(s.students) : "—"];
@@ -199,7 +200,7 @@ function drawBreakdown(c: Ctx, input: RotaPdfInput, names: Map<string, string>, 
     c.y -= L.dayH + 2;
     if (!L.dayFill) { c.page.drawLine({ start: { x: M, y: c.y }, end: { x: M + inner, y: c.y }, thickness: 1.2, color: L.text }); c.y -= 2; }
     if (day.welfare && Object.keys(day.welfare).length) {
-      const w = (["AM", "PM", "EV"] as const).filter((s) => day.welfare?.[s]).map((s) => `${s === "AM" ? "Morning" : s === "PM" ? "Afternoon" : "Evening"}: ${day.welfare?.[s]}`).join("   ");
+      const w = welfareLine(day.welfare);
       c.page.drawText(safe(`Welfare on duty   ${w}`), { x: M + 6, y: c.y - size - 2, size: size - 1, font: c.font, color: L.muted });
       c.y -= size + 6;
     }
