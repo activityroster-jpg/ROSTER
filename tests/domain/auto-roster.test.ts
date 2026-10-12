@@ -56,4 +56,24 @@ describe("planAutoRoster", () => {
   it("does nothing with nothing open", () => {
     expect(planAutoRoster([sess("s1", "2026-10-12", "AM", 0, { open: [] })], [person("ann", {})])).toEqual({ picks: [], unfilled: [], complete: true });
   });
+
+  it("never puts someone on a session that clashes with one they are already on, even when that session is full", () => {
+    const full = sess("full", "2026-10-14", "AM", 0, { open: [], onSession: ["cal"], startAt: 10 * 60, endAt: 13 * 60 });
+    const camp = sess("camp", "2026-10-14", "AM", 1, { startAt: 9 * 60, endAt: 16 * 60 });
+    const pm = sess("pm", "2026-10-14", "PM", 1, { startAt: 13.5 * 60, endAt: 16.5 * 60 });
+    const free = { "2026-10-14|AM": "available", "2026-10-14|PM": "available" } as const;
+    const plan = planAutoRoster([full, camp, pm], [person("cal", free)]);
+    // Same slot as "full" → no; the PM session overlaps the camp's times but cal isn't on the camp, so PM is fine.
+    expect(plan.picks.map((p) => `${p.sessionId}:${p.instructorId}`)).toEqual(["pm:cal"]);
+    expect(plan.unfilled.map((u) => u.sessionId)).toEqual(["camp"]);
+  });
+
+  it("treats overlapping times in different slots as a clash", () => {
+    const camp = sess("camp", "2026-10-14", "AM", 1, { startAt: 9 * 60, endAt: 16 * 60 });
+    const pm = sess("pm", "2026-10-14", "PM", 1, { startAt: 13.5 * 60, endAt: 16.5 * 60 });
+    const free = { "2026-10-14|AM": "available", "2026-10-14|PM": "available" } as const;
+    const plan = planAutoRoster([camp, pm], [person("cal", free)]);
+    expect(plan.picks).toHaveLength(1);
+    expect(plan.unfilled).toHaveLength(1);
+  });
 });

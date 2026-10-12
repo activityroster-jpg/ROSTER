@@ -45,8 +45,9 @@ export function RosterBoard({ data, canEdit }: { data: BoardData; canEdit: boole
   const [autoOpen, setAutoOpen] = useState(false);
   const [autoBusy, startAuto] = useTransition();
   const [autoMsg, setAutoMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [autoMode, setAutoMode] = useState<"open" | "redo">("open");
   const runAuto = () => startAuto(async () => {
-    const r = await autoRosterAction({ monday: data.monday });
+    const r = await autoRosterAction({ monday: data.monday, mode: autoMode });
     setAutoOpen(false);
     setAutoMsg({ ok: r.ok, text: r.ok ? r.message ?? "Done" : r.error ?? "Couldn't auto-roster" });
     if (r.ok) router.refresh();
@@ -85,15 +86,26 @@ export function RosterBoard({ data, canEdit }: { data: BoardData; canEdit: boole
         </p>
         {canEdit ? (
           <div className="flex items-center gap-2">
-            <button type="button" disabled={autoBusy || totalOpen === 0} onClick={() => setAutoOpen(true)} title={totalOpen ? "Fill the open roles from whoever is free, spread evenly" : "Nothing open this week"}
+            <button type="button" disabled={autoBusy} onClick={() => { setAutoMode(totalOpen ? "open" : "redo"); setAutoOpen(true); }} title="Fill the open roles from whoever is free, spread evenly, or redo the whole week"
               className="rounded-lg bg-teal px-3 py-1.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{autoBusy ? "Filling…" : "✨ Auto-roster"}</button>
             <a href="/learn?topic=rostering" target="_blank" rel="noreferrer" className="text-xs font-medium text-teal hover:underline">📖 Read the guide</a>
           </div>
         ) : null}
       </div>
       {autoMsg ? <p role="status" className={`mb-3 rounded-lg border px-3 py-2 text-sm ${autoMsg.ok ? "border-starboard/40 bg-starboard/10 text-navy" : "border-port/40 bg-port/10 text-port"}`}>{autoMsg.text}</p> : null}
-      <ConfirmDialog open={autoOpen} title={`Auto-roster the ${totalOpen} open role${totalOpen === 1 ? "" : "s"} this week?`} tone="teal" confirmLabel="Fill them" busy={autoBusy} onConfirm={runAuto} onCancel={() => setAutoOpen(false)}
-        consequences={["Each open role goes to someone who is Free (then Maybe) for that session, cleared to roster and able to teach the course type; sessions are shared out as evenly as possible.", "The usual checks run; nothing is overridden, and roles nobody suitable is free for stay open.", "People already on the roster keep their sessions.", "You can change any of it afterwards by hand."]} />
+      <ConfirmDialog open={autoOpen} title="Auto-roster this week" tone="teal" confirmLabel={autoMode === "redo" ? "Redo the whole week" : `Fill the ${totalOpen} open role${totalOpen === 1 ? "" : "s"}`} busy={autoBusy} confirmDisabled={autoMode === "open" && totalOpen === 0} onConfirm={runAuto} onCancel={() => setAutoOpen(false)}
+        consequences={["Each role goes to someone who is Free (then Maybe) for that session, cleared to roster and able to teach the course type; sessions are shared out as evenly as possible, and nobody is put on two sessions that clash.", "The usual checks run; nothing is overridden, and roles nobody suitable is free for stay open.", "You can change any of it afterwards by hand."]}>
+        <div className="space-y-2 text-sm text-navy">
+          <label className="flex items-start gap-2">
+            <input type="radio" name="auto-mode" checked={autoMode === "open"} onChange={() => setAutoMode("open")} className="mt-1" />
+            <span><span className="font-semibold">Fill the open roles only</span> ({totalOpen} open). Everyone already on the roster keeps their sessions.</span>
+          </label>
+          <label className="flex items-start gap-2">
+            <input type="radio" name="auto-mode" checked={autoMode === "redo"} onChange={() => setAutoMode("redo")} className="mt-1" />
+            <span><span className="font-semibold">Redo the whole week.</span> Everyone comes off this week&rsquo;s sessions first (confirmed people too; a day of a multi-day course is skipped for that day only) and is told, then every role is filled afresh.</span>
+          </label>
+        </div>
+      </ConfirmDialog>
 
       <div className={sel ? "lg:mr-[28rem]" : ""}>
         {layout === "courses" ? (
@@ -139,10 +151,10 @@ function CoursesByDay({ data, canEdit, picked, dropTarget, setDropTarget, onDrop
               const isTarget = dropTarget === s.sessionId;
               // The card's state at a glance: red = a problem, orange = places open, green = filled and fine.
               const tone = flags.length
-                ? { bar: "border-l-8 border-l-port", card: "border-port/40 bg-port/10 hover:bg-port/15" }
+                ? { bar: "border-l-[10px] border-l-port", card: "border-port bg-port/20 hover:bg-port/25" }
                 : open.length
-                  ? { bar: "border-l-8 border-l-amber", card: "border-amber/50 bg-amber/15 hover:bg-amber/20" }
-                  : { bar: "border-l-8 border-l-starboard", card: "border-starboard/40 bg-starboard/10 hover:bg-starboard/15" };
+                  ? { bar: "border-l-[10px] border-l-amber", card: "border-amber bg-amber/25 hover:bg-amber/30" }
+                  : { bar: "border-l-[10px] border-l-starboard", card: "border-starboard bg-starboard/20 hover:bg-starboard/25" };
               return (
                 <button
                   key={s.sessionId}

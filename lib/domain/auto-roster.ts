@@ -13,10 +13,13 @@ export interface AutoSession {
   courseTypeId: string;
   date: string;
   slot: string;
-  /** Roles still to fill on this session. */
+  /** Roles still to fill on this session (empty for a full session, which still counts for clashes). */
   open: { roleTypeId: string; missing: number }[];
-  /** Everyone already on the session (any role), so nobody is added twice. */
+  /** Everyone already on the session (any role), so nobody is added twice or put somewhere that clashes. */
   onSession: string[];
+  /** Wall-clock start and end (ms): two sessions clash when they share a slot or their times overlap. */
+  startAt?: number;
+  endAt?: number;
 }
 
 export interface AutoInstructor {
@@ -47,10 +50,13 @@ const AVAIL_RANK: Record<EffectiveStatus, number> = { available: 0, tentative: 1
 
 export function planAutoRoster(sessions: readonly AutoSession[], instructors: readonly AutoInstructor[]): AutoPlan {
   const load = new Map(instructors.map((i) => [i.id, i.load]));
-  // Where each person has been put this run (and where they already are), to stop clashes within the plan.
-  const taken = new Map<string, Set<string>>();
-  const mark = (id: string, key: string) => { const s = taken.get(id) ?? new Set<string>(); s.add(key); taken.set(id, s); };
-  for (const s of sessions) for (const id of s.onSession) mark(id, `${s.date}|${s.slot}`);
+  // Where each person is this week (already, or put there by this run), to stop clashes: same slot, or overlapping times that day.
+  const taken = new Map<string, AutoSession[]>();
+  const mark = (id: string, s: AutoSession) => { const l = taken.get(id) ?? []; l.push(s); taken.set(id, l); };
+  const clashes = (a: AutoSession, b: AutoSession) =>
+    a.date === b.date && (a.slot === b.slot || (a.startAt != null && a.endAt != null && b.startAt != null && b.endAt != null && a.startAt < b.endAt && b.startAt < a.endAt));
+  const busyFor = (id: string, s: AutoSession) => (taken.get(id) ?? []).some((t) => clashes(t, s));
+  for (const s of sessions) for (const id of s.onSession) mark(id, s);
 
   const picks: AutoPick[] = [];
   const unfilled: AutoUnfilled[] = [];
@@ -62,7 +68,7 @@ export function planAutoRoster(sessions: readonly AutoSession[], instructors: re
       let missing = role.missing;
       while (missing > 0) {
         const candidates = instructors
-          .filter((i) => i.fit && !onThis.has(i.id) && !taken.get(i.id)?.has(key))
+          .filter((i) => i.fit && !onThis.has(i.id) && !busyFor(i.id, s))
           .filter((i) => !i.knownQualifications || i.teaches.includes(s.courseTypeId))
           .map((i) => ({ i, avail: AVAIL_RANK[i.availability[key] ?? "unasked"] }))
           .filter((c) => c.avail < AVAIL_RANK.unavailable)
@@ -75,7 +81,7 @@ export function planAutoRoster(sessions: readonly AutoSession[], instructors: re
         if (!best) break;
         picks.push({ sessionId: s.sessionId, courseId: s.courseId, instructorId: best.i.id, roleTypeId: role.roleTypeId, date: s.date, slot: s.slot });
         onThis.add(best.i.id);
-        mark(best.i.id, key);
+        mark(best.i.id, s);
         load.set(best.i.id, (load.get(best.i.id) ?? 0) + 1);
         missing--;
       }
