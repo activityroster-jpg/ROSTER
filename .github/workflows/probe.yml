@@ -1,22 +1,25 @@
 name: Probe production
-# Read-only: fetches a few public pages and prints the status codes. Used to
-# check production from GitHub's network when it cannot be reached otherwise.
+# Read-only: fetches a few pages on production and staging and records the
+# status code and time taken as annotations (readable without the job log).
+# Runs on demand, and whenever this file changes.
 on:
   workflow_dispatch:
+  push:
+    paths: [".github/workflows/probe.yml"]
 jobs:
   probe:
     runs-on: ubuntu-24.04
     steps:
       - name: Fetch pages
         run: |
-          for u in https://activityroster.com/api/health https://activityroster.com/ https://activityroster.com/sign-in https://no-such-centre-probe.activityroster.com/ https://no-such-centre-probe.activityroster.com/sign-in https://staging.activityroster.com/api/health https://no-such-centre-probe.staging.activityroster.com/; do
-            code=$(curl -sS -o /tmp/body -w '%{http_code}' --max-time 30 "$u" || echo ERR)
-            echo "$code  $u"
-            if [ "$code" != "200" ] && [ "$code" != "404" ] && [ "$code" != "302" ] && [ "$code" != "307" ]; then head -c 600 /tmp/body; echo; fi
+          for u in \
+            https://activityroster.com/api/health https://activityroster.com/sign-in https://activityroster.com/admin https://activityroster.com/go https://probe.activityroster.com/office https://probe.activityroster.com/sign-in \
+            https://staging.activityroster.com/api/health https://staging.activityroster.com/sign-in https://staging.activityroster.com/admin https://staging.activityroster.com/dev https://probe.staging.activityroster.com/office; do
+            out=$(curl -sS -o /tmp/body -w '%{http_code} %{time_total}s' --max-time 40 "$u" 2>&1 || echo "ERR $?")
+            echo "::warning::$out  $u  | $(head -c 160 /tmp/body | tr '\n' ' ')"
           done
-          curl -sS https://activityroster.com/api/health; echo
-      - name: Which build is live (compare the built chunk names)
+      - name: Which build is live
         run: |
           for host in activityroster.com staging.activityroster.com; do
-            echo "$host: $(curl -sS --max-time 30 "https://$host/learn" | grep -o 'learn/page-[a-z0-9]*\.js' | head -1) $(curl -sS --max-time 30 "https://$host/" | grep -o 'chunks/main-app-[a-z0-9]*\.js' | head -1)"
+            echo "::warning::$host build: $(curl -sS --max-time 30 "https://$host/" | grep -o 'chunks/main-app-[a-z0-9]*\.js' | head -1)"
           done
