@@ -91,6 +91,13 @@ export async function middleware(req: NextRequest) {
 
   const isAppPath = path.startsWith("/office") || path.startsWith("/portal");
 
+  // www is the same site: send it to the apex so search engines see one address.
+  if (host.kind === "reserved" && host.label === "www") {
+    const to = url.clone();
+    to.host = APEX;
+    return NextResponse.redirect(to, 301);
+  }
+
   if (host.kind === "tenant") {
     // The platform admin area is apex-only; bounce it off centre subdomains.
     if (path.startsWith("/admin")) {
