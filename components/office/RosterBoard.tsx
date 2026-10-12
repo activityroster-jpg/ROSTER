@@ -137,6 +137,12 @@ function CoursesByDay({ data, canEdit, picked, dropTarget, setDropTarget, onDrop
               const open = data.openRoles[s.sessionId] ?? [];
               const flags = data.problems[s.sessionId] ?? [];
               const isTarget = dropTarget === s.sessionId;
+              // The card's state at a glance: red = a problem, orange = places open, green = filled and fine.
+              const tone = flags.length
+                ? { bar: "border-l-8 border-l-port", card: "border-port/40 bg-port/10 hover:bg-port/15" }
+                : open.length
+                  ? { bar: "border-l-8 border-l-amber", card: "border-amber/50 bg-amber/15 hover:bg-amber/20" }
+                  : { bar: "border-l-8 border-l-starboard", card: "border-starboard/40 bg-starboard/10 hover:bg-starboard/15" };
               return (
                 <button
                   key={s.sessionId}
@@ -145,7 +151,7 @@ function CoursesByDay({ data, canEdit, picked, dropTarget, setDropTarget, onDrop
                   onDragOver={(e) => { if (!canEdit) return; e.preventDefault(); if (dropTarget !== s.sessionId) setDropTarget(s.sessionId); }}
                   onDragLeave={() => { if (dropTarget === s.sessionId) setDropTarget(null); }}
                   onDrop={(e) => { e.preventDefault(); const id = e.dataTransfer.getData("text/instructor"); if (id) onDrop(s, d, id); }}
-                  className={`block w-full rounded-lg border p-2 text-left text-xs transition ${isTarget ? "border-teal bg-teal/10 ring-2 ring-teal/40" : selectedId === s.sessionId ? "border-navy bg-navy/5" : picked ? "border-dashed border-teal/50 hover:bg-teal/5" : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"} $${flags.length ? "border-l-8 border-l-port" : open.length ? "border-l-8 border-l-amber" : "border-l-8 border-l-starboard"}`}
+                  className={`block w-full rounded-lg border p-2 text-left text-xs transition ${isTarget ? "border-teal bg-teal/10 ring-2 ring-teal/40" : selectedId === s.sessionId ? "border-navy bg-navy/5" : picked ? "border-dashed border-teal/50 hover:bg-teal/5" : tone.card} ${tone.bar}`}
                 >
                   <div className="flex items-start justify-between gap-1">
                     <span className="font-semibold leading-tight text-navy">{s.courseName}</span>
