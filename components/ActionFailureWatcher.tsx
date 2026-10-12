@@ -7,6 +7,18 @@ import { BUILD_ID } from "@/lib/build-id";
 /** Don't ask the server which build is live more often than this. */
 const VERSION_CHECK_MIN_MS = 60_000;
 
+/**
+ * A save or a page fetch that gets no answer in this long is treated as
+ * stalled: it is cancelled so the page's queue moves on, and the office is
+ * asked to reload. Next runs a page's saves one after another, so one that
+ * never answers would otherwise freeze every button after it (12 Oct: the
+ * centre admin "frozen after heavy use" while a fresh window was fine).
+ */
+const ACTION_STALL_MS = 25_000;
+const PAGE_STALL_MS = 40_000;
+/** Saves slower than this are reported (no banner) so the Dev Center shows where time goes. */
+const SLOW_MS = 8_000;
+
 /** Signed-in areas, where an unexpected failure is worth reporting (the public site has browser-extension noise). */
 const REPORTED_AREAS = /^\/(office|portal|admin|app|welcome|set-pin|pin|verify-login|verify-device|security|two-factor)(\/|$)/;
 
@@ -41,13 +53,47 @@ export function ActionFailureWatcher() {
     const timer = window.setInterval(onChange, 5 * VERSION_CHECK_MIN_MS);
     return () => { document.removeEventListener("visibilitychange", onChange); window.removeEventListener("focus", onChange); window.clearInterval(timer); };
   }, []);
+  // Stall guard: every save (Next-Action) and page fetch (RSC) gets a deadline.
+  useEffect(() => {
+    const w = window as Window & { __arStallGuard?: boolean };
+    if (w.__arStallGuard || !REPORTED_AREAS.test(window.location.pathname)) return;
+    w.__arStallGuard = true;
+    const original = window.fetch.bind(window);
+    const headerOf = (init: RequestInit | undefined, input: RequestInfo | URL, name: string): string | null => {
+      const h = init?.headers;
+      if (h instanceof Headers) return h.get(name);
+      if (Array.isArray(h)) return h.find(([k]) => k.toLowerCase() === name.toLowerCase())?.[1] ?? null;
+      if (h && typeof h === "object") { for (const k of Object.keys(h)) if (k.toLowerCase() === name.toLowerCase()) return (h as Record<string, string>)[k] ?? null; }
+      if (input instanceof Request) return input.headers.get(name);
+      return null;
+    };
+    const report = (message: string) => void original("/api/report-error", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: message.slice(0, 2000), path: window.location.pathname }) }).catch(() => {});
+    window.fetch = (input, init) => {
+      const isAction = Boolean(headerOf(init, input, "Next-Action"));
+      const isPage = !isAction && Boolean(headerOf(init, input, "RSC"));
+      if ((!isAction && !isPage) || init?.signal) return original(input, init);
+      const ac = new AbortController();
+      const started = Date.now();
+      let stalled = false;
+      const timer = window.setTimeout(() => { stalled = true; ac.abort(); }, isAction ? ACTION_STALL_MS : PAGE_STALL_MS);
+      return original(input, { ...init, signal: ac.signal }).then(
+        (res) => { const took = Date.now() - started; if (isAction && took > SLOW_MS) report(`[slow] save took ${Math.round(took / 1000)}s`); return res; },
+        (err: unknown) => {
+          if (stalled) { setChallenged(true); report(`[stalled] ${isAction ? "save" : "page"} got no answer in ${Math.round((Date.now() - started) / 1000)}s; cancelled`); }
+          throw err;
+        },
+      ).finally(() => window.clearTimeout(timer));
+    };
+    // Never unpatched: the guard lives as long as the page.
+  }, []);
   useEffect(() => {
     const seen = new Set<string>();
     const handle = (reason: unknown) => {
       const message = reason instanceof Error ? reason.message : typeof reason === "string" ? reason : "";
       if (!message) return;
       if (isStaleActionError(message)) { setStale(true); return; }
-      if (/unexpected response was received from the server|failed to fetch|load failed/i.test(message)) { setChallenged(true); }
+      if (/unexpected response was received from the server|failed to fetch|load failed|aborted|signal timed out/i.test(message)) { setChallenged(true); }
+      if (/aborted|signal timed out/i.test(message)) return; // the stall guard already reported it
       if (seen.has(message) || !REPORTED_AREAS.test(window.location.pathname)) return;
       seen.add(message);
       void fetch("/api/report-error", {
@@ -65,7 +111,7 @@ export function ActionFailureWatcher() {
   if (!stale && challenged) {
     return (
       <div role="alert" className="fixed inset-x-0 top-0 z-[100] flex flex-wrap items-center justify-center gap-3 bg-navy px-4 py-3 text-sm text-white shadow-lg print:hidden">
-        <span>That didn&rsquo;t go through: the connection was interrupted or a security check got in the way. Reload the page and try again.</span>
+        <span>That didn&rsquo;t go through: the connection stalled or was interrupted. Reload the page and try again; anything saved before this is safe.</span>
         <button type="button" onClick={() => window.location.reload()} className="rounded-lg bg-white px-3 py-1 text-sm font-semibold text-navy">Reload</button>
         <button type="button" onClick={() => setChallenged(false)} className="text-white/70 hover:text-white">Dismiss</button>
       </div>
