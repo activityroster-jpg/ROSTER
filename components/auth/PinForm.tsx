@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { PinInput } from "@/components/auth/PinInput";
 import { Logo } from "@/components/Logo";
 import { setPinAction, verifyPinAction, resetMyPinAction, requestPinResetCodeAction } from "@/app/pin/actions";
 import { biometricPinSaved, biometricsAvailable, forgetBiometricPin, isNative, savePinForBiometrics, unlockPinWithBiometrics } from "@/lib/mobile/native";
@@ -74,18 +75,7 @@ export function PinForm({ mode, next, hasPassword = true, userId }: { mode: "ent
   };
 
   const pinInput = (value: string, set: (v: string) => void, label: string, autoFocus = false) => (
-    <div>
-      <label className="mb-1 block text-xs font-medium text-slate-500">{label}</label>
-      <input
-        value={value}
-        onChange={(e) => set(e.target.value.replace(/\D/g, "").slice(0, 4))}
-        inputMode="numeric"
-        autoComplete="off"
-        autoFocus={autoFocus}
-        placeholder="••••"
-        className="w-full rounded-lg border border-slate-300 px-3 py-3 text-center text-2xl tracking-[0.5em] outline-none focus:border-teal"
-      />
-    </div>
+    <PinInput value={value} onChange={set} label={label} autoFocus={autoFocus} />
   );
 
   const field = "w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-teal";

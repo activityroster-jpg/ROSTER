@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { PinInput } from "@/components/auth/PinInput";
 import { stepUpWithPinAction } from "@/app/pin/actions";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { biometricPinSaved, isNative, unlockPinWithBiometrics } from "@/lib/mobile/native";
@@ -45,9 +46,7 @@ export function StepUpButton({ label, href, onVerified, className, consequences,
       <button type="button" onClick={begin} disabled={pending} className={className}>{label}</button>
       {err && !open ? <span role="alert" className="ml-2 text-xs text-port">{err}</span> : null}
       <ConfirmDialog open={open} title={title} consequences={consequences} confirmLabel="Continue" tone="navy" busy={pending} onCancel={() => { setOpen(false); setPin(""); setErr(null); }} onConfirm={confirm}>
-        <label className="block text-xs font-medium text-slate-500">Your 4-digit PIN
-          <input autoFocus inputMode="numeric" pattern="[0-9]*" maxLength={4} value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))} onKeyDown={(e) => { if (e.key === "Enter" && pin.length === 4) confirm(); }} className="mt-1 block w-28 rounded-lg border border-slate-300 px-3 py-2 text-center text-lg tracking-[0.5em] outline-none focus:border-teal" aria-label="PIN" />
-        </label>
+        <PinInput value={pin} onChange={setPin} label="Your 4-digit PIN" autoFocus size="sm" onEnter={confirm} />
         {err ? <p role="alert" className="mt-2 text-xs text-port">{err}</p> : null}
       </ConfirmDialog>
     </>
