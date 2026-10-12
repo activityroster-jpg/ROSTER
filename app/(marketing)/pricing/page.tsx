@@ -17,12 +17,12 @@ export const metadata = {
 const INCLUDED = [
   "Roster builder with RYA ratio, licence and safety-cover checks on every assignment",
   "Auto-roster: one click fills the week's open roles evenly from who's available",
-  "Instructor app: shifts, availability, swaps, leave, hours and documents",
+  "Instructor app: shifts, availability, open shifts, leave, hours and documents",
   "Certificate and vetting tracking (DBS, PVG, AccessNI, Garda) with expiry reminders",
-  "Roles for admins, senior instructors and a welfare officer",
+  "Office access you choose per admin, and welfare officers on duty shown on the roster",
   "Printable day-by-day roster PDF in your choice of layout",
   "Emergency sheet for the duty officer",
-  "Leave, cover and open shifts; hours and payroll export",
+  "Leave, cover and open shifts; hours and payroll export, paid by the hour, session, day or student",
   "Import your courses and staff from a spreadsheet or calendar",
   "Hosted in the EU, strictly isolated per centre, export your data any time",
 ]

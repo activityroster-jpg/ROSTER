@@ -49,7 +49,9 @@ export function requiredInstructors(groupSize: number, ratio: number): number {
 export function evaluateRatio(input: RatioInput): RatioResult {
   const explicit = typeof input.staffRequired === "number" && input.staffRequired >= 0 ? input.staffRequired : null;
   const required = explicit ?? requiredInstructors(input.groupSize, input.ratio);
-  const ratioCounting = input.assigned.filter((a) => a.countsTowardRatio).length;
+  // An explicit total counts every role the office listed (a safety-boat place included), so it is
+  // measured against everyone assigned; the ratio alone counts only the people who count towards it.
+  const ratioCounting = explicit !== null ? input.assigned.length : input.assigned.filter((a) => a.countsTowardRatio).length;
   const hasSafetyCover = input.assigned.some((a) => a.isSafetyCover);
 
   const understaffed = ratioCounting < required;

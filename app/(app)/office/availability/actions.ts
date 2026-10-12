@@ -107,7 +107,7 @@ export async function assignFromAvailabilityAction(courseId: string, instructorI
   if (!courseId || !roleTypeId) return { ok: false, error: "Pick a role" };
   const res = await assignStaff(repos, ctx, { courseId, instructorId, roleTypeId });
   if (!res.ok) {
-    return { ok: false, error: `${assignBlockMessage(res.reason, res.detail)}${res.noOverride ? "." : ". Override from the course page if you need to."}` };
+    return { ok: false, error: `${assignBlockMessage(res.reason, res.detail)}${res.noOverride ? "." : ". Assign them from the roster or the course page with “Assign anyway” if you need to."}` };
   }
   revalidatePath("/office/availability");
   revalidatePath("/office/courses");
@@ -196,7 +196,7 @@ export async function moveFromAvailabilityAction(input: { fromSessionId: string;
   revalidatePath("/office");
   if (!put.ok) {
     const why = "error" in put ? put.error : assignBlockMessage(put.reason, put.detail);
-    return { ok: false, error: `Taken off ${fromName}, but not put on the new course: ${why}. Assign them from the course page (override if needed).` };
+    return { ok: false, error: `Taken off ${fromName}, but not put on the new course: ${why}. Assign them from the roster or the course page (“Assign anyway” if needed).` };
   }
   const scope = fromLive.length > 1 ? "that day" : "the whole course";
   return { ok: true, message: `Moved: off ${fromName} (${scope}) and onto the new course${"warnings" in put && put.warnings.length ? ` — ⚠ ${put.warnings.join("; ")}` : ""}` };

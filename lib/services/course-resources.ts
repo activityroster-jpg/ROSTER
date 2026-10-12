@@ -207,15 +207,18 @@ export async function setCourseStaffing(repos: Repositories, ctx: AnyTenantConte
   // when the screen didn't ask, everyone in a role the course no longer lists.
   // Each comes off their course-level place and any one-day adds on this course.
   const removed: { instructorId: string; roleTypeId: string }[] = [];
-  const allStaff = input.remove?.length || dropped.size ? await t.courseStaff.list(ctx, eq(courseStaffTable.courseId, courseId)) : [];
-  const going = new Set<string>(input.remove ? input.remove.filter((id) => allStaff.some((a) => a.instructorId === id)) : allStaff.filter((a) => dropped.has(a.roleTypeId)).map((a) => a.instructorId));
+  const needStaff = Boolean(input.remove?.length || dropped.size);
+  const allStaff = needStaff ? await t.courseStaff.list(ctx, eq(courseStaffTable.courseId, courseId)) : [];
+  const sessionIds = needStaff ? (await t.courseSession.list(ctx, eq(courseSessionTable.courseId, courseId))).map((s) => s.id) : [];
+  // Day adds on this course: someone on for a day only holds a place too, so they can be chosen.
+  const dayRows = sessionIds.length ? await t.sessionStaffOverride.listIn(ctx, sessionStaffOverrideTable.courseSessionId, sessionIds) : [];
+  const onCourse = new Set([...allStaff.map((a) => a.instructorId), ...dayRows.filter((o) => o.mode === "add").map((o) => o.instructorId)]);
+  const going = new Set<string>(input.remove
+    ? input.remove.filter((id) => onCourse.has(id))
+    : [...allStaff.filter((a) => dropped.has(a.roleTypeId)).map((a) => a.instructorId), ...dayRows.filter((o) => o.mode === "add" && dropped.has(o.roleTypeId)).map((o) => o.instructorId)]);
   if (going.size) {
     for (const a of allStaff) if (going.has(a.instructorId)) { ops.push(t.courseStaff.deleteStatement(ctx, a.id)); removed.push({ instructorId: a.instructorId, roleTypeId: a.roleTypeId }); }
-    const sessionIds = (await t.courseSession.list(ctx, eq(courseSessionTable.courseId, courseId))).map((s) => s.id);
-    if (sessionIds.length) {
-      const dayAdds = await t.sessionStaffOverride.listIn(ctx, sessionStaffOverrideTable.courseSessionId, sessionIds, inArray(sessionStaffOverrideTable.instructorId, [...going]));
-      for (const o of dayAdds) { ops.push(t.sessionStaffOverride.deleteStatement(ctx, o.id)); if (!removed.some((r) => r.instructorId === o.instructorId)) removed.push({ instructorId: o.instructorId, roleTypeId: o.roleTypeId }); }
-    }
+    for (const o of dayRows) if (going.has(o.instructorId)) { ops.push(t.sessionStaffOverride.deleteStatement(ctx, o.id)); if (!removed.some((r) => r.instructorId === o.instructorId)) removed.push({ instructorId: o.instructorId, roleTypeId: o.roleTypeId }); }
   }
   const students = Math.max(0, Math.min(500, Math.round(input.students)));
   // No lines left = the office wants no staff on it (0), not the ratio's default back (null = never set).

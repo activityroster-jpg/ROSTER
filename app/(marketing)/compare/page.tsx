@@ -55,7 +55,7 @@ const ROWS: Row[] = [
   },
   {
     feature: "Instructor app",
-    detail: "Shifts, availability, swaps, leave, hours and documents on their phone, with notifications.",
+    detail: "Shifts, availability, open shifts, leave, hours and documents on their phone, with notifications.",
     us: "yes", general: "yes", club: "partial", sheets: "no",
   },
   {

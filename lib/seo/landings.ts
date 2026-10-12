@@ -69,7 +69,7 @@ export const LANDINGS: Landing[] = [
         heading: "RYA rules built in, not bolted on",
         body: [
           "Your centre starts with RYA course types, instructor grades, roles and checks already set up. Each course type carries the student-to-instructor ratio and safety-boat requirement your operating procedures set, and you can change any of them. From then on, every assignment is checked as you make it.",
-          "If someone isn't qualified for a course, is marked busy, would push a session over its ratio, or the session has no safety cover, you see it at once. Nothing is silently blocked or silently allowed: overrides need a reason and are recorded.",
+          "If someone isn't qualified for a course, is marked busy, would push a session over its ratio, or the session has no safety cover, you see it at once. Nothing is silently blocked or silently allowed: an override is one deliberate press, recorded with what it overrode and who pressed it.",
         ],
       },
       {
@@ -126,7 +126,7 @@ export const LANDINGS: Landing[] = [
     ],
     screens: ["board", "boardPeople", "problems", "appHome"],
     faqs: [
-      { q: "Can we still override a check?", a: "Yes. Some days you need to. ActivityRoster tells you exactly what the problem is, and an override asks for a reason that goes into the change log, so there's a record of who decided and why." },
+      { q: "Can we still override a check?", a: "Yes. Some days you need to. ActivityRoster tells you exactly what the problem is beside the person's name, and the button changes to “Assign anyway”. Pressing it records the checks it overrode, who pressed it and when in the change log, so there's a record if anyone asks later." },
       { q: "Does it work for multi-day courses where staff change day to day?", a: "Yes. Staff can be set for the whole course or swapped for a single day, and each day is checked on its own." },
       { q: "Do instructors need the app?", a: "It's the easiest way for them to see their week, set availability and confirm sessions, and it's free for them. Everything also works in a phone browser." },
     ],

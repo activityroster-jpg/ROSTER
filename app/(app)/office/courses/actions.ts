@@ -498,7 +498,8 @@ export async function addRolePlaceAction(courseId: string, roleTypeId: string): 
   if (!course || !role) return { ok: false, error: "Course or role not found" };
   const ct = await t.courseType.findById(ctx, course.courseTypeId);
   const current = cleanRoleLines(requirements);
-  const base = current.length ? current : suggestRoles({ students: course.capacity, ratio: course.ratio, requiresSafetyBoat: Boolean(ct?.requiresSafetyBoat), roles });
+  // A course set to "no staff needed" (0) starts from nothing; one never set starts from what the ratio implies.
+  const base = current.length ? current : course.staffRequired === 0 ? [] : suggestRoles({ students: course.capacity, ratio: course.ratio, requiresSafetyBoat: Boolean(ct?.requiresSafetyBoat), roles });
   const line = base.find((l) => l.roleTypeId === roleTypeId);
   const next = line ? base.map((l) => (l.roleTypeId === roleTypeId ? { ...l, count: Math.min(50, l.count + 1) } : l)) : [...base, { roleTypeId, count: 1 }];
   const r = await setCourseStaffing(repos, ctx, courseId, { students: course.capacity, roles: next, expectedVersion: course.updatedAt.getTime() });

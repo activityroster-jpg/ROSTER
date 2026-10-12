@@ -17,16 +17,16 @@ export const metadata = {
 // The full platform, one line each, in the order a centre manager cares about.
 // Keep this in step with what is built (and with INCLUDED on the pricing page).
 const PLATFORM = [
-  { icon: CalendarCheck, title: "Roster builder", body: "Build the week; every assignment is checked for licences, ratios and clashes." },
+  { icon: CalendarCheck, title: "Roster builder", body: "Build the week; every assignment is checked for licences, ratios and clashes, and each session shows green, orange or red at a glance." },
   { icon: Sparkles, title: "Auto-roster", body: "One click fills every open role from who's free, shared out evenly. Not enough people? It fills what it can and shows you the gaps." },
-  { icon: Smartphone, title: "Instructor app", body: "Shifts, availability, swaps, hours and documents on their phone, with notifications." },
+  { icon: Smartphone, title: "Instructor app", body: "Shifts, availability, open shifts, hours and documents on their phone, with notifications." },
   { icon: FileCheck, title: "Certs & vetting", body: "Every RYA licence, first aid and DBS/PVG/AccessNI/Garda check, with expiry reminders." },
   { icon: Clock, title: "Hours at a glance", body: "Each person's rostered hours for the week, beside their name on the roster and the availability sheet." },
-  { icon: KeyRound, title: "Roles for your team", body: "Admin, senior instructor and welfare officer, each seeing only what they need." },
+  { icon: KeyRound, title: "Access for your team", body: "Office admins see only the parts you tick for them; instructors see their own shifts; welfare officers on duty show on the roster." },
   { icon: FileText, title: "Printable roster", body: "A day-by-day PDF in the layout you choose, ready for the noticeboard." },
   { icon: LifeBuoy, title: "Emergency sheet", body: "Today's staff and emergency contacts on one page for the duty officer." },
   { icon: CalendarOff, title: "Leave & cover", body: "Staff ask in the app; you approve in a tap and open the gap to the team." },
-  { icon: Clock, title: "Hours & payroll", body: "Hours from the roster (or the optional clock), times pay rates, exported monthly." },
+  { icon: Clock, title: "Hours & payroll", body: "Hours from the roster (or the optional clock), times pay rates by the hour, session, day or student, exported monthly." },
   { icon: Upload, title: "Import in minutes", body: "Bring your courses and staff across from a spreadsheet or calendar." },
   { icon: ClipboardCheck, title: "Audit trail & GDPR tools", body: "Every change logged; export, restrict or anonymise a person's data in a click." },
 ];
@@ -369,7 +369,7 @@ export default function MarketingHome() {
               ["Where is data stored?", "In the EU. Certificates are held privately and encrypted; DBS, PVG, AccessNI and Garda checks are recorded by status and reference only, so the certificate itself is never stored."],
               ["Which jurisdictions are supported?", "England, Wales, Scotland, Northern Ireland and Ireland — DBS, PVG, AccessNI or Garda vetting set up automatically."],
               ["Can we tailor it to how we run?", "Yes. Grades, roles, checks, session times and course types are all yours to edit."],
-              ["Do our instructors need to install anything?", "They get the instructor app on their phone for shifts, availability, swaps, hours and documents. It also works in any phone browser, so nobody is left out."],
+              ["Do our instructors need to install anything?", "They get the instructor app on their phone for shifts, availability, open shifts, hours and documents. It also works in any phone browser, so nobody is left out."],
               ["We have under-18 assistants. Can they use it?", "Yes. Add their date of birth and they're marked as under 18, with their contact details kept private from colleagues. Each person's hours for the week show beside their name, so you can keep an eye on them."],
               ["Can we bring our existing schedule across?", "Yes. Import courses and staff from a spreadsheet or calendar, check what was read, then save. Most centres are set up in an afternoon."],
               ["Will the platform keep improving?", "Yes. ActivityRoster is a live platform, updated continuously with nothing to install. Centres request features from inside the platform and vote for each other's ideas, and we build around what centres vote for."],

@@ -33,7 +33,7 @@ const SECTIONS = [
     heading: "PADI standards built in, not bolted on",
     body: [
       "Your centre starts with the PADI course list (Discover Scuba to Divemaster, the specialties, Bubblemaker to Junior Open Water), the professional ratings from Divemaster to Course Director, dive kit and the checks that lapse: annual membership renewal, liability insurance, diving medical, EFR, oxygen provider. Every list is yours to change.",
-      "Each course type carries a student-to-instructor ratio you set, and every assignment is checked as you make it: the person must hold a rating that covers the course, be free, and not be on another dive at the same time. Nothing is silently blocked or silently allowed; overrides need a reason and are recorded.",
+      "Each course type carries a student-to-instructor ratio you set, and every assignment is checked as you make it: the person must hold a rating that covers the course, be free, and not be on another dive at the same time. Nothing is silently blocked or silently allowed: when there's a problem the button says “Assign anyway”, and the override is recorded with the reason.",
     ],
   },
   {
@@ -47,7 +47,7 @@ const FAQS = [
   { q: "Do you track PADI renewals and insurance?", a: "Yes. Membership renewal, professional liability insurance, the diving medical, EFR and oxygen provider all carry expiry dates with reminders. You choose which ones block rostering when they lapse." },
   { q: "We also teach RYA powerboat courses. Can one centre do both?", a: "Yes. Pick your main activity at sign-up, then add the RYA course list and instructor types from Course setup. One login, one roster." },
   { q: "Does it replace our booking system?", a: "No. ActivityRoster is the staff side: who is working, whether they are qualified and free, and their hours. Customer bookings stay where they are." },
-  { q: "Are instructors paid per student or per certification?", a: "Pay rates are per session or per hour today, per role or per person; per-student pay is on the way. Hours and pay export monthly for your payroll." },
+  { q: "Are instructors paid per student or per certification?", a: "Either works. Each pay rate can be per hour, per session, per day or per student (the rate times the students on the course), for a role, a person or a particular course. Hours and pay export for your payroll." },
   { q: "We're not in the UK.", a: "Choose “Other” for your country at sign-up. Vetting checks, currency and time zone follow." },
 ];
 
