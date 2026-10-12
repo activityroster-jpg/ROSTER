@@ -165,7 +165,9 @@ export function CourseCard({
         ) : null}
 
         {open && (() => {
-          const required = course.staffRequired ?? computedRequired ?? null;
+          // The same number the staffing panel shows: the role lines, or the ratio's instructors plus safety cover.
+          const lineTotal = staffing ? staffing.lines.reduce((t, l) => t + l.count, 0) : 0;
+          const required = staffing ? (lineTotal || staffing.required) : (course.staffRequired ?? computedRequired ?? null);
           const n = assigned.length;
           if (required == null) return n > 0 ? <span className="text-xs text-slate-500">{n} assigned</span> : null;
           const ok = n >= required;
