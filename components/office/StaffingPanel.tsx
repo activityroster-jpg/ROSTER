@@ -11,7 +11,7 @@ import { SurplusPicker, type SurplusGroup } from "./SurplusPicker";
  * ratio implies, and the role lines the admin adjusts. "Staff required" is
  * derived from the lines, never typed.
  */
-export function StaffingPanel({ courseId, staffing, compact = false, onSaved }: { courseId: string; staffing: StaffingView; compact?: boolean; onSaved?: () => void }) {
+export function StaffingPanel({ courseId, staffing, compact = false, notes, onSaved }: { courseId: string; staffing: StaffingView; compact?: boolean; /** Problems to show beside names when choosing who comes off (double-booked, licences), by instructor id. */ notes?: Record<string, string>; onSaved?: () => void }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [students, setStudents] = useState(String(staffing.students));
@@ -30,7 +30,7 @@ export function StaffingPanel({ courseId, staffing, compact = false, onSaved }: 
   const [confirming, setConfirming] = useState(false);
   // Fewer places than people in a role (removed, or its count lowered): the office picks who comes off.
   const surplus: SurplusGroup[] = staffing.lines
-    .map((l) => ({ roleName: l.roleName, people: l.people, surplus: l.people.length - (lines.find((x) => x.roleTypeId === l.roleTypeId)?.count ?? 0) }))
+    .map((l) => ({ roleName: l.roleName, people: l.people.map((p) => ({ ...p, note: notes?.[p.instructorId] })), surplus: l.people.length - (lines.find((x) => x.roleTypeId === l.roleTypeId)?.count ?? 0) }))
     .filter((g) => g.surplus > 0);
   const save = (remove?: string[]) => start(async () => {
     setConfirming(false);

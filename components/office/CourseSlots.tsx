@@ -26,7 +26,7 @@ export function candidateNote(c: SlotCandidate): string {
 export const candidateFactsOf = (c: SlotCandidate) => ({ fit: c.fit, qualified: c.qualified ?? null, available: courseStateAvailable(c.avail) && !c.busyWith });
 
 /** What stands in the way of this person on this course: each line is a block the office can override. Empty = nothing. */
-function issuesOf(c: SlotCandidate | undefined): string[] {
+export function issuesOf(c: SlotCandidate | undefined): string[] {
   if (!c) return [];
   const out: string[] = [];
   if (!c.fit) out.push(`Not cleared to roster: ${c.reason ?? "a check isn't met"}.`);

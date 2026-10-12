@@ -5,8 +5,8 @@ import { ConfirmDialog } from "./ConfirmDialog";
 
 export interface SurplusGroup {
   roleName: string;
-  /** Everyone filling this role's places right now. */
-  people: { instructorId: string; name: string }[];
+  /** Everyone filling this role's places right now, with any problem beside the name (double-booked, licences don't cover the course). */
+  people: { instructorId: string; name: string; note?: string }[];
   /** How many of them have to come off to fit the new number of places (0 places = all). */
   surplus: number;
 }
@@ -22,8 +22,12 @@ export function SurplusPicker({ open, groups, busy, onCancel, onConfirm }: {
   const [ticked, setTicked] = useState<Set<string>>(new Set());
   useEffect(() => {
     if (!open) return;
+    // Pre-tick the people with a problem first, then the last-added, until the surplus is covered.
     const next = new Set<string>();
-    for (const g of groups) for (const p of g.people.slice(Math.max(0, g.people.length - g.surplus))) next.add(p.instructorId);
+    for (const g of groups) {
+      const ordered = [...g.people.filter((p) => p.note), ...[...g.people].reverse().filter((p) => !p.note)];
+      for (const p of ordered.slice(0, g.surplus)) next.add(p.instructorId);
+    }
     setTicked(next);
   }, [open, groups]);
   const countIn = (g: SurplusGroup) => g.people.filter((p) => ticked.has(p.instructorId)).length;
@@ -34,7 +38,7 @@ export function SurplusPicker({ open, groups, busy, onCancel, onConfirm }: {
     <ConfirmDialog open={open} title={`Who comes off the course?`} confirmLabel={`Remove ${total} and save`} busy={busy} confirmDisabled={!ready}
       onCancel={onCancel} onConfirm={() => onConfirm([...ticked])}
       consequences={[
-        "You've set fewer places than there are people in them. Tick who comes off; the rest stay.",
+        "You've set fewer places than there are people in them. Tick who comes off; the rest stay. Anyone with a problem beside their name is ticked first.",
         "Those ticked come off every day of this course and are told; their unapproved pay lines for it are removed.",
       ]}>
       <div className="space-y-3">
@@ -46,7 +50,7 @@ export function SurplusPicker({ open, groups, busy, onCancel, onConfirm }: {
                 <li key={p.instructorId}>
                   <label className="flex items-center gap-2 text-sm text-navy">
                     <input type="checkbox" checked={ticked.has(p.instructorId)} onChange={() => toggle(p.instructorId)} className="h-4 w-4 rounded border-slate-300" />
-                    {p.name}
+                    <span>{p.name}{p.note ? <span className="ml-2 text-xs text-port">⚠ {p.note}</span> : null}</span>
                   </label>
                 </li>
               ))}

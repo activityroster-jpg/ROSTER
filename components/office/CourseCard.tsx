@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { renameCourseAction, updateSessionTimesAction } from "@/app/(app)/office/courses/actions";
 import { buildRoleSlots, type SlotLine } from "@/lib/domain/role-slots";
-import { CourseSlots } from "./CourseSlots";
+import { issuesOf, CourseSlots } from "./CourseSlots";
 
 export interface CardSession { id: string; date: string; startMs: number; endMs: number }
 export interface CardAssigned { id: string; instructorId: string; instructorName: string; roleTypeId: string; roleName: string; isOverride: boolean; status: "assigned" | "confirmed" | "declined"; declineNote?: string | null }
@@ -173,7 +173,7 @@ export function CourseCard({
 
       {open ? (
         <div className="mt-2 space-y-2">
-          {staffing ? <StaffingPanel courseId={course.id} staffing={staffing} compact onSaved={onChanged} /> : null}
+          {staffing ? <StaffingPanel courseId={course.id} staffing={staffing} compact notes={Object.fromEntries(instructors.flatMap((c) => { const t = issuesOf(c).join(" "); return t ? [[c.id, t]] : []; }))} onSaved={onChanged} /> : null}
           <CourseSlots courseId={course.id} slots={slots} candidates={instructors} roles={roles} onChanged={onChanged} />
         </div>
       ) : null}

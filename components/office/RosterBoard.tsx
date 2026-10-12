@@ -360,8 +360,8 @@ function SlotRow({ roleTypeId, roleName, member, extra, candidates, byId, slotKe
 }
 
 /** Students and the roles the course needs, editable for the whole course. */
-function StaffingEditor({ courseId, students, needs, roles, filling, onSaved, onCancel }: {
-  courseId: string; students: number; needs: { roleTypeId: string; count: number }[]; roles: BoardData["roles"]; filling: { roleTypeId: string; roleName: string; member?: Member; extra?: boolean }[]; onSaved: (message?: string) => void; onCancel: () => void;
+function StaffingEditor({ courseId, students, needs, roles, filling, noteFor, onSaved, onCancel }: {
+  courseId: string; students: number; needs: { roleTypeId: string; count: number }[]; roles: BoardData["roles"]; filling: { roleTypeId: string; roleName: string; member?: Member; extra?: boolean }[]; noteFor: (instructorId: string) => string | undefined; onSaved: (message?: string) => void; onCancel: () => void;
 }) {
   const [n, setN] = useState(String(students || ""));
   const [lines, setLines] = useState(needs.length ? needs.map((x) => ({ ...x })) : [{ roleTypeId: roles[0]?.id ?? "", count: 1 }]);
@@ -371,7 +371,7 @@ function StaffingEditor({ courseId, students, needs, roles, filling, onSaved, on
   // Fewer places than people in a role (removed, or its count lowered): the office picks who comes off.
   // "Filling" follows the panel's rows, so an Assistant Instructor holding an Instructor place counts for that line.
   const surplus: SurplusGroup[] = needs.map((need) => {
-    const people = filling.flatMap((sl) => (sl.roleTypeId === need.roleTypeId && sl.member && !sl.extra && sl.member.status !== "declined" ? [{ instructorId: sl.member.instructorId, name: sl.member.name }] : []));
+    const people = filling.flatMap((sl) => (sl.roleTypeId === need.roleTypeId && sl.member && !sl.extra && sl.member.status !== "declined" ? [{ instructorId: sl.member.instructorId, name: sl.member.name, note: noteFor(sl.member.instructorId) }] : []));
     const count = lines.filter((l) => l.roleTypeId === need.roleTypeId).reduce((t, l) => t + l.count, 0);
     return { roleName: roles.find((r) => r.id === need.roleTypeId)?.name ?? "Role", people, surplus: people.length - count };
   }).filter((g) => g.surplus > 0);
@@ -504,7 +504,7 @@ function SessionPanel({ data, selected, canEdit, preselect, instructors, byId, o
           <p className="text-sm text-navy"><span className="font-semibold">{s.students || 0}</span> students · <span className="font-semibold">{totalNeeded}</span> staff needed</p>
           {canEdit && meta ? <button type="button" onClick={() => setEditing((v) => !v)} className="rounded border border-slate-300 bg-white px-2 py-0.5 text-xs font-medium text-navy hover:bg-slate-50">{editing ? "Close" : "Edit students & roles"}</button> : null}
         </div>
-        {editing && meta ? <StaffingEditor courseId={meta.courseId} students={s.students} needs={(meta.needs ?? []).map((x) => ({ roleTypeId: x.roleTypeId, count: x.count }))} roles={data.roles} filling={slots} onCancel={() => setEditing(false)} onSaved={(message) => { setEditing(false); setMsg({ ok: true, text: message && message !== "Saved" ? message : "Students and roles saved for the whole course" }); onChanged(); }} /> : null}
+        {editing && meta ? <StaffingEditor courseId={meta.courseId} students={s.students} needs={(meta.needs ?? []).map((x) => ({ roleTypeId: x.roleTypeId, count: x.count }))} roles={data.roles} filling={slots} noteFor={(id) => issuesFor(byId.get(id), key, dayWord, s.slot, meta?.courseTypeId ?? null, elsewhere).join(" ") || undefined} onCancel={() => setEditing(false)} onSaved={(message) => { setEditing(false); setMsg({ ok: true, text: message && message !== "Saved" ? message : "Students and roles saved for the whole course" }); onChanged(); }} /> : null}
         {flags.length ? <ul className="mb-3 space-y-1 rounded-lg bg-port/5 p-2 text-xs text-port">{flags.map((f, i) => <li key={i}>⚠ {f}</li>)}</ul> : null}
 
         <div className="mb-1 flex items-center justify-between">

@@ -9,7 +9,7 @@ import { Card, StatusPill } from "@/components/ui";
 import { CourseManage } from "@/components/office/CourseManage";
 import { SessionManager, type SessionRow } from "@/components/office/SessionManager";
 import { canDeleteCourse } from "@/lib/services/cancel";
-import { CourseSlots } from "@/components/office/CourseSlots";
+import { CourseSlots, issuesOf } from "@/components/office/CourseSlots";
 import { buildRoleSlots } from "@/lib/domain/role-slots";
 import { busyElsewhereFor } from "@/lib/services/clashes";
 import { StaffingPanel } from "@/components/office/StaffingPanel";
@@ -111,7 +111,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
       <Card className="mb-6">
         <h2 className="mb-1 font-semibold text-navy">Staffing</h2>
         <p className="mb-3 text-xs text-slate-500">Students booked, what the course type's ratio implies, and the roles you want filled. The number of staff needed follows from the roles.</p>
-        <StaffingPanel courseId={course.id} staffing={staffing} />
+        <StaffingPanel courseId={course.id} staffing={staffing} notes={Object.fromEntries(instructorOptions.flatMap((c) => { const t = issuesOf(c).join(" "); return t ? [[c.id, t]] : []; }))} />
         <div className="mt-4">
           <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">Who&apos;s on it</p>
           <CourseSlots courseId={course.id} candidates={instructorOptions} roles={activeRoles} slots={buildRoleSlots(
