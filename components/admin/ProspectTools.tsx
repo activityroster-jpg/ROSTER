@@ -110,6 +110,13 @@ export function ProspectTools({ hasRows }: { hasRows: boolean }) {
                 <input name={f.name} required={f.name === "name"} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal" />
               </div>
             ))}
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-500">Centre type</label>
+              <select name="activityType" defaultValue="rya_centre" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal">
+                <option value="rya_centre">RYA centre or school</option>
+                <option value="padi_centre">PADI dive centre</option>
+              </select>
+            </div>
           </div>
           <div className="mt-3 flex items-center gap-3">
             <button disabled={adding} className="rounded-lg bg-teal px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-60">{adding ? "Adding…" : "Add prospect"}</button>

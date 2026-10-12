@@ -115,6 +115,8 @@ describe("pay rules", () => {
     expect(linePay({ unit: "day", rate: 100, payableMinutes: 90, firstOfDay: true })).toBe(100);
     expect(linePay({ unit: "day", rate: 100, payableMinutes: 90, firstOfDay: false })).toBe(0);
     expect(linePay({ unit: "hour", rate: null, payableMinutes: 90, firstOfDay: true })).toBeNull();
+    expect(linePay({ unit: "student", rate: 25, payableMinutes: 90, firstOfDay: true, students: 4 })).toBe(100);
+    expect(linePay({ unit: "student", rate: 25, payableMinutes: 90, firstOfDay: true, students: 0 })).toBeNull();
     expect(markFirstOfDay([{ instructorId: "a", date: "2026-01-01" }, { instructorId: "a", date: "2026-01-01" }, { instructorId: "b", date: "2026-01-01" }, { instructorId: "a", date: "2026-01-02" }])).toEqual([true, false, true, true]);
   });
 });

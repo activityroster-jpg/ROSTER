@@ -130,6 +130,8 @@ export interface PayrollLine {
   breakMinutes: number;
   payableMinutes: number;
   payUnit: PayUnit;
+  /** Students on the course (its places), for per-student pay. */
+  students: number | null;
   rate: number | null;
   /** Office override of the pay (wins over everything). */
   overridePay: number | null;
@@ -211,6 +213,7 @@ export async function getPayrollLines(
   const holidayPct = s?.holidayPayPercent && s.holidayPayPercent > 0 ? s.holidayPayPercent : null;
   const sessionById = new Map(sessions.map((x) => [x.id, x]));
   const courseName = new Map(courses.map((c) => [c.id, c.name ?? "Course"]));
+  const courseStudents = new Map(courses.map((c) => [c.id, c.capacity]));
   const entryFor = new Map<string, (typeof entries)[number]>();
   for (const e of entries) if (e.courseSessionId && e.clockOutAt) entryFor.set(`${e.instructorId}|${e.courseSessionId}`, e);
 
@@ -247,6 +250,7 @@ export async function getPayrollLines(
       overrideMinutes: r.overrideMinutes ?? null,
       workedMinutes: worked,
       payUnit: r.payUnit ?? "hour",
+      students: session ? courseStudents.get(session.courseId) ?? null : null,
       rate: r.ratePence != null ? r.ratePence / 100 : r.rate ?? null,
       overridePay: r.overridePayPence != null ? r.overridePayPence / 100 : r.overridePay ?? null,
       approved: r.approved,
@@ -262,7 +266,7 @@ export async function getPayrollLines(
   const lines: PayrollLine[] = partials.map((p, i) => {
     // Breaks only make sense for hourly pay.
     const { breakMinutes, payableMinutes } = p.payUnit === "hour" ? applyBreak(p.workedMinutes, policy) : { breakMinutes: 0, payableMinutes: p.workedMinutes };
-    const computed = linePay({ unit: p.payUnit, rate: p.rate, payableMinutes, firstOfDay: firstOfDay[i]! });
+    const computed = linePay({ unit: p.payUnit, rate: p.rate, payableMinutes, firstOfDay: firstOfDay[i]!, students: p.students });
     const pay = p.overridePay ?? computed;
     const holidayPay = holidayPct && pay != null && !p.volunteer ? Math.round(pay * holidayPct) / 100 : null;
     return { ...p, breakMinutes, payableMinutes, pay, holidayPay };
@@ -289,7 +293,7 @@ export function summariseByInstructor(lines: PayrollLine[]): PayrollSummaryRow[]
 }
 
 const h = (m: number) => (m / 60).toFixed(2);
-const UNIT: Record<PayUnit, string> = { hour: "per hour", session: "per session", day: "per day" };
+const UNIT: Record<PayUnit, string> = { hour: "per hour", session: "per session", day: "per day", student: "per student" };
 
 /** Spreadsheet (CSV) — one row per shift. */
 export function payrollLinesToCsv(lines: PayrollLine[]): string {

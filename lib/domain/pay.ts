@@ -1,13 +1,15 @@
 /**
- * Pay rules as pure functions. A centre pays each instructor one of three ways:
+ * Pay rules as pure functions. A centre pays each instructor one of four ways:
  *   - per hour: payable minutes × rate
  *   - per session: a flat rate for each rostered session
  *   - per day: a flat rate for each day worked (paid on the first session of
  *     the day; the rest of that day's sessions pay 0)
+ *   - per student: the course's student count × rate, for each rostered
+ *     session (dive centres paying per certification candidate)
  */
-export type PayUnit = "hour" | "day" | "session";
+export type PayUnit = "hour" | "day" | "session" | "student";
 
-export const PAY_UNIT_LABEL: Record<PayUnit, string> = { hour: "per hour", session: "per session", day: "per day" };
+export const PAY_UNIT_LABEL: Record<PayUnit, string> = { hour: "per hour", session: "per session", day: "per day", student: "per student" };
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
@@ -18,6 +20,8 @@ export interface PayLineInput {
   payableMinutes: number;
   /** For day rates: is this the first session of that instructor's day? */
   firstOfDay: boolean;
+  /** For per-student rates: students on the course (its places). Missing or 0 → pay is unknown, not zero. */
+  students?: number | null;
 }
 
 /** Pay for one line, or null when no rate is set. */
@@ -27,6 +31,7 @@ export function linePay(i: PayLineInput): number | null {
     case "hour": return round2((Math.max(0, i.payableMinutes) / 60) * i.rate);
     case "session": return round2(i.rate);
     case "day": return i.firstOfDay ? round2(i.rate) : 0;
+    case "student": return i.students && i.students > 0 ? round2(i.students * i.rate) : null;
   }
 }
 

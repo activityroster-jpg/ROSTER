@@ -5,6 +5,8 @@
  * implies when the office hasn't set lines. Anyone assigned beyond the lines
  * still shows, marked "not required". Pure.
  */
+import { bySeniority } from "./role-rank";
+
 export interface SlotLine { roleTypeId: string; roleName: string; count: number }
 
 export interface SlotPerson {
@@ -32,7 +34,8 @@ export interface RoleSlot {
 export function buildRoleSlots(lines: readonly SlotLine[], people: readonly SlotPerson[]): RoleSlot[] {
   const slots: RoleSlot[] = [];
   const used = new Set<SlotPerson>();
-  for (const line of lines) {
+  // Higher levels first: Senior Instructor above Instructor above Assistant, safety and support last.
+  for (const line of bySeniority(lines)) {
     const inRole = people.filter((p) => p.roleTypeId === line.roleTypeId && !used.has(p));
     // Declined people never hold a place: they show, but the place stays open.
     const holding = inRole.filter((p) => p.status !== "declined");

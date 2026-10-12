@@ -5,7 +5,7 @@ import { requirePlatformAdmin } from "@/lib/platform/admin";
 import { getDb } from "@/lib/cf/bindings";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { z } from "zod";
-import { LINKEDIN_STATUSES, PROSPECT_INTERACTION_KINDS, PROSPECT_STATUSES, type NewMarketingProspect, type ProspectStatus } from "@/lib/db/schema";
+import { ACTIVITY_TYPES, LINKEDIN_STATUSES, PROSPECT_INTERACTION_KINDS, PROSPECT_STATUSES, type ActivityType, type NewMarketingProspect, type ProspectStatus } from "@/lib/db/schema";
 import { OUTREACH_TICKS, PIPELINE_META, PIPELINE_STAGES, PROSPECT_STATUS_META, letterPrinted, parseLinkedinContacts, primaryProspectStatus, stageOf, statusesForStage, toggleOutreach, topRanks, type OutreachTick, type PipelineStage } from "@/lib/marketing";
 import { parseCsv } from "@/lib/import/parse";
 import { addressComplete, parseProspectStatuses, primaryProspectStatus as primaryOf } from "@/lib/marketing";
@@ -62,6 +62,7 @@ export async function createProspectAction(_prev: ProspectResult, fd: FormData):
     linkedinUrl: str(fd, "linkedinUrl"),
     contactName: str(fd, "contactName"),
     contactRole: str(fd, "contactRole"),
+    activityType: fd.get("activityType") === "padi_centre" ? "padi_centre" : "rya_centre",
     source: "manual",
   });
   revalidatePath("/admin/marketing");
@@ -479,6 +480,15 @@ export async function setProspectBasisAction(id: string, input: { soleTrader: bo
   const repo = await platform();
   const basis = (["legitimate_interests", "consent", "existing_customer"] as const).find((b) => b === input.lawfulBasis) ?? "legitimate_interests";
   await repo.updateProspect(id, { soleTrader: Boolean(input.soleTrader), lawfulBasis: basis, basisNote: (input.basisNote ?? "").trim().slice(0, 200) || null });
+  revalidateProspects(id);
+  return { ok: true };
+}
+
+/** Which activity pack a prospect would get (the Centre type dropdown on its page). */
+export async function setProspectActivityTypeAction(id: string, activityType: string): Promise<ProspectResult> {
+  const repo = await platform();
+  const type = (ACTIVITY_TYPES as readonly string[]).includes(activityType) ? (activityType as ActivityType) : "rya_centre";
+  await repo.updateProspect(id, { activityType: type });
   revalidateProspects(id);
   return { ok: true };
 }

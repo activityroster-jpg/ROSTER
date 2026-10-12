@@ -117,7 +117,7 @@ export default function DivingPage() {
               ))}
             </div>
             <p className="mt-6 text-sm text-slate-600">
-              <Link href="/learn?topic=rostering" className="font-semibold text-teal hover:underline">📖 How it works, step by step</Link>
+              <Link href="/learn?topic=dive-centres" className="font-semibold text-teal hover:underline">📖 The dive-centre guide</Link>
               <span className="mx-2 text-slate-300">·</span>
               <Link href="/demo" className="font-semibold text-teal hover:underline">Every screen in the tour</Link>
             </p>

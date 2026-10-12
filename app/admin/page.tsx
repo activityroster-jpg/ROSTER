@@ -51,11 +51,12 @@ function within<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
   return Promise.race([p.catch(() => fallback), new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms))]);
 }
 
-export default async function AdminOverviewPage({ searchParams }: { searchParams: Promise<{ q?: string; show?: string; removed?: string; logins?: string }> }) {
+export default async function AdminOverviewPage({ searchParams }: { searchParams: Promise<{ q?: string; show?: string; type?: string; removed?: string; logins?: string }> }) {
   await requirePlatformAdmin();
   const sp = await searchParams;
   const q = (typeof sp.q === "string" ? sp.q : "").trim().toLowerCase();
   const show = sp.show === "attention" ? "attention" : sp.show === "trial" ? "trial" : sp.show === "quiet" ? "quiet" : "all";
+  const type = sp.type === "rya_centre" || sp.type === "padi_centre" ? sp.type : "";
   const db = await getDb();
   const platform = new PlatformRepository(db);
   const env = getEnv();
@@ -80,6 +81,7 @@ export default async function AdminOverviewPage({ searchParams }: { searchParams
   const quiet = (o: (typeof allOrgs)[number]) => { const d = lastActivity.get(o.id); return !d || now - d.getTime() > 14 * DAY; };
   const orgs = allOrgs.filter((o) => {
     if (q && !`${o.name} ${o.slug} ${owners.get(o.id) ?? ""}`.toLowerCase().includes(q)) return false;
+    if (type && (o.activityType ?? "rya_centre") !== type) return false;
     if (show === "attention") return needsAttention(o);
     if (show === "trial") return trialState(o, pricing.trialDays).kind !== "paid";
     if (show === "quiet") return quiet(o);
@@ -234,7 +236,12 @@ export default async function AdminOverviewPage({ searchParams }: { searchParams
             <button key={k} type="submit" name="show" value={k} className={`rounded-md px-3 py-1 font-medium ${show === k ? "bg-navy text-white" : "text-slate-500 hover:text-navy"}`}>{label}</button>
           ))}
         </div>
-        {q || show !== "all" ? <Link href="/admin" className="text-sm text-slate-500 hover:text-navy">Clear</Link> : null}
+        <select name="type" defaultValue={type} aria-label="Centre type" className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm outline-none focus:border-teal">
+          <option value="">All types</option>
+          <option value="rya_centre">RYA centres & schools</option>
+          <option value="padi_centre">Dive centres</option>
+        </select>
+        {q || show !== "all" || type ? <Link href="/admin" className="text-sm text-slate-500 hover:text-navy">Clear</Link> : null}
       </form>
 
       <Card className="overflow-x-auto p-0">

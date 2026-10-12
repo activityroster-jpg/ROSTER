@@ -40,14 +40,16 @@ export interface ProspectRow {
   /** They replied, met us or asked for more: the orange vibe. */
   engaged: boolean;
   source: string;
+  /** "rya_centre" or "padi_centre" (lib/packs). */
+  activityType: string;
   soleTrader: boolean;
   lawfulBasis: string;
   /** Epoch ms — "Added" sort. */
   createdAt: number;
 }
 
-type Filters = { name: string; region: string; email: string; contact: string; status: string; top: string };
-const EMPTY: Filters = { name: "", region: "", email: "", contact: "", status: "", top: "" };
+type Filters = { name: string; region: string; email: string; contact: string; status: string; top: string; type: string };
+const EMPTY: Filters = { name: "", region: "", email: "", contact: "", status: "", top: "", type: "" };
 
 type SortKey = "name" | "region" | "email" | "addr" | "vibe" | "status" | "added";
 type Sort = { key: SortKey; dir: "asc" | "desc" };
@@ -141,7 +143,8 @@ export function ProspectsTable({ rows: serverRows }: { rows: ProspectRow[] }) {
       (!filters.email || has(r.email, filters.email)) &&
       (!filters.contact || has(`${r.contactName} ${r.contactRole}`, filters.contact)) &&
       statusMatch(r, filters.status) &&
-      topMatch(r, filters.top),
+      topMatch(r, filters.top) &&
+      (!filters.type || r.activityType === filters.type),
     );
     // The top 250 read biggest first unless another sort is chosen.
     if (!sort && filters.top) return [...kept].sort((a, b) => (a.topRank ?? 1e6) - (b.topRank ?? 1e6));
@@ -218,6 +221,11 @@ export function ProspectsTable({ rows: serverRows }: { rows: ProspectRow[] }) {
         <div className="flex items-center gap-3">
           {pager}
           {batchMsg ? <span className="text-xs text-slate-500">{batchMsg}</span> : null}
+          <select value={filters.type} onChange={(e) => set("type", e.target.value)} aria-label="Centre type filter" className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs font-medium text-navy outline-none focus:border-teal">
+            <option value="">All types</option>
+            <option value="rya_centre">RYA centres & schools</option>
+            <option value="padi_centre">Dive centres</option>
+          </select>
           <select value={filters.top} onChange={(e) => set("top", e.target.value)} aria-label="Top 250 filter" className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs font-medium text-navy outline-none focus:border-teal">
             <option value="">All centres</option>
             <option value="top">Top 250 (biggest)</option>

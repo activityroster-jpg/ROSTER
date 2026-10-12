@@ -582,6 +582,13 @@
       "when": 1791800000000,
       "tag": "0082_remove_parental_permission",
       "breakpoints": true
+    },
+    {
+      "idx": 83,
+      "version": "6",
+      "when": 1791831006891,
+      "tag": "0083_prospect_activity_type",
+      "breakpoints": true
     }
   ]
 }

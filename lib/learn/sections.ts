@@ -570,7 +570,7 @@ export const SECTIONS: Section[] = [
       { kind: "p", text: "Settings → Pay rates holds every rate your centre pays. Most centres set a standard rate for each role and they're done; anyone paid differently gets their own rate. Each rate is per hour, per session or per day." },
       { kind: "sub", text: "1 · Standard rates by role" },
       { kind: "steps", items: [
-        "Enter the rate for each role (Instructor, Senior Instructor, Assistant, Safety boat driver and so on) and choose per hour, per session or per day.",
+        "Enter the rate for each role (Instructor, Senior Instructor, Assistant, Safety boat driver and so on) and choose per hour, per session, per day or per student (the rate times the students on the course, for centres that pay per certification candidate).",
         "“Everyone else” is the rate for any role without its own.",
         "If a role pays differently on some courses (say, camps by the day), press “+ Different rate on a course” beside the role and set it.",
       ] },
@@ -741,6 +741,28 @@ export const SECTIONS: Section[] = [
     ],
   },
   {
+    id: "dive-centres",
+    icon: "🤿",
+    label: "Dive centres (PADI)",
+    blurb: "What changes when you sign up as a PADI dive centre: ratings, courses, dive slots and pay per student.",
+    blocks: [
+      { kind: "p", text: "Choose “PADI dive centre” at sign-up and your centre starts with the PADI pack instead of the RYA one. Everything else on the platform is the same: the roster, availability, the staff app, payroll and the printable rota." },
+      { kind: "sub", text: "What the PADI pack sets up" },
+      { kind: "bullets", items: [
+        "Ratings instead of RYA qualifications: Divemaster, Assistant Instructor, Open Water Scuba Instructor, Master Scuba Diver Trainer, IDC Staff Instructor, Master Instructor and Course Director, plus the specialty instructor ratings. Tick what each person holds on their staff page.",
+        "Roles: Instructor, Assistant Instructor, Divemaster, Boat Skipper, Dive Centre Staff and Volunteer. Rename or add to them in Settings → Roles.",
+        "Courses: the core PADI courses from Discover Scuba Diving through Open Water, Advanced, Rescue and Divemaster, plus the common specialties. Add your own in Course setup.",
+        "Slots: Morning dive, Afternoon dive and Night dive, with the times you can change in Settings.",
+        "Medical and expiring documents: keep diving medicals, EFR and insurance on each person's Documents card; the platform reminds you before they expire. Whether an out-of-date document blocks rostering is your choice in Settings.",
+      ] },
+      { kind: "sub", text: "Paying per student" },
+      { kind: "p", text: "Many dive centres pay instructors per certification candidate rather than by the hour. In Settings → Pay rates choose “per student” for a role, a person or a course: each rostered session then pays the rate times the students on that course (its places). Hourly, per session and per day still work alongside it." },
+      { kind: "sub", text: "Running both" },
+      { kind: "p", text: "A centre that runs sailing and diving adds the other pack's lists from the bottom of Course setup. The centre type at sign-up only chooses what you start with." },
+      { kind: "tip", text: "The dive-centre page on the website (activityroster.com/diving) is the one to send a PADI centre that asks what we do for them." },
+    ],
+  },
+  {
     id: "help-assistant",
     icon: "💬",
     label: "The Help button",
@@ -828,5 +850,6 @@ export const GUIDE_STAGES: { label: string; ids: string[] }[] = [
   { label: "Build the roster", ids: ["availability", "office-managed", "dashboard", "board", "rostering", "bulk", "problems", "rota"] },
   { label: "Run the season", ids: ["leave", "time", "pay-rates", "notifications"] },
   { label: "Account, billing & data", ids: ["plans", "billing", "trial-survey", "admin-security", "data", "retention"] },
+  { label: "Dive centres", ids: ["dive-centres"] },
   { label: "Help & troubleshooting", ids: ["help-assistant", "feature-requests", "if-the-platform-is-down"] },
 ];

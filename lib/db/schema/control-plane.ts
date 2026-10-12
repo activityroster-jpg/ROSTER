@@ -411,6 +411,8 @@ export const marketingProspect = sqliteTable("marketing_prospect", {
   linkedinCheckedAt: integer("linkedin_checked_at", { mode: "timestamp_ms" }),
   /** Top 250 by hand: true keeps them in, false keeps them out, null follows the size estimate (lib/marketing topRanks). */
   topPick: integer("top_pick", { mode: "boolean" }),
+  /** Which activity pack this centre would get: an RYA centre/school or a PADI dive centre (lib/packs). */
+  activityType: text("activity_type", { enum: ACTIVITY_TYPES }).notNull().default("rya_centre"),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 }, (t) => [

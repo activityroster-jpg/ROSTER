@@ -1,0 +1,1 @@
+ALTER TABLE `marketing_prospect` ADD `activity_type` text DEFAULT 'rya_centre' NOT NULL;

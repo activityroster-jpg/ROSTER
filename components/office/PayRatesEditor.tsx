@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { savePayRatesAction } from "@/app/(app)/office/settings/pay-actions";
 
-export type PayUnitValue = "hour" | "session" | "day";
+export type PayUnitValue = "hour" | "session" | "day" | "student";
 export interface RateRow { instructorId: string | null; roleTypeId: string | null; courseTypeId: string | null; unit: PayUnitValue; rate: number }
 export interface NamedItem { id: string; name: string }
 export interface PersonItem { id: string; name: string; employment: string }
@@ -13,6 +13,7 @@ const UNITS: { value: PayUnitValue; label: string }[] = [
   { value: "hour", label: "per hour" },
   { value: "session", label: "per session" },
   { value: "day", label: "per day" },
+  { value: "student", label: "per student" },
 ];
 const unitLabel = (u: PayUnitValue) => UNITS.find((x) => x.value === u)?.label ?? u;
 const keyOf = (r: { instructorId: string | null; roleTypeId: string | null; courseTypeId: string | null }) => `${r.instructorId ?? ""}|${r.roleTypeId ?? ""}|${r.courseTypeId ?? ""}`;

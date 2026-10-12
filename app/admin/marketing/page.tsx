@@ -56,6 +56,7 @@ export default async function AdminMarketingPage() {
     topPick: p.topPick ?? null,
     engaged: Boolean(p.engagedAt),
     source: p.source,
+    activityType: p.activityType ?? "rya_centre",
     soleTrader: Boolean(p.soleTrader),
     lawfulBasis: p.lawfulBasis ?? "legitimate_interests",
     createdAt: p.createdAt instanceof Date ? p.createdAt.getTime() : Number(p.createdAt),

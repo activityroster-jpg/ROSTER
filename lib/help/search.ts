@@ -186,7 +186,9 @@ function queryTerms(q: string, df: Map<string, number>, words: Map<string, strin
     if (max > 0 && !/^\d+$/.test(w)) {
       for (const [word, term] of words) {
         if (Math.abs(word.length - w.length) > max) continue;
-        const d = Math.min(editDistance(w, word, max), editDistance(stem(w), word, max));
+        // Short guide words (PADI, rota, pay) have too many near-neighbours: only a slip in the
+        // word as typed reaches them, never one in its stem ("paris" must not become "padi").
+        const d = word.length <= 4 ? editDistance(w, word, max) : Math.min(editDistance(w, word, max), editDistance(stem(w), word, max));
         if (d > max) continue;
         const f = df.get(term) ?? 0;
         if (!best || d < best.d || (d === best.d && f > best.df)) best = { term, d, df: f };

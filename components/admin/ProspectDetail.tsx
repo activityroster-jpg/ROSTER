@@ -17,6 +17,7 @@ import {
   addInteractionAction,
   deleteInteractionAction,
   setEngagedAction,
+  setProspectActivityTypeAction,
   setProspectBasisAction,
   updateProspectAction,
 } from "@/app/admin/marketing/actions";
@@ -42,6 +43,7 @@ export interface ProspectDetailData {
   stage: PipelineStage;
   engagedAt: number | null;
   source: string;
+  activityType: string;
   soleTrader: boolean;
   lawfulBasis: string;
   createdAt: number;
@@ -219,6 +221,12 @@ export function ProspectDetail({ prospect: p, interactions }: { prospect: Prospe
             {dirty ? <button type="button" onClick={() => { setDraft(toDraft(p)); setDirty(false); setMsg(null); }} className="text-xs text-slate-500 hover:underline">Discard changes</button> : null}
             {msg ? <span className={`text-xs ${msg.ok ? "text-starboard" : "text-port"}`}>{msg.text}</span> : null}
           </div>
+
+          <h3 className="mb-2 mt-6 text-sm font-semibold text-navy">Centre type</h3>
+          <select value={p.activityType} disabled={pending} onChange={(e) => run(() => setProspectActivityTypeAction(p.id, e.target.value))} aria-label="Centre type" className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal">
+            <option value="rya_centre">RYA centre or school</option>
+            <option value="padi_centre">PADI dive centre</option>
+          </select>
 
           <h3 className="mb-2 mt-6 text-sm font-semibold text-navy">Lawful basis</h3>
           <div className="flex flex-wrap items-center gap-3 text-sm">
