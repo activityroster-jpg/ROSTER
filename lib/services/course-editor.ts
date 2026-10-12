@@ -136,7 +136,7 @@ export async function getCourseEditorData(
     roles: roles.filter((r) => r.active).map((r) => ({ id: r.id, name: r.name })),
     ratioOn,
     ratio: ratioOn ? { ok: ratio.ok, understaffed: ratio.understaffed, missingSafetyCover: ratio.missingSafetyCover } : undefined,
-    staffing: staffingViewFrom(course, ct, roles, requirements.filter((r) => r.courseId === course.id), mine),
+    staffing: staffingViewFrom(course, ct, roles, requirements.filter((r) => r.courseId === course.id), mine, nameById),
     computedRequired: ratio.requiredStaff,
     roleNeeds: roleNeedsByCourse(
       requirements.filter((r) => r.courseId === course.id),

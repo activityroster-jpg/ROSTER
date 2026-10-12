@@ -249,7 +249,7 @@ export async function setCourseStudentsAction(courseId: string, students: number
 }
 
 /** The staffing panel: students booked and the role lines; staff required is derived from the lines. */
-export async function setCourseStaffingAction(input: { courseId: string; students: number; roles: { roleTypeId: string; count: number }[]; expectedVersion?: number | null }): Promise<ActionState> {
+export async function setCourseStaffingAction(input: { courseId: string; students: number; roles: { roleTypeId: string; count: number }[]; remove?: string[]; expectedVersion?: number | null }): Promise<ActionState> {
   const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const parsed = courseStaffingSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: firstIssue(parsed.error, "Check the staffing values") };

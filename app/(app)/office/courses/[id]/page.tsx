@@ -55,7 +55,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
   ]);
 
   const ct = courseTypes.find((c) => c.id === course.courseTypeId);
-  const staffing = staffingViewFrom(course, ct, roles, requirements.filter((r) => r.courseId === id), assignments);
+  const staffing = staffingViewFrom(course, ct, roles, requirements.filter((r) => r.courseId === id), assignments, new Map(instructors.map((i) => [i.id, i.name])));
   const membersBySession = await staffBySession(repos, ctx, sessions, assignments);
   const roleNameOf = (rid: string) => roles.find((r) => r.id === rid)?.name ?? "Role";
   // Declared before the per-day loop below uses it: declaring it later threw

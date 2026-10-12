@@ -7,13 +7,15 @@ import { useEffect, useRef } from "react";
  * on destructive actions with a proper dialog"). Pass what will happen as
  * `consequences`, one plain line each; the primary button says the verb.
  */
-export function ConfirmDialog({ open, title, consequences, confirmLabel = "Confirm", tone = "port", busy = false, onConfirm, onCancel, children }: {
+export function ConfirmDialog({ open, title, consequences, confirmLabel = "Confirm", tone = "port", busy = false, confirmDisabled = false, onConfirm, onCancel, children }: {
   open: boolean;
   title: string;
   consequences: string[];
   confirmLabel?: string;
   tone?: "port" | "teal" | "navy";
   busy?: boolean;
+  /** The primary button waits until a choice in `children` is complete. */
+  confirmDisabled?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
   /** Optional extra controls (a reason box, a choice). */
@@ -39,7 +41,7 @@ export function ConfirmDialog({ open, title, consequences, confirmLabel = "Confi
         {children ? <div className="mt-3">{children}</div> : null}
         <div className="mt-5 flex items-center justify-end gap-2">
           <button type="button" onClick={onCancel} disabled={busy} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-navy hover:bg-slate-50 disabled:opacity-50">Keep as it is</button>
-          <button type="button" onClick={onConfirm} disabled={busy} className={`rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 ${btn}`}>{busy ? "Working…" : confirmLabel}</button>
+          <button type="button" onClick={onConfirm} disabled={busy || confirmDisabled} className={`rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 ${btn}`}>{busy ? "Working…" : confirmLabel}</button>
         </div>
       </div>
     </dialog>

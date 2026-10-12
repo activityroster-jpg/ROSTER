@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
 import {
@@ -116,7 +116,7 @@ export interface StaffingView {
   ratio: number;
   requiresSafetyBoat: boolean;
   roles: StaffingRole[];
-  lines: { roleTypeId: string; roleName: string; count: number; filled: number }[];
+  lines: { roleTypeId: string; roleName: string; count: number; filled: number; /** Who fills the places now (for choosing who comes off when places shrink). */ people: { instructorId: string; name: string }[] }[];
   /** Derived: the role lines' total, or what the ratio implies when there are none. */
   required: number;
   /** The course's last-changed time when this was read, for the "changed since you opened it" check. */
@@ -133,7 +133,8 @@ export function staffingViewFrom(
   courseType: Pick<CourseType, "requiresSafetyBoat"> | null | undefined,
   roles: readonly RoleType[],
   requirements: readonly Pick<CourseRoleRequirement, "roleTypeId" | "count">[],
-  assignments: readonly Pick<CourseStaff, "roleTypeId" | "status">[],
+  assignments: readonly Pick<CourseStaff, "roleTypeId" | "status" | "instructorId">[],
+  names?: ReadonlyMap<string, string>,
 ): StaffingView {
   const staffingRoles: StaffingRole[] = roles.map((r) => ({ id: r.id, name: r.name, countsTowardRatio: Boolean(r.countsTowardRatio), isSafetyCover: Boolean(r.isSafetyCover), active: Boolean(r.active) }));
   const input = { students: course.capacity, ratio: course.ratio, requiresSafetyBoat: Boolean(courseType?.requiresSafetyBoat), roles: staffingRoles };
@@ -142,6 +143,7 @@ export function staffingViewFrom(
     roleName: roles.find((r) => r.id === l.roleTypeId)?.name ?? "Role",
     count: l.count,
     filled: assignments.filter((a) => a.roleTypeId === l.roleTypeId && a.status !== "declined").length,
+    people: assignments.filter((a) => a.roleTypeId === l.roleTypeId && a.status !== "declined").map((a) => ({ instructorId: a.instructorId, name: names?.get(a.instructorId) ?? "Someone" })),
   }));
   const fromLines = derivedStaffRequired(lines);
   const suggested = suggestRoles(input);
@@ -180,7 +182,7 @@ export async function getCourseStaffing(repos: Repositories, ctx: AnyTenantConte
  * screens confirm that first); `removed` lists them so the caller can re-sync
  * hours and tell them. Audited.
  */
-export async function setCourseStaffing(repos: Repositories, ctx: AnyTenantContext, courseId: string, input: { students: number; roles: readonly { roleTypeId: string; count: number }[]; expectedVersion?: number | null }): Promise<Result & { removed?: { instructorId: string; roleTypeId: string }[] }> {
+export async function setCourseStaffing(repos: Repositories, ctx: AnyTenantContext, courseId: string, input: { students: number; roles: readonly { roleTypeId: string; count: number }[]; remove?: readonly string[]; expectedVersion?: number | null }): Promise<Result & { removed?: { instructorId: string; roleTypeId: string }[] }> {
   const t = repos.tenant;
   // Every change and its log entry in one batch: the course never ends up with half the old list and half the new.
   const ops: PromiseLike<unknown>[] = [];
@@ -201,16 +203,17 @@ export async function setCourseStaffing(repos: Repositories, ctx: AnyTenantConte
     if (row.count !== want.count) ops.push(t.courseRoleRequirement.updateStatement(ctx, row.id, { count: want.count }));
   }
   for (const l of lines) if (!seen.has(l.roleTypeId)) ops.push(t.courseRoleRequirement.insertStatement(ctx, { courseId, roleTypeId: l.roleTypeId, count: l.count }));
-  // People in a role the course no longer lists come off: their course-level
-  // place and any one-day adds in that role.
+  // Fewer places than people: the office chose who comes off (`remove`), or,
+  // when the screen didn't ask, everyone in a role the course no longer lists.
+  // Each comes off their course-level place and any one-day adds on this course.
   const removed: { instructorId: string; roleTypeId: string }[] = [];
-  if (dropped.size) {
-    const roleIds = [...dropped];
-    const staff = await t.courseStaff.list(ctx, and(eq(courseStaffTable.courseId, courseId), inArray(courseStaffTable.roleTypeId, roleIds)));
-    for (const a of staff) { ops.push(t.courseStaff.deleteStatement(ctx, a.id)); removed.push({ instructorId: a.instructorId, roleTypeId: a.roleTypeId }); }
+  const allStaff = input.remove?.length || dropped.size ? await t.courseStaff.list(ctx, eq(courseStaffTable.courseId, courseId)) : [];
+  const going = new Set<string>(input.remove ? input.remove.filter((id) => allStaff.some((a) => a.instructorId === id)) : allStaff.filter((a) => dropped.has(a.roleTypeId)).map((a) => a.instructorId));
+  if (going.size) {
+    for (const a of allStaff) if (going.has(a.instructorId)) { ops.push(t.courseStaff.deleteStatement(ctx, a.id)); removed.push({ instructorId: a.instructorId, roleTypeId: a.roleTypeId }); }
     const sessionIds = (await t.courseSession.list(ctx, eq(courseSessionTable.courseId, courseId))).map((s) => s.id);
     if (sessionIds.length) {
-      const dayAdds = await t.sessionStaffOverride.listIn(ctx, sessionStaffOverrideTable.courseSessionId, sessionIds, inArray(sessionStaffOverrideTable.roleTypeId, roleIds));
+      const dayAdds = await t.sessionStaffOverride.listIn(ctx, sessionStaffOverrideTable.courseSessionId, sessionIds, inArray(sessionStaffOverrideTable.instructorId, [...going]));
       for (const o of dayAdds) { ops.push(t.sessionStaffOverride.deleteStatement(ctx, o.id)); if (!removed.some((r) => r.instructorId === o.instructorId)) removed.push({ instructorId: o.instructorId, roleTypeId: o.roleTypeId }); }
     }
   }

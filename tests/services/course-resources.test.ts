@@ -28,12 +28,12 @@ describe("staffing: one panel, staff required derived from the role lines", () =
   });
 
   it("builds the view with filled counts and falls back to the ratio when there are no lines", () => {
-    const view = staffingViewFrom({ capacity: 10, ratio: 4, staffRequired: null }, { requiresSafetyBoat: false }, roles.map((r) => ({ ...r, code: r.id, organisationId: "o", createdAt: new Date(), updatedAt: new Date(), isFirstAider: false, sortOrder: 0 })) as never, [], [{ roleTypeId: "in", status: "assigned" }]);
+    const view = staffingViewFrom({ capacity: 10, ratio: 4, staffRequired: null }, { requiresSafetyBoat: false }, roles.map((r) => ({ ...r, code: r.id, organisationId: "o", createdAt: new Date(), updatedAt: new Date(), isFirstAider: false, sortOrder: 0 })) as never, [], [{ roleTypeId: "in", status: "assigned", instructorId: "p-in-assigned" }]);
     expect(view.required).toBe(3);
     expect(view.fromRoles).toBe(false);
     expect(view.assigned).toBe(1);
-    const withLines = staffingViewFrom({ capacity: 10, ratio: 4, staffRequired: 2 }, { requiresSafetyBoat: false }, roles.map((r) => ({ ...r, code: r.id, organisationId: "o", createdAt: new Date(), updatedAt: new Date(), isFirstAider: false, sortOrder: 0 })) as never, [{ roleTypeId: "in", count: 2 }], [{ roleTypeId: "in", status: "confirmed" }, { roleTypeId: "in", status: "declined" }]);
-    expect(withLines.lines).toEqual([{ roleTypeId: "in", roleName: "Instructor", count: 2, filled: 1 }]);
+    const withLines = staffingViewFrom({ capacity: 10, ratio: 4, staffRequired: 2 }, { requiresSafetyBoat: false }, roles.map((r) => ({ ...r, code: r.id, organisationId: "o", createdAt: new Date(), updatedAt: new Date(), isFirstAider: false, sortOrder: 0 })) as never, [{ roleTypeId: "in", count: 2 }], [{ roleTypeId: "in", status: "confirmed", instructorId: "p-in-confirmed" }, { roleTypeId: "in", status: "declined", instructorId: "p-in-declined" }]);
+    expect(withLines.lines).toEqual([{ roleTypeId: "in", roleName: "Instructor", count: 2, filled: 1, people: [{ instructorId: "p-in-confirmed", name: "Someone" }] }]);
     expect(withLines.required).toBe(2);
     expect(withLines.fromRoles).toBe(true);
   });
@@ -87,7 +87,8 @@ describe("course resources and staffing against the database", () => {
     expect(course.capacity).toBe(9);
     expect(course.staffRequired).toBe(2);
     const after = (await getCourseStaffing(repos, ctx, courseId))!;
-    expect(after.lines).toEqual([{ roleTypeId: counting.id, roleName: counting.name, count: 2, filled: 1 }]);
+    expect(after.lines.map(({ people: _p, ...l }) => l)).toEqual([{ roleTypeId: counting.id, roleName: counting.name, count: 2, filled: 1 }]);
+    expect(after.lines[0]!.people).toHaveLength(1);
     expect(after.fromRoles).toBe(true);
     // Clearing the lines hands the decision back to the ratio.
     await setCourseStaffing(repos, ctx, courseId, { students: 9, roles: [] });

@@ -67,6 +67,8 @@ export const courseStaffingSchema = z.object({
   courseId: idSchema,
   students: z.number().int().min(0).max(500),
   roles: z.array(z.object({ roleTypeId: idSchema, count: z.number().int().min(0).max(50) })).max(20),
+  /** Who comes off the course because fewer places are left than people (chosen in the staffing editor). */
+  remove: z.array(idSchema).max(50).optional(),
   expectedVersion: expectedVersionSchema,
 });
 /** The office setting availability for a staff member: the instructor id comes from the client here, so it is checked. */

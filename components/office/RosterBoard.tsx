@@ -12,6 +12,7 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { groupCandidates } from "@/lib/domain/assign-order";
 import { PeoplePicker } from "./PeoplePicker";
 import { AddRolePlace } from "./AddRolePlace";
+import { SurplusPicker, type SurplusGroup } from "./SurplusPicker";
 
 type Layout = "courses" | "people";
 const STORAGE = "ar.board.layout";
@@ -262,12 +263,14 @@ function candidateNote(i: BoardInstructor, slotKey: string, courseTypeId: string
   return bits.join(" · ");
 }
 
-/** Who is on another session in the same slot that day, and which course. */
+/** Who is on another session that day in the same slot, or at times that overlap this one, and which course. */
 function elsewhereInSlot(days: RotaDay[], date: string, slot: string, sessionId: string): Map<string, string> {
   const out = new Map<string, string>();
   const day = days.find((d) => d.date === date);
+  const me = day?.sessions.find((s) => s.sessionId === sessionId);
+  const overlaps = (s: RotaSession) => Boolean(me && s.startAt < me.endAt && me.startAt < s.endAt);
   for (const s of day?.sessions ?? []) {
-    if (s.sessionId === sessionId || s.slot !== slot) continue;
+    if (s.sessionId === sessionId || (s.slot !== slot && !overlaps(s))) continue;
     for (const m of s.staff) if (m.status !== "declined" && !out.has(m.instructorId)) out.set(m.instructorId, s.courseName);
   }
   return out;
@@ -339,22 +342,26 @@ function SlotRow({ roleTypeId, roleName, member, extra, candidates, byId, slotKe
 }
 
 /** Students and the roles the course needs, editable for the whole course. */
-function StaffingEditor({ courseId, students, needs, roles, staff, onSaved, onCancel }: {
-  courseId: string; students: number; needs: { roleTypeId: string; count: number }[]; roles: BoardData["roles"]; staff: Member[]; onSaved: (message?: string) => void; onCancel: () => void;
+function StaffingEditor({ courseId, students, needs, roles, filling, onSaved, onCancel }: {
+  courseId: string; students: number; needs: { roleTypeId: string; count: number }[]; roles: BoardData["roles"]; filling: { roleTypeId: string; roleName: string; member?: Member; extra?: boolean }[]; onSaved: (message?: string) => void; onCancel: () => void;
 }) {
   const [n, setN] = useState(String(students || ""));
   const [lines, setLines] = useState(needs.length ? needs.map((x) => ({ ...x })) : [{ roleTypeId: roles[0]?.id ?? "", count: 1 }]);
   const [pending, start] = useTransition();
   const [err, setErr] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
-  // Roles coming off the list that still have people in them: they come off the course too, so ask first.
-  const kept = new Set(lines.filter((l) => l.roleTypeId && l.count > 0).map((l) => l.roleTypeId));
-  const losing = staff.filter((m) => m.status !== "declined" && needs.some((x) => x.roleTypeId === m.roleTypeId) && !kept.has(m.roleTypeId));
-  const save = () => {
+  // Fewer places than people in a role (removed, or its count lowered): the office picks who comes off.
+  // "Filling" follows the panel's rows, so an Assistant Instructor holding an Instructor place counts for that line.
+  const surplus: SurplusGroup[] = needs.map((need) => {
+    const people = filling.flatMap((sl) => (sl.roleTypeId === need.roleTypeId && sl.member && !sl.extra && sl.member.status !== "declined" ? [{ instructorId: sl.member.instructorId, name: sl.member.name }] : []));
+    const count = lines.filter((l) => l.roleTypeId === need.roleTypeId).reduce((t, l) => t + l.count, 0);
+    return { roleName: roles.find((r) => r.id === need.roleTypeId)?.name ?? "Role", people, surplus: people.length - count };
+  }).filter((g) => g.surplus > 0);
+  const save = (remove?: string[]) => {
     setConfirming(false);
     setErr(null);
     start(async () => {
-      const r = await setCourseStaffingAction({ courseId, students: Math.max(0, Math.round(Number(n) || 0)), roles: lines.filter((l) => l.roleTypeId && l.count > 0) });
+      const r = await setCourseStaffingAction({ courseId, students: Math.max(0, Math.round(Number(n) || 0)), roles: lines.filter((l) => l.roleTypeId && l.count > 0), remove });
       if (r.ok) onSaved(r.message); else setErr(r.error ?? "That didn't save");
     });
   };
@@ -378,15 +385,10 @@ function StaffingEditor({ courseId, students, needs, roles, staff, onSaved, onCa
       <button type="button" onClick={() => setLines((ls) => [...ls, { roleTypeId: roles[0]?.id ?? "", count: 1 }])} className="mt-2 text-xs font-medium text-teal hover:underline">+ Add a role</button>
       {err ? <p className="mt-2 text-xs text-port">{err}</p> : null}
       <div className="mt-3 flex items-center gap-2">
-        <button type="button" disabled={pending} onClick={() => (losing.length ? setConfirming(true) : save())} className="rounded-lg bg-teal px-3 py-1.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{pending ? "Saving…" : "Save"}</button>
+        <button type="button" disabled={pending} onClick={() => (surplus.length ? setConfirming(true) : save([]))} className="rounded-lg bg-teal px-3 py-1.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{pending ? "Saving…" : "Save"}</button>
         <button type="button" onClick={onCancel} className="text-sm text-slate-500 hover:text-navy">Cancel</button>
       </div>
-      <ConfirmDialog open={confirming} title={`Take ${losing.length === 1 ? losing[0]!.name : `${losing.length} people`} off this course?`} confirmLabel="Remove the role and its people" busy={pending} onCancel={() => setConfirming(false)} onConfirm={save}
-        consequences={[
-          `A role you removed still has people in it: ${losing.map((m) => `${m.name} (${m.role})`).join(", ")}.`,
-          "Saving takes them off every day of this course; they are told, and their unapproved pay lines for it are removed.",
-          "Keep the role (or set it to 1) if you want them to stay.",
-        ]} />
+      <SurplusPicker open={confirming} groups={surplus} busy={pending} onCancel={() => setConfirming(false)} onConfirm={(ids) => save(ids)} />
     </div>
   );
 }
@@ -462,7 +464,7 @@ function SessionPanel({ data, selected, canEdit, preselect, instructors, byId, o
           <p className="text-sm text-navy"><span className="font-semibold">{s.students || 0}</span> students · <span className="font-semibold">{totalNeeded}</span> staff needed</p>
           {canEdit && meta ? <button type="button" onClick={() => setEditing((v) => !v)} className="rounded border border-slate-300 bg-white px-2 py-0.5 text-xs font-medium text-navy hover:bg-slate-50">{editing ? "Close" : "Edit students & roles"}</button> : null}
         </div>
-        {editing && meta ? <StaffingEditor courseId={meta.courseId} students={s.students} needs={(meta.needs ?? []).map((x) => ({ roleTypeId: x.roleTypeId, count: x.count }))} roles={data.roles} staff={s.staff} onCancel={() => setEditing(false)} onSaved={(message) => { setEditing(false); setMsg({ ok: true, text: message && message !== "Saved" ? message : "Students and roles saved for the whole course" }); onChanged(); }} /> : null}
+        {editing && meta ? <StaffingEditor courseId={meta.courseId} students={s.students} needs={(meta.needs ?? []).map((x) => ({ roleTypeId: x.roleTypeId, count: x.count }))} roles={data.roles} filling={slots} onCancel={() => setEditing(false)} onSaved={(message) => { setEditing(false); setMsg({ ok: true, text: message && message !== "Saved" ? message : "Students and roles saved for the whole course" }); onChanged(); }} /> : null}
         {flags.length ? <ul className="mb-3 space-y-1 rounded-lg bg-port/5 p-2 text-xs text-port">{flags.map((f, i) => <li key={i}>⚠ {f}</li>)}</ul> : null}
 
         <div className="mb-1 flex items-center justify-between">
