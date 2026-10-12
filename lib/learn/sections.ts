@@ -434,7 +434,7 @@ export const SECTIONS: Section[] = [
     blocks: [
       { kind: "p", text: "Assign staff from a course (either the card on the Courses page or the course's own page)." },
       { kind: "steps", items: [
-        "Pick an instructor. The dropdown shows whether they're cleared (and the reason if not) and whether they're available for this course's times.",
+        "Pick an instructor. The list is in three groups, the same everywhere on the platform: 🟢 qualified for the course type and free for its times, then 🟠 qualified but not free, then 🔴 not qualified or not cleared (with the reason). Auto-roster picks in the same order.",
         "Pick their role (e.g. Senior Instructor, Instructor, Safety Boat).",
         "Assign. We check they're qualified, not double-booked, and that the course meets its ratio and safety-cover requirements.",
       ] },

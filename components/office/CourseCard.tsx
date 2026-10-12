@@ -1,5 +1,6 @@
 "use client";
 
+import { TIER_DOT, TIER_LABEL, courseStateAvailable, groupCandidates } from "@/lib/domain/assign-order";
 import { useState, useTransition } from "react";
 import { courseAvailLabel, type CourseAvailState } from "@/lib/domain/availability";
 import { useRouter } from "next/navigation";
@@ -212,8 +213,12 @@ export function CourseCard({
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <select aria-label="Instructor" value={instr} onChange={(ev) => setInstr(ev.target.value)} className={`${inputCls} min-w-[10rem] flex-1`}>
               <option value="">Instructor…</option>
-              {instructors.map((i) => (
-                <option key={i.id} value={i.id}>{i.name}{i.fit ? "" : ` — ${i.reason || "not cleared"}`}{i.qualified === false ? " — not qualified for this type" : ""}{i.avail && i.avail !== "none" ? ` · ${courseAvailLabel(i.avail as CourseAvailState)}` : ""}</option>
+              {groupCandidates(instructors, (i) => ({ fit: i.fit, qualified: i.qualified ?? null, available: courseStateAvailable(i.avail) }), (i) => i.name).map((g) => (
+                <optgroup key={g.tier} label={`${TIER_DOT[g.tier]} ${TIER_LABEL[g.tier]}`}>
+                  {g.items.map((i) => (
+                    <option key={i.id} value={i.id}>{TIER_DOT[g.tier]} {i.name}{i.fit ? "" : ` — ${i.reason || "not cleared"}`}{i.qualified === false ? " — not qualified for this type" : ""}{i.avail && i.avail !== "none" ? ` · ${courseAvailLabel(i.avail as CourseAvailState)}` : ""}</option>
+                  ))}
+                </optgroup>
               ))}
             </select>
             <select aria-label="Role" value={role} onChange={(ev) => setRole(ev.target.value)} className={`${inputCls} min-w-[8rem]`}>

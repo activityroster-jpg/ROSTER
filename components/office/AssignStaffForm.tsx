@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { assignStaffAction, type ActionState } from "@/app/(app)/office/courses/actions";
 import { courseAvailLabel, type CourseAvailState } from "@/lib/domain/availability";
+import { TIER_DOT, TIER_LABEL, courseStateAvailable, groupCandidates } from "@/lib/domain/assign-order";
 
 const initial: ActionState = { ok: false };
 
@@ -29,13 +30,17 @@ export function AssignStaffForm({
       <input type="hidden" name="courseId" value={courseId} />
       <select aria-label="Instructor" name="instructorId" required value={chosen} onChange={(e) => setChosen(e.target.value)} className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal">
         <option value="">Instructor…</option>
-        {instructors.map((i) => (
-          <option key={i.id} value={i.id}>
-            {i.name}
-            {i.fit ? "" : ` — ${i.reason || "not cleared"}`}
-            {i.qualified === false ? " — not qualified for this type" : ""}
-            {i.avail && i.avail !== "none" ? ` · ${availLabel(i.avail)}` : ""}
-          </option>
+        {groupCandidates(instructors, (i) => ({ fit: i.fit, qualified: i.qualified ?? null, available: courseStateAvailable(i.avail) }), (i) => i.name).map((g) => (
+          <optgroup key={g.tier} label={`${TIER_DOT[g.tier]} ${TIER_LABEL[g.tier]}`}>
+            {g.items.map((i) => (
+              <option key={i.id} value={i.id}>
+                {TIER_DOT[g.tier]} {i.name}
+                {i.fit ? "" : ` — ${i.reason || "not cleared"}`}
+                {i.qualified === false ? " — not qualified for this type" : ""}
+                {i.avail && i.avail !== "none" ? ` · ${availLabel(i.avail)}` : ""}
+              </option>
+            ))}
+          </optgroup>
         ))}
       </select>
       <select aria-label="Role" name="roleTypeId" required className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal">

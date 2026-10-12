@@ -9,6 +9,7 @@ import type { RotaDay, RotaSession } from "@/lib/services/schedule";
 import { autoRosterAction, boardAssignAction, boardRemoveAction } from "@/app/(app)/office/rota/board-actions";
 import { setCourseStaffingAction } from "@/app/(app)/office/courses/actions";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { TIER_DOT, TIER_LABEL, groupCandidates } from "@/lib/domain/assign-order";
 
 type Layout = "courses" | "people";
 const STORAGE = "ar.board.layout";
@@ -224,6 +225,12 @@ interface SlotRowProps {
   onAssign: (instructorId: string, roleTypeId: string, replacing?: Member) => void; onRemove: (m: Member, scope: "course" | "day") => void; onAskRemove: (m: Member) => void;
 }
 
+/** Green / orange / red facts for one person on one session, for the pickers' order. */
+function candidateFacts(i: BoardInstructor, slotKey: string, courseTypeId: string | null) {
+  const status = i.availability[slotKey]?.status ?? "unasked";
+  return { fit: i.fit, qualified: courseTypeId ? (i.knownQualifications ? i.teaches.includes(courseTypeId) : null) : null, available: status === "available" || status === "unasked" };
+}
+
 function optionLabel(i: BoardInstructor, slotKey: string, courseTypeId: string | null): string {
   const a = i.availability[slotKey];
   const av = a ? AVAIL[a.status] ?? AVAIL.unasked! : AVAIL.unasked!;
@@ -266,7 +273,11 @@ function SlotRow({ roleTypeId, roleName, member, extra, candidates, byId, slotKe
           <>
             <select value={pick} onChange={(e) => setPick(e.target.value)} aria-label={`Who for ${roleName}`} className={field}>
               <option value="">{member ? `Replace ${member.name} with…` : "Choose someone…"}</option>
-              {candidates.map((i) => <option key={i.id} value={i.id}>{optionLabel(i, slotKey, courseTypeId)}</option>)}
+              {groupCandidates(candidates, (i) => candidateFacts(i, slotKey, courseTypeId), (i) => i.name).map((g) => (
+                <optgroup key={g.tier} label={`${TIER_DOT[g.tier]} ${TIER_LABEL[g.tier]}`}>
+                  {g.items.map((i) => <option key={i.id} value={i.id}>{TIER_DOT[g.tier]} {optionLabel(i, slotKey, courseTypeId)}</option>)}
+                </optgroup>
+              ))}
             </select>
             <button type="button" disabled={pending || !pick} onClick={() => { onAssign(pick, roleTypeId, changing ? member : undefined); setChanging(false); setPick(""); }} className="rounded-lg bg-teal px-3 py-1.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{member ? "Save" : "Assign"}</button>
             {changing ? <button type="button" onClick={() => { setChanging(false); setPick(""); }} className="text-xs text-slate-400 hover:text-navy">Cancel</button> : null}
