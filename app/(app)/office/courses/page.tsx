@@ -14,7 +14,7 @@ import { CourseCard } from "@/components/office/CourseCard";
 import { roleNeedsByCourse } from "@/lib/services/course-editor";
 import { suggestRoles } from "@/lib/domain/staffing";
 import type { SlotLine } from "@/lib/domain/role-slots";
-import { elsewhereFor } from "@/lib/domain/clash-note";
+import { elsewhereFor, indexSessions } from "@/lib/domain/clash-note";
 import { parseDefaultSchedule } from "@/lib/domain";
 import { BulkAssignForm } from "@/components/office/BulkAssignForm";
 import { CourseUpdatesCheck } from "@/components/office/CourseUpdatesCheck";
@@ -81,10 +81,11 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
   const staffOfCourse = new Map<string, string[]>();
   for (const a of assignments) if (a.status !== "declined") staffOfCourse.set(a.courseId, [...(staffOfCourse.get(a.courseId) ?? []), a.instructorId]);
   const courseNameOf = new Map(courses.map((c) => [c.courseId, c.courseName]));
-  const busyFor = (courseId: string) => elsewhereFor(
-    liveScope.filter((s) => s.courseId === courseId).map((s) => ({ date: s.date, slot: s.slot })),
-    liveScope.filter((s) => s.courseId !== courseId).map((s) => ({ courseId: s.courseId, courseName: courseNameOf.get(s.courseId) ?? "another course", date: s.date, slot: s.slot, instructorIds: staffOfCourse.get(s.courseId) ?? [] })),
-  );
+  // Indexed once: hundreds of courses × thousands of sessions must not cost a sort per card.
+  const slotIndex = indexSessions(liveScope.map((s) => ({ courseId: s.courseId, courseName: courseNameOf.get(s.courseId) ?? "another course", date: s.date, slot: s.slot, instructorIds: staffOfCourse.get(s.courseId) ?? [] })));
+  const sessionsOfCourse = new Map<string, { date: string; slot: string }[]>();
+  for (const s of liveScope) sessionsOfCourse.set(s.courseId, [...(sessionsOfCourse.get(s.courseId) ?? []), { date: s.date, slot: s.slot }]);
+  const busyFor = (courseId: string) => elsewhereFor(sessionsOfCourse.get(courseId) ?? [], slotIndex, courseId);
   // The required places on each card: the course's role lines, or what the ratio implies.
   const courseRowById = new Map(courseRows.map((c) => [c.id, c]));
   const slotLinesFor = (courseId: string): SlotLine[] => {
