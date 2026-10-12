@@ -9,7 +9,7 @@ import { CreateAccountForm } from "@/components/auth/CreateAccountForm";
 
 export const dynamic = "force-dynamic";
 
-const SAFE_NEXT = /^\/(office|portal|parent)(\/[A-Za-z0-9/_-]*)?$/;
+const SAFE_NEXT = /^\/(office|portal)(\/[A-Za-z0-9/_-]*)?$/;
 
 /**
  * First stop after an invitation link: create your account. The link has

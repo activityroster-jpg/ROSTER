@@ -10,8 +10,6 @@ import type { MembershipRole } from "@/lib/db/schema";
  *               starts with none.
  *   instructor  the instructor app. Senior instructors and volunteers are
  *               instructors: "senior" is a qualification, not access.
- *   parent      a read-only roster of their under-18 child, and the parental
- *               permission answer.
  *
  * The legacy roles senior_instructor and welfare_officer were migrated to
  * instructor (migration 0059) and are no longer granted; they stay in the enum
@@ -83,7 +81,7 @@ export function landingFor(role: MembershipRole): string {
 }
 
 export const ROLE_LABEL: Record<MembershipRole, string> = {
-  owner: "Superadmin", admin: "Office admin", instructor: "Instructor", parent: "Parent / guardian",
+  owner: "Superadmin", admin: "Office admin", instructor: "Instructor",
   senior_instructor: "Instructor", welfare_officer: "Instructor",
 };
 

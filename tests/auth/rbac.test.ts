@@ -25,10 +25,9 @@ describe("roles: owner, office admin with features, instructor, parent", () => {
     expect(featuresOf({ role: "owner" })).toEqual([...OFFICE_FEATURES]);
   });
 
-  it("instructors and the retired parent role never reach the office", () => {
+  it("instructors and the legacy roles never reach the office", () => {
     expect(can("instructor", "office.view")).toBe(false);
     expect(can({ role: "instructor", features: ["roster"] }, "rota.view")).toBe(false); // features mean nothing off the office roles
-    expect(can("parent", "office.view")).toBe(false);
     // Legacy roles were migrated to instructor and grant nothing.
     expect(can("senior_instructor", "roster.edit")).toBe(false);
     expect(can("welfare_officer", "protected.view")).toBe(false);
@@ -38,7 +37,6 @@ describe("roles: owner, office admin with features, instructor, parent", () => {
     expect(landingFor("owner")).toBe("/office");
     expect(landingFor("admin")).toBe("/office");
     expect(landingFor("instructor")).toBe("/portal");
-    expect(landingFor("parent")).toBe("/portal");
     expect(isOfficeRole("owner")).toBe(true);
     expect(isOfficeRole("admin")).toBe(true);
     expect(isOfficeRole("instructor")).toBe(false);

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { isStaleActionError } from "@/lib/ui/stale-action";
 
 /** Signed-in areas, where an unexpected failure is worth reporting (the public site has browser-extension noise). */
-const REPORTED_AREAS = /^\/(office|portal|parent|admin|app|welcome|set-pin|pin|verify-login|verify-device|security|two-factor)(\/|$)/;
+const REPORTED_AREAS = /^\/(office|portal|admin|app|welcome|set-pin|pin|verify-login|verify-device|security|two-factor)(\/|$)/;
 
 /**
  * Watches for a save that fails without telling anyone (9 Oct: an equipment

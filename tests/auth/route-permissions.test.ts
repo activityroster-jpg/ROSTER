@@ -110,7 +110,6 @@ describe("role by route", () => {
     expect(used.size).toBeGreaterThan(5);
     for (const p of used) {
       expect(can("instructor", p as Permission), `instructor must not have ${p}`).toBe(false);
-      expect(can("parent", p as Permission), `parent must not have ${p}`).toBe(false);
       if (p !== "office.view") expect(can({ role: "admin", features: [] }, p as Permission), `fresh office admin must not have ${p}`).toBe(false);
       expect(can("owner", p as Permission), `owner must have ${p}`).toBe(true);
     }

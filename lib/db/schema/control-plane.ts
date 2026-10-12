@@ -242,10 +242,10 @@ export const platformPricing = sqliteTable("platform_pricing", {
  * owner       the superadmin: set the centre up and pays; everything. One per centre.
  * admin       an office admin; what they can reach is the `features` list the owner sets (lib/auth/rbac).
  * instructor  the instructor app (senior instructors and volunteers included).
- * parent      retired 10 Oct 2026 with the parent view; migration 0080 removed every parent membership. Never granted now.
+ * (The parent role was retired 10 Oct 2026; migration 0080 removed every parent membership and the value is gone from the list.)
  * senior_instructor / welfare_officer: legacy, migrated to instructor in 0059; never granted now.
  */
-export const MEMBERSHIP_ROLES = ["owner", "admin", "instructor", "parent", "senior_instructor", "welfare_officer"] as const;
+export const MEMBERSHIP_ROLES = ["owner", "admin", "instructor", "senior_instructor", "welfare_officer"] as const;
 export type MembershipRole = (typeof MEMBERSHIP_ROLES)[number];
 
 // invited = admin invited, not yet accepted · requested = joined via the app's

@@ -191,7 +191,7 @@ export const LANDINGS: Landing[] = [
       },
       {
         heading: "Who can teach what, without looking it up",
-        body: ["Each instructor's qualifications decide which courses they can take, and the scheduling screens use that. Put someone on a course their licences don't cover and you're told before it's saved, not after a parent asks."],
+        body: ["Each instructor's qualifications decide which courses they can take, and the scheduling screens use that. Put someone on a course their licences don't cover and you're told before it's saved, not after the course has started."],
       },
       {
         heading: "Fair, visible, and easy to change",
@@ -419,7 +419,7 @@ export const LANDINGS: Landing[] = [
       },
       {
         heading: "Volunteers sign up from their phone",
-        body: ["Members set when they're free in the app, see their duties and confirm them. If something comes up they say so in the app and the duty officer knows straight away; the gap can be offered as an open duty that anyone free can claim. Under-18 juniors who help get higher-privacy defaults and, if you choose, a parent can see their roster."],
+        body: ["Members set when they're free in the app, see their duties and confirm them. If something comes up they say so in the app and the duty officer knows straight away; the gap can be offered as an open duty that anyone free can claim. Under-18 juniors who help get higher-privacy defaults."],
       },
       {
         heading: "Licences checked for safety duties",
