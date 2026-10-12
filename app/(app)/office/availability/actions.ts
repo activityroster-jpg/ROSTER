@@ -6,7 +6,11 @@ import { requireTenant } from "@/lib/tenant/require";
 import { getWeekSchedule, weekStart } from "@/lib/services/schedule";
 import { getTeachingMatrix } from "@/lib/services/teaching";
 import { assignStaff, assignBlockMessage } from "@/lib/services/assignment";
-import { courseStaff as courseStaffTable } from "@/lib/db/schema";
+import { courseSession as courseSessionTable, courseStaff as courseStaffTable } from "@/lib/db/schema";
+import { clearDayStaff, sessionsForInstructor, setDayStaff } from "@/lib/services/session-staff";
+import { writeAudit } from "@/lib/services/audit";
+import { syncHoursForCourse } from "@/lib/services/hours";
+import { notifyRosterChange } from "@/lib/services/assignment";
 import { cleanRoleLines, suggestRoles } from "@/lib/domain/staffing";
 import { BULK_AVAILABILITY_MAX, setAvailability, setAvailabilityBulk, type BulkAvailabilityEntry } from "@/lib/services/availability";
 import { availabilityForStaffSchema, firstIssue, officeAvailabilitySchema } from "@/lib/validation/actions";
@@ -22,8 +26,10 @@ export interface CellCandidate {
   /** The roles this course needs (its role lines, or what the ratio implies) and how many places are still open in each. */
   roles: { id: string; name: string; missing: number }[];
 }
+/** A session in this slot the person is already on. */
+export interface CurrentSession { sessionId: string; courseId: string; courseName: string; time: string; multiDay: boolean; dayOnly: boolean }
 export type CellResult =
-  | { ok: true; candidates: CellCandidate[]; roles: { id: string; name: string }[] }
+  | { ok: true; candidates: CellCandidate[]; roles: { id: string; name: string }[]; current: CurrentSession[] }
   | { ok: false; error: string };
 
 const fmtT = (v: Date | number) =>
@@ -66,6 +72,15 @@ export async function assignableForCellAction(date: string, slot: string, instru
   const courseById = new Map(courses.map((c) => [c.id, c]));
   const nameOf = (c: (typeof courses)[number]) => c.name ?? courseTypes.find((t) => t.id === c.courseTypeId)?.name ?? "Course";
 
+  // What they're already on in this slot (course-level or a day-only add).
+  const slotSessions = sessions.filter((s) => s.date === date && s.slot === slot && !s.cancelledAt);
+  const liveCount = new Map<string, number>();
+  for (const s of sessions) if (!s.cancelledAt) liveCount.set(s.courseId, (liveCount.get(s.courseId) ?? 0) + 1);
+  const current: CurrentSession[] = (await sessionsForInstructor(repos, ctx, instructorId, slotSessions)).map((s) => {
+    const c = courseById.get(s.courseId);
+    return { sessionId: s.id, courseId: s.courseId, courseName: c ? nameOf(c) : "Course", time: `${fmtT(s.startAt)}–${fmtT(s.endAt)}`, multiDay: (liveCount.get(s.courseId) ?? 0) > 1, dayOnly: !alreadyOn.has(s.courseId) };
+  });
+
   const candidates: CellCandidate[] = [];
   for (const s of sessions) {
     if (s.date !== date || s.slot !== slot) continue;
@@ -87,7 +102,7 @@ export async function assignableForCellAction(date: string, slot: string, instru
   const unique = candidates.filter((c) => (seen.has(c.courseId) ? false : (seen.add(c.courseId), true)));
   unique.sort((a, b) => Number(b.needsCover) - Number(a.needsCover) || a.courseName.localeCompare(b.courseName));
 
-  return { ok: true, candidates: unique, roles: activeRoles };
+  return { ok: true, candidates: unique, roles: activeRoles, current };
 }
 
 /**
@@ -150,4 +165,59 @@ export async function setAvailabilityBulkAction(input: unknown): Promise<{ ok: b
   revalidatePath("/office/staff");
   const changed = r.set + r.cleared;
   return { ok: true, message: `${changed} slot${changed === 1 ? "" : "s"} updated${r.keptLeave ? ` (${r.keptLeave} on approved leave left as they are)` : ""}` };
+}
+
+/**
+ * Move someone from the session they're on in this slot to another course:
+ * off the old one (that day only when the old course runs several days, the
+ * whole course when it's a one-off), then onto the new one (that day only
+ * when the new course runs several days). Each step is checked and audited
+ * as usual; if the second step is refused, the first is reported plainly.
+ */
+export async function moveFromAvailabilityAction(input: { fromSessionId: string; toCourseId: string; instructorId: string; roleTypeId: string }): Promise<{ ok: boolean; error?: string; message?: string }> {
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
+  const t = repos.tenant;
+  if (!input.fromSessionId || !input.toCourseId || !input.instructorId || !input.roleTypeId) return { ok: false, error: "Pick a role" };
+  const from = await t.courseSession.findById(ctx, input.fromSessionId);
+  if (!from) return { ok: false, error: "That session no longer exists" };
+  const [fromCourse, fromSessions, mine, toSessions] = await Promise.all([
+    t.course.findById(ctx, from.courseId),
+    t.courseSession.list(ctx, eq(courseSessionTable.courseId, from.courseId)),
+    t.courseStaff.list(ctx, eq(courseStaffTable.instructorId, input.instructorId)),
+    t.courseSession.list(ctx, eq(courseSessionTable.courseId, input.toCourseId)),
+  ]);
+  const fromLive = fromSessions.filter((s) => !s.cancelledAt);
+  const assignment = mine.find((a) => a.courseId === from.courseId);
+  const fromName = fromCourse?.name ?? "the old course";
+
+  // 1. Off the old one.
+  if (!assignment) {
+    const r = await clearDayStaff(repos, ctx, from.id, input.instructorId);
+    if (!r.ok) return { ok: false, error: r.error ?? "Couldn't take them off" };
+  } else if (fromLive.length > 1) {
+    const r = await setDayStaff(repos, ctx, { sessionId: from.id, instructorId: input.instructorId, roleTypeId: assignment.roleTypeId, mode: "skip" });
+    if (!r.ok) return { ok: false, error: r.error };
+  } else {
+    await t.courseStaff.delete(ctx, assignment.id);
+    await writeAudit(repos, ctx, { action: "remove_staff", entity: "course", entityId: from.courseId, after: { assignmentId: assignment.id, from: "availability-move", to: input.toCourseId } });
+    await syncHoursForCourse(repos, ctx, from.courseId);
+    await notifyRosterChange(repos, ctx, input.instructorId, fromName, fromLive.map((s) => s.date), "removed");
+  }
+
+  // 2. Onto the new one.
+  const toLive = toSessions.filter((s) => !s.cancelledAt);
+  const here = toLive.find((s) => s.date === from.date && s.slot === from.slot);
+  const put = toLive.length > 1 && here
+    ? await setDayStaff(repos, ctx, { sessionId: here.id, instructorId: input.instructorId, roleTypeId: input.roleTypeId, mode: "add" })
+    : await assignStaff(repos, ctx, { courseId: input.toCourseId, instructorId: input.instructorId, roleTypeId: input.roleTypeId });
+  revalidatePath("/office/availability");
+  revalidatePath("/office/courses");
+  revalidatePath("/office/rota");
+  revalidatePath("/office");
+  if (!put.ok) {
+    const why = "error" in put ? put.error : assignBlockMessage(put.reason, put.detail);
+    return { ok: false, error: `Taken off ${fromName}, but not put on the new course: ${why}. Assign them from the course page (override if needed).` };
+  }
+  const scope = fromLive.length > 1 ? "that day" : "the whole course";
+  return { ok: true, message: `Moved: off ${fromName} (${scope}) and onto the new course${"warnings" in put && put.warnings.length ? ` — ⚠ ${put.warnings.join("; ")}` : ""}` };
 }

@@ -114,7 +114,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
         <StaffingPanel courseId={course.id} staffing={staffing} />
         <div className="mt-4">
           <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">Who&apos;s on it</p>
-          <CourseSlots courseId={course.id} candidates={instructorOptions} slots={buildRoleSlots(
+          <CourseSlots courseId={course.id} candidates={instructorOptions} roles={activeRoles} slots={buildRoleSlots(
             staffing.lines.length ? staffing.lines.map((l) => ({ roleTypeId: l.roleTypeId, roleName: l.roleName, count: l.count })) : staffing.suggested.map((l) => ({ roleTypeId: l.roleTypeId, roleName: roleName.get(l.roleTypeId) ?? "Role", count: l.count })),
             assignments.map((a) => ({ assignmentId: a.id, instructorId: a.instructorId, name: nameById.get(a.instructorId) ?? "Instructor", roleTypeId: a.roleTypeId, roleName: roleName.get(a.roleTypeId) ?? "role", status: a.status, isOverride: Boolean(a.isOverride), declineNote: a.declineNote })),
           )} />

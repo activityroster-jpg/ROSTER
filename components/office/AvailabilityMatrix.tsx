@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { askConfirm } from "@/lib/ui/ask-confirm";
 import { useRouter } from "next/navigation";
 import { WeekHours } from "@/components/office/WeekHours";
-import { assignableForCellAction, assignFromAvailabilityAction, setAvailabilityBulkAction, setAvailabilityForStaffAction, type CellCandidate } from "@/app/(app)/office/availability/actions";
+import { assignableForCellAction, assignFromAvailabilityAction, moveFromAvailabilityAction, setAvailabilityBulkAction, setAvailabilityForStaffAction, type CellCandidate, type CurrentSession } from "@/app/(app)/office/availability/actions";
 
 export interface MatrixRow {
   instructorId: string;
@@ -113,28 +113,35 @@ export function AvailabilityMatrix({ days, rows, availableCounts, staffManagedBy
   const quickTitle = !quick ? "" : quick.kind === "row" ? `${quick.name}, this whole week` : quick.kind === "day" ? `Everyone, ${quick.label} (all day)` : quick.kind === "slot" ? `Everyone, ${quick.label}` : "Everyone, this whole week";
   const [sel, setSel] = useState<Selected | null>(null);
   const [cands, setCands] = useState<CellCandidate[] | null>(null);
+  const [current, setCurrent] = useState<CurrentSession[]>([]);
+  // Click a name: everything they're on this week.
+  const [person, setPerson] = useState<MatrixRow | null>(null);
   // The role chosen per course (each course lists only the roles it needs).
   const [roleFor, setRoleFor] = useState<Record<string, string>>({});
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const openCell = (instructorId: string, name: string, date: string, slot: string, dayLabel: string) => {
     setSel({ instructorId, name, date, slot, dayLabel });
-    setCands(null); setMsg(null); setRoleFor({});
+    setCands(null); setMsg(null); setRoleFor({}); setCurrent([]); setPerson(null);
     if (mode === "edit") return; // edit mode: the panel only sets availability
     const row = rows.find((x) => x.instructorId === instructorId);
     if (row && !isFreeCell(row, `${date}|${slot}`)) { setCands([]); return; }
     start(async () => {
       const res = await assignableForCellAction(date, slot, instructorId);
-      if (res.ok) { setCands(res.candidates); setRoleFor(Object.fromEntries(res.candidates.map((c) => [c.courseId, c.roles[0]?.id ?? ""]))); }
+      if (res.ok) { setCands(res.candidates); setCurrent(res.current); setRoleFor(Object.fromEntries(res.candidates.map((c) => [c.courseId, c.roles[0]?.id ?? ""]))); }
       else { setMsg({ ok: false, text: res.error }); setCands([]); }
     });
   };
 
-  const assign = (courseId: string) => {
+  const assign = (courseId: string, move = false) => {
     if (!sel) return;
     setMsg(null);
     start(async () => {
-      const res = await assignFromAvailabilityAction(courseId, sel.instructorId, roleFor[courseId] ?? "");
+      const from = current[0];
+      const res = move && from
+        ? await moveFromAvailabilityAction({ fromSessionId: from.sessionId, toCourseId: courseId, instructorId: sel.instructorId, roleTypeId: roleFor[courseId] ?? "" })
+        : await assignFromAvailabilityAction(courseId, sel.instructorId, roleFor[courseId] ?? "");
+      if (res.ok && move) setCurrent([]);
       setMsg({ ok: res.ok, text: res.ok ? res.message ?? "Assigned" : res.error ?? "Failed" });
       if (res.ok) {
         setCands((cs) => (cs ? cs.filter((c) => c.courseId !== courseId) : cs));
@@ -252,11 +259,11 @@ export function AvailabilityMatrix({ days, rows, availableCounts, staffManagedBy
                       <WeekHours minutes={r.assignedMinutes ?? 0} />
                     </button>
                   ) : (
-                    <span className="flex items-center gap-1.5 px-4 py-1.5">
+                    <button type="button" onClick={() => { setPerson(r); setSel(null); setCands(null); setMsg(null); }} className="flex w-full items-center gap-1.5 px-4 py-1.5 text-left hover:bg-teal/10" title={`Everything ${r.name} is on this week`}>
                       {r.name}
                       {r.officeManaged ? <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-slate-500" title="The office keeps their availability">office</span> : null}
                       <WeekHours minutes={r.assignedMinutes ?? 0} />
-                    </span>
+                    </button>
                   )}
                 </td>
                 {days.map((d, di) => SLOTS.map((s, si) => {
@@ -298,6 +305,30 @@ export function AvailabilityMatrix({ days, rows, availableCounts, staffManagedBy
 
       {/* Cell panel: set availability, fill a shift. Pinned to the bottom of the screen so the
           person's week stays in view above it; the spacer keeps the last rows reachable. */}
+      {person ? <div aria-hidden className="h-[46vh]" /> : null}
+      {person ? (
+        <div role="dialog" aria-label={`${person.name} this week`} onKeyDown={(e) => { if (e.key === "Escape") setPerson(null); }}
+          className="fixed inset-x-3 bottom-3 z-40 max-h-[44vh] overflow-y-auto rounded-card border border-navy/20 bg-white p-4 shadow-2xl lg:left-[calc(15rem+1.5rem)] lg:right-6">
+          <div className="flex items-center justify-between gap-2">
+            <p className="font-semibold text-navy"><span className="text-teal">{person.name}</span> this week <span className="font-normal text-slate-500">· <WeekHours minutes={person.assignedMinutes ?? 0} /></span></p>
+            <button type="button" onClick={() => setPerson(null)} className="text-sm text-slate-400 hover:text-navy">✕ Close</button>
+          </div>
+          {(() => {
+            const items = days.flatMap((d, di) => SLOTS.flatMap((sl) => { const on = person.assigned[`${d}|${sl}`]; return on?.length ? [{ key: `${d}|${sl}`, label: `${DAY_LABELS[di]} ${d.slice(8)} · ${sl}`, on, date: d, slot: sl, dayLabel: `${DAY_LABELS[di]} ${d.slice(8)}` }] : []; }));
+            return items.length ? (
+              <ul className="mt-3 divide-y divide-slate-100 rounded-lg border border-slate-200">
+                {items.map((it) => (
+                  <li key={it.key} className="flex flex-wrap items-center gap-2 px-3 py-2 text-sm">
+                    <span className="w-28 flex-none text-xs font-semibold text-slate-500">{it.label}</span>
+                    <span className="text-navy">{it.on.join(" · ")}</span>
+                    <button type="button" onClick={() => openCell(person.instructorId, person.name, it.date, it.slot, it.dayLabel)} className="ml-auto text-xs font-medium text-teal hover:underline">Change</button>
+                  </li>
+                ))}
+              </ul>
+            ) : <p className="mt-3 text-sm text-slate-500">Nothing rostered for {person.name} this week.</p>;
+          })()}
+        </div>
+      ) : null}
       {sel ? <div aria-hidden className="h-[46vh]" /> : null}
       {sel ? (
         <div role="dialog" aria-label={`${sel.name}, ${sel.dayLabel} ${sel.slot}`} onKeyDown={(e) => { if (e.key === "Escape") { setSel(null); setCands(null); setMsg(null); } }}
@@ -328,7 +359,16 @@ export function AvailabilityMatrix({ days, rows, availableCounts, staffManagedBy
           {editing ? null : selRow && !isFreeCell(selRow, selKey) ? (
             <p className="mt-3 text-sm text-slate-600">{sel.name} isn&rsquo;t free {sel.dayLabel} {sel.slot} ({selSource === "default" ? "not answered yet" : selSource === "unasked" ? "not asked yet" : CELL[selStatus]?.word.toLowerCase() ?? "busy"}). To change that, switch to <button type="button" onClick={() => setMode("edit")} className="font-semibold text-teal hover:underline">Edit availability</button>.</p>
           ) : (<>
-          <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">Sessions they can be assigned to</p>
+          {current.length ? (
+            <div className="mt-3 rounded-lg border border-teal/30 bg-teal/5 px-3 py-2 text-sm">
+              <p className="text-xs font-semibold uppercase tracking-wide text-teal">Currently on, {sel.dayLabel} {sel.slot}</p>
+              <ul className="mt-1 space-y-0.5">
+                {current.map((c) => <li key={c.sessionId} className="text-navy"><span className="font-medium">{c.courseName}</span> <span className="text-xs text-slate-500">{c.time}{c.dayOnly ? " · this day only" : c.multiDay ? " · whole course" : ""}</span></li>)}
+              </ul>
+              <p className="mt-1 text-xs text-slate-500">“Move here” takes {sel.name} off {current[0]?.courseName}{current[0]?.multiDay ? " for this day" : ""} and puts them on the course you pick.</p>
+            </div>
+          ) : null}
+          <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">{current.length ? "Other sessions in this slot" : "Sessions they can be assigned to"}</p>
           {pending && cands === null ? (
             <p className="mt-2 text-sm text-slate-400">Finding sessions they can cover…</p>
           ) : cands && cands.length > 0 ? (
@@ -342,9 +382,14 @@ export function AvailabilityMatrix({ days, rows, availableCounts, staffManagedBy
                     <select value={roleFor[c.courseId] ?? ""} onChange={(e) => setRoleFor((m) => ({ ...m, [c.courseId]: e.target.value }))} aria-label={`Role on ${c.courseName}`} className="ml-auto rounded-lg border border-slate-300 px-2 py-1 text-xs outline-none focus:border-teal">
                       {c.roles.map((r) => <option key={r.id} value={r.id}>{r.name}{r.missing > 0 ? ` (${r.missing} open)` : " (filled)"}</option>)}
                     </select>
-                    <button type="button" onClick={() => assign(c.courseId)} disabled={pending || !roleFor[c.courseId]} className="rounded-lg bg-teal px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-700 disabled:opacity-50">
-                      {pending ? "…" : "Assign"}
-                    </button>
+                    {current.length ? (
+                      <>
+                        <button type="button" onClick={() => assign(c.courseId, true)} disabled={pending || !roleFor[c.courseId]} className="rounded-lg bg-teal px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{pending ? "…" : "Move here"}</button>
+                        <button type="button" onClick={() => assign(c.courseId)} disabled={pending || !roleFor[c.courseId]} className="text-xs text-slate-400 hover:text-navy disabled:opacity-50" title="Keep them on what they're on and add this too">Add as well</button>
+                      </>
+                    ) : (
+                      <button type="button" onClick={() => assign(c.courseId)} disabled={pending || !roleFor[c.courseId]} className="rounded-lg bg-teal px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{pending ? "…" : "Assign"}</button>
+                    )}
                   </li>
                 ))}
               </ul>

@@ -11,6 +11,7 @@ import { setCourseStaffingAction } from "@/app/(app)/office/courses/actions";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { groupCandidates } from "@/lib/domain/assign-order";
 import { PeoplePicker } from "./PeoplePicker";
+import { AddRolePlace } from "./AddRolePlace";
 
 type Layout = "courses" | "people";
 const STORAGE = "ar.board.layout";
@@ -450,6 +451,7 @@ function SessionPanel({ data, selected, canEdit, preselect, instructors, byId, o
             ))}
           </ul>
         )}
+        {canEdit && meta ? <div className="mb-3"><AddRolePlace courseId={meta.courseId} roles={data.roles.map((r) => ({ id: r.id, name: r.name }))} onChanged={onChanged} /></div> : null}
         {canEdit ? <label className="flex items-center gap-2 text-xs text-slate-600"><input type="checkbox" checked={override} onChange={(e) => setOverride(e.target.checked)} /> Override a block (Busy, clash, licence, qualification)</label> : null}
         {msg ? <p className={`mt-3 text-xs ${msg.ok ? "text-starboard" : "text-port"}`}>{msg.text}</p> : null}
       </div>

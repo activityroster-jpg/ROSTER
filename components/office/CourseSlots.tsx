@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { assignStaffAction, removeStaffAction } from "@/app/(app)/office/courses/actions";
 import { courseStateAvailable, groupCandidates } from "@/lib/domain/assign-order";
 import { PeoplePicker } from "./PeoplePicker";
+import { AddRolePlace } from "./AddRolePlace";
 import type { RoleSlot, SlotPerson } from "@/lib/domain/role-slots";
 
 export interface SlotCandidate { id: string; name: string; fit: boolean; reason?: string; avail?: string; qualified?: boolean | null; /** "Youth Stage 3 (Mon AM)" when they are on another course at the same time. */ busyWith?: string }
@@ -31,7 +32,7 @@ export const candidateFactsOf = (c: SlotCandidate) => ({ fit: c.fit, qualified: 
  * the platform's one order: qualified and free, then qualified but busy, then
  * not qualified or not cleared. Assignments are for the whole course.
  */
-export function CourseSlots({ courseId, slots, candidates, onChanged }: { courseId: string; slots: RoleSlot[]; candidates: SlotCandidate[]; onChanged?: () => void }) {
+export function CourseSlots({ courseId, slots, candidates, roles = [], onChanged }: { courseId: string; slots: RoleSlot[]; candidates: SlotCandidate[]; roles?: { id: string; name: string }[]; onChanged?: () => void }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [err, setErr] = useState<string | null>(null);
@@ -56,9 +57,9 @@ export function CourseSlots({ courseId, slots, candidates, onChanged }: { course
   });
   const remove = (p: SlotPerson) => run(() => removeStaffAction(courseId, p.assignmentId));
 
-  if (slots.length === 0) return <p className="text-xs text-slate-400">No places to fill yet: set the students booked or add a role above.</p>;
   return (
     <div>
+      {slots.length === 0 ? <p className="text-xs text-slate-400">No places to fill yet: set the students booked, or add a role below.</p> : null}
       <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white">
         {slots.map((s) => (
           <SlotRowView key={s.key} slot={s} candidates={free} pending={pending} editing={editing === s.key}
@@ -66,6 +67,7 @@ export function CourseSlots({ courseId, slots, candidates, onChanged }: { course
         ))}
       </ul>
       {err ? <p role="alert" className="mt-1.5 text-xs text-port">{err}</p> : null}
+      {roles.length ? <AddRolePlace courseId={courseId} roles={roles} onChanged={onChanged} /> : null}
     </div>
   );
 }

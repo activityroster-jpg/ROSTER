@@ -346,6 +346,11 @@ export const SECTIONS: Section[] = [
     blurb: "Collect availability and see it before you build the roster.",
     blocks: [
       { kind: "p", text: "Instructors answer from their own app: Free, Maybe or Busy for each Morning/Afternoon/Evening slot. There is no blank: inside your availability window a slot counts as Busy until it's marked Free or Maybe, so nobody is rostered on a guess." },
+      { kind: "sub", text: "Assigning and moving people from the sheet" },
+      { kind: "bullets", items: [
+        "Click a Free cell and the panel lists the sessions in that slot the person could cover, with only the roles each course needs (open places first). If they are already on something in that slot it says so at the top; “Move here” takes them off it (that day only on a multi-day course) and onto the course you pick, or “Add as well” keeps both.",
+        "Click a person's name to see everything they are on this week, with a Change link beside each.",
+      ] },
       { kind: "sub", text: "The usual week and day notes" },
       { kind: "bullets", items: [
         "Each instructor can set a usual week once (say, Free every Saturday and Sunday). It fills in any day they haven't answered, and they only change the exceptions.",

@@ -25,7 +25,7 @@ const fmtDate = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString
 const fmtTime = (ms: number) => new Date(ms).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
 
 export function CourseCard({
-  course, audience, sessions, assigned, instructors, ratioOn, ratio, computedRequired, roleNeeds, slotLines, staffing, shade, defaultOpen = false, onChanged,
+  course, audience, sessions, assigned, instructors, roles, ratioOn, ratio, computedRequired, roleNeeds, slotLines, staffing, shade, defaultOpen = false, onChanged,
 }: {
   course: { id: string; name: string; courseTypeName: string; status: string; staffRequired: number | null };
   audience: string;
@@ -174,7 +174,7 @@ export function CourseCard({
       {open ? (
         <div className="mt-2 space-y-2">
           {staffing ? <StaffingPanel courseId={course.id} staffing={staffing} compact onSaved={onChanged} /> : null}
-          <CourseSlots courseId={course.id} slots={slots} candidates={instructors} onChanged={onChanged} />
+          <CourseSlots courseId={course.id} slots={slots} candidates={instructors} roles={roles} onChanged={onChanged} />
         </div>
       ) : null}
     </div>

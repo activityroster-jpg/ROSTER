@@ -16,7 +16,8 @@ import { syncHoursForCourse } from "@/lib/services/hours";
 import { assignBlockMessage, notifyRosterChange } from "@/lib/services/assignment";
 import { firstIssue, idSchema, studentsSchema } from "@/lib/validation/actions";
 import { eq } from "drizzle-orm";
-import { courseSession as courseSessionTable, courseStaff as courseStaffTable } from "@/lib/db/schema";
+import { courseRoleRequirement as courseRoleRequirementTable, courseSession as courseSessionTable, courseStaff as courseStaffTable } from "@/lib/db/schema";
+import { cleanRoleLines, suggestRoles } from "@/lib/domain/staffing";
 import { problemsForCourse, problemsSuffix } from "@/lib/services/problems";
 import { setCourseEquipment, setCourseLocations, setCourseStaffing } from "@/lib/services/course-resources";
 import { clearDayStaff, setDayStaff } from "@/lib/services/session-staff";
@@ -473,4 +474,30 @@ export async function bulkAssignStaffAction(input: {
     return { ok: false, error: `None assigned — ${reasons.join("; ") || "checks not met"}. Tick “assign anyway” to override.` };
   }
   return { ok: true, message };
+}
+
+/**
+ * "Add another role" on a course's staffing rows: one more required place for
+ * that role. With no role lines yet, the ratio's suggested lines are written
+ * first so nothing already shown is lost. The place then appears as an empty
+ * row to fill.
+ */
+export async function addRolePlaceAction(courseId: string, roleTypeId: string): Promise<ActionState> {
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
+  if (!idSchema.safeParse(courseId).success || !idSchema.safeParse(roleTypeId).success) return { ok: false, error: "Invalid request" };
+  const t = repos.tenant;
+  const [course, role, roles, requirements] = await Promise.all([t.course.findById(ctx, courseId), t.roleType.findById(ctx, roleTypeId), t.roleType.list(ctx), t.courseRoleRequirement.list(ctx, eq(courseRoleRequirementTable.courseId, courseId))]);
+  if (!course || !role) return { ok: false, error: "Course or role not found" };
+  const ct = await t.courseType.findById(ctx, course.courseTypeId);
+  const current = cleanRoleLines(requirements);
+  const base = current.length ? current : suggestRoles({ students: course.capacity, ratio: course.ratio, requiresSafetyBoat: Boolean(ct?.requiresSafetyBoat), roles });
+  const line = base.find((l) => l.roleTypeId === roleTypeId);
+  const next = line ? base.map((l) => (l.roleTypeId === roleTypeId ? { ...l, count: Math.min(50, l.count + 1) } : l)) : [...base, { roleTypeId, count: 1 }];
+  const r = await setCourseStaffing(repos, ctx, courseId, { students: course.capacity, roles: next, expectedVersion: course.updatedAt.getTime() });
+  if (!r.ok) return r;
+  revalidatePath("/office/courses");
+  revalidatePath(`/office/courses/${courseId}`);
+  revalidatePath("/office/rota");
+  revalidatePath("/office");
+  return { ok: true, message: `Added a ${role.name} place` };
 }
