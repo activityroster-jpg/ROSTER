@@ -9,7 +9,7 @@ export default function robots(): MetadataRoute.Robots {
         userAgent: "*",
         allow: "/",
         // Keep the authenticated app + admin + APIs out of the index.
-        disallow: ["/office", "/portal", "/admin", "/api/", "/sign-in", "/pin", "/set-pin", "/no-access", "/suspended"],
+        disallow: ["/office", "/portal", "/admin", "/dev", "/api/", "/sign-in", "/pin", "/set-pin", "/no-access", "/suspended"],
       },
     ],
     sitemap: `${site}/sitemap.xml`,

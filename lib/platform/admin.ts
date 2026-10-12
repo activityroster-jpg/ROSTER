@@ -34,7 +34,8 @@ export const requirePlatformAdmin = cache(async function requirePlatformAdmin():
   const auth = await getAuth();
   const session = await auth.api.getSession({ headers: h });
   const email = session?.user?.email ?? null;
-  if (!(await isPlatformAdminEmail(email))) redirect("/sign-in");
+  // The Dev Center's own door: signs an admin in and sends them back here.
+  if (!(await isPlatformAdminEmail(email))) redirect("/dev");
   // Unfamiliar device/network → password again; then the 4-digit PIN.
   await enforceDeviceGate(session!.user.id, "/admin", null, true);
   // The money-facing admin also requires the 4-digit PIN each session…

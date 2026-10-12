@@ -29,13 +29,14 @@ export default function SignInPage() {
   // Centre admins confirm an emailed code (and choose "stay signed in?") before
   // the office opens; instructors go straight to their portal.
   const isPortal = next === "/portal" || next.startsWith("/go?to=portal");
+  const isDev = next === "/admin";
   const after = isPortal ? next : `/verify-login?next=${encodeURIComponent(next)}`;
   // Remember how this person last signed in on this device.
   useEffect(() => {
     try { if (window.localStorage.getItem("ar.signin.mode") === "link") setMode("link"); } catch { /* blocked storage */ }
     const q = new URLSearchParams(window.location.search);
     const n = q.get("next");
-    if (n === "/portal" || n === "/office" || n === "/go?to=portal" || n === "/go?to=office") setNext(n);
+    if (n === "/portal" || n === "/office" || n === "/go?to=portal" || n === "/go?to=office" || n === "/admin") setNext(n);
     if (q.get("expired") === "1") setExpired(true);
     // An emailed link that was already used, or has expired (the auth library adds ?error=).
     if (q.get("error")) setLinkUsed(true);
@@ -121,8 +122,8 @@ export default function SignInPage() {
 
   return (
     <div className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-4">
-      <h1 className="mb-1 font-display text-2xl font-semibold text-navy">{mode === "setup" ? "Set up your account" : isPortal ? "Instructor sign in" : "Sign in"}</h1>
-      <p className="mb-6 text-sm text-slate-500">{mode === "setup" ? "Been invited to a centre? Enter your email and we'll send a link to confirm it. Then you'll choose your password." : isPortal ? "Enter your email and password to open your portal." : "Enter your email and password. We'll then email you a code to confirm it's you."}</p>
+      <h1 className="mb-1 font-display text-2xl font-semibold text-navy">{mode === "setup" ? "Set up your account" : isDev ? "Dev Center sign in" : isPortal ? "Instructor sign in" : "Sign in"}</h1>
+      <p className="mb-6 text-sm text-slate-500">{mode === "setup" ? "Been invited to a centre? Enter your email and we'll send a link to confirm it. Then you'll choose your password." : isDev ? "Platform owner only. Enter your email and password; then the emailed code, your PIN and your authenticator code." : isPortal ? "Enter your email and password to open your portal." : "Enter your email and password. We'll then email you a code to confirm it's you."}</p>
       {linkUsed ? <p role="status" className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">That link has already been used or has expired. If you&rsquo;ve already set up your account, sign in with your password. If not, send yourself a new link below.</p> : null}
       {expired ? <p role="status" className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">You were signed out after a while away. Sign in again to carry on.</p> : null}
 
