@@ -6,7 +6,7 @@ export default function SetupSuccessPage() {
       <div className="rounded-card border border-slate-200 bg-white p-8 shadow-sm">
         <h1 className="font-display text-2xl font-semibold text-navy">Thank you — your setup is booked</h1>
         <p className="mt-3 text-slate-600">
-          We&apos;ve received your payment for the done-for-you setup &amp; customisation service. A VAT receipt is on
+          We&apos;ve received your payment for the custom platform build. A VAT receipt is on
           its way to your inbox.
         </p>
         <p className="mt-2 text-slate-600">

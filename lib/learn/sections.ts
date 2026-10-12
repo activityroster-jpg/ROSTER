@@ -609,7 +609,7 @@ export const SECTIONS: Section[] = [
       { kind: "bullets", items: [
         "Small Club — £35/month. Designed for smaller centres: up to 10 people on your team.",
         "Standard — £65/month. Unlimited instructors and volunteers.",
-        "Custom platform (recommended) — from £850 setup, plus £350 travel if we work with your team on site, then £65/month. We build and tailor the whole thing around exactly how your centre runs and hand it over ready to go.",
+        "Custom platform (recommended) — from £850, plus £350 if we work with your team on site, then £65/month. We change the platform to fit how your centre runs: features added, removed or adjusted to suit your workflow, your data brought across, and a hand-over.",
       ] },
       { kind: "sub", text: "How the Small Club limit works" },
       { kind: "p", text: "On Small Club you can add up to 10 people in total. Everyone counts towards the 10 — paid instructors and volunteers alike. When you try to add the 11th person, we'll let you know you've reached the limit and prompt you to upgrade to Standard for unlimited team members." },

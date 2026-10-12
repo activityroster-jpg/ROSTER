@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export const metadata = {
   title: "Pricing",
   description:
-    "Simple flat pricing per centre — no per-user fees. Small Club £35/mo (up to 10) or Standard £65/mo unlimited, plus an optional done-for-you custom build. Cheaper than per-user tools for volunteer-heavy RYA centres.",
+    "Simple flat pricing per centre — no per-user fees. Small Club £35/mo (up to 10) or Standard £65/mo unlimited, plus an optional custom build that shapes the platform to how your centre runs. Cheaper than per-user tools for volunteer-heavy RYA centres.",
   alternates: { canonical: "/pricing" },
 };
 
@@ -28,12 +28,12 @@ const INCLUDED = [
 ]
 
 const SETUP_INCLUDED = [
-  "A kick-off call to understand exactly how your centre runs",
-  "We tailor the platform to your way of working — your courses, grades, roles, ratios, checks and session times, set up your way",
-  "Custom features and tweaks built around what you actually need — tell us how you want it and we'll make it work like that",
-  "We import your existing schedule, staff and licences from your spreadsheets",
-  "We invite your instructors and set up availability & the weekly roster",
-  "A walk-through so you and your team are confident from day one",
+  "A working session to map how your centre actually runs: who does what, in what order, and where the time goes",
+  "Features added, removed or changed to match that: the screens, checks, roles and rules behave your way",
+  "Custom tweaks you ask for, built in, not worked around",
+  "Your schedule, staff and licences brought across from wherever they live now",
+  "Your team invited, availability flowing and the first roster built with you",
+  "A hand-over so the office and instructors are confident from day one",
 ];
 
 // Travel to run the custom build on site with the centre's team (recommended).
@@ -128,15 +128,15 @@ export default async function PricingPage() {
           );
         })}
 
-        {/* Custom platform: done-for-you build */}
+        {/* Custom platform: built around the centre */}
         {setupEnabled ? (
           <div className="relative flex flex-col overflow-hidden rounded-card border border-amber/50 bg-white shadow-sm">
             <div className="bg-amber/15 px-6 py-2 text-center text-xs font-semibold uppercase tracking-wide text-amber">
-              Done for you
+              Built around you
             </div>
             <div className="flex flex-1 flex-col p-7">
               <h2 className="font-display text-xl font-bold text-navy">Custom platform</h2>
-              <p className="mt-1 text-sm text-slate-500 md:min-h-[2.5rem]">We set it up and tailor it around exactly how your centre runs.</p>
+              <p className="mt-1 text-sm text-slate-500 md:min-h-[2.5rem]">Features added, removed and changed to fit how your centre runs.</p>
               <p className="mt-5 text-xs font-semibold uppercase tracking-wide text-slate-400">One-off setup, from</p>
               <p className="mt-1 flex items-baseline gap-1">
                 <span className="font-display text-4xl font-bold leading-none text-navy">{fmtMoney(setupPrice, currency)}</span>
@@ -146,7 +146,7 @@ export default async function PricingPage() {
                 then {fmtMoney(standard.monthlyPrice, currency)}/month · optional {fmtMoney(ON_SITE_TRAVEL, currency)} on-site day
               </p>
               <p className="mt-3 inline-flex self-start rounded-full bg-amber/15 px-3 py-1 text-xs font-semibold text-amber">
-                Unlimited team · set up for you
+                Unlimited team · shaped to your workflow
               </p>
               <Link href="/terms#fair-use" className="mt-1.5 self-start text-xs text-slate-500 underline hover:text-navy">Fair use applies</Link>
               <div className="mt-auto pt-6">
@@ -273,9 +273,9 @@ export default async function PricingPage() {
         <div className="mt-10 overflow-hidden rounded-card border border-amber/60 bg-amber/5 shadow-sm">
           <div className="p-7">
             <p className="text-sm font-semibold uppercase tracking-wide text-amber">Custom platform</p>
-            <h2 className="mt-1 font-display text-2xl font-bold text-navy">What the done-for-you build includes</h2>
+            <h2 className="mt-1 font-display text-2xl font-bold text-navy">What the custom build includes</h2>
             <p className="mt-2 max-w-2xl text-slate-600">
-              We build the platform around how your centre runs:{" "}
+              Every centre runs differently. We change the platform to fit yours, adding, removing and adjusting features so it optimises your workflow rather than a generic one:{" "}
               <strong className="text-navy">from {fmtMoney(setupPrice, currency)} setup</strong>, then{" "}
               {fmtMoney(standard.monthlyPrice, currency)}/month. Add an on-site day with your team for{" "}
               {fmtMoney(ON_SITE_TRAVEL, currency)} if you would like us there in person.
