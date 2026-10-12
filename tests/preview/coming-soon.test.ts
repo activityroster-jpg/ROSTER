@@ -34,8 +34,10 @@ describe("the Coming soon gate", () => {
     const shut = await middleware(req("https://activityroster.com/"));
     expect(rewrittenTo(shut)).toContain("/coming-soon?next=%2F");
     expect(shut.headers.get("x-robots-tag")).toBe("noindex");
+    // www is one 301 to the apex, gate or no gate (one address for search engines).
     const www = await middleware(req("https://www.activityroster.com/pricing"));
-    expect(rewrittenTo(www)).toContain("/coming-soon");
+    expect(www.status).toBe(301);
+    expect(www.headers.get("location")).toBe("https://activityroster.com/pricing");
     const open = await middleware(req("https://activityroster.com/", `${PREVIEW_COOKIE}=${await previewToken()}`));
     expect(rewrittenTo(open)).toBeNull();
     const wrongCookie = await middleware(req("https://activityroster.com/", `${PREVIEW_COOKIE}=nope`));
@@ -46,7 +48,7 @@ describe("the Coming soon gate", () => {
     delete process.env.PREVIEW_GATE;
     try {
       expect(rewrittenTo(await middleware(req("https://activityroster.com/")))).toBeNull();
-      expect(rewrittenTo(await middleware(req("https://www.activityroster.com/pricing")))).toBeNull();
+      expect((await middleware(req("https://www.activityroster.com/pricing"))).status).toBe(301);
     } finally {
       process.env.PREVIEW_GATE = "on";
     }
