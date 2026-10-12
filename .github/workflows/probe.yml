@@ -1,9 +1,13 @@
 name: Probe production
 # Read-only: fetches a few pages on production and staging and records the
 # status code and time taken as annotations (readable without the job log).
-# Runs on demand, and whenever this file changes.
+# Runs on demand, every two hours through the working day (so there is a
+# response-time history to look back on when something feels slow), and
+# whenever this file changes.
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "17 6-22/2 * * *"
   push:
     paths: [".github/workflows/probe.yml"]
 jobs:
@@ -21,5 +25,5 @@ jobs:
       - name: Which build is live
         run: |
           for host in activityroster.com staging.activityroster.com; do
-            echo "::warning::$host build: $(curl -sS --max-time 30 "https://$host/" | grep -o 'chunks/main-app-[a-z0-9]*\.js' | head -1)"
+            echo "::warning::$host build: $(curl -sS --max-time 30 "https://$host/api/version")"
           done

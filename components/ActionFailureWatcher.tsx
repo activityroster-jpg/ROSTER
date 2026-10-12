@@ -2,6 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { isStaleActionError } from "@/lib/ui/stale-action";
+import { BUILD_ID } from "@/lib/build-id";
+
+/** Don't ask the server which build is live more often than this. */
+const VERSION_CHECK_MIN_MS = 60_000;
 
 /** Signed-in areas, where an unexpected failure is worth reporting (the public site has browser-extension noise). */
 const REPORTED_AREAS = /^\/(office|portal|admin|app|welcome|set-pin|pin|verify-login|verify-device|security|two-factor)(\/|$)/;
@@ -18,6 +22,25 @@ export function ActionFailureWatcher() {
   // A save answered with a Cloudflare security check (an HTML page instead of
   // the action's result): the page looks frozen until it is reloaded.
   const [challenged, setChallenged] = useState(false);
+  // A new build went live while this page was open: say so before a save fails.
+  useEffect(() => {
+    if (BUILD_ID === "dev" || !REPORTED_AREAS.test(window.location.pathname)) return;
+    let last = 0;
+    const check = async () => {
+      if (document.visibilityState !== "visible" || Date.now() - last < VERSION_CHECK_MIN_MS) return;
+      last = Date.now();
+      try {
+        const r = await fetch("/api/version", { cache: "no-store" });
+        const j = (await r.json()) as { build?: string };
+        if (j.build && j.build !== BUILD_ID) setStale(true);
+      } catch { /* offline or blocked: nothing to say */ }
+    };
+    const onChange = () => { void check(); };
+    document.addEventListener("visibilitychange", onChange);
+    window.addEventListener("focus", onChange);
+    const timer = window.setInterval(onChange, 5 * VERSION_CHECK_MIN_MS);
+    return () => { document.removeEventListener("visibilitychange", onChange); window.removeEventListener("focus", onChange); window.clearInterval(timer); };
+  }, []);
   useEffect(() => {
     const seen = new Set<string>();
     const handle = (reason: unknown) => {
@@ -51,7 +74,7 @@ export function ActionFailureWatcher() {
   if (!stale) return null;
   return (
     <div role="alert" className="fixed inset-x-0 top-0 z-[100] flex flex-wrap items-center justify-center gap-3 bg-navy px-4 py-3 text-sm text-white shadow-lg print:hidden">
-      <span>ActivityRoster has just been updated, so that change didn&rsquo;t save. Reload the page and try again.</span>
+      <span>ActivityRoster has been updated since this page was opened. Reload to carry on with the latest version; a save from the old page won&rsquo;t go through.</span>
       <button type="button" onClick={() => window.location.reload()} className="rounded-lg bg-white px-3 py-1 text-sm font-semibold text-navy">Reload</button>
     </div>
   );
