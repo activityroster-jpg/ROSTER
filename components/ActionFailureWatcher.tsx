@@ -15,12 +15,16 @@ const REPORTED_AREAS = /^\/(office|portal|admin|app|welcome|set-pin|pin|verify-l
  */
 export function ActionFailureWatcher() {
   const [stale, setStale] = useState(false);
+  // A save answered with a Cloudflare security check (an HTML page instead of
+  // the action's result): the page looks frozen until it is reloaded.
+  const [challenged, setChallenged] = useState(false);
   useEffect(() => {
     const seen = new Set<string>();
     const handle = (reason: unknown) => {
       const message = reason instanceof Error ? reason.message : typeof reason === "string" ? reason : "";
       if (!message) return;
       if (isStaleActionError(message)) { setStale(true); return; }
+      if (/unexpected response was received from the server|failed to fetch|load failed/i.test(message)) { setChallenged(true); }
       if (seen.has(message) || !REPORTED_AREAS.test(window.location.pathname)) return;
       seen.add(message);
       void fetch("/api/report-error", {
@@ -35,6 +39,15 @@ export function ActionFailureWatcher() {
     window.addEventListener("error", onError);
     return () => { window.removeEventListener("unhandledrejection", onRejection); window.removeEventListener("error", onError); };
   }, []);
+  if (!stale && challenged) {
+    return (
+      <div role="alert" className="fixed inset-x-0 top-0 z-[100] flex flex-wrap items-center justify-center gap-3 bg-navy px-4 py-3 text-sm text-white shadow-lg print:hidden">
+        <span>That didn&rsquo;t go through: the connection was interrupted or a security check got in the way. Reload the page and try again.</span>
+        <button type="button" onClick={() => window.location.reload()} className="rounded-lg bg-white px-3 py-1 text-sm font-semibold text-navy">Reload</button>
+        <button type="button" onClick={() => setChallenged(false)} className="text-white/70 hover:text-white">Dismiss</button>
+      </div>
+    );
+  }
   if (!stale) return null;
   return (
     <div role="alert" className="fixed inset-x-0 top-0 z-[100] flex flex-wrap items-center justify-center gap-3 bg-navy px-4 py-3 text-sm text-white shadow-lg print:hidden">
