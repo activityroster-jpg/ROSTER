@@ -93,6 +93,7 @@ export async function getCourseEditorData(
     groupSize: course.capacity,
     ratio: course.ratio,
     requiresSafetyBoat: ct?.requiresSafetyBoat ?? false,
+    staffRequired: course.staffRequired,
     assigned: assignedRoles,
   });
 

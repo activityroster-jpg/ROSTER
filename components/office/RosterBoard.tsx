@@ -231,19 +231,19 @@ interface SlotRowProps {
   roleTypeId: string; roleName: string; member?: Member; extra?: boolean;
   candidates: BoardInstructor[]; byId: Map<string, BoardInstructor>; slotKey: string; dayWord: string; slot: string;
   courseTypeId: string | null; courseId: string | null; canEdit: boolean; multiDay: boolean; pending: boolean;
-  elsewhere: Map<string, string>;
+  elsewhere: Map<string, Elsewhere>;
   /** The person picked for this row (the panel holds every row's pick, so one person can't be picked twice). */
   pick: string; onPick: (instructorId: string) => void;
-  onAssign: (instructorId: string, roleTypeId: string, override: boolean, note: string | null, replacing?: Member) => void; onRemove: (m: Member, scope: "course" | "day") => void; onAskRemove: (m: Member) => void;
+  onAssign: (instructorId: string, roleTypeId: string, override: boolean, note: string | null, replacing?: Member, moveFrom?: Elsewhere) => void; onRemove: (m: Member, scope: "course" | "day") => void; onAskRemove: (m: Member) => void;
 }
 
 /** What stands in the way of putting this person on this session: each line is a block the office can override. Empty = nothing. */
-function issuesFor(i: BoardInstructor | undefined, slotKey: string, dayWord: string, slot: string, courseTypeId: string | null, elsewhere: Map<string, string>): string[] {
+function issuesFor(i: BoardInstructor | undefined, slotKey: string, dayWord: string, slot: string, courseTypeId: string | null, elsewhere: Map<string, Elsewhere>): string[] {
   if (!i) return [];
   const a = i.availability[slotKey];
   const out: string[] = [];
   if (a?.status === "unavailable") out.push(`Busy ${dayWord} ${slot} in their availability.`);
-  const on = elsewhere.get(i.id);
+  const on = elsewhere.get(i.id)?.name;
   if (on) out.push(`Already on ${on} in this slot.`);
   if (!i.fit) out.push(`Not cleared to roster: ${i.fitReason}`);
   const q = courseTypeId ? (i.knownQualifications ? i.teaches.includes(courseTypeId) : null) : null;
@@ -252,34 +252,37 @@ function issuesFor(i: BoardInstructor | undefined, slotKey: string, dayWord: str
 }
 
 /** Green / orange / red facts for one person on one session, for the pickers' order. */
-function candidateFacts(i: BoardInstructor, slotKey: string, courseTypeId: string | null, elsewhere?: Map<string, string>) {
+function candidateFacts(i: BoardInstructor, slotKey: string, courseTypeId: string | null, elsewhere?: Map<string, Elsewhere>) {
   const status = i.availability[slotKey]?.status ?? "unasked";
   return { fit: i.fit, qualified: courseTypeId ? (i.knownQualifications ? i.teaches.includes(courseTypeId) : null) : null, available: (status === "available" || status === "unasked") && !elsewhere?.get(i.id) };
 }
 
 /** Why they sit where they do: on another course, or what they said about the slot, plus licence and qualification notes. */
-function candidateNote(i: BoardInstructor, slotKey: string, courseTypeId: string | null, elsewhere?: Map<string, string>): string {
+function candidateNote(i: BoardInstructor, slotKey: string, courseTypeId: string | null, elsewhere?: Map<string, Elsewhere>): string {
   const a = i.availability[slotKey];
   const av = a ? AVAIL[a.status] ?? AVAIL.unasked! : AVAIL.unasked!;
   const q = courseTypeId ? (i.knownQualifications ? i.teaches.includes(courseTypeId) : null) : null;
   const bits: string[] = [];
   if (!i.fit) bits.push(i.fitReason);
   if (q === false) bits.push("not qualified for this course");
-  const on = elsewhere?.get(i.id);
+  const on = elsewhere?.get(i.id)?.name;
   if (on) bits.push(`on another course: ${on}`);
   else bits.push(`${av.word}${a?.source === "default" ? " (not answered)" : a?.source === "pattern" ? " (usual week)" : ""}`);
   return bits.join(" · ");
 }
 
 /** Who is on another session that day in the same slot, or at times that overlap this one, and which course. */
-function elsewhereInSlot(days: RotaDay[], date: string, slot: string, sessionId: string): Map<string, string> {
-  const out = new Map<string, string>();
+/** Where someone already is in this slot: the other session and their place on it, so the panel can move them here. */
+interface Elsewhere { name: string; sessionId: string; courseId: string; member: Member }
+
+function elsewhereInSlot(days: RotaDay[], date: string, slot: string, sessionId: string): Map<string, Elsewhere> {
+  const out = new Map<string, Elsewhere>();
   const day = days.find((d) => d.date === date);
   const me = day?.sessions.find((s) => s.sessionId === sessionId);
   const overlaps = (s: RotaSession) => Boolean(me && s.startAt < me.endAt && me.startAt < s.endAt);
   for (const s of day?.sessions ?? []) {
     if (s.sessionId === sessionId || (s.slot !== slot && !overlaps(s))) continue;
-    for (const m of s.staff) if (m.status !== "declined" && !out.has(m.instructorId)) out.set(m.instructorId, s.courseName);
+    for (const m of s.staff) if (m.status !== "declined" && !out.has(m.instructorId)) out.set(m.instructorId, { name: s.courseName, sessionId: s.sessionId, courseId: s.courseId, member: m });
   }
   return out;
 }
@@ -295,7 +298,8 @@ function SlotRow({ roleTypeId, roleName, member, extra, candidates, byId, slotKe
   // A pick with a block only goes on through "Assign anyway", which records the override and why.
   const issues = showPicker ? issuesFor(chosen, slotKey, dayWord, slot, courseTypeId, elsewhere) : [];
   const memberIssues = member && !changing ? issuesFor(byId.get(member.instructorId), slotKey, dayWord, slot, courseTypeId, elsewhere) : [];
-  const commit = () => { onAssign(pick, roleTypeId, issues.length > 0, issues.length ? issues.join(" ") : null, changing ? member : undefined); setChanging(false); setPick(""); };
+  const clash = chosen ? elsewhere.get(chosen.id) : undefined;
+  const commit = (moveFrom?: Elsewhere) => { onAssign(pick, roleTypeId, issues.length > 0, issues.length ? issues.join(" ") : null, changing ? member : undefined, moveFrom); setChanging(false); setPick(""); };
 
   return (
     <li className="rounded-lg border border-slate-200 px-2.5 py-2">
@@ -322,10 +326,15 @@ function SlotRow({ roleTypeId, roleName, member, extra, candidates, byId, slotKe
           <>
             <PeoplePicker value={pick} onChange={setPick} ariaLabel={`Who for ${roleName}`} className="flex-1" placeholder={member ? `Replace ${member.name} with…` : "Choose someone…"}
               groups={groupCandidates(candidates, (i) => candidateFacts(i, slotKey, courseTypeId, elsewhere), (i) => i.name).map((g) => ({ tier: g.tier, items: g.items.map((i) => ({ id: i.id, label: i.name, note: candidateNote(i, slotKey, courseTypeId, elsewhere) })) }))} />
-            {issues.length ? (
-              <button type="button" disabled={pending || !pick} onClick={commit} title="Put them on despite the block; the override and the reason are recorded" className="rounded-lg bg-amber px-3 py-1.5 text-sm font-semibold text-white hover:bg-amber/90 disabled:opacity-50">Assign anyway</button>
+            {clash ? (
+              <>
+                <button type="button" disabled={pending || !pick} onClick={() => commit(clash)} title={`Put them on here and take them off ${clash.name} for this day`} className="rounded-lg bg-teal px-3 py-1.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">Move here</button>
+                <button type="button" disabled={pending || !pick} onClick={() => commit()} title="Put them on here as well; the clash override is recorded" className="rounded-lg bg-amber px-3 py-1.5 text-sm font-semibold text-white hover:bg-amber/90 disabled:opacity-50">Keep on both</button>
+              </>
+            ) : issues.length ? (
+              <button type="button" disabled={pending || !pick} onClick={() => commit()} title="Put them on despite the block; the override and the reason are recorded" className="rounded-lg bg-amber px-3 py-1.5 text-sm font-semibold text-white hover:bg-amber/90 disabled:opacity-50">Assign anyway</button>
             ) : (
-              <button type="button" disabled={pending || !pick} onClick={commit} className="rounded-lg bg-teal px-3 py-1.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">Assign</button>
+              <button type="button" disabled={pending || !pick} onClick={() => commit()} className="rounded-lg bg-teal px-3 py-1.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">Assign</button>
             )}
             {changing ? <button type="button" onClick={() => { setChanging(false); setPick(""); }} className="text-xs text-slate-400 hover:text-navy">Cancel</button> : null}
           </>
@@ -337,7 +346,8 @@ function SlotRow({ roleTypeId, roleName, member, extra, candidates, byId, slotKe
         <div className="mt-1.5 space-y-0.5 pl-[7.5rem] text-xs">
           <p className={chosenAvail?.status === "available" ? "text-starboard" : chosenAvail?.status === "unavailable" ? "text-port" : "text-slate-500"}>Availability {dayWord} {slot}: {(chosenAvail ? AVAIL[chosenAvail.status] ?? AVAIL.unasked! : AVAIL.unasked!).word}{chosenAvail?.source === "default" ? " (hasn't answered; counts as busy)" : chosenAvail?.source === "pattern" ? " (usual week)" : chosenAvail?.source === "assumed" ? " (office keeps their availability)" : ""}</p>
           {issues.map((t) => <p key={t} className="text-port">{t}</p>)}
-          {issues.length ? <p className="text-slate-500">Press “Assign anyway” to put them on regardless; the override is recorded.</p> : qualified === null ? <p className="text-slate-400">No licences recorded for them.</p> : null}
+          {clash ? <p className="text-slate-500">“Move here” takes them off {clash.name} for this day; “Keep on both” leaves them on it as well (the clash override is recorded).</p>
+            : issues.length ? <p className="text-slate-500">Press “Assign anyway” to put them on regardless; the override is recorded.</p> : qualified === null ? <p className="text-slate-400">No licences recorded for them.</p> : null}
         </div>
       ) : null}
       {memberIssues.length ? (
@@ -427,9 +437,17 @@ function SessionPanel({ data, selected, canEdit, preselect, instructors, byId, o
   });
   const remove = (m: Member, sc: "course" | "day") => run(() => boardRemoveAction({ sessionId: s.sessionId, courseId: s.courseId, instructorId: m.instructorId, roleTypeId: m.roleTypeId, assignmentId: m.assignmentId, scope: sc }));
   // Change = put the new person on first, then take the old one off, so a refused assignment leaves the slot as it was.
-  const assign = (instructorId: string, roleTypeId: string, override: boolean, note: string | null, replacing?: Member) => run(
-    () => boardAssignAction({ sessionId: s.sessionId, courseId: s.courseId, instructorId, roleTypeId, scope: replacing?.dayOnly ? "day" : scope, override, note }),
-    replacing ? () => boardRemoveAction({ sessionId: s.sessionId, courseId: s.courseId, instructorId: replacing.instructorId, roleTypeId: replacing.roleTypeId, assignmentId: replacing.assignmentId, scope: replacing.dayOnly ? "day" : "course" }) : undefined,
+  // "Move here" = assign here, then take them off the other session: just this day when that course runs on other days too.
+  const assign = (instructorId: string, roleTypeId: string, override: boolean, note: string | null, replacing?: Member, moveFrom?: Elsewhere) => run(
+    () => boardAssignAction({ sessionId: s.sessionId, courseId: s.courseId, instructorId, roleTypeId, scope: replacing?.dayOnly ? "day" : scope, override, note: moveFrom ? `Moved here from ${moveFrom.name}` : note }),
+    replacing || moveFrom ? async () => {
+      if (replacing) await boardRemoveAction({ sessionId: s.sessionId, courseId: s.courseId, instructorId: replacing.instructorId, roleTypeId: replacing.roleTypeId, assignmentId: replacing.assignmentId, scope: replacing.dayOnly ? "day" : "course" });
+      if (moveFrom) {
+        const m = moveFrom.member;
+        const otherMultiDay = Boolean(data.sessionMeta[moveFrom.sessionId]?.multiDay);
+        await boardRemoveAction({ sessionId: moveFrom.sessionId, courseId: moveFrom.courseId, instructorId: m.instructorId, roleTypeId: m.roleTypeId, assignmentId: m.assignmentId, scope: m.dayOnly || otherMultiDay ? "day" : "course" });
+      }
+    } : undefined,
   );
 
   // One row per required place; people on roles the course doesn't list come after.
@@ -507,7 +525,7 @@ function SessionPanel({ data, selected, canEdit, preselect, instructors, byId, o
                 candidates={candidates.filter((c) => { const mine = pickFor(i); return c.id === mine || !slots.some((_, j) => j !== i && pickFor(j) === c.id); })}
                 courseTypeId={meta?.courseTypeId ?? null} courseId={meta?.courseId ?? null} canEdit={canEdit} multiDay={Boolean(meta?.multiDay)} pending={pending}
                 pick={pickFor(i)} onPick={(id) => setPickAt(i, id)}
-                onAssign={(instructorId, roleTypeId, override, note, replacing) => { setPickAt(i, ""); assign(instructorId, roleTypeId, override, note, replacing); }} onRemove={remove} onAskRemove={setAskRemove} />
+                onAssign={(instructorId, roleTypeId, override, note, replacing, moveFrom) => { setPickAt(i, ""); assign(instructorId, roleTypeId, override, note, replacing, moveFrom); }} onRemove={remove} onAskRemove={setAskRemove} />
             ))}
           </ul>
         )}

@@ -97,7 +97,7 @@ export async function getBoard(repos: Repositories, ctx: AnyTenantContext, monda
           const filled = covering.filter((m) => m.roleTypeId === l.roleTypeId).length;
           if (filled < l.count) open.push({ roleTypeId: l.roleTypeId, roleName: roleById.get(l.roleTypeId)?.name ?? "Role", missing: l.count - filled });
         }
-      } else if (course) {
+      } else if (course && course.staffRequired !== 0) {
         const need = requiredInstructors(course.capacity, course.ratio);
         const counting = covering.filter((m) => roleById.get(m.roleTypeId)?.countsTowardRatio).length;
         const instructorRole = roles.find((r) => r.active && r.countsTowardRatio && !r.isSafetyCover) ?? roles.find((r) => r.active && r.countsTowardRatio);
@@ -108,7 +108,7 @@ export async function getBoard(repos: Repositories, ctx: AnyTenantContext, monda
         if (ct?.requiresSafetyBoat && safetyRole && !covering.some((m) => roleById.get(m.roleTypeId)?.isSafetyCover)) open.push({ roleTypeId: safetyRole.id, roleName: safetyRole.name, missing: 1 });
       }
       openRoles[s.sessionId] = open;
-      sessionMeta[s.sessionId] = { courseTypeId: course?.courseTypeId ?? "", multiDay: (liveCount.get(s.courseId) ?? 0) > 1, courseId: s.courseId, needs, explicitRoles: lines.length > 0 };
+      sessionMeta[s.sessionId] = { courseTypeId: course?.courseTypeId ?? "", multiDay: (liveCount.get(s.courseId) ?? 0) > 1, courseId: s.courseId, needs, explicitRoles: lines.length > 0 || course?.staffRequired === 0 };
     }
   }
 

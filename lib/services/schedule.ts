@@ -160,6 +160,7 @@ function coverageOf(
       groupSize: course.capacity,
       ratio: course.ratio,
       requiresSafetyBoat: ct?.requiresSafetyBoat ?? false,
+      staffRequired: course.staffRequired,
       assigned: assignedByCourse.get(course.id) ?? [],
     });
     coverageByCourse.set(course.id, {
@@ -221,7 +222,7 @@ export async function getWeekSchedule(
       const course = courseById.get(s.courseId);
       const ct = course ? courseTypeById.get(course.courseTypeId) : undefined;
       const members = coveringStaff(staffBySessionId.get(s.id) ?? []).map((m) => { const role = roleById.get(m.roleTypeId); return { instructorId: m.instructorId, countsTowardRatio: role?.countsTowardRatio ?? false, isSafetyCover: role?.isSafetyCover ?? false }; });
-      const cov = course ? { courseName: course.name ?? ct?.name ?? "Course", ratio: evaluateRatio({ groupSize: course.capacity, ratio: course.ratio, requiresSafetyBoat: ct?.requiresSafetyBoat ?? false, assigned: members }) } : coverageByCourse.get(s.courseId);
+      const cov = course ? { courseName: course.name ?? ct?.name ?? "Course", ratio: evaluateRatio({ groupSize: course.capacity, ratio: course.ratio, requiresSafetyBoat: ct?.requiresSafetyBoat ?? false, staffRequired: course.staffRequired, assigned: members }) } : coverageByCourse.get(s.courseId);
       return {
         sessionId: s.id,
         courseId: s.courseId,
@@ -397,7 +398,7 @@ export async function getRotaDays(
         const ct = course ? ctById.get(course.courseTypeId) : undefined;
         const members = staffBySessionId.get(s.id) ?? [];
         const assignedRoles = coveringStaff(members).map((m) => { const role = roleById.get(m.roleTypeId); return { instructorId: m.instructorId, countsTowardRatio: role?.countsTowardRatio ?? false, isSafetyCover: role?.isSafetyCover ?? false }; });
-        const cov = course ? { ratio: evaluateRatio({ groupSize: course.capacity, ratio: course.ratio, requiresSafetyBoat: ct?.requiresSafetyBoat ?? false, assigned: assignedRoles }) } : coverageByCourse.get(s.courseId);
+        const cov = course ? { ratio: evaluateRatio({ groupSize: course.capacity, ratio: course.ratio, requiresSafetyBoat: ct?.requiresSafetyBoat ?? false, staffRequired: course.staffRequired, assigned: assignedRoles }) } : coverageByCourse.get(s.courseId);
         return {
           sessionId: s.id,
           courseId: s.courseId,

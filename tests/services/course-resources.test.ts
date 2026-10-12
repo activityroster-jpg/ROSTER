@@ -90,9 +90,12 @@ describe("course resources and staffing against the database", () => {
     expect(after.lines.map(({ people: _p, ...l }) => l)).toEqual([{ roleTypeId: counting.id, roleName: counting.name, count: 2, filled: 1 }]);
     expect(after.lines[0]!.people).toHaveLength(1);
     expect(after.fromRoles).toBe(true);
-    // Clearing the lines hands the decision back to the ratio.
+    // Clearing the lines means "no staff needed" (0), not the ratio's default back (null = never set).
     await setCourseStaffing(repos, ctx, courseId, { students: 9, roles: [] });
-    expect((await repos.tenant.course.findById(ctx, courseId))!.staffRequired).toBeNull();
+    expect((await repos.tenant.course.findById(ctx, courseId))!.staffRequired).toBe(0);
+    const none = (await getCourseStaffing(repos, ctx, courseId))!;
+    expect(none.required).toBe(0);
+    expect(none.suggested).toEqual([]);
     expect((await repos.tenant.courseRoleRequirement.list(ctx)).filter((x) => x.courseId === courseId)).toEqual([]);
   });
 

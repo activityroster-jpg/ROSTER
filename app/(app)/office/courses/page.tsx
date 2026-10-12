@@ -92,7 +92,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
     const needs = roleNeeds.get(courseId);
     if (needs?.length) return needs.map((n) => ({ roleTypeId: n.roleTypeId, roleName: n.roleName, count: n.count }));
     const row = courseRowById.get(courseId);
-    if (!row) return [];
+    if (!row || row.staffRequired === 0) return [];
     const ct = courseTypes.find((t) => t.id === row.courseTypeId);
     return suggestRoles({ students: row.capacity, ratio: row.ratio, requiresSafetyBoat: Boolean(ct?.requiresSafetyBoat), roles }).map((l) => ({ roleTypeId: l.roleTypeId, roleName: roleName.get(l.roleTypeId) ?? "Role", count: l.count }));
   };

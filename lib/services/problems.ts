@@ -167,7 +167,7 @@ export async function findProblems(repos: Repositories, ctx: AnyTenantContext, o
     for (const c of courseRows) {
       if (!inRange.has(c.id)) continue;
       const ct = courseTypes.find((x) => x.id === c.courseTypeId);
-      const r = evaluateRatio({ groupSize: c.capacity, ratio: c.ratio, requiresSafetyBoat: ct?.requiresSafetyBoat ?? false, assigned: assignedByCourse.get(c.id) ?? [] });
+      const r = evaluateRatio({ groupSize: c.capacity, ratio: c.ratio, requiresSafetyBoat: ct?.requiresSafetyBoat ?? false, staffRequired: c.staffRequired, assigned: assignedByCourse.get(c.id) ?? [] });
       coverage.set(c.id, { understaffed: r.understaffed, missingSafetyCover: r.missingSafetyCover, assigned: r.ratioCountingStaff, required: r.requiredStaff });
     }
     if (!opts.instructorId) problems.push(...coverageProblems(sessions, courses, coverage));

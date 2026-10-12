@@ -24,6 +24,12 @@ export interface RatioInput {
   /** Does this course require safety-boat cover? (course_type.requiresSafetyBoat) */
   readonly requiresSafetyBoat: boolean;
   readonly assigned: readonly AssignedRole[];
+  /**
+   * What the office set (course.staffRequired: the role lines' total, or 0 for
+   * "no staff needed"). A number wins over the ratio; null/undefined = the
+   * ratio decides.
+   */
+  readonly staffRequired?: number | null;
 }
 
 export interface RatioResult {
@@ -41,12 +47,14 @@ export function requiredInstructors(groupSize: number, ratio: number): number {
 }
 
 export function evaluateRatio(input: RatioInput): RatioResult {
-  const required = requiredInstructors(input.groupSize, input.ratio);
+  const explicit = typeof input.staffRequired === "number" && input.staffRequired >= 0 ? input.staffRequired : null;
+  const required = explicit ?? requiredInstructors(input.groupSize, input.ratio);
   const ratioCounting = input.assigned.filter((a) => a.countsTowardRatio).length;
   const hasSafetyCover = input.assigned.some((a) => a.isSafetyCover);
 
   const understaffed = ratioCounting < required;
-  const missingSafetyCover = input.requiresSafetyBoat && !hasSafetyCover;
+  // "No staff needed" (an explicit 0) asks for no safety cover either.
+  const missingSafetyCover = explicit === 0 ? false : input.requiresSafetyBoat && !hasSafetyCover;
 
   return {
     ratioCountingStaff: ratioCounting,

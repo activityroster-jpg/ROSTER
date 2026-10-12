@@ -425,7 +425,8 @@ export const SECTIONS: Section[] = [
       { kind: "bullets", items: [
         "Click any session to see who's on it (confirmed, unconfirmed, can't make it, this day only), the roles still open and the week's problems for that session.",
         "Add someone: the picker shows their availability for that slot, whether they're cleared to roster, whether their qualifications cover the course type. On a multi-day course choose “This day only” or “Whole course”.",
-        "Remove, or on a multi-day course “skip this day”. If the person you picked has a block (Busy, on another course, not cleared, licences don't cover the course) the button reads “Assign anyway”: press it to put them on regardless, and the override and its reasons are recorded. The issue stays shown under their name.",
+        "Remove, or on a multi-day course “skip this day”. If the person you picked has a block (Busy, on another course, not cleared, licences don't cover the course) the button reads “Assign anyway”: press it to put them on regardless, and the override and its reasons are recorded. The issue stays shown under their name. When the block is that they are already on another course in that slot you get two buttons instead: “Move here” takes them off the other course for that day, “Keep on both” leaves them on both with the clash recorded.",
+        "“Edit students & roles” with every role removed means the course needs nobody (0 staff); the ratio's suggestion only applies to a course whose roles were never set.",
         "“Edit students & roles” changes the places the course needs. Taking a role off the list takes the people in that role off the course too; you are asked first.",
         "“Print view” keeps the three printable templates, the PDF and the emergency sheet.",
       ] },

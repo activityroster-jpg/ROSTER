@@ -145,8 +145,8 @@ export function staffingViewFrom(
     filled: assignments.filter((a) => a.roleTypeId === l.roleTypeId && a.status !== "declined").length,
     people: assignments.filter((a) => a.roleTypeId === l.roleTypeId && a.status !== "declined").map((a) => ({ instructorId: a.instructorId, name: names?.get(a.instructorId) ?? "Someone" })),
   }));
-  const fromLines = derivedStaffRequired(lines);
-  const suggested = suggestRoles(input);
+  const fromLines = derivedStaffRequired(lines) ?? (course.staffRequired === 0 ? 0 : null);
+  const suggested = course.staffRequired === 0 && lines.length === 0 ? [] : suggestRoles(input);
   const live = assignments.filter((a) => a.status !== "declined").length;
   return {
     students: course.capacity,
@@ -157,7 +157,7 @@ export function staffingViewFrom(
     required: fromLines ?? derivedStaffRequired(suggested) ?? 0,
     fromRoles: fromLines !== null,
     suggested,
-    note: staffingShortfallNote(input, lines),
+    note: course.staffRequired === 0 && lines.length === 0 ? null : staffingShortfallNote(input, lines),
     assigned: live,
   };
 }
@@ -218,7 +218,8 @@ export async function setCourseStaffing(repos: Repositories, ctx: AnyTenantConte
     }
   }
   const students = Math.max(0, Math.min(500, Math.round(input.students)));
-  ops.push(t.course.updateStatement(ctx, courseId, { capacity: students, staffRequired: derivedStaffRequired(lines), updatedAt: new Date(version) }));
+  // No lines left = the office wants no staff on it (0), not the ratio's default back (null = never set).
+  ops.push(t.course.updateStatement(ctx, courseId, { capacity: students, staffRequired: derivedStaffRequired(lines) ?? 0, updatedAt: new Date(version) }));
   const audit = auditStatement(repos, ctx, { action: "set_staffing", entity: "course", entityId: courseId, after: { students, roles: lines, removed, staffRequired: derivedStaffRequired(lines) } });
   await runAtomic(repos.db, [...ops, ...(audit ? [audit] : [])]);
   return { ok: true, version, removed };
