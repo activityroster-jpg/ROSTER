@@ -425,9 +425,11 @@ export const SECTIONS: Section[] = [
       { kind: "bullets", items: [
         "Click any session to see who's on it (confirmed, unconfirmed, can't make it, this day only), the roles still open and the week's problems for that session.",
         "Add someone: the picker shows their availability for that slot, whether they're cleared to roster, whether their qualifications cover the course type. On a multi-day course choose “This day only” or “Whole course”.",
-        "Remove, or on a multi-day course “skip this day”. A block (Busy, clash, cert, qualification) can be overridden, and the override is recorded.",
+        "Remove, or on a multi-day course “skip this day”. If the person you picked has a block (Busy, on another course, not cleared, licences don't cover the course) the button reads “Assign anyway”: press it to put them on regardless, and the override and its reasons are recorded. The issue stays shown under their name.",
+        "“Edit students & roles” changes the places the course needs. Taking a role off the list takes the people in that role off the course too; you are asked first.",
         "“Print view” keeps the three printable templates, the PDF and the emergency sheet.",
       ] },
+      { kind: "tip", text: "Each session card's left edge shows its state: green = every place filled and nothing wrong; orange = places still open (the “needs” badge says how many); red = a problem to fix, such as a clash or someone whose licences don't cover the course (the ⚠ badge lists them)." },
       { kind: "tip", text: "Green dot = Free, amber = Maybe, red = Busy, faint red = hasn't answered (counts as Busy), grey = not asked yet (beyond the availability window)." },
     ],
   },
