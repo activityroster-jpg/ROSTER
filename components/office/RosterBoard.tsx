@@ -225,7 +225,21 @@ interface SlotRowProps {
   candidates: BoardInstructor[]; byId: Map<string, BoardInstructor>; slotKey: string; dayWord: string; slot: string;
   courseTypeId: string | null; courseId: string | null; canEdit: boolean; multiDay: boolean; pending: boolean; preselect: string | null;
   elsewhere: Map<string, string>;
-  onAssign: (instructorId: string, roleTypeId: string, replacing?: Member) => void; onRemove: (m: Member, scope: "course" | "day") => void; onAskRemove: (m: Member) => void;
+  onAssign: (instructorId: string, roleTypeId: string, override: boolean, note: string | null, replacing?: Member) => void; onRemove: (m: Member, scope: "course" | "day") => void; onAskRemove: (m: Member) => void;
+}
+
+/** What stands in the way of putting this person on this session: each line is a block the office can override. Empty = nothing. */
+function issuesFor(i: BoardInstructor | undefined, slotKey: string, dayWord: string, slot: string, courseTypeId: string | null, elsewhere: Map<string, string>): string[] {
+  if (!i) return [];
+  const a = i.availability[slotKey];
+  const out: string[] = [];
+  if (a?.status === "unavailable") out.push(`Busy ${dayWord} ${slot} in their availability.`);
+  const on = elsewhere.get(i.id);
+  if (on) out.push(`Already on ${on} in this slot.`);
+  if (!i.fit) out.push(`Not cleared to roster: ${i.fitReason}`);
+  const q = courseTypeId ? (i.knownQualifications ? i.teaches.includes(courseTypeId) : null) : null;
+  if (q === false) out.push("Their licences don't cover this course.");
+  return out;
 }
 
 /** Green / orange / red facts for one person on one session, for the pickers' order. */
@@ -266,8 +280,11 @@ function SlotRow({ roleTypeId, roleName, member, extra, candidates, byId, slotKe
   const chosen = pick ? byId.get(pick) : undefined;
   const chosenAvail = chosen?.availability[slotKey];
   const qualified = chosen && courseTypeId ? (chosen.knownQualifications ? chosen.teaches.includes(courseTypeId) : null) : null;
-  const field = "min-w-0 flex-1 rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal";
   const showPicker = canEdit && (!member || changing);
+  // A pick with a block only goes on through "Assign anyway", which records the override and why.
+  const issues = showPicker ? issuesFor(chosen, slotKey, dayWord, slot, courseTypeId, elsewhere) : [];
+  const memberIssues = member && !changing ? issuesFor(byId.get(member.instructorId), slotKey, dayWord, slot, courseTypeId, elsewhere) : [];
+  const commit = () => { onAssign(pick, roleTypeId, issues.length > 0, issues.length ? issues.join(" ") : null, changing ? member : undefined); setChanging(false); setPick(""); };
 
   return (
     <li className="rounded-lg border border-slate-200 px-2.5 py-2">
@@ -294,7 +311,11 @@ function SlotRow({ roleTypeId, roleName, member, extra, candidates, byId, slotKe
           <>
             <PeoplePicker value={pick} onChange={setPick} ariaLabel={`Who for ${roleName}`} className="flex-1" placeholder={member ? `Replace ${member.name} with…` : "Choose someone…"}
               groups={groupCandidates(candidates, (i) => candidateFacts(i, slotKey, courseTypeId, elsewhere), (i) => i.name).map((g) => ({ tier: g.tier, items: g.items.map((i) => ({ id: i.id, label: i.name, note: candidateNote(i, slotKey, courseTypeId, elsewhere) })) }))} />
-            <button type="button" disabled={pending || !pick} onClick={() => { onAssign(pick, roleTypeId, changing ? member : undefined); setChanging(false); setPick(""); }} className="rounded-lg bg-teal px-3 py-1.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{member ? "Save" : "Assign"}</button>
+            {issues.length ? (
+              <button type="button" disabled={pending || !pick} onClick={commit} title="Put them on despite the block; the override and the reason are recorded" className="rounded-lg bg-amber px-3 py-1.5 text-sm font-semibold text-white hover:bg-amber/90 disabled:opacity-50">Assign anyway</button>
+            ) : (
+              <button type="button" disabled={pending || !pick} onClick={commit} className="rounded-lg bg-teal px-3 py-1.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">Assign</button>
+            )}
             {changing ? <button type="button" onClick={() => { setChanging(false); setPick(""); }} className="text-xs text-slate-400 hover:text-navy">Cancel</button> : null}
           </>
         ) : (
@@ -304,9 +325,13 @@ function SlotRow({ roleTypeId, roleName, member, extra, candidates, byId, slotKe
       {showPicker && chosen ? (
         <div className="mt-1.5 space-y-0.5 pl-[7.5rem] text-xs">
           <p className={chosenAvail?.status === "available" ? "text-starboard" : chosenAvail?.status === "unavailable" ? "text-port" : "text-slate-500"}>Availability {dayWord} {slot}: {(chosenAvail ? AVAIL[chosenAvail.status] ?? AVAIL.unasked! : AVAIL.unasked!).word}{chosenAvail?.source === "default" ? " (hasn't answered; counts as busy)" : chosenAvail?.source === "pattern" ? " (usual week)" : chosenAvail?.source === "assumed" ? " (office keeps their availability)" : ""}</p>
-          {elsewhere.get(chosen.id) ? <p className="text-amber">Already on {elsewhere.get(chosen.id)} in this slot.</p> : null}
-          {!chosen.fit ? <p className="text-port">Not cleared to roster: {chosen.fitReason}</p> : null}
-          {qualified === false ? <p className="text-port">Their licences don&apos;t cover this course (override needed).</p> : qualified === null ? <p className="text-slate-400">No licences recorded for them.</p> : null}
+          {issues.map((t) => <p key={t} className="text-port">{t}</p>)}
+          {issues.length ? <p className="text-slate-500">Press “Assign anyway” to put them on regardless; the override is recorded.</p> : qualified === null ? <p className="text-slate-400">No licences recorded for them.</p> : null}
+        </div>
+      ) : null}
+      {memberIssues.length ? (
+        <div className="mt-1.5 space-y-0.5 pl-[7.5rem] text-xs">
+          {memberIssues.map((t) => <p key={t} className="text-amber">⚠ {t}</p>)}
         </div>
       ) : null}
     </li>
@@ -314,18 +339,23 @@ function SlotRow({ roleTypeId, roleName, member, extra, candidates, byId, slotKe
 }
 
 /** Students and the roles the course needs, editable for the whole course. */
-function StaffingEditor({ courseId, students, needs, roles, onSaved, onCancel }: {
-  courseId: string; students: number; needs: { roleTypeId: string; count: number }[]; roles: BoardData["roles"]; onSaved: () => void; onCancel: () => void;
+function StaffingEditor({ courseId, students, needs, roles, staff, onSaved, onCancel }: {
+  courseId: string; students: number; needs: { roleTypeId: string; count: number }[]; roles: BoardData["roles"]; staff: Member[]; onSaved: (message?: string) => void; onCancel: () => void;
 }) {
   const [n, setN] = useState(String(students || ""));
   const [lines, setLines] = useState(needs.length ? needs.map((x) => ({ ...x })) : [{ roleTypeId: roles[0]?.id ?? "", count: 1 }]);
   const [pending, start] = useTransition();
   const [err, setErr] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
+  // Roles coming off the list that still have people in them: they come off the course too, so ask first.
+  const kept = new Set(lines.filter((l) => l.roleTypeId && l.count > 0).map((l) => l.roleTypeId));
+  const losing = staff.filter((m) => m.status !== "declined" && needs.some((x) => x.roleTypeId === m.roleTypeId) && !kept.has(m.roleTypeId));
   const save = () => {
+    setConfirming(false);
     setErr(null);
     start(async () => {
       const r = await setCourseStaffingAction({ courseId, students: Math.max(0, Math.round(Number(n) || 0)), roles: lines.filter((l) => l.roleTypeId && l.count > 0) });
-      if (r.ok) onSaved(); else setErr(r.error ?? "That didn't save");
+      if (r.ok) onSaved(r.message); else setErr(r.error ?? "That didn't save");
     });
   };
   const field = "rounded-lg border border-slate-300 px-2 py-1 text-sm outline-none focus:border-teal";
@@ -348,9 +378,15 @@ function StaffingEditor({ courseId, students, needs, roles, onSaved, onCancel }:
       <button type="button" onClick={() => setLines((ls) => [...ls, { roleTypeId: roles[0]?.id ?? "", count: 1 }])} className="mt-2 text-xs font-medium text-teal hover:underline">+ Add a role</button>
       {err ? <p className="mt-2 text-xs text-port">{err}</p> : null}
       <div className="mt-3 flex items-center gap-2">
-        <button type="button" disabled={pending} onClick={save} className="rounded-lg bg-teal px-3 py-1.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{pending ? "Saving…" : "Save"}</button>
+        <button type="button" disabled={pending} onClick={() => (losing.length ? setConfirming(true) : save())} className="rounded-lg bg-teal px-3 py-1.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{pending ? "Saving…" : "Save"}</button>
         <button type="button" onClick={onCancel} className="text-sm text-slate-500 hover:text-navy">Cancel</button>
       </div>
+      <ConfirmDialog open={confirming} title={`Take ${losing.length === 1 ? losing[0]!.name : `${losing.length} people`} off this course?`} confirmLabel="Remove the role and its people" busy={pending} onCancel={() => setConfirming(false)} onConfirm={save}
+        consequences={[
+          `A role you removed still has people in it: ${losing.map((m) => `${m.name} (${m.role})`).join(", ")}.`,
+          "Saving takes them off every day of this course; they are told, and their unapproved pay lines for it are removed.",
+          "Keep the role (or set it to 1) if you want them to stay.",
+        ]} />
     </div>
   );
 }
@@ -364,7 +400,6 @@ function SessionPanel({ data, selected, canEdit, preselect, instructors, byId, o
   const flags = data.problems[s.sessionId] ?? [];
   const [pending, start] = useTransition();
   const [scope, setScope] = useState<"course" | "day">(meta?.multiDay ? "day" : "course");
-  const [override, setOverride] = useState(false);
   const [editing, setEditing] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [askRemove, setAskRemove] = useState<Member | null>(null);
@@ -374,13 +409,13 @@ function SessionPanel({ data, selected, canEdit, preselect, instructors, byId, o
     try {
       const r = await fn();
       setMsg({ ok: r.ok, text: r.ok ? r.message ?? "Done" : r.error ?? "Failed" });
-      if (r.ok) { if (then) await then(); setOverride(false); onChanged(); }
+      if (r.ok) { if (then) await then(); onChanged(); }
     } catch { setMsg({ ok: false, text: "That didn't save. Reload the page and try again." }); }
   });
   const remove = (m: Member, sc: "course" | "day") => run(() => boardRemoveAction({ sessionId: s.sessionId, courseId: s.courseId, instructorId: m.instructorId, roleTypeId: m.roleTypeId, assignmentId: m.assignmentId, scope: sc }));
   // Change = put the new person on first, then take the old one off, so a refused assignment leaves the slot as it was.
-  const assign = (instructorId: string, roleTypeId: string, replacing?: Member) => run(
-    () => boardAssignAction({ sessionId: s.sessionId, courseId: s.courseId, instructorId, roleTypeId, scope: replacing?.dayOnly ? "day" : scope, override }),
+  const assign = (instructorId: string, roleTypeId: string, override: boolean, note: string | null, replacing?: Member) => run(
+    () => boardAssignAction({ sessionId: s.sessionId, courseId: s.courseId, instructorId, roleTypeId, scope: replacing?.dayOnly ? "day" : scope, override, note }),
     replacing ? () => boardRemoveAction({ sessionId: s.sessionId, courseId: s.courseId, instructorId: replacing.instructorId, roleTypeId: replacing.roleTypeId, assignmentId: replacing.assignmentId, scope: replacing.dayOnly ? "day" : "course" }) : undefined,
   );
 
@@ -427,7 +462,7 @@ function SessionPanel({ data, selected, canEdit, preselect, instructors, byId, o
           <p className="text-sm text-navy"><span className="font-semibold">{s.students || 0}</span> students · <span className="font-semibold">{totalNeeded}</span> staff needed</p>
           {canEdit && meta ? <button type="button" onClick={() => setEditing((v) => !v)} className="rounded border border-slate-300 bg-white px-2 py-0.5 text-xs font-medium text-navy hover:bg-slate-50">{editing ? "Close" : "Edit students & roles"}</button> : null}
         </div>
-        {editing && meta ? <StaffingEditor courseId={meta.courseId} students={s.students} needs={(meta.needs ?? []).map((x) => ({ roleTypeId: x.roleTypeId, count: x.count }))} roles={data.roles} onCancel={() => setEditing(false)} onSaved={() => { setEditing(false); setMsg({ ok: true, text: "Students and roles saved for the whole course" }); onChanged(); }} /> : null}
+        {editing && meta ? <StaffingEditor courseId={meta.courseId} students={s.students} needs={(meta.needs ?? []).map((x) => ({ roleTypeId: x.roleTypeId, count: x.count }))} roles={data.roles} staff={s.staff} onCancel={() => setEditing(false)} onSaved={(message) => { setEditing(false); setMsg({ ok: true, text: message && message !== "Saved" ? message : "Students and roles saved for the whole course" }); onChanged(); }} /> : null}
         {flags.length ? <ul className="mb-3 space-y-1 rounded-lg bg-port/5 p-2 text-xs text-port">{flags.map((f, i) => <li key={i}>⚠ {f}</li>)}</ul> : null}
 
         <div className="mb-1 flex items-center justify-between">
@@ -452,7 +487,6 @@ function SessionPanel({ data, selected, canEdit, preselect, instructors, byId, o
           </ul>
         )}
         {canEdit && meta ? <div className="mb-3"><AddRolePlace courseId={meta.courseId} roles={data.roles.map((r) => ({ id: r.id, name: r.name }))} onChanged={onChanged} /></div> : null}
-        {canEdit ? <label className="flex items-center gap-2 text-xs text-slate-600"><input type="checkbox" checked={override} onChange={(e) => setOverride(e.target.checked)} /> Override a block (Busy, clash, licence, qualification)</label> : null}
         {msg ? <p className={`mt-3 text-xs ${msg.ok ? "text-starboard" : "text-port"}`}>{msg.text}</p> : null}
       </div>
       <ConfirmDialog open={askRemove !== null} title={`Take ${askRemove?.name ?? ""} off ${s.courseName}?`} confirmLabel="Remove from the course" busy={pending} onCancel={() => setAskRemove(null)}

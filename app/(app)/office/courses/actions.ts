@@ -255,10 +255,18 @@ export async function setCourseStaffingAction(input: { courseId: string; student
   if (!parsed.success) return { ok: false, error: firstIssue(parsed.error, "Check the staffing values") };
   const r = await setCourseStaffing(repos, ctx, parsed.data.courseId, parsed.data);
   if (!r.ok) return r;
+  const removed = r.removed ?? [];
+  if (removed.length) {
+    await syncHoursForCourse(repos, ctx, parsed.data.courseId);
+    const [course, sessions] = await Promise.all([repos.tenant.course.findById(ctx, parsed.data.courseId), repos.tenant.courseSession.list(ctx, eq(courseSessionTable.courseId, parsed.data.courseId))]);
+    for (const p of removed) await notifyRosterChange(repos, ctx, p.instructorId, course?.name ?? "a course", sessions.map((s) => s.date), "removed");
+    revalidatePath("/office/rota");
+    revalidatePath("/portal");
+  }
   revalidatePath("/office/courses");
   revalidatePath(`/office/courses/${parsed.data.courseId}`);
   revalidatePath("/office");
-  return { ok: true, message: "Saved", version: r.version };
+  return { ok: true, message: removed.length ? `Saved; ${removed.length} ${removed.length === 1 ? "person" : "people"} taken off the course with their role` : "Saved", version: r.version };
 }
 
 /** Put someone on one day only, or take them off one day (the rest of the course stands). */
@@ -268,7 +276,7 @@ export async function setDayStaffAction(input: { sessionId: string; instructorId
   if (!(SESSION_STAFF_MODES as readonly string[]).includes(input.mode)) return { ok: false, error: "Invalid request" };
   const note = typeof input.note === "string" ? input.note.trim().slice(0, 300) || null : null;
   const r = await setDayStaff(repos, ctx, { sessionId: input.sessionId, instructorId: input.instructorId, roleTypeId: input.roleTypeId, mode: input.mode as SessionStaffMode, override: Boolean(input.override), note });
-  if (!r.ok) return { ok: false, error: `${r.error}. Tick override to push it through.` };
+  if (!r.ok) return { ok: false, error: `${r.error}. Press “Assign anyway” to push it through.` };
   revalidatePath("/office/courses");
   revalidatePath("/office/rota");
   revalidatePath("/office");

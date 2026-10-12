@@ -25,6 +25,18 @@ export function candidateNote(c: SlotCandidate): string {
 }
 export const candidateFactsOf = (c: SlotCandidate) => ({ fit: c.fit, qualified: c.qualified ?? null, available: courseStateAvailable(c.avail) && !c.busyWith });
 
+/** What stands in the way of this person on this course: each line is a block the office can override. Empty = nothing. */
+function issuesOf(c: SlotCandidate | undefined): string[] {
+  if (!c) return [];
+  const out: string[] = [];
+  if (!c.fit) out.push(`Not cleared to roster: ${c.reason ?? "a check isn't met"}.`);
+  if (c.qualified === false) out.push("Their licences don't cover this course.");
+  if (c.busyWith) out.push(`Already on ${c.busyWith}.`);
+  else if (c.avail === "unavailable") out.push("Busy in their availability.");
+  else if (c.avail === "silent") out.push("Hasn't answered about availability (counts as busy).");
+  return out;
+}
+
 /**
  * A course's staffing as two columns: each required place on the left
  * ("Instructor 1", "Safety Boat Driver"), who is in it on the right, with
@@ -48,11 +60,11 @@ export function CourseSlots({ courseId, slots, candidates, roles = [], onChanged
       else { setEditing(null); router.refresh(); onChanged?.(); }
     });
   };
-  const assign = (instructorId: string, roleTypeId: string, override: boolean, replacing?: SlotPerson) => run(async () => {
+  const assign = (instructorId: string, roleTypeId: string, override: boolean, note: string | null, replacing?: SlotPerson) => run(async () => {
     if (replacing) { const r = await removeStaffAction(courseId, replacing.assignmentId); if (!r.ok) return r; }
     const fd = new FormData();
     fd.set("courseId", courseId); fd.set("instructorId", instructorId); fd.set("roleTypeId", roleTypeId);
-    if (override) fd.set("override", "on");
+    if (override) { fd.set("override", "on"); if (note) fd.set("overrideNote", note); }
     return assignStaffAction({ ok: false }, fd);
   });
   const remove = (p: SlotPerson) => run(() => removeStaffAction(courseId, p.assignmentId));
@@ -74,13 +86,16 @@ export function CourseSlots({ courseId, slots, candidates, roles = [], onChanged
 
 function SlotRowView({ slot, candidates, pending, editing, onEdit, onCancel, onAssign, onRemove }: {
   slot: RoleSlot; candidates: SlotCandidate[]; pending: boolean; editing: boolean;
-  onEdit: () => void; onCancel: () => void; onAssign: (instructorId: string, roleTypeId: string, override: boolean, replacing?: SlotPerson) => void; onRemove: (p: SlotPerson) => void;
+  onEdit: () => void; onCancel: () => void; onAssign: (instructorId: string, roleTypeId: string, override: boolean, note: string | null, replacing?: SlotPerson) => void; onRemove: (p: SlotPerson) => void;
 }) {
   const [pick, setPick] = useState("");
-  const [override, setOverride] = useState(false);
   const p = slot.person;
   const chosen = candidates.find((c) => c.id === pick);
   const picker = !p || editing;
+  // A pick with a block only goes on through "Assign anyway", which records the override and why.
+  const issues = picker ? issuesOf(chosen) : [];
+  const personIssues = p && !editing ? issuesOf(candidates.find((c) => c.id === p.instructorId)) : [];
+  const commit = () => { onAssign(pick, slot.roleTypeId, issues.length > 0, issues.length ? issues.join(" ") : null, editing ? p : undefined); setPick(""); };
   return (
     <li className="grid gap-2 px-3 py-2 sm:grid-cols-[11rem_1fr] sm:items-center">
       <div className="text-sm font-semibold text-navy">
@@ -95,6 +110,7 @@ function SlotRowView({ slot, candidates, pending, editing, onEdit, onCancel, onA
               : p.status === "declined" ? <span className="rounded bg-port/10 px-1.5 py-0.5 text-[10px] font-semibold text-port" title={p.declineNote ?? undefined}>can&apos;t make it</span>
               : <span className="text-[10px] text-slate-400">unconfirmed</span>}
             {p.isOverride ? <span className="text-[10px] font-semibold text-amber" title="Assigned with an override">override</span> : null}
+            {personIssues.length ? <span className="basis-full text-xs text-amber">{personIssues.map((t) => `⚠ ${t}`).join(" ")}</span> : null}
             <span className="ml-auto flex items-center gap-2 text-xs">
               <button type="button" disabled={pending} onClick={onEdit} className="rounded border border-slate-300 px-2 py-0.5 font-medium text-navy hover:bg-slate-50 disabled:opacity-50">Change</button>
               <button type="button" disabled={pending} onClick={() => onRemove(p)} className="text-slate-400 hover:text-port disabled:opacity-50">Remove</button>
@@ -104,13 +120,13 @@ function SlotRowView({ slot, candidates, pending, editing, onEdit, onCancel, onA
           <>
             <PeoplePicker value={pick} onChange={setPick} ariaLabel={`Who for ${slot.label}`} className="flex-1" placeholder={p ? `Replace ${p.name} with…` : "Choose someone…"}
               groups={groupCandidates(candidates, candidateFactsOf, (c) => c.name).map((g) => ({ tier: g.tier, items: g.items.map((c) => ({ id: c.id, label: c.name, note: candidateNote(c) })) }))} />
-            {chosen && (!chosen.fit || chosen.qualified === false || !candidateFactsOf(chosen).available) ? (
-              <label className="flex items-center gap-1 text-xs text-slate-500" title="Assign even though a check isn't met (recorded)">
-                <input type="checkbox" checked={override} onChange={(e) => setOverride(e.target.checked)} /> override
-              </label>
-            ) : null}
-            <button type="button" disabled={pending || !pick} onClick={() => { onAssign(pick, slot.roleTypeId, override, editing ? p : undefined); setPick(""); setOverride(false); }} className="rounded-lg bg-teal px-3 py-1.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{p ? "Save" : "Assign"}</button>
+            {issues.length ? (
+              <button type="button" disabled={pending || !pick} onClick={commit} title="Put them on despite the block; the override and the reason are recorded" className="rounded-lg bg-amber px-3 py-1.5 text-sm font-semibold text-white hover:bg-amber/90 disabled:opacity-50">Assign anyway</button>
+            ) : (
+              <button type="button" disabled={pending || !pick} onClick={commit} className="rounded-lg bg-teal px-3 py-1.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">Assign</button>
+            )}
             {editing ? <button type="button" onClick={() => { onCancel(); setPick(""); }} className="text-xs text-slate-400 hover:text-navy">Cancel</button> : null}
+            {issues.length ? <span className="basis-full text-xs text-port">{issues.join(" ")} <span className="text-slate-500">Press “Assign anyway” to put them on regardless; the override is recorded.</span></span> : null}
           </>
         ) : null}
       </div>

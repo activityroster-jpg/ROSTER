@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
 import {
@@ -8,6 +8,7 @@ import {
   courseLocation as courseLocationTable,
   courseRoleRequirement as courseRoleRequirementTable,
   courseStaff as courseStaffTable,
+  sessionStaffOverride as sessionStaffOverrideTable,
   type Course,
   type CourseStaff,
   type CourseType,
@@ -175,9 +176,11 @@ export async function getCourseStaffing(repos: Repositories, ctx: AnyTenantConte
 /**
  * Save the staffing panel: students booked and the role lines. Staff required
  * is derived from the lines (null when there are none, so the ratio decides).
- * Audited.
+ * A role taken off the list takes its people off the course with it (the
+ * screens confirm that first); `removed` lists them so the caller can re-sync
+ * hours and tell them. Audited.
  */
-export async function setCourseStaffing(repos: Repositories, ctx: AnyTenantContext, courseId: string, input: { students: number; roles: readonly { roleTypeId: string; count: number }[]; expectedVersion?: number | null }): Promise<Result> {
+export async function setCourseStaffing(repos: Repositories, ctx: AnyTenantContext, courseId: string, input: { students: number; roles: readonly { roleTypeId: string; count: number }[]; expectedVersion?: number | null }): Promise<Result & { removed?: { instructorId: string; roleTypeId: string }[] }> {
   const t = repos.tenant;
   // Every change and its log entry in one batch: the course never ends up with half the old list and half the new.
   const ops: PromiseLike<unknown>[] = [];
@@ -190,18 +193,32 @@ export async function setCourseStaffing(repos: Repositories, ctx: AnyTenantConte
   for (const l of cleanRoleLines(input.roles)) if (await t.roleType.findById(ctx, l.roleTypeId)) lines.push(l);
   const existing = await t.courseRoleRequirement.list(ctx, eq(courseRoleRequirementTable.courseId, courseId));
   const seen = new Set<string>();
+  const dropped = new Set<string>();
   for (const row of existing) {
     const want = lines.find((l) => l.roleTypeId === row.roleTypeId);
-    if (!want || seen.has(row.roleTypeId)) { ops.push(t.courseRoleRequirement.deleteStatement(ctx, row.id)); continue; }
+    if (!want || seen.has(row.roleTypeId)) { ops.push(t.courseRoleRequirement.deleteStatement(ctx, row.id)); if (!want) dropped.add(row.roleTypeId); continue; }
     seen.add(row.roleTypeId);
     if (row.count !== want.count) ops.push(t.courseRoleRequirement.updateStatement(ctx, row.id, { count: want.count }));
   }
   for (const l of lines) if (!seen.has(l.roleTypeId)) ops.push(t.courseRoleRequirement.insertStatement(ctx, { courseId, roleTypeId: l.roleTypeId, count: l.count }));
+  // People in a role the course no longer lists come off: their course-level
+  // place and any one-day adds in that role.
+  const removed: { instructorId: string; roleTypeId: string }[] = [];
+  if (dropped.size) {
+    const roleIds = [...dropped];
+    const staff = await t.courseStaff.list(ctx, and(eq(courseStaffTable.courseId, courseId), inArray(courseStaffTable.roleTypeId, roleIds)));
+    for (const a of staff) { ops.push(t.courseStaff.deleteStatement(ctx, a.id)); removed.push({ instructorId: a.instructorId, roleTypeId: a.roleTypeId }); }
+    const sessionIds = (await t.courseSession.list(ctx, eq(courseSessionTable.courseId, courseId))).map((s) => s.id);
+    if (sessionIds.length) {
+      const dayAdds = await t.sessionStaffOverride.listIn(ctx, sessionStaffOverrideTable.courseSessionId, sessionIds, inArray(sessionStaffOverrideTable.roleTypeId, roleIds));
+      for (const o of dayAdds) { ops.push(t.sessionStaffOverride.deleteStatement(ctx, o.id)); if (!removed.some((r) => r.instructorId === o.instructorId)) removed.push({ instructorId: o.instructorId, roleTypeId: o.roleTypeId }); }
+    }
+  }
   const students = Math.max(0, Math.min(500, Math.round(input.students)));
   ops.push(t.course.updateStatement(ctx, courseId, { capacity: students, staffRequired: derivedStaffRequired(lines), updatedAt: new Date(version) }));
-  const audit = auditStatement(repos, ctx, { action: "set_staffing", entity: "course", entityId: courseId, after: { students, roles: lines, staffRequired: derivedStaffRequired(lines) } });
+  const audit = auditStatement(repos, ctx, { action: "set_staffing", entity: "course", entityId: courseId, after: { students, roles: lines, removed, staffRequired: derivedStaffRequired(lines) } });
   await runAtomic(repos.db, [...ops, ...(audit ? [audit] : [])]);
-  return { ok: true, version };
+  return { ok: true, version, removed };
 }
 
 /**

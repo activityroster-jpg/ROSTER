@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { setCourseStaffingAction } from "@/app/(app)/office/courses/actions";
 import type { StaffingView } from "@/lib/services/course-resources";
+import { ConfirmDialog } from "./ConfirmDialog";
 
 /**
  * The one staffing panel (audit A2-2, option B): students booked, what the
@@ -26,11 +27,17 @@ export function StaffingPanel({ courseId, staffing, compact = false, onSaved }: 
   const total = lines.reduce((n, l) => n + l.count, 0);
   const dirty = Number(students) !== staffing.students || JSON.stringify(lines) !== JSON.stringify(staffing.lines.map((l) => ({ roleTypeId: l.roleTypeId, count: l.count })));
 
+  const [confirming, setConfirming] = useState(false);
+  // Roles coming off the list that still have people in them come off the course with them: ask first.
+  const losing = staffing.lines.filter((l) => l.filled > 0 && !lines.some((x) => x.roleTypeId === l.roleTypeId && x.count > 0));
+  const losingPeople = losing.reduce((n, l) => n + l.filled, 0);
   const save = () => start(async () => {
+    setConfirming(false);
     const r = await setCourseStaffingAction({ courseId, students: Number(students) || 0, roles: lines, expectedVersion: version });
-    setMsg({ ok: r.ok, text: r.ok ? "Staffing saved" : r.error ?? "Failed" });
+    setMsg({ ok: r.ok, text: r.ok ? (r.message && r.message !== "Saved" ? r.message : "Staffing saved") : r.error ?? "Failed" });
     if (r.ok) { if (r.version) setVersion(r.version); router.refresh(); onSaved?.(); }
   });
+  const askSave = () => (losingPeople ? setConfirming(true) : save());
   const useSuggestion = () => setLines(staffing.suggested.length ? staffing.suggested : lines);
   const setCount = (roleTypeId: string, count: number) => setLines((ls) => ls.map((l) => (l.roleTypeId === roleTypeId ? { ...l, count: Math.max(0, Math.min(50, count)) } : l)).filter((l) => l.count > 0));
   const addRole = (roleTypeId: string) => { if (roleTypeId) setLines((ls) => [...ls, { roleTypeId, count: 1 }]); };
@@ -82,9 +89,15 @@ export function StaffingPanel({ courseId, staffing, compact = false, onSaved }: 
           {staffing.assigned} of {total || staffing.required} staff assigned
         </span>
         {staffing.note && !dirty ? <span className="text-xs text-amber">⚠ {staffing.note}</span> : null}
-        {dirty ? <button type="button" onClick={save} disabled={pending} className="rounded-lg bg-teal px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{pending ? "Saving…" : "Save staffing"}</button> : null}
+        {dirty ? <button type="button" onClick={askSave} disabled={pending} className="rounded-lg bg-teal px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{pending ? "Saving…" : "Save staffing"}</button> : null}
         {msg ? <span className={`text-xs ${msg.ok ? "text-starboard" : "text-port"}`}>{msg.text}</span> : null}
       </div>
+      <ConfirmDialog open={confirming} title={`Take ${losingPeople} ${losingPeople === 1 ? "person" : "people"} off this course?`} confirmLabel="Remove the role and its people" busy={pending} onCancel={() => setConfirming(false)} onConfirm={save}
+        consequences={[
+          `A role you removed still has people in it: ${losing.map((l) => `${l.filled} × ${l.roleName}`).join(", ")}.`,
+          "Saving takes them off every day of this course; they are told, and their unapproved pay lines for it are removed.",
+          "Keep the role (or set it to 1) if you want them to stay.",
+        ]} />
     </div>
   );
 }
