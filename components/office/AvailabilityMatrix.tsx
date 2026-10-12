@@ -120,17 +120,18 @@ export function AvailabilityMatrix({ days, rows, availableCounts, staffManagedBy
   const [roleFor, setRoleFor] = useState<Record<string, string>>({});
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
+  const loadCell = async (date: string, slot: string, instructorId: string) => {
+    const res = await assignableForCellAction(date, slot, instructorId);
+    if (res.ok) { setCands(res.candidates); setCurrent(res.current); setRoleFor(Object.fromEntries(res.candidates.map((c) => [c.courseId, c.roles[0]?.id ?? ""]))); }
+    else { setMsg({ ok: false, text: res.error }); setCands([]); }
+  };
   const openCell = (instructorId: string, name: string, date: string, slot: string, dayLabel: string) => {
     setSel({ instructorId, name, date, slot, dayLabel });
     setCands(null); setMsg(null); setRoleFor({}); setCurrent([]); setPerson(null);
     if (mode === "edit") return; // edit mode: the panel only sets availability
     const row = rows.find((x) => x.instructorId === instructorId);
     if (row && !isFreeCell(row, `${date}|${slot}`)) { setCands([]); return; }
-    start(async () => {
-      const res = await assignableForCellAction(date, slot, instructorId);
-      if (res.ok) { setCands(res.candidates); setCurrent(res.current); setRoleFor(Object.fromEntries(res.candidates.map((c) => [c.courseId, c.roles[0]?.id ?? ""]))); }
-      else { setMsg({ ok: false, text: res.error }); setCands([]); }
-    });
+    start(() => loadCell(date, slot, instructorId));
   };
 
   const assign = (courseId: string, move = false) => {
@@ -141,10 +142,10 @@ export function AvailabilityMatrix({ days, rows, availableCounts, staffManagedBy
       const res = move && from
         ? await moveFromAvailabilityAction({ fromSessionId: from.sessionId, toCourseId: courseId, instructorId: sel.instructorId, roleTypeId: roleFor[courseId] ?? "" })
         : await assignFromAvailabilityAction(courseId, sel.instructorId, roleFor[courseId] ?? "");
-      if (res.ok && move) setCurrent([]);
       setMsg({ ok: res.ok, text: res.ok ? res.message ?? "Assigned" : res.error ?? "Failed" });
       if (res.ok) {
-        setCands((cs) => (cs ? cs.filter((c) => c.courseId !== courseId) : cs));
+        // Re-read the cell so "Currently on" shows the new session and the list drops it.
+        await loadCell(sel.date, sel.slot, sel.instructorId);
         router.refresh();
       }
     });

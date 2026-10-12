@@ -3,15 +3,15 @@
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { requireTenant } from "@/lib/tenant/require";
-import { getWeekSchedule, weekStart } from "@/lib/services/schedule";
+import { weekStart } from "@/lib/services/schedule";
+import { getBoard } from "@/lib/services/board";
 import { getTeachingMatrix } from "@/lib/services/teaching";
 import { assignStaff, assignBlockMessage } from "@/lib/services/assignment";
 import { courseSession as courseSessionTable, courseStaff as courseStaffTable } from "@/lib/db/schema";
-import { clearDayStaff, sessionsForInstructor, setDayStaff } from "@/lib/services/session-staff";
+import { clearDayStaff, setDayStaff } from "@/lib/services/session-staff";
 import { writeAudit } from "@/lib/services/audit";
 import { syncHoursForCourse } from "@/lib/services/hours";
 import { notifyRosterChange } from "@/lib/services/assignment";
-import { cleanRoleLines, suggestRoles } from "@/lib/domain/staffing";
 import { BULK_AVAILABILITY_MAX, setAvailability, setAvailabilityBulk, type BulkAvailabilityEntry } from "@/lib/services/availability";
 import { availabilityForStaffSchema, firstIssue, officeAvailabilitySchema } from "@/lib/validation/actions";
 import { instructor as instructorTable } from "@/lib/db/schema";
@@ -44,58 +44,38 @@ export async function assignableForCellAction(date: string, slot: string, instru
   const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !instructorId) return { ok: false, error: "Invalid cell" };
 
-  const [sessions, courses, courseTypes, roles, teaching, existing, schedule, requirements, allStaff] = await Promise.all([
-    repos.tenant.courseSession.list(ctx),
-    repos.tenant.course.list(ctx),
-    repos.tenant.courseType.list(ctx),
+  // One source of truth: the same week data the roster board shows (who is on each
+  // session that day, day adds included, and which places are still open), so the
+  // availability sheet can never disagree with the rota.
+  const [board, roles, teaching] = await Promise.all([
+    getBoard(repos, ctx, weekStart(new Date(`${date}T00:00:00Z`))),
     repos.tenant.roleType.list(ctx),
     getTeachingMatrix(repos, ctx),
-    repos.tenant.courseStaff.list(ctx, eq(courseStaffTable.instructorId, instructorId)),
-    getWeekSchedule(repos, ctx, weekStart(new Date(`${date}T00:00:00Z`))),
-    repos.tenant.courseRoleRequirement.list(ctx),
-    repos.tenant.courseStaff.list(ctx),
   ]);
   const activeRoles = roles.filter((r) => r.active).map((r) => ({ id: r.id, name: r.name }));
-  const roleName = new Map(roles.map((r) => [r.id, r.name]));
-  // Only the roles this course needs, open places first.
-  const rolesFor = (course: (typeof courses)[number]) => {
-    const ct = courseTypes.find((t) => t.id === course.courseTypeId);
-    const own = cleanRoleLines(requirements.filter((r) => r.courseId === course.id));
-    const lines = own.length ? own : suggestRoles({ students: course.capacity, ratio: course.ratio, requiresSafetyBoat: Boolean(ct?.requiresSafetyBoat), roles });
-    const onCourse = allStaff.filter((a) => a.courseId === course.id && a.status !== "declined");
-    const out = lines.map((l) => ({ id: l.roleTypeId, name: roleName.get(l.roleTypeId) ?? "Role", missing: Math.max(0, l.count - onCourse.filter((a) => a.roleTypeId === l.roleTypeId).length) }));
-    return (out.length ? out : activeRoles.map((r) => ({ ...r, missing: 0 }))).sort((a, b) => Number(b.missing > 0) - Number(a.missing > 0));
-  };
-
   const teachable = new Set((teaching.get(instructorId) ?? []).map((c) => c.courseTypeId));
-  const alreadyOn = new Set(existing.map((a) => a.courseId));
-  const courseById = new Map(courses.map((c) => [c.id, c]));
-  const nameOf = (c: (typeof courses)[number]) => c.name ?? courseTypes.find((t) => t.id === c.courseTypeId)?.name ?? "Course";
+  const day = board.days.find((d) => d.date === date);
+  const inSlot = (day?.sessions ?? []).filter((s) => s.slot === slot && s.status !== "cancelled");
+  const onIt = (s: (typeof inSlot)[number]) => s.staff.some((m) => m.instructorId === instructorId && m.status !== "declined");
 
   // What they're already on in this slot (course-level or a day-only add).
-  const slotSessions = sessions.filter((s) => s.date === date && s.slot === slot && !s.cancelledAt);
-  const liveCount = new Map<string, number>();
-  for (const s of sessions) if (!s.cancelledAt) liveCount.set(s.courseId, (liveCount.get(s.courseId) ?? 0) + 1);
-  const current: CurrentSession[] = (await sessionsForInstructor(repos, ctx, instructorId, slotSessions)).map((s) => {
-    const c = courseById.get(s.courseId);
-    return { sessionId: s.id, courseId: s.courseId, courseName: c ? nameOf(c) : "Course", time: `${fmtT(s.startAt)}–${fmtT(s.endAt)}`, multiDay: (liveCount.get(s.courseId) ?? 0) > 1, dayOnly: !alreadyOn.has(s.courseId) };
+  const current: CurrentSession[] = inSlot.filter(onIt).map((s) => {
+    const me = s.staff.find((m) => m.instructorId === instructorId)!;
+    return { sessionId: s.sessionId, courseId: s.courseId, courseName: s.courseName, time: `${fmtT(s.startAt)}–${fmtT(s.endAt)}`, multiDay: Boolean(board.sessionMeta[s.sessionId]?.multiDay), dayOnly: Boolean(me.dayOnly) };
   });
 
   const candidates: CellCandidate[] = [];
-  for (const s of sessions) {
-    if (s.date !== date || s.slot !== slot) continue;
-    const course = courseById.get(s.courseId);
-    if (!course || alreadyOn.has(course.id) || !teachable.has(course.courseTypeId)) continue;
-    const cov = schedule.coverageByCourse.get(course.id)?.ratio;
-    candidates.push({
-      courseId: course.id,
-      courseName: nameOf(course),
-      time: `${fmtT(s.startAt)}–${fmtT(s.endAt)}`,
-      needsCover: cov ? !cov.ok : true,
-      assigned: cov?.ratioCountingStaff ?? 0,
-      required: cov?.requiredStaff ?? 0,
-      roles: rolesFor(course),
-    });
+  for (const s of inSlot) {
+    const meta = board.sessionMeta[s.sessionId];
+    if (!meta || onIt(s) || !teachable.has(meta.courseTypeId)) continue;
+    const open = board.openRoles[s.sessionId] ?? [];
+    const assigned = s.staff.filter((m) => m.status !== "declined").length;
+    const required = meta.needs.reduce((n, x) => n + x.count, 0);
+    // Only the roles this session needs, open places first; a course with no roles set offers every active role.
+    const rolesOut = meta.needs.length
+      ? meta.needs.map((n) => ({ id: n.roleTypeId, name: n.roleName, missing: open.find((o) => o.roleTypeId === n.roleTypeId)?.missing ?? 0 })).sort((a, b) => Number(b.missing > 0) - Number(a.missing > 0))
+      : activeRoles.map((r) => ({ ...r, missing: 0 }));
+    candidates.push({ courseId: s.courseId, courseName: s.courseName, time: `${fmtT(s.startAt)}–${fmtT(s.endAt)}`, needsCover: open.length > 0, assigned, required, roles: rolesOut });
   }
   // De-dupe by course (a course may have several sessions in the slot) and put gaps first.
   const seen = new Set<string>();
