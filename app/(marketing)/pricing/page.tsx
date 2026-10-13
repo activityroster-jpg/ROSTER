@@ -15,8 +15,8 @@ export const metadata = {
 };
 
 const INCLUDED = [
-  "Roster builder with RYA ratio, licence and safety-cover checks on every assignment",
-  "Auto-roster: one click fills the week's open roles evenly from who's available",
+  "Roster builder with instructor-type, RYA ratio, supervision and licence checks on every assignment",
+  "Auto-roster: one click fills the week's open places evenly from who's available and qualified",
   "Instructor app: shifts, availability, open shifts, leave, hours and documents",
   "Certificate and vetting tracking (DBS, PVG, AccessNI, Garda) with expiry reminders",
   "Office access you choose per admin, and welfare officers on duty shown on the roster",
@@ -195,7 +195,7 @@ export default async function PricingPage() {
           <p className="text-sm font-semibold uppercase tracking-wide text-starboard">Flat price vs the per-user platforms</p>
           <h2 className="mt-1 font-display text-2xl font-bold text-navy">Cheaper than the per-user platforms — at every size</h2>
           <p className="mt-2 max-w-2xl text-slate-600">
-            {COMPETITOR_NAMES_AND} charge per user. A centre rosters everyone (instructors, safety-boat cover, shore
+            {COMPETITOR_NAMES_AND} charge per user. A centre rosters everyone (instructors, assistants, shore
             crew, volunteers), so per-seat pricing bills your whole volunteer base. One flat price per centre comes out
             cheaper at every size.{" "}
             <Link href="/compare" className="font-semibold text-teal hover:underline">Full comparison →</Link>

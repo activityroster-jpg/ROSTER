@@ -64,7 +64,7 @@ export function GeneralSettingsForm({
     licence: { title: "Stop blocking people with a missing or expired must-have cert?", consequences: ["Anyone can be rostered whatever their DBS, first aid or other must-have checks say.", "Expiry still shows on the Instructors tab, but nothing stops an assignment.", "The problems list will no longer flag it either."] },
     conflict: { title: "Stop checking for double-bookings?", consequences: ["The same person can be put on two courses at the same time without a warning.", "The problems list stops flagging clashes created by moving sessions.", "Recorded in the change log."] },
     availability: { title: "Stop checking availability when rostering?", consequences: ["People marked Busy, on approved leave, or who never answered can be rostered without a warning.", "The problems list stops flagging rostered-while-Busy.", "Instructors still see and set availability; the office just isn't stopped by it."] },
-    ratio: { title: "Stop flagging short-staffed courses and missing safety cover?", consequences: ["Courses no longer show Covered / Under-staffed / No safety cover.", "The Today strip and the problems list stop counting uncovered sessions.", "Ratios are still stored on each course type for when you switch it back on."] },
+    ratio: { title: "Stop flagging short-staffed courses?", consequences: ["Courses no longer show Covered / Under-staffed against their ratio.", "The Today strip and the problems list stop counting uncovered sessions.", "Ratios are still stored on each course type for when you switch it back on."] },
   };
   const toggle = (k: keyof typeof checks, on: boolean) => { if (!on && checks[k]) setAskOff(k); else setChecks((c) => ({ ...c, [k]: on })); };
 
@@ -145,7 +145,7 @@ export function GeneralSettingsForm({
           </label>
           <label className="flex items-start gap-2 text-sm text-slate-600">
             <input type="checkbox" name="enforceRatioChecks" checked={checks.ratio} onChange={(e) => toggle("ratio", e.target.checked)} className="mt-0.5 h-4 w-4 rounded border-slate-300" />
-            <span>Flag courses that are short of instructors or safety-boat cover</span>
+            <span>Flag courses that are short of instructors for their ratio</span>
           </label>
           <label className="flex items-start gap-2 text-sm text-slate-600">
             <input type="checkbox" name="enforceConflictChecks" checked={checks.conflict} onChange={(e) => toggle("conflict", e.target.checked)} className="mt-0.5 h-4 w-4 rounded border-slate-300" />

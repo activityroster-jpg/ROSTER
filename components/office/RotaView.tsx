@@ -15,7 +15,7 @@ const FIELDS = [
   { key: "role", label: "Role" },
   { key: "location", label: "Location" },
   { key: "equipment", label: "Equipment" },
-  { key: "cover", label: "Safety-cover status" },
+  { key: "cover", label: "Staffing status (covered or short)" },
 ] as const;
 type FieldKey = (typeof FIELDS)[number]["key"];
 type Fields = Record<FieldKey, boolean>;

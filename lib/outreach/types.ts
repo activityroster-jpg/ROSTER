@@ -42,14 +42,14 @@ export interface ResearchResult {
 export const DEFAULT_TARGET_ROLES = "Principal, Chief Instructor, Centre Manager, Commodore, Sailing Secretary, Owner";
 
 export const DEFAULT_PITCH =
-  "ActivityRoster is staff rostering built for RYA training centres and clubs. It rosters instructors across courses while checking RYA ratios, safety-boat cover and each instructor's certs; tracks DBS, first aid and safeguarding expiry; and gives instructors an app for availability, confirming shifts, clocking in and leave. Flat price per centre (£35 Small Club, £65 Standard), first month free, no card.";
+  "ActivityRoster is staff rostering built for RYA training centres and clubs. It rosters instructors across courses while checking RYA ratios, the right instructor type in every place and each instructor's certs; tracks DBS, first aid and safeguarding expiry; and gives instructors an app for availability, confirming shifts, clocking in and leave. Flat price per centre (£35 Small Club, £65 Standard), first month free, no card.";
 
 export const DEFAULT_STEPS: SequenceStep[] = [
   {
     gapDays: 0,
     purpose: "First contact: one specific observation about their centre, what we do in one sentence, a soft ask.",
     subject: "Rostering at {{centre}}",
-    body: "Hi {{first_name}},\n\n{{hook}}\n\nI run ActivityRoster, a rostering tool built for RYA centres: it puts instructors on courses while checking ratios, safety-boat cover and certs, and gives your team an app for availability and confirming shifts.\n\nWould it be worth a 15-minute look? Happy to send a link instead if that's easier.\n\n{{sender}}",
+    body: "Hi {{first_name}},\n\n{{hook}}\n\nI run ActivityRoster, a rostering tool built for RYA centres: it puts instructors on courses while checking ratios, instructor types and certs, and gives your team an app for availability and confirming shifts.\n\nWould it be worth a 15-minute look? Happy to send a link instead if that's easier.\n\n{{sender}}",
   },
   {
     gapDays: 4,

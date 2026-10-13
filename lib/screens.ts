@@ -27,7 +27,7 @@ const phone = (name: string, title: string, caption: string, topic: string): Scr
 export const SCREENS = {
   onboarding: desktop("onboarding", "Setup wizard", "A new centre picks what it wants to manage and how its sessions run, then the wizard sets up courses, team and roster style.", "getting-started"),
   dashboard: desktop("dashboard", "Dashboard", "Monday morning at a busy centre: today's sessions, who is on, and everything that needs attention this week.", "dashboard"),
-  problems: desktop("problems", "Problems on the roster", "Clashes, missing safety cover and short-staffed sessions, worked out from the roster as it stands now.", "problems"),
+  problems: desktop("problems", "Problems on the roster", "Clashes, people in places they aren't qualified for, sessions with no Senior Instructor on duty and short-staffed sessions, worked out from the roster as it stands now.", "problems"),
   board: desktop("board", "Roster board", "The week as courses by day, with everyone's availability alongside, so you can drag people onto sessions.", "board"),
   boardPeople: desktop("board-people", "People × days", "The same week turned round: a row per instructor, free slots in green, so gaps and double-bookings stand out.", "board"),
   rota: desktop("rota", "Printable roster", "The published week ready to print or send as a PDF, with locations, kit and this week's problems on top.", "rota"),

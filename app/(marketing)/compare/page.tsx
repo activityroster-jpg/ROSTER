@@ -29,8 +29,8 @@ const COLUMNS = [
 
 const ROWS: Row[] = [
   {
-    feature: "RYA ratio & safety-boat cover checks",
-    detail: "Flags an understaffed session or missing safety cover as you roster — not after.",
+    feature: "RYA instructor types, ratios and supervision checks",
+    detail: "Each place is an instructor type, checked against who can teach the course; flags an understaffed session or no Senior Instructor on duty as you roster — not after.",
     us: "yes", general: "no", club: "no", sheets: "no",
   },
   {
@@ -130,7 +130,7 @@ export default function ComparePage() {
         <p className="mx-auto mt-3 max-w-2xl text-slate-600">
           General rostering apps schedule shifts. Club systems take bookings and money. Spreadsheets do
           whatever you build. None of them understand an RYA centre&apos;s compliance the way ActivityRoster does —
-          ratios, safety cover, licences and vetting, enforced as you roster.
+          instructor types, ratios, supervision, licences and vetting, enforced as you roster.
         </p>
       </div>
 

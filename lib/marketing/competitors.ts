@@ -30,7 +30,7 @@ export interface Competitor {
 
 const RYA_ROWS = (them: Partial<Record<string, Cell>>): CompareRow[] => {
   const base: [string, Cell][] = [
-    ["RYA ratio & safety-boat cover checks", "no"],
+    ["RYA instructor types, ratio & supervision checks", "no"],
     ["Blocks unqualified / expired instructors", "no"],
     ["Licence tracking with expiry alerts", "partial"],
     ["DBS / safeguarding vetting enforced at assignment", "no"],
@@ -61,7 +61,7 @@ export const COMPETITORS: Competitor[] = [
       "Time & attendance with payroll integrations",
     ],
     weWin: [
-      "Deputy schedules shifts; it doesn't know a Dinghy Instructor from a Senior Instructor, or that a session needs a safety boat.",
+      "Deputy schedules shifts; it doesn't know a Dinghy Instructor from a Senior Instructor, or that an Assistant Instructor needs one on duty.",
       "ActivityRoster blocks an instructor who's missing a mandatory check or whose licence has expired — with a recorded override if you must proceed.",
       "Courses run as multi-session bookings (a 5-day camp, a weekly club), not just individual shifts.",
       "Boats and kit are conflict-checked against sessions; youth and adult courses are separated everywhere.",
@@ -80,7 +80,7 @@ export const COMPETITORS: Competitor[] = [
       "Basic time tracking",
     ],
     weWin: [
-      "No concept of RYA qualifications, ratios or safety-boat cover — you'd track all of that by hand.",
+      "No concept of RYA instructor types, who can teach which course, ratios or supervision — you'd track all of that by hand.",
       "ActivityRoster enforces fit and ratio as you roster, and keeps a licence & vetting register with expiry alerts.",
       "Instructor availability feeds straight into course assignment, showing free/maybe/busy for the exact session times.",
     ],
@@ -98,7 +98,7 @@ export const COMPETITORS: Competitor[] = [
       "Cost/hours reporting",
     ],
     weWin: [
-      "Strong on generic rosters and leave, but there's no licence tracking, safety-cover logic or course structure.",
+      "Strong on generic rosters and leave, but there's no licence tracking, instructor-type logic or course structure.",
       "ActivityRoster gives you leave and open-shift cover too — plus the compliance moat RotaCloud doesn't attempt.",
       "The roster is course- and audience-aware (youth/adult), and prints cleanly for the wall or the inbox.",
     ],
@@ -116,7 +116,7 @@ export const COMPETITORS: Competitor[] = [
       "Multi-department scheduling",
     ],
     weWin: [
-      "Planday scales scheduling well, but qualifications, ratios and safety cover for watersports aren't part of the model.",
+      "Planday scales scheduling well, but instructor types, ratios and supervision for watersports aren't part of the model.",
       "ActivityRoster is ready for an RYA centre on day one — schemes, grades, ratios and defaults are seeded.",
       "Every roster, override and change is written to an audit trail scoped to your centre.",
     ],
@@ -134,7 +134,7 @@ export const COMPETITORS: Competitor[] = [
       "Communications to members",
     ],
     weWin: [
-      "These systems focus on members and bookings; instructor rostering, qualifications and safety cover are thin or absent.",
+      "These systems focus on members and bookings; instructor rostering, qualifications and supervision are thin or absent.",
       "ActivityRoster is the staff-side counterpart — who's qualified, who's available, who's on which session, and whether it's safe.",
       "It complements a booking system rather than replacing it: you run the roster, they take the money.",
     ],

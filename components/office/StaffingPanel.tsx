@@ -5,11 +5,13 @@ import { useEffect, useState, useTransition } from "react";
 import { setCourseStaffingAction } from "@/app/(app)/office/courses/actions";
 import type { StaffingView } from "@/lib/services/course-resources";
 import { SurplusPicker, type SurplusGroup } from "./SurplusPicker";
+import { PlaceSelect } from "./PlaceSelect";
 
 /**
  * The one staffing panel (audit A2-2, option B): students booked, what the
- * ratio implies, and the role lines the admin adjusts. "Staff required" is
- * derived from the lines, never typed.
+ * ratio implies, and the places (instructor types) the admin adjusts. "Staff
+ * required" is derived from the lines, never typed. The add-a-place list
+ * shows the types that teach this course first, with "Other…" for the rest.
  */
 export function StaffingPanel({ courseId, staffing, compact = false, notes, onSaved }: { courseId: string; staffing: StaffingView; compact?: boolean; /** Problems to show beside names when choosing who comes off (double-booked, licences), by instructor id. */ notes?: Record<string, string>; onSaved?: () => void }) {
   const router = useRouter();
@@ -55,13 +57,13 @@ export function StaffingPanel({ courseId, staffing, compact = false, notes, onSa
           Ratio 1:{Math.max(1, staffing.ratio)} → <span className="font-semibold text-navy">{ratioNeeds} instructor{ratioNeeds === 1 ? "" : "s"}</span>
           {staffing.requiresSafetyBoat ? <> + <span className="font-semibold text-navy">safety cover</span></> : null}
         </p>
-        {staffing.suggested.length ? <button type="button" onClick={useSuggestion} className="pb-1.5 text-xs font-medium text-teal hover:underline">Use the suggested roles</button> : null}
+        {staffing.suggested.length ? <button type="button" onClick={useSuggestion} className="pb-1.5 text-xs font-medium text-teal hover:underline">Use the suggested places</button> : null}
       </div>
 
       <div className="mt-3">
-        <p className="mb-1 text-xs font-semibold text-slate-500">Roles needed</p>
+        <p className="mb-1 text-xs font-semibold text-slate-500">Places needed (instructor types)</p>
         {lines.length === 0 ? (
-          <p className="text-xs text-slate-400">No role lines: the ratio alone decides ({staffing.required} needed). Add roles to say who exactly.</p>
+          <p className="text-xs text-slate-400">No places listed: the ratio alone decides ({staffing.required} needed, in the course&apos;s lead instructor type). Add places to say exactly who.</p>
         ) : (
           <ul className="space-y-1.5">
             {lines.map((l) => {
@@ -78,10 +80,7 @@ export function StaffingPanel({ courseId, staffing, compact = false, notes, onSa
           </ul>
         )}
         {unused.length ? (
-          <select value="" onChange={(e) => addRole(e.target.value)} aria-label="Add a role" className={`${field} mt-2`}>
-            <option value="">+ Add a role…</option>
-            {unused.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-          </select>
+          <PlaceSelect value="" onChange={addRole} places={unused.map((r) => ({ id: r.id, name: r.name, rank: r.rank, qualificationTypeId: r.qualificationTypeId ?? null }))} relevant={staffing.relevantRoleIds.filter((id) => unused.some((r) => r.id === id))} ariaLabel="Add a place" placeholder="+ Add a place…" className={`${field} mt-2`} />
         ) : null}
       </div>
 

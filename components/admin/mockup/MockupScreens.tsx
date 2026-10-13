@@ -15,7 +15,7 @@ export interface SampleData {
   weekLabel: string;
   days: { label: string; date: string }[];
   staff: { name: string; role: string; fit: "fit" | "blocked" | "expiring"; note: string; teaches: string }[];
-  sessions: { day: number; slot: "AM" | "PM" | "EV"; start: string; end: string; course: string; audience: "youth" | "adult"; staff: { name: string; role: string }[]; location: string; equipment: string; cover: "covered" | "needs" | "nosafety" }[];
+  sessions: { day: number; slot: "AM" | "PM" | "EV"; start: string; end: string; course: string; audience: "youth" | "adult"; staff: { name: string; role: string }[]; location: string; equipment: string; cover: "covered" | "needs" | "nosenior" }[];
 }
 
 export function slugify(name: string): string {
@@ -32,10 +32,10 @@ export function sampleData(centre: string, now = new Date()): SampleData {
   });
   const weekLabel = `${days[0]!.date} – ${days[6]!.date}`;
   const sam = { name: "Sam Green", role: "Senior Instructor" };
-  const priya = { name: "Priya Nair", role: "Instructor" };
-  const tom = { name: "Tom Walsh", role: "Instructor" };
+  const priya = { name: "Priya Nair", role: "Dinghy Instructor" };
+  const tom = { name: "Tom Walsh", role: "Dinghy Instructor" };
   const ellie = { name: "Ellie Morgan", role: "Assistant Instructor" };
-  const jack = { name: "Jack O'Neill", role: "Safety Boat Driver" };
+  const jack = { name: "Jack O'Neill", role: "Powerboat Instructor" };
   const hannah = { name: "Hannah Reid", role: "Volunteer" };
   return {
     centre,
@@ -53,7 +53,7 @@ export function sampleData(centre: string, now = new Date()): SampleData {
     sessions: [
       { day: 0, slot: "AM", start: "09:30", end: "12:30", course: "Youth Stage 1", audience: "youth", staff: [priya, ellie, jack], location: "Main lake", equipment: "Pico ×4 · Safety RIB 1", cover: "covered" },
       { day: 0, slot: "PM", start: "13:30", end: "16:30", course: "Start Sailing (Level 1)", audience: "adult", staff: [sam, jack], location: "Main lake", equipment: "Wayfarer ×2 · Safety RIB 1", cover: "covered" },
-      { day: 1, slot: "AM", start: "09:30", end: "12:30", course: "Youth Stage 2", audience: "youth", staff: [priya], location: "Main lake", equipment: "Pico ×4", cover: "nosafety" },
+      { day: 1, slot: "AM", start: "09:30", end: "12:30", course: "Youth Stage 2", audience: "youth", staff: [priya, ellie], location: "Main lake", equipment: "Pico ×4", cover: "nosenior" },
       { day: 2, slot: "EV", start: "18:00", end: "20:30", course: "Junior Club Session", audience: "youth", staff: [sam, ellie, jack], location: "Main lake", equipment: "Pico ×6 · Safety RIB 1", cover: "covered" },
       { day: 3, slot: "AM", start: "09:30", end: "16:30", course: "Powerboat Level 2", audience: "adult", staff: [jack], location: "Slipway", equipment: "Safety RIB 2", cover: "covered" },
       { day: 4, slot: "AM", start: "09:30", end: "12:30", course: "Basic Skills (Level 2)", audience: "adult", staff: [tom], location: "Main lake", equipment: "Wayfarer ×2", cover: "needs" },
@@ -121,7 +121,7 @@ const Pill = ({ tone, children }: { tone: "covered" | "attention" | "conflict" |
 );
 const Aud = ({ a }: { a: "youth" | "adult" }) => <span className={`rounded px-1 py-[1px] text-[6px] font-semibold ${a === "youth" ? "bg-amber/15 text-amber" : "bg-teal/15 text-teal"}`}>{a === "youth" ? "Youth" : "Adult"}</span>;
 const Card = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => <div className={`rounded-lg border border-slate-200 bg-white p-2.5 ${className}`}>{children}</div>;
-const coverPill = (c: SampleData["sessions"][number]["cover"]) => c === "covered" ? <Pill tone="covered">Covered</Pill> : c === "needs" ? <Pill tone="attention">Under-staffed</Pill> : <Pill tone="conflict">No safety cover</Pill>;
+const coverPill = (c: SampleData["sessions"][number]["cover"]) => c === "covered" ? <Pill tone="covered">Covered</Pill> : c === "needs" ? <Pill tone="attention">Under-staffed</Pill> : <Pill tone="conflict">No Senior Instructor</Pill>;
 
 /* ---------- Screens ---------- */
 
@@ -132,7 +132,7 @@ export function DashboardScreen({ d }: { d: SampleData }) {
       <h1 className="font-display text-[12px] font-semibold text-navy">Good morning — {d.days[0]!.label} {d.days[0]!.date}</h1>
       <p className="mb-2 text-[7px] text-slate-500">{d.centre} · week of {d.weekLabel}</p>
       <div className="mb-2 grid grid-cols-4 gap-1.5">
-        {[["Sessions this week", String(d.sessions.length), "View / print roster"], ["Staff fit to roster", "4 of 6", "1 expiring · 1 blocked"], ["Needs cover", "2", "1 under-staffed · 1 no safety boat"], ["Hours this week", "68.5", "£1,712 est. pay"]].map(([l, v, s]) => (
+        {[["Sessions this week", String(d.sessions.length), "View / print roster"], ["Staff fit to roster", "4 of 6", "1 expiring · 1 blocked"], ["Needs cover", "2", "1 under-staffed · 1 no Senior Instructor"], ["Hours this week", "68.5", "£1,712 est. pay"]].map(([l, v, s]) => (
           <Card key={l}><p className="text-[6.5px] font-semibold text-navy">{l}</p><p className="text-[13px] font-semibold text-navy">{v}</p><p className="text-[6px] text-slate-400">{s}</p></Card>
         ))}
       </div>
@@ -150,7 +150,7 @@ export function DashboardScreen({ d }: { d: SampleData }) {
         <Card>
           <p className="mb-1 font-semibold text-navy">Needs your attention</p>
           <ul className="space-y-1">
-            <li className="rounded bg-port/5 px-1.5 py-1"><span className="font-semibold text-port">No safety cover</span> — Youth Stage 2, {d.days[1]!.label} AM</li>
+            <li className="rounded bg-port/5 px-1.5 py-1"><span className="font-semibold text-port">No Senior Instructor on duty</span> — Youth Stage 2, {d.days[1]!.label} AM</li>
             <li className="rounded bg-amber/5 px-1.5 py-1"><span className="font-semibold text-amber">Under-staffed</span> — Basic Skills (L2), {d.days[4]!.label} AM: 1 of 2</li>
             <li className="rounded bg-amber/5 px-1.5 py-1"><span className="font-semibold text-amber">Expiring</span> — Tom Walsh, First Aid (21 days)</li>
             <li className="rounded bg-port/5 px-1.5 py-1"><span className="font-semibold text-port">Blocked</span> — Hannah Reid, DBS missing</li>
@@ -192,8 +192,8 @@ export function CoursesScreen({ d }: { d: SampleData }) {
             <span className="text-slate-400">▸</span><Aud a={s.audience} />
             <span className="font-semibold text-navy">{s.course}</span>
             <span className="text-slate-500">{d.days[s.day]!.label} {d.days[s.day]!.date}, {s.start}–{s.end}</span>
-            <span className="rounded bg-slate-100 px-1 text-[6px] text-slate-600">Instructor {s.staff.filter((x) => x.role.includes("Instructor")).length}/2</span>
-            <span className="rounded bg-slate-100 px-1 text-[6px] text-slate-600">Safety Boat {s.staff.some((x) => x.role.includes("Safety")) ? 1 : 0}/1</span>
+            <span className="rounded bg-slate-100 px-1 text-[6px] text-slate-600">Dinghy Instructor {s.staff.filter((x) => x.role === "Dinghy Instructor" || x.role === "Senior Instructor").length}/2</span>
+            <span className="rounded bg-slate-100 px-1 text-[6px] text-slate-600">Assistant Instructor {s.staff.filter((x) => x.role === "Assistant Instructor").length}/1</span>
             <span className="ml-auto">{coverPill(s.cover)}</span>
             <span className="text-[6.5px] font-medium text-teal">manage →</span>
           </div>

@@ -16,7 +16,7 @@ const fira = Fira_Sans({
 });
 
 const DESCRIPTION =
-  "RYA sailing school software: staff rostering, instructor qualifications, availability and safety-boat cover checked as you schedule, with an app for your instructors. For RYA sailing schools, clubs and watersports centres.";
+  "RYA sailing school software: staff rostering with instructor types, who can teach each course, availability and ratios checked as you schedule, and an app for your instructors. For RYA sailing schools, clubs and watersports centres.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   keywords: [
     "RYA sailing school software", "RYA staff rostering software", "sailing school rostering software",
     "sailing instructor scheduling software", "RYA qualification tracking", "sailing centre management software",
-    "watersports staff scheduling", "safety boat cover", "RYA training centre",
+    "watersports staff scheduling", "RYA instructor qualifications", "RYA training centre",
   ],
   // No site-wide canonical: each page sets its own. (A canonical of "/" here
   // told search engines every page was a copy of the homepage; fixed 6 Oct.)

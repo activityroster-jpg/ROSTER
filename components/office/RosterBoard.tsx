@@ -82,29 +82,29 @@ export function RosterBoard({ data, canEdit }: { data: BoardData; canEdit: boole
           <button type="button" role="tab" aria-selected={layout === "people"} onClick={() => choose("people")} className={`rounded-lg px-3 py-1.5 text-sm font-medium ${layout === "people" ? "bg-navy text-white" : "text-navy hover:bg-slate-100"}`}>People × days</button>
         </div>
         <p className="text-xs text-slate-500">
-          {totalOpen ? <span className="font-semibold text-amber">{totalOpen} role{totalOpen === 1 ? "" : "s"} still open</span> : <span className="font-semibold text-starboard">Every role filled</span>}
+          {totalOpen ? <span className="font-semibold text-amber">{totalOpen} place{totalOpen === 1 ? "" : "s"} still open</span> : <span className="font-semibold text-starboard">Every place filled</span>}
           {data.problemCounts.total ? <> · <span className="font-semibold text-port">{data.problemCounts.total} problem{data.problemCounts.total === 1 ? "" : "s"}</span></> : null}
-          {canEdit ? <span className="ml-2 text-slate-400">Click a session to see its roles and assign people.</span> : null}
+          {canEdit ? <span className="ml-2 text-slate-400">Click a session to see its places and assign people.</span> : null}
         </p>
         {canEdit ? (
           <div className="flex items-center gap-2">
-            <button type="button" disabled={autoBusy} onClick={() => { setAutoMode(totalOpen ? "open" : "redo"); setAutoOpen(true); }} title="Fill the open roles from whoever is free, spread evenly, or redo the whole week"
+            <button type="button" disabled={autoBusy} onClick={() => { setAutoMode(totalOpen ? "open" : "redo"); setAutoOpen(true); }} title="Fill the open places from whoever is free and suitable, spread evenly, or redo the whole week"
               className="rounded-lg bg-teal px-3 py-1.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{autoBusy ? "Filling…" : "✨ Auto-roster"}</button>
             <a href="/learn?topic=rostering" target="_blank" rel="noreferrer" className="text-xs font-medium text-teal hover:underline">📖 Read the guide</a>
           </div>
         ) : null}
       </div>
       {autoMsg ? <p role="status" className={`mb-3 rounded-lg border px-3 py-2 text-sm ${autoMsg.ok ? "border-starboard/40 bg-starboard/10 text-navy" : "border-port/40 bg-port/10 text-port"}`}>{autoMsg.text}</p> : null}
-      <ConfirmDialog open={autoOpen} title="Auto-roster this week" tone="teal" confirmLabel={autoMode === "redo" ? "Redo the whole week" : `Fill the ${totalOpen} open role${totalOpen === 1 ? "" : "s"}`} busy={autoBusy} confirmDisabled={autoMode === "open" && totalOpen === 0} onConfirm={runAuto} onCancel={() => setAutoOpen(false)}
-        consequences={["Each place goes to someone who is Free (then Maybe) for that session, cleared to roster, able to teach the course type and holding the place's instructor type (or a higher one on its ladder); sessions are shared out as evenly as possible, and nobody is put on two sessions that clash.", "The usual checks run; nothing is overridden, and roles nobody suitable is free for stay open.", "You can change any of it afterwards by hand."]}>
+      <ConfirmDialog open={autoOpen} title="Auto-roster this week" tone="teal" confirmLabel={autoMode === "redo" ? "Redo the whole week" : `Fill the ${totalOpen} open place${totalOpen === 1 ? "" : "s"}`} busy={autoBusy} confirmDisabled={autoMode === "open" && totalOpen === 0} onConfirm={runAuto} onCancel={() => setAutoOpen(false)}
+        consequences={["Each place goes to someone who is Free (then Maybe) for that session, cleared to roster, able to teach the course type and holding the place's instructor type (or a higher one on its ladder); sessions are shared out as evenly as possible, and nobody is put on two sessions that clash.", "The usual checks run; nothing is overridden, and places nobody suitable is free for stay open.", "You can change any of it afterwards by hand."]}>
         <div className="space-y-2 text-sm text-navy">
           <label className="flex items-start gap-2">
             <input type="radio" name="auto-mode" checked={autoMode === "open"} onChange={() => setAutoMode("open")} className="mt-1" />
-            <span><span className="font-semibold">Fill the open roles only</span> ({totalOpen} open). Everyone already on the roster keeps their sessions.</span>
+            <span><span className="font-semibold">Fill the open places only</span> ({totalOpen} open). Everyone already on the roster keeps their sessions.</span>
           </label>
           <label className="flex items-start gap-2">
             <input type="radio" name="auto-mode" checked={autoMode === "redo"} onChange={() => setAutoMode("redo")} className="mt-1" />
-            <span><span className="font-semibold">Redo the whole week.</span> Everyone comes off this week&rsquo;s sessions first (confirmed people too; a day of a multi-day course is skipped for that day only) and is told, then every role is filled afresh.</span>
+            <span><span className="font-semibold">Redo the whole week.</span> Everyone comes off this week&rsquo;s sessions first (confirmed people too; a day of a multi-day course is skipped for that day only) and is told, then every place is filled afresh.</span>
           </label>
         </div>
       </ConfirmDialog>
@@ -542,7 +542,7 @@ function SessionPanel({ data, selected, canEdit, preselect, instructors, byId, o
 
         <div className="mb-1 flex items-center justify-between">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Places</p>
-          {open.length ? <p className="text-xs text-amber">{open.reduce((n, r: OpenRole) => n + r.missing, 0)} still to fill</p> : <p className="text-xs text-starboard">Every role filled</p>}
+          {open.length ? <p className="text-xs text-amber">{open.reduce((n, r: OpenRole) => n + r.missing, 0)} still to fill</p> : <p className="text-xs text-starboard">Every place filled</p>}
         </div>
         {canEdit && meta?.multiDay ? (
           <div className="mb-2 flex gap-3 text-xs text-slate-600">

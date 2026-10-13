@@ -231,10 +231,10 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
       <p className="mb-6 text-sm text-slate-500">
         Add a course, then assign staff to it. Youth and adult courses are labelled so they never get mixed up.
         {(() => {
-          const checks = [licenceOn && "instructor certs", ratioOn && "ratios & safety-boat cover", conflictOn && "double-bookings"].filter(Boolean);
+          const checks = [licenceOn && "must-have certs and checks", ratioOn && "ratios", conflictOn && "double-bookings"].filter(Boolean);
           return checks.length
-            ? ` We check ${checks.join(", ").replace(/, ([^,]*)$/, " and $1")} as you go — anything short is flagged.`
-            : " Optional checks (certs, ratios, safety cover) can be switched on in Settings.";
+            ? ` We check each person's instructor types against the place and the course, plus ${checks.join(", ").replace(/, ([^,]*)$/, " and $1")}, as you go — anything short is flagged.`
+            : " Each person's instructor types are checked against the place and the course; more checks (certs, ratios, double-bookings) can be switched on in Settings.";
         })()}
       </p>
 

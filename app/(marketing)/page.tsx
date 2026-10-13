@@ -10,7 +10,7 @@ import { apexDomain, COMPANY } from "@/lib/config";
 export const metadata = {
   title: { absolute: "RYA Sailing School Software & Staff Rostering | ActivityRoster" },
   description:
-    "The operating system for RYA sailing centres. Build rotas that are ready to run: instructor qualifications, availability, course ratios and safety-boat cover checked as you schedule. Free for a month.",
+    "The operating system for RYA sailing centres. Build rotas that are ready to run: the right instructor type in every place, availability, course ratios and Senior Instructor cover checked as you schedule. Free for a month.",
   alternates: { canonical: "/" },
 };
 
@@ -34,14 +34,14 @@ const PLATFORM = [
 const SAFETY = [
   { icon: ShieldCheck, title: "Won't roster the under-qualified", body: "Lapsed first aid or vetting? They can't be assigned without a recorded override." },
   { icon: Users, title: "Ratio-aware", body: "Flags a course the moment it's short of instructors." },
-  { icon: LifeBuoy, title: "Safety-boat cover enforced", body: "Nothing goes afloat without cover — overrides are recorded." },
+  { icon: LifeBuoy, title: "The right instructor in every place", body: "Each place is an instructor type: an AI never fills a DI place, and a session with no Senior Instructor on duty is flagged. Overrides are recorded." },
   { icon: AlertTriangle, title: "Nothing lapses quietly", body: "Expiry alerts on every licence and check." },
   { icon: CalendarCheck, title: "Clash detection", body: "Double-booked instructor or boat? Caught instantly." },
   { icon: Wallet, title: "Hours & pay, done", body: "Scheduled vs actual, exported for payroll." },
 ];
 
 const AUDIENCES = [
-  { icon: Anchor, title: "Yacht clubs", body: "Volunteer rosters and racing safety cover, without the committee spreadsheet." },
+  { icon: Anchor, title: "Yacht clubs", body: "Volunteer rosters for training, racing and duties, without the committee spreadsheet." },
   { icon: Ship, title: "Sailing schools", body: "Back-to-back RYA courses, a big freelance pool, every licence tracked." },
   { icon: Waves, title: "Activity centres", body: "Dinghy, windsurf, powerboat and kayak — one roster, one compliance picture." },
 ];
@@ -130,7 +130,7 @@ export default function MarketingHome() {
         applicationCategory: "BusinessApplication",
         operatingSystem: "Web",
         offers: { "@type": "Offer", price: "35", priceCurrency: "GBP" },
-        description: "RYA sailing school software. Instructor qualifications, availability, course ratios and safety-boat cover checked as you schedule. Flat per-centre pricing from £35/month.",
+        description: "RYA sailing school software. Instructor types, who can teach each course, availability and course ratios checked as you schedule. Flat per-centre pricing from £35/month.",
       },
     ],
   };
@@ -154,8 +154,8 @@ export default function MarketingHome() {
               The operating system for RYA sailing centres.
             </h1>
             <p className="mt-4 max-w-xl text-lg text-white/85">
-              Build rotas that are actually ready to run. ActivityRoster checks instructor qualifications, availability,
-              course ratios and safety-boat cover as you schedule.
+              Build rotas that are actually ready to run. ActivityRoster checks each instructor&rsquo;s type against the place and
+              the course, availability, course ratios and Senior Instructor cover as you schedule.
             </p>
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
               <a href="#get-demo" className="rounded-lg bg-[#0C6B74] px-6 py-3.5 text-center font-semibold text-white shadow-lg transition hover:bg-teal-700">
@@ -253,7 +253,7 @@ export default function MarketingHome() {
           <div className="mt-8 grid gap-4 md:grid-cols-3 md:gap-6">
             {[
               { n: "1", title: "Set up your centre", body: "RYA defaults are in place from the start. A guided set-up imports your courses and staff." },
-              { n: "2", title: "Build the week", body: "Drop courses on the calendar. Staff, ratios and safety cover are checked as you go." },
+              { n: "2", title: "Build the week", body: "Drop courses on the calendar. Instructor types, ratios and supervision are checked as you go." },
               { n: "3", title: "Run the season", body: "Staff confirm shifts, swap, pick up cover and book leave in the app. Hours flow to payroll." },
             ].map((s) => (
               <div key={s.n} className="flex gap-4 rounded-card border border-slate-200 bg-white p-5 md:block md:p-6">
@@ -323,7 +323,7 @@ export default function MarketingHome() {
             {[
               { href: "/compare", icon: GitCompare, title: "Compare", body: "Against the tools centres use today." },
               { href: "/learn", icon: BookOpen, title: "Learning Centre", body: "Guides to every part of the platform." },
-              { href: "/guides", icon: Newspaper, title: "Sailing school guides", body: "Ratios, safety cover, qualifications and a free rota template." },
+              { href: "/guides", icon: Newspaper, title: "Sailing school guides", body: "Ratios, supervision, qualifications and a free rota template." },
               { href: "/pricing", icon: Tag, title: "Pricing", body: "Two flat plans, nothing per user. First month free." },
             ].map((c) => (
               <Link key={c.href} href={c.href} className="group rounded-card border border-slate-200 bg-white p-4 transition hover:border-teal hover:shadow-md md:p-5">
