@@ -1,13 +1,15 @@
 import { and, eq, gte, isNull, lt, or } from "drizzle-orm";
 import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
-import { availability as availabilityTable, course as courseTable, courseEquipment as courseEquipmentTable, courseSession as courseSessionTable, courseStaff as courseStaffTable, sessionStaffOverride as overrideTable } from "@/lib/db/schema";
-import { clashModeFor, evaluateFit, evaluateRatio, type AssignedRole, type ComplianceRequirement, type HeldCompliance } from "@/lib/domain";
+import { availability as availabilityTable, course as courseTable, courseEquipment as courseEquipmentTable, courseRoleRequirement as courseRoleRequirementTable, courseSession as courseSessionTable, courseStaff as courseStaffTable, sessionStaffOverride as overrideTable } from "@/lib/db/schema";
+import { clashModeFor, evaluateFit, type ComplianceRequirement, type HeldCompliance } from "@/lib/domain";
+import { cleanRoleLines } from "@/lib/domain/staffing";
 import { liveSessions } from "@/lib/domain/sessions";
 import { indexAvailability, keyOf, managedByOffice } from "@/lib/domain/availability";
 import {
   availabilityProblems,
-  coverageProblems,
+  sessionCoverageProblems,
+  type CourseCover,
   declinedProblems,
   doubleBookings,
   equipmentProblems,
@@ -76,7 +78,7 @@ export async function findProblems(repos: Repositories, ctx: AnyTenantContext, o
   // Everything else only for the courses and dates in that window.
   const windowCourseIds = [...new Set(allSessions.map((x) => x.courseId))];
   const availInWindow = or(and(gte(availabilityTable.date, windowFrom), lt(availabilityTable.date, windowTo)), isNull(availabilityTable.date));
-  const [courseRows, courseTypes, assignmentRows, instructorRows, availRows, complianceTypes, complianceItems, roleTypes, courseEquipment, equipment, teachingCtx, qualifications, equipmentTypes, overrideRows] = await Promise.all([
+  const [courseRows, courseTypes, assignmentRows, instructorRows, availRows, complianceTypes, complianceItems, roleTypes, courseEquipment, equipment, teachingCtx, qualifications, equipmentTypes, overrideRows, roleLineRows] = await Promise.all([
     t.course.listIn(ctx, courseTable.id, windowCourseIds),
     t.courseType.list(ctx),
     t.courseStaff.listIn(ctx, courseStaffTable.courseId, windowCourseIds),
@@ -91,6 +93,7 @@ export async function findProblems(repos: Repositories, ctx: AnyTenantContext, o
     t.qualification.list(ctx),
     t.equipmentType.list(ctx),
     t.sessionStaffOverride.listIn(ctx, overrideTable.courseSessionId, allSessions.map((x) => x.id)),
+    t.courseRoleRequirement.listIn(ctx, courseRoleRequirementTable.courseId, windowCourseIds),
   ]);
 
   const cancelled = new Set(courseRows.filter((c) => c.cancelledAt || c.status === "cancelled").map((c) => c.id));
@@ -176,23 +179,18 @@ export async function findProblems(repos: Repositories, ctx: AnyTenantContext, o
   // An expired instructor type behind someone's place: a warning, never a block.
   problems.push(...expiredTypeProblems(sessions, assignments, courses, roleRow, teachingCtx));
 
-  // Ratio and safety cover: when the centre flags them.
-  if (settings?.enforceRatioChecks ?? false) {
-    const roleById = new Map(roleTypes.map((r) => [r.id, r]));
-    const assignedByCourse = new Map<string, AssignedRole[]>();
-    for (const a of assignmentRows) {
-      if (a.status === "declined") continue;
-      const role = roleById.get(a.roleTypeId);
-      assignedByCourse.set(a.courseId, [...(assignedByCourse.get(a.courseId) ?? []), { instructorId: a.instructorId, countsTowardRatio: role?.countsTowardRatio ?? false, isSafetyCover: role?.isSafetyCover ?? false }]);
-    }
-    const coverage = new Map<string, { understaffed: boolean; missingSafetyCover: boolean; assigned: number; required: number }>();
+  // Ratio and safety cover, per session (one-day changes counted), judged as
+  // the roster board judges it: against the course's role lines when it has
+  // them, else its ratio. When the centre flags them.
+  if ((settings?.enforceRatioChecks ?? false) && !opts.instructorId) {
+    const roleById = new Map(roleTypes.map((r) => [r.id, { countsTowardRatio: Boolean(r.countsTowardRatio), isSafetyCover: Boolean(r.isSafetyCover) }]));
+    const info = new Map<string, CourseCover>();
     for (const c of courseRows) {
       if (!inRange.has(c.id)) continue;
       const ct = courseTypes.find((x) => x.id === c.courseTypeId);
-      const r = evaluateRatio({ groupSize: c.capacity, ratio: c.ratio, requiresSafetyBoat: ct?.requiresSafetyBoat ?? false, staffRequired: c.staffRequired, assigned: assignedByCourse.get(c.id) ?? [] });
-      coverage.set(c.id, { understaffed: r.understaffed, missingSafetyCover: r.missingSafetyCover, assigned: r.ratioCountingStaff, required: r.requiredStaff });
+      info.set(c.id, { capacity: c.capacity, ratio: c.ratio, staffRequired: c.staffRequired, requiresSafetyBoat: ct?.requiresSafetyBoat ?? false, lines: cleanRoleLines(roleLineRows.filter((l) => l.courseId === c.id)) });
     }
-    if (!opts.instructorId) problems.push(...coverageProblems(sessions, courses, coverage));
+    problems.push(...sessionCoverageProblems(sessions, assignments, courses, info, roleById));
   }
 
   // Equipment: tracked units only.

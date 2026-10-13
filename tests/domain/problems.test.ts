@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { availabilityProblems, coverageProblems, declinedProblems, describeProblem, doubleBookings, equipmentProblems, perAssignmentProblems, sortProblems, type ProblemAssignment, type ProblemCourse, type ProblemInstructor, type ProblemSession } from "@/lib/domain/problems";
+import { availabilityProblems, sessionCoverageProblems, declinedProblems, describeProblem, doubleBookings, equipmentProblems, perAssignmentProblems, sortProblems, type ProblemAssignment, type ProblemCourse, type ProblemInstructor, type ProblemSession } from "@/lib/domain/problems";
 import { horizonFor, indexAvailability, type AvailabilityIndex } from "@/lib/domain/availability";
 
 const T = (h: number) => Date.UTC(2026, 0, 6, h); // Tuesday 6 January 2026
@@ -43,12 +43,34 @@ describe("problems: pure detectors", () => {
     const nq = perAssignmentProblems("not-qualified", "warn", sessions, a, courses, instructors, (id, c) => (id === "i2" && c.courseTypeId === "t2" ? "No powerboat ticket" : null));
     expect(nq).toHaveLength(1);
     expect(nq[0]).toMatchObject({ kind: "not-qualified", instructorName: "Jo", courseId: "c2", detail: "No powerboat ticket" });
-    const cov = coverageProblems(sessions, courses, new Map([["c1", { understaffed: true, missingSafetyCover: true, assigned: 1, required: 2 }], ["c2", { understaffed: false, missingSafetyCover: false, assigned: 1, required: 1 }]]));
+    const roles = new Map([["in", { countsTowardRatio: true, isSafetyCover: false }], ["sb", { countsTowardRatio: false, isSafetyCover: true }]]);
+    const cov = sessionCoverageProblems(sessions, [{ id: "a2", courseId: "c1", instructorId: "i2", status: "assigned", roleTypeId: "in" }, { id: "a5", courseId: "c2", instructorId: "i1", status: "assigned", roleTypeId: "in" }], courses, new Map([
+      ["c1", { capacity: 12, ratio: 6, staffRequired: null, requiresSafetyBoat: true, lines: [] }],
+      ["c2", { capacity: 6, ratio: 6, staffRequired: null, requiresSafetyBoat: false, lines: [] }],
+    ]), roles);
     expect(cov.map((p) => p.kind)).toEqual(["no-safety-cover", "unstaffed"]);
     expect(cov[1]!.detail).toBe("1 of 2 instructors rostered");
     const eq = equipmentProblems(sessions, [{ courseId: "c1", equipmentId: "e1" }, { courseId: "c2", equipmentId: "e1" }, { courseId: "c3", equipmentId: "e2" }, { courseId: "c3", equipmentId: null }], new Map([["e1", { name: "RIB 1", status: "available" }], ["e2", { name: "Laser 4", status: "maintenance" }]]), courses);
     expect(eq.map((p) => p.kind).sort()).toEqual(["equipment-clash", "equipment-maintenance"]);
     expect(eq.find((p) => p.kind === "equipment-clash")!.detail).toMatch(/RIB 1 is also on Adult taster/);
     expect(describeProblem(eq.find((p) => p.kind === "equipment-maintenance")!)).toBe("equipment in maintenance on Powerboat, 2026-01-07 PM (Laser 4 is in maintenance)");
+  });
+
+  it("cover is judged per session: a day skip leaves that day short, a day add fills it, role lines decide when set", () => {
+    const week: ProblemSession[] = [
+      { id: "mon", courseId: "w", date: "2026-01-05", slot: "AM", startAt: 1, endAt: 2 },
+      { id: "tue", courseId: "w", date: "2026-01-06", slot: "AM", startAt: 3, endAt: 4 },
+      { id: "wed", courseId: "w", date: "2026-01-07", slot: "AM", startAt: 5, endAt: 6 },
+    ];
+    const cs = new Map<string, ProblemCourse>([["w", { id: "w", name: "Week", courseTypeId: "t" }]]);
+    const roles = new Map([["in", { countsTowardRatio: true, isSafetyCover: false }]]);
+    const people: ProblemAssignment[] = [
+      { id: "a", courseId: "w", instructorId: "i1", status: "assigned", roleTypeId: "in", skipSessionIds: ["tue", "wed"] },
+      { id: "d", courseId: "w", instructorId: "i2", status: "assigned", roleTypeId: "in", onlySessionIds: ["wed"] },
+    ];
+    const ratio = sessionCoverageProblems(week, people, cs, new Map([["w", { capacity: 6, ratio: 6, staffRequired: null, requiresSafetyBoat: false, lines: [] }]]), roles);
+    expect(ratio.map((p) => p.sessionId)).toEqual(["tue"]);
+    const lines = sessionCoverageProblems(week, people, cs, new Map([["w", { capacity: 6, ratio: 6, staffRequired: null, requiresSafetyBoat: false, lines: [{ roleTypeId: "in", count: 2 }] }]]), roles);
+    expect(lines.map((p) => [p.sessionId, p.detail])).toEqual([["mon", "1 of 2 places filled"], ["tue", "0 of 2 places filled"], ["wed", "1 of 2 places filled"]]);
   });
 });

@@ -10,6 +10,7 @@
 
 import { findConflicts, slotTimeOverlaps, type ClashMode, type ResourceBooking } from "./conflict";
 import { fmtWallTime } from "./time";
+import { evaluateRatio } from "./ratio";
 import { effectiveAvailability, type AvailabilityHorizon, type AvailabilityIndex } from "./availability";
 
 export type ProblemKind =
@@ -215,19 +216,55 @@ export function perAssignmentProblems(
   return out;
 }
 
-/** Ratio and safety cover per course, dated by its first session in range. */
-export function coverageProblems(sessions: readonly ProblemSession[], courses: ReadonlyMap<string, ProblemCourse>, coverage: ReadonlyMap<string, { understaffed: boolean; missingSafetyCover: boolean; assigned: number; required: number }>): Problem[] {
+
+/** What a course needs on each of its sessions. */
+export interface CourseCover {
+  capacity: number;
+  ratio: number;
+  staffRequired: number | null;
+  requiresSafetyBoat: boolean;
+  /** The course's role lines (places and how many); empty when the ratio decides. */
+  lines: readonly { roleTypeId: string; count: number }[];
+}
+
+/**
+ * Cover per session, as the roster board shows it: who is actually on each
+ * session (course-level people minus that day's skips, plus that day's adds),
+ * against the course's role lines when it has any (each place filled), else
+ * its ratio and safety-boat need. One warning per short session.
+ */
+export function sessionCoverageProblems(
+  sessions: readonly ProblemSession[],
+  assignments: readonly ProblemAssignment[],
+  courses: ReadonlyMap<string, ProblemCourse>,
+  cover: ReadonlyMap<string, CourseCover>,
+  roles: ReadonlyMap<string, { countsTowardRatio: boolean; isSafetyCover: boolean }>,
+): Problem[] {
+  const byCourse = new Map<string, ProblemSession[]>();
+  for (const s of sessions) byCourse.set(s.courseId, [...(byCourse.get(s.courseId) ?? []), s]);
+  const onSession = new Map<string, ProblemAssignment[]>();
+  for (const a of assignments) {
+    if (a.status === "declined") continue;
+    for (const s of sessionsOf(a, byCourse.get(a.courseId) ?? [])) onSession.set(s.id, [...(onSession.get(s.id) ?? []), a]);
+  }
   const out: Problem[] = [];
-  const seen = new Set<string>();
   for (const s of [...sessions].sort((a, b) => a.date.localeCompare(b.date) || a.startAt - b.startAt)) {
-    if (seen.has(s.courseId)) continue;
-    seen.add(s.courseId);
-    const cov = coverage.get(s.courseId);
-    if (!cov) continue;
-    const name = courses.get(s.courseId)?.name ?? "Course";
-    const base = { date: s.date, slot: s.slot, courseId: s.courseId, courseName: name, sessionId: s.id, instructorId: null, instructorName: null };
-    if (cov.missingSafetyCover) out.push({ ...base, kind: "no-safety-cover", severity: "block", detail: "Needs safety-boat cover and nobody is rostered for it" });
-    if (cov.understaffed) out.push({ ...base, kind: "unstaffed", severity: "warn", detail: cov.required ? `${cov.assigned} of ${cov.required} instructors rostered` : "Nobody rostered" });
+    const c = cover.get(s.courseId);
+    if (!c || c.staffRequired === 0) continue;
+    const people = onSession.get(s.id) ?? [];
+    const base = { date: s.date, slot: s.slot, courseId: s.courseId, courseName: courses.get(s.courseId)?.name ?? "Course", sessionId: s.id, instructorId: null, instructorName: null };
+    if (c.lines.length) {
+      const needed = c.lines.reduce((n, l) => n + l.count, 0);
+      const filled = c.lines.reduce((n, l) => n + Math.min(l.count, people.filter((p) => p.roleTypeId === l.roleTypeId).length), 0);
+      if (filled < needed) out.push({ ...base, kind: "unstaffed", severity: "warn", detail: `${filled} of ${needed} places filled` });
+      continue;
+    }
+    const r = evaluateRatio({
+      groupSize: c.capacity, ratio: c.ratio, requiresSafetyBoat: c.requiresSafetyBoat, staffRequired: c.staffRequired,
+      assigned: people.map((p) => ({ instructorId: p.instructorId, countsTowardRatio: roles.get(p.roleTypeId ?? "")?.countsTowardRatio ?? false, isSafetyCover: roles.get(p.roleTypeId ?? "")?.isSafetyCover ?? false })),
+    });
+    if (r.missingSafetyCover) out.push({ ...base, kind: "no-safety-cover", severity: "block", detail: "Needs safety-boat cover and nobody is rostered for it" });
+    if (r.understaffed) out.push({ ...base, kind: "unstaffed", severity: "warn", detail: r.requiredStaff ? `${r.ratioCountingStaff} of ${r.requiredStaff} instructors rostered` : "Nobody rostered" });
   }
   return out;
 }

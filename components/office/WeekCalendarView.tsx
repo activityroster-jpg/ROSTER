@@ -18,8 +18,8 @@ const fmtDay = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString(
 const tint = (a: string) => a === "youth" ? "border-l-amber bg-amber/10 text-amber" : a === "adult" ? "border-l-teal bg-teal/10 text-teal" : "border-l-slate-400 bg-slate-100 text-slate-600";
 
 /** A big, read-only week calendar with client-side week navigation. */
-export function WeekCalendarView({ events, addHref }: { events: EventUi[]; addHref?: string }) {
-  const thisMonday = mondayOf(new Date());
+export function WeekCalendarView({ events, addHref, today }: { events: EventUi[]; addHref?: string; /** Today at the centre, from the server, so both sides render the same week. */ today?: string }) {
+  const thisMonday = mondayOf(today ? new Date(`${today}T12:00:00Z`) : new Date());
   const [monday, setMonday] = useState(thisMonday);
   const [editing, setEditing] = useState<string | null>(null);
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDaysIso(monday, i)), [monday]);
@@ -29,7 +29,7 @@ export function WeekCalendarView({ events, addHref }: { events: EventUi[]; addHr
     for (const a of m.values()) a.sort((x, y) => x.startAt - y.startAt);
     return m;
   }, [events]);
-  const isToday = (iso: string) => iso === new Date().toISOString().slice(0, 10);
+  const isToday = (iso: string) => iso === (today ?? new Date().toISOString().slice(0, 10));
 
   return (
     <div className="rounded-card border border-slate-200 bg-white p-4 shadow-sm">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { TIER_LABEL, type CandidateTier } from "@/lib/domain/assign-order";
 
 export interface PickerItem { id: string; label: string; note?: string }
@@ -16,14 +16,18 @@ const SECTION: Record<CandidateTier, { head: string; row: string; dot: string }>
  * The one people picker: three shaded sections in the platform's order
  * (green: qualified and free; orange: qualified but not free; red: not
  * qualified or not cleared), with a type-to-filter box. A native dropdown
- * can't be coloured, so this is a button that opens a list.
+ * can't be coloured, so this is a button that opens a list. Works from the
+ * keyboard like one: arrow keys move, Enter picks, Escape closes.
  */
 export function PeoplePicker({ value, onChange, groups, placeholder = "Choose someone…", ariaLabel, className = "", disabled = false }: {
   value: string; onChange: (id: string) => void; groups: PickerGroup[]; placeholder?: string; ariaLabel: string; className?: string; disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
+  const [active, setActive] = useState(-1);
   const root = useRef<HTMLDivElement>(null);
+  const button = useRef<HTMLButtonElement>(null);
+  const listId = useId();
   const chosen = useMemo(() => groups.flatMap((g) => g.items).find((i) => i.id === value), [groups, value]);
   const chosenTier = useMemo(() => groups.find((g) => g.items.some((i) => i.id === value))?.tier, [groups, value]);
 
@@ -38,31 +42,48 @@ export function PeoplePicker({ value, onChange, groups, placeholder = "Choose so
   const needle = q.trim().toLowerCase();
   const shown = groups.map((g) => ({ ...g, items: needle ? g.items.filter((i) => i.label.toLowerCase().includes(needle)) : g.items })).filter((g) => g.items.length > 0);
   const total = groups.reduce((n, g) => n + g.items.length, 0);
+  const flat = shown.flatMap((g) => g.items);
+  const optionId = (i: number) => `${listId}-opt-${i}`;
+  const pick = (id: string) => { onChange(id); setOpen(false); button.current?.focus(); };
+  const openList = () => { setOpen(true); setQ(""); setActive(Math.max(0, flat.findIndex((i) => i.id === value))); };
+  useEffect(() => { if (open && active >= 0) document.getElementById(optionId(active))?.scrollIntoView({ block: "nearest" }); });
+  const onKey = (e: React.KeyboardEvent) => {
+    if (!open) {
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); openList(); }
+      return;
+    }
+    if (e.key === "ArrowDown") { e.preventDefault(); setActive((a) => Math.min(flat.length - 1, a + 1)); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setActive((a) => Math.max(0, a - 1)); }
+    else if (e.key === "Home") { e.preventDefault(); setActive(0); }
+    else if (e.key === "End") { e.preventDefault(); setActive(flat.length - 1); }
+    else if (e.key === "Enter" && active >= 0 && flat[active]) { e.preventDefault(); pick(flat[active]!.id); }
+    else if (e.key === "Escape") { e.preventDefault(); setOpen(false); button.current?.focus(); }
+  };
 
   return (
-    <div ref={root} className={`relative min-w-0 ${className}`}>
-      <button type="button" disabled={disabled} aria-haspopup="listbox" aria-expanded={open} aria-label={ariaLabel} onClick={() => { setOpen((o) => !o); setQ(""); }}
+    <div ref={root} className={`relative min-w-0 ${className}`} onKeyDown={onKey}>
+      <button ref={button} type="button" disabled={disabled} aria-haspopup="listbox" aria-expanded={open} aria-controls={open ? listId : undefined} aria-activedescendant={open && active >= 0 ? optionId(active) : undefined} aria-label={ariaLabel} onClick={() => (open ? setOpen(false) : openList())}
         className="flex w-full items-center gap-2 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-left text-sm outline-none focus:border-teal disabled:opacity-50">
         {chosen ? <><span aria-hidden className={`h-2.5 w-2.5 flex-none rounded-full ${SECTION[chosenTier ?? "ready"].dot}`} /><span className="truncate text-navy">{chosen.label}</span></> : <span className="truncate text-slate-400">{placeholder}</span>}
         <span aria-hidden className="ml-auto text-slate-400">▾</span>
       </button>
       {open ? (
         <div className="absolute left-0 z-30 mt-1 w-full min-w-[20rem] overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg">
-          {total > 8 ? <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Type a name…" aria-label="Filter people" className="w-full border-b border-slate-100 px-3 py-2 text-sm outline-none" /> : null}
-          <ul role="listbox" aria-label={ariaLabel} className="max-h-72 overflow-y-auto">
+          {total > 8 ? <input autoFocus value={q} onChange={(e) => { setQ(e.target.value); setActive(0); }} placeholder="Type a name…" aria-label="Filter people" aria-controls={listId} aria-activedescendant={active >= 0 ? optionId(active) : undefined} className="w-full border-b border-slate-100 px-3 py-2 text-sm outline-none" /> : null}
+          <ul id={listId} role="listbox" aria-label={ariaLabel} className="max-h-72 overflow-y-auto">
             {shown.length === 0 ? <li className="px-3 py-2 text-xs text-slate-400">Nobody matches.</li> : null}
             {shown.map((g) => (
               <li key={g.tier}>
                 <p className={`sticky top-0 px-3 py-1 text-[10px] font-semibold uppercase tracking-wide ${SECTION[g.tier].head}`}>{TIER_LABEL[g.tier]} · {g.items.length}</p>
                 <ul>
-                  {g.items.map((i) => (
-                    <li key={i.id} role="option" aria-selected={i.id === value}>
-                      <button type="button" onClick={() => { onChange(i.id); setOpen(false); }} className={`flex w-full items-start gap-2 px-3 py-1.5 text-left text-sm ${SECTION[g.tier].row} ${i.id === value ? "font-semibold" : ""}`}>
+                  {g.items.map((i) => { const n = flat.indexOf(i); return (
+                    <li key={i.id} id={optionId(n)} role="option" aria-selected={i.id === value}>
+                      <button type="button" tabIndex={-1} onMouseEnter={() => setActive(n)} onClick={() => pick(i.id)} className={`flex w-full items-start gap-2 px-3 py-1.5 text-left text-sm ${SECTION[g.tier].row} ${i.id === value ? "font-semibold" : ""} ${n === active ? "ring-2 ring-inset ring-teal" : ""}`}>
                         <span aria-hidden className={`mt-1.5 h-2 w-2 flex-none rounded-full ${SECTION[g.tier].dot}`} />
                         <span className="min-w-0"><span className="text-navy">{i.label}</span>{i.note ? <span className="block text-xs text-slate-500">{i.note}</span> : null}</span>
                       </button>
                     </li>
-                  ))}
+                  ); })}
                 </ul>
               </li>
             ))}

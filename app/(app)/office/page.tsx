@@ -215,7 +215,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       <div className="mb-8">
         <Collapsible title="Calendar">
           <div className="mb-2 flex justify-end"><Link href="/office/courses" className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-navy hover:bg-slate-50">Plan courses →</Link></div>
-          <WeekCalendarView events={events} addHref="/office/courses" />
+          <WeekCalendarView events={events} addHref="/office/courses" today={today} />
         </Collapsible>
       </div>
 

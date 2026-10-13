@@ -31,7 +31,7 @@ const fmtDay = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString(
 let seq = 0;
 const OTHER = "__other";
 
-export function CoursePlanner({ courseTypes, events, slotStyle, roles = [], relevantByType = {}, leadByType = {}, instructorTypes = [], locations = [], equipment = [] }: {
+export function CoursePlanner({ courseTypes, events, slotStyle, roles = [], relevantByType = {}, leadByType = {}, instructorTypes = [], locations = [], equipment = [], today }: {
   courseTypes: CourseTypeUi[]; events: EventUi[]; slotStyle: "slots" | "times";
   /** The centre's places (each an instructor type, plus Volunteer). */
   roles?: PlaceOption[];
@@ -42,10 +42,13 @@ export function CoursePlanner({ courseTypes, events, slotStyle, roles = [], rele
   /** The centre's instructor types, for "who can teach it" on a course type typed in under Other. */
   instructorTypes?: TypeOption[];
   locations?: Option[]; equipment?: Option[];
+  /** Today at the centre (YYYY-MM-DD), from the server, so the page renders the same on both sides. */
+  today?: string;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
-  const thisMonday = mondayOf(new Date());
+  const todayIso = today ?? new Date().toISOString().slice(0, 10);
+  const thisMonday = mondayOf(new Date(`${todayIso}T12:00:00Z`));
   const [monday, setMonday] = useState(thisMonday);
   const [courseTypeId, setCourseTypeId] = useState("");
   // "Other" — a manually-typed type, kept off the regular list unless ticked.
@@ -55,7 +58,7 @@ export function CoursePlanner({ courseTypes, events, slotStyle, roles = [], rele
   const needTeachers = instructorTypes.some((t) => t.discipline);
   const isOther = courseTypeId === OTHER;
   const typeSchedule = courseTypes.find((c) => c.id === courseTypeId)?.schedule ?? [];
-  const [scheduleStart, setScheduleStart] = useState(() => new Date().toISOString().slice(0, 10));
+  const [scheduleStart, setScheduleStart] = useState(todayIso);
   // Replace the draft sessions with the type's default schedule from a start date.
   const fillFromDefault = () => setRows(expandDefaultSchedule(scheduleStart, typeSchedule).map((x) => ({
     key: `r${seq++}`, date: x.date, startTime: x.start, endTime: x.end, slot: x.start < "12:00" ? "AM" : x.start < "17:00" ? "PM" : "EV", useTimes: true,
@@ -130,7 +133,7 @@ export function CoursePlanner({ courseTypes, events, slotStyle, roles = [], rele
 
   const audTint = (a: string) => a === "youth" ? "bg-amber/15 text-amber" : a === "adult" ? "bg-teal/15 text-teal" : "bg-slate-100 text-slate-600";
 
-  const isToday = (iso: string) => iso === new Date().toISOString().slice(0, 10);
+  const isToday = (iso: string) => iso === todayIso;
 
   return (
     <div className="mb-6 space-y-4">
