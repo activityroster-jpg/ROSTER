@@ -4,7 +4,6 @@ import type { AnyTenantContext } from "@/lib/tenant/context";
 import {
   availability as availabilityTable,
   complianceItem as complianceItemTable,
-  instructorCourseType as instructorCourseTypeTable,
   onboardingItem as onboardingTable,
   payRate as payRateTable,
   qualification as qualificationTable,
@@ -14,6 +13,7 @@ import { autoStepDone, isFirstAidType, manualLabels, recommendedTracker, tracker
 import { parseTrackerConfig } from "@/lib/validation/onboarding-tracker";
 import { hasFeature } from "@/lib/features";
 import { writeAudit } from "./audit";
+import { getTeachingMatrix } from "./teaching";
 
 /** The centre's tracker and whether it uses pay & payroll (the pay step depends on it). */
 export async function loadTracker(repos: Repositories, ctx: AnyTenantContext): Promise<{ config: TrackerConfig; payOn: boolean; chosen: boolean }> {
@@ -59,10 +59,11 @@ export async function ensureManualRows(repos: Repositories, ctx: AnyTenantContex
 /** What the record says about one person, for the steps that tick themselves. */
 export async function trackerFacts(repos: Repositories, ctx: AnyTenantContext, instructorId: string): Promise<TrackerFacts> {
   const t = repos.tenant;
-  const [person, licences, courses, ownOrCentreRates, items, types, availabilitySet] = await Promise.all([
+  const [person, licences, teaching, ownOrCentreRates, items, types, availabilitySet] = await Promise.all([
     t.instructor.findById(ctx, instructorId),
     t.qualification.count(ctx, eq(qualificationTable.instructorId, instructorId)),
-    t.instructorCourseType.count(ctx, eq(instructorCourseTypeTable.instructorId, instructorId)),
+    // The courses they can teach follow from their instructor types (and any approvals).
+    getTeachingMatrix(repos, ctx),
     t.payRate.count(ctx, or(eq(payRateTable.instructorId, instructorId), isNull(payRateTable.instructorId))),
     t.complianceItem.list(ctx, eq(complianceItemTable.instructorId, instructorId)),
     t.complianceType.list(ctx),
@@ -73,7 +74,7 @@ export async function trackerFacts(repos: Repositories, ctx: AnyTenantContext, i
   return {
     linked: Boolean(person?.userId),
     licences,
-    courses,
+    courses: teaching.get(instructorId)?.length ?? 0,
     payRate: ownOrCentreRates > 0,
     firstAid: heldTypes.some((ct) => isFirstAidType(ct)),
     vetting: heldTypes.some((ct) => Boolean(ct.isVetting)),

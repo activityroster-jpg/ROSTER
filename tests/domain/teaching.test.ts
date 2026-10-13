@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canFillPlace, canTeachByRules, defaultPlaceType, placeFitIssue, rulesByCourse, unsupervised, type TeachRule, type TypeInfo } from "@/lib/domain/teaching";
+import { approvalCourses, canFillPlace, canTeachByRules, coursesTaught, defaultPlaceType, placeFitIssue, rulesByCourse, unsupervised, type TeachRule, type TypeInfo } from "@/lib/domain/teaching";
 
 const type = (id: string, discipline: string | null, rank: number, extra: Partial<TypeInfo> = {}): TypeInfo => ({ id, name: id, discipline, rank, needsSupervision: false, supervises: false, ...extra });
 const TYPES = new Map<string, TypeInfo>([
@@ -80,5 +80,25 @@ describe("who can teach what", () => {
     expect(placeFitIssue(ann, "L1", di)).toBe("place");
     expect(placeFitIssue(ann, "PB1", vol)).toBeNull(); // a Volunteer place isn't a teaching place
     expect(placeFitIssue(newbie, "PB1", di)).toBeNull();
+  });
+
+  it("lists the courses someone teaches: the map first, then the fallbacks for unmapped courses", () => {
+    const courses = [
+      { id: "L1", discipline: "dinghy" }, { id: "DaySailing", discipline: "dinghy" }, { id: "PB1", discipline: "powerboat" },
+      { id: "OwnDinghy", discipline: "dinghy" }, { id: "Ticked", discipline: null }, { id: "Staffed", discipline: null },
+    ];
+    const staffing = new Map([["Staffed", ["PBI"]]]);
+    const di = coursesTaught(courses, byCourse, held("DI"), held("Ticked"), TYPES, staffing);
+    expect([...di.keys()].sort()).toEqual(["L1", "OwnDinghy", "Ticked"]);
+    expect(di.get("L1")).toBe(true); // from the course map
+    expect(di.get("OwnDinghy")).toBe(false); // unmapped: by activity only
+    expect([...coursesTaught(courses, byCourse, held("DI"), held("DaySailing"), TYPES).keys()]).toContain("DaySailing");
+    expect([...coursesTaught(courses, byCourse, held("PBI"), held(), TYPES, staffing).keys()].sort()).toEqual(["PB1", "Staffed"]);
+  });
+
+  it("offers the Principal's approval only where it is someone's only way in", () => {
+    expect(approvalCourses(byCourse, held("DI"))).toEqual(["DaySailing"]);
+    expect(approvalCourses(byCourse, held("DI", "SI"))).toEqual([]); // an SI teaches it outright
+    expect(approvalCourses(byCourse, held("AI"))).toEqual([]);
   });
 });

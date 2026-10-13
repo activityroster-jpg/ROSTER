@@ -1,18 +1,17 @@
 import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
-import type { CourseAudience } from "@/lib/db/schema";
-import { roleType as roleTypeSchema } from "@/lib/db/schema";
+import type { CourseAudience, roleType as roleTypeSchema } from "@/lib/db/schema";
 import type { StaffingRole } from "@/lib/domain/staffing";
 
 type RoleType = typeof roleTypeSchema.$inferSelect;
-import { canFillPlace, canTeachByRules, defaultPlaceType, fillablePlaces, rulesByCourse, typesForCourse, type TeachRule, type TypeInfo } from "@/lib/domain/teaching";
+import { canFillPlace, coursesTaught, defaultPlaceType, fillablePlaces, rulesByCourse, schemeDiscipline, typesForCourse, type TeachingData, type TeachRule, type TypeInfo } from "@/lib/domain/teaching";
 
 export interface TeachableCourse {
   courseTypeId: string;
   name: string;
   audience: CourseAudience;
   category: string | null;
-  /** true when a course-type staffing rule matched; false when inferred by discipline. */
+  /** False when only the activity fallback put it there (no course map, tick or staffing rule). */
   explicit: boolean;
 }
 
@@ -21,23 +20,7 @@ export interface InstructorTeaching {
   courses: TeachableCourse[];
 }
 
-/** Map a scheme name (RYA, PADI, …) to the qualification discipline that covers it. Used only for a course with no course map rows. */
-export function schemeDiscipline(scheme: string | null): string | null {
-  const s = (scheme ?? "").toLowerCase();
-  if (s.includes("freedive")) return "freediving";
-  if (s.includes("efr") || s.includes("first aid")) return "first_aid";
-  if (s.includes("padi") || s.includes("scuba") || s.includes("dive") || s.includes("ssi") || s.includes("bsac")) return "diving";
-  if (s.includes("windsurf")) return "windsurf";
-  if (s.includes("paddleboard") || s.includes("sup")) return "sup";
-  if (s.includes("powerboat")) return "powerboat";
-  if (s.includes("keelboat")) return "keelboat";
-  if (s.includes("motor")) return "motor_cruising";
-  if (s.includes("cruising")) return "cruising";
-  if (s.includes("shorebased")) return "shorebased";
-  if (s.includes("sailability")) return "dinghy";
-  if (s.includes("sailing") || s.includes("onboard")) return "dinghy";
-  return null;
-}
+export { schemeDiscipline };
 
 /**
  * Everything "who can teach what" needs, read once: the instructor types, the
@@ -141,12 +124,9 @@ export function fillsByInstructor(tc: TeachingContext, instructorIds: readonly s
 }
 
 /**
- * Work out which course types each instructor can teach. A course with course
- * map rows follows them (lib/domain/teaching). A course without any falls back,
- * in order, to the centre's per-person "can teach" ticks, its explicit staffing
- * rules (every listed qualification required), then the activity of the course
- * against the ladders the person holds. Pure data assembly over tenant-scoped
- * reads.
+ * Work out which course types each instructor can teach (lib/domain/teaching
+ * coursesTaught): the course map, else the per-person tick, the older staffing
+ * rules, then the activity. Pure data assembly over tenant-scoped reads.
  */
 export async function getTeachingMatrix(
   repos: Repositories,
@@ -168,35 +148,39 @@ export async function getTeachingMatrix(
   }
 
   const activeTypes = courseTypes.filter((c) => c.active);
+  const forTeaching = activeTypes.map((c) => ({ id: c.id, discipline: schemeDiscipline(c.scheme) }));
   const out = new Map<string, TeachableCourse[]>();
-
   for (const ins of instructors) {
-    const types = tc.held.get(ins.id) ?? new Set<string>();
-    const disc = new Set([...types].map((id) => tc.types.get(id)?.discipline).filter((d): d is string => Boolean(d)));
-    const approved = tc.approved.get(ins.id) ?? new Set<string>();
-    const teachable: TeachableCourse[] = [];
-
-    for (const ct of activeTypes) {
-      let can: boolean;
-      let explicit = true;
-      const byMap = canTeachByRules(tc.rulesByCourse.get(ct.id), types, approved);
-      if (byMap !== null) can = byMap;
-      else if (approved.has(ct.id)) can = true;
-      else {
-        const required = requiredByType.get(ct.id);
-        if (required && required.length > 0) can = required.every((qid) => types.has(qid));
-        else {
-          explicit = false;
-          const d = schemeDiscipline(ct.scheme);
-          can = d ? disc.has(d) : false;
-        }
-      }
-      if (can) {
-        teachable.push({ courseTypeId: ct.id, name: ct.name, audience: ct.audience, category: ct.category ?? null, explicit });
-      }
-    }
-    out.set(ins.id, teachable);
+    const taught = coursesTaught(forTeaching, tc.rulesByCourse, tc.held.get(ins.id) ?? new Set<string>(), tc.approved.get(ins.id) ?? new Set<string>(), tc.types, requiredByType);
+    out.set(ins.id, activeTypes.filter((ct) => taught.has(ct.id)).map((ct) => ({ courseTypeId: ct.id, name: ct.name, audience: ct.audience, category: ct.category ?? null, explicit: taught.get(ct.id)! })));
   }
-
   return out;
+}
+
+/**
+ * What the instructor-type tick boxes need (setup wizard, adding someone, the
+ * staff profile): the active types, the courses the centre runs, the course
+ * map and the older staffing rules.
+ */
+export async function getTeachingData(repos: Repositories, ctx: AnyTenantContext, opts: { includeInactive?: boolean } = {}): Promise<TeachingData> {
+  const t = repos.tenant;
+  const [qualTypes, courseTypes, rows, staffing] = await Promise.all([
+    t.qualificationType.list(ctx),
+    t.courseType.list(ctx),
+    t.qualificationCourseType.list(ctx),
+    t.courseTypeStaffing.list(ctx),
+  ]);
+  // The setup wizard picks which courses the centre runs, so it gets every listed course (and filters as ticks change).
+  const running = courseTypes.filter((c) => c.listed && (opts.includeInactive || c.active));
+  const runningIds = new Set(running.map((c) => c.id));
+  const rules: TeachRule[] = rows.filter((r) => runningIds.has(r.courseTypeId)).map((r) => ({ qualificationTypeId: r.qualificationTypeId, courseTypeId: r.courseTypeId, alsoRequiresTypeId: r.alsoRequiresTypeId ?? null, needsApproval: Boolean(r.needsApproval) }));
+  const relevant = new Set<string>();
+  for (const r of rules) { relevant.add(r.qualificationTypeId); if (r.alsoRequiresTypeId) relevant.add(r.alsoRequiresTypeId); }
+  return {
+    types: qualTypes.filter((q) => q.active).sort((a, b) => a.rank - b.rank || a.name.localeCompare(b.name)).map((q) => ({ id: q.id, name: q.name, code: q.code, discipline: q.discipline ?? null, rank: q.rank })),
+    courses: running.sort((a, b) => a.name.localeCompare(b.name)).map((c) => ({ id: c.id, name: c.name, discipline: schemeDiscipline(c.scheme), group: c.category || (c.audience === "youth" ? "Youth" : c.audience === "adult" ? "Adult" : "Courses") })),
+    rules,
+    staffing: staffing.filter((r) => runningIds.has(r.courseTypeId)).map((r) => ({ courseTypeId: r.courseTypeId, qualificationTypeId: r.qualificationTypeId })),
+    relevantTypeIds: [...relevant],
+  };
 }

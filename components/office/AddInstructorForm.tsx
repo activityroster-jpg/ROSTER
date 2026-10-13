@@ -1,43 +1,30 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { setupInstructorAction, type ActionState } from "@/app/(app)/office/staff/actions";
 import { MultiSelect } from "@/components/MultiSelect";
-import { qualTeachDiscipline, courseTeachDiscipline } from "@/lib/rya/teaching-map";
+import type { TeachingData } from "@/lib/domain/teaching";
+import { InstructorTypesEditor, approvalsToSave, type TypesValue } from "./InstructorTypesEditor";
 
 const initial: ActionState = { ok: false };
 
-export interface CourseChoice { id: string; name: string; audience: "youth" | "adult" | "all"; scheme?: string | null; category?: string | null }
 export interface Choice { id: string; name: string; mandatory?: boolean }
 
-export function AddInstructorForm({ courses, quals, checks, certsLabel = "RYA licences and qualifications" }: { courses: CourseChoice[]; quals: Choice[]; checks: Choice[]; certsLabel?: string }) {
+/**
+ * Add someone with all their details: who they are, the instructor types they
+ * hold (tick every one that applies; the courses they can teach follow from
+ * the types), any Principal's approvals, and the checks they need.
+ */
+export function AddInstructorForm({ teaching, checks }: { teaching: TeachingData; checks: Choice[] }) {
   const [state, action, pending] = useActionState(setupInstructorAction, initial);
-  const [selCourses, setSelCourses] = useState<Set<string>>(new Set());
-  const [selQuals, setSelQuals] = useState<Set<string>>(new Set());
+  const [types, setTypes] = useState<TypesValue>({ typeIds: new Set(), approvedIds: new Set() });
+  const [personName, setPersonName] = useState("");
   const [selChecks, setSelChecks] = useState<Set<string>>(new Set(checks.filter((c) => c.mandatory).map((c) => c.id)));
+  // A saved person clears the ticks for the next one.
+  useEffect(() => { if (state.ok) { setTypes({ typeIds: new Set(), approvedIds: new Set() }); setPersonName(""); } }, [state]);
 
   const toggler = (set: React.Dispatch<React.SetStateAction<Set<string>>>) => (id: string) =>
     set((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
-
-  // Selecting a licence auto-ticks the courses it lets them teach (conservative
-  // map — see lib/rya/teaching-map). Deselecting removes them unless another held
-  // licence still covers that discipline.
-  const toggleQual = (id: string) => {
-    const q = quals.find((x) => x.id === id);
-    const turningOn = !selQuals.has(id);
-    const nextQuals = new Set(selQuals);
-    turningOn ? nextQuals.add(id) : nextQuals.delete(id);
-    setSelQuals(nextQuals);
-    const d = q ? qualTeachDiscipline(q.name) : null;
-    if (!d) return;
-    setSelCourses((cur) => {
-      const n = new Set(cur);
-      const matches = courses.filter((c) => courseTeachDiscipline(c) === d);
-      if (turningOn) matches.forEach((c) => n.add(c.id));
-      else if (!quals.some((x) => nextQuals.has(x.id) && qualTeachDiscipline(x.name) === d)) matches.forEach((c) => n.delete(c.id));
-      return n;
-    });
-  };
   const allOf = (opts: { id: string }[], set: React.Dispatch<React.SetStateAction<Set<string>>>) => () => set(new Set(opts.map((o) => o.id)));
   const clear = (set: React.Dispatch<React.SetStateAction<Set<string>>>) => () => set(new Set());
 
@@ -54,7 +41,7 @@ export function AddInstructorForm({ courses, quals, checks, certsLabel = "RYA li
       <div className="grid gap-3 sm:grid-cols-4">
         <div>
           <label className="mb-1 block text-sm font-semibold text-navy">Full name</label>
-          <input name="name" required className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal" />
+          <input name="name" required value={personName} onChange={(e) => setPersonName(e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal" />
         </div>
         <div>
           <label className="mb-1 block text-sm font-semibold text-navy">Email</label>
@@ -63,7 +50,7 @@ export function AddInstructorForm({ courses, quals, checks, certsLabel = "RYA li
         <div>
           <label className="mb-1 block text-sm font-semibold text-navy">Date of birth</label>
           <input name="dateOfBirth" type="date" required className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal" />
-          <p className="mt-1 text-[11px] text-slate-400">Needed for under-18 protections and working-hours rules.</p>
+          <p className="mt-1 text-[11px] text-slate-400">Needed for under-18 privacy protections.</p>
         </div>
         <div>
           <label className="mb-1 block text-sm font-semibold text-navy">Employment</label>
@@ -73,20 +60,14 @@ export function AddInstructorForm({ courses, quals, checks, certsLabel = "RYA li
         </div>
       </div>
 
-      <Field title="Certs they hold" hint={`${certsLabel}. Pick them and we'll suggest the courses they can teach below. They upload a photo of each for you to verify.`}>
-        <MultiSelect placeholder="Select certs…" options={quals} selected={selQuals} onToggle={toggleQual} onSelectAll={allOf(quals, setSelQuals)} onClear={clear(setSelQuals)} />
-      </Field>
-
-      <Field title="Courses this instructor can teach" hint="Pre-filled from the certs above — add or remove any.">
-        <MultiSelect placeholder="Select courses…" options={courses} selected={selCourses} onToggle={toggler(setSelCourses)} onSelectAll={allOf(courses, setSelCourses)} onClear={clear(setSelCourses)} />
-      </Field>
+      <InstructorTypesEditor data={teaching} value={types} onChange={setTypes} personName={personName.split(" ")[0]} compact />
 
       <Field title="Background checks they need" hint="DBS, first aid, safeguarding — the mandatory ones are already ticked.">
         <MultiSelect placeholder="Select checks…" options={checks} selected={selChecks} onToggle={toggler(setSelChecks)} onSelectAll={allOf(checks, setSelChecks)} onClear={clear(setSelChecks)} />
       </Field>
 
-      {[...selCourses].map((id) => <input key={`c${id}`} type="hidden" name="course" value={id} />)}
-      {[...selQuals].map((id) => <input key={`q${id}`} type="hidden" name="qual" value={id} />)}
+      {approvalsToSave(teaching, types).map((id) => <input key={`c${id}`} type="hidden" name="course" value={id} />)}
+      {[...types.typeIds].map((id) => <input key={`q${id}`} type="hidden" name="qual" value={id} />)}
       {[...selChecks].map((id) => <input key={`k${id}`} type="hidden" name="check" value={id} />)}
 
       <div className="flex items-center gap-3">
@@ -96,7 +77,7 @@ export function AddInstructorForm({ courses, quals, checks, certsLabel = "RYA li
         {state.error ? <p className="text-sm text-port">{state.error}</p> : null}
         {state.ok ? <p className="text-sm text-starboard">{state.message}</p> : null}
       </div>
-      <p className="text-xs text-slate-400">Saving emails the instructor a link to set up their account and upload photos of their certs. You can also upload documents for them from their page.</p>
+      <p className="text-xs text-slate-400">Saving emails the instructor a link to set up their account and upload a photo of each licence. You can also upload documents for them from their page.</p>
     </form>
   );
 }

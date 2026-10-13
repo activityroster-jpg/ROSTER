@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireTenant } from "@/lib/tenant/require";
 import { writeAudit } from "@/lib/services/audit";
+import { createInstructorType, syncPlacesForType } from "@/lib/services/instructor-types";
 import {
   complianceTypeSchema,
   qualificationTypeSchema,
@@ -113,7 +114,8 @@ export async function addConfigAction(_prev: ActionState, formData: FormData): P
           expiryTracked: formData.get("expiryTracked") === "on",
           active: true,
         });
-        await t.qualificationType.insert(ctx, { ...v, defaultValidMonths: v.defaultValidMonths ?? null });
+        // A type with a ladder gets its place on courses too (places are instructor types).
+        await createInstructorType(repos, ctx, { name: v.name, code: v.code, rank: v.rank, discipline: v.discipline ?? null, expiryTracked: v.expiryTracked, defaultValidMonths: v.defaultValidMonths ?? null });
         break;
       }
       case "compliance": {
@@ -161,7 +163,7 @@ export async function setConfigNameAction(_prev: ActionState, formData: FormData
   switch (kind) {
     case "slot": res = await t.sessionSlot.update(ctx, id, { label: name }); break;
     case "role": res = await t.roleType.update(ctx, id, { name }); break;
-    case "grade": res = await t.qualificationType.update(ctx, id, { name }); break;
+    case "grade": res = await t.qualificationType.update(ctx, id, { name }); if (res) await syncPlacesForType(repos, ctx, id, { name }); break;
     case "compliance": res = await t.complianceType.update(ctx, id, { name }); break;
     case "equipmentType": res = await t.equipmentType.update(ctx, id, { name }); break;
     case "locationType": res = await t.locationType.update(ctx, id, { name }); break;
@@ -186,6 +188,8 @@ export async function setConfigActiveAction(_prev: ActionState, formData: FormDa
   const repo = repoFor(repos.tenant, kind);
   const updated = await repo.update(ctx, id, { active });
   if (!updated) return { ok: false, error: "Item not found" };
+  // Retiring an instructor type retires its place on courses with it (and bringing it back brings the place back).
+  if (kind === "grade") await syncPlacesForType(repos, ctx, id, { active });
 
   await writeAudit(repos, ctx, {
     action: active ? "reactivate" : "deactivate",

@@ -23,7 +23,8 @@ import { ageOn, isUnder18 } from "@/lib/domain/age";
 import { readProtectedContacts } from "@/lib/services/protected-contacts";
 import { ProtectedContactsForm } from "@/components/office/ProtectedContactsForm";
 import { StaffAvailabilityCard } from "@/components/office/StaffAvailabilityCard";
-import { StaffLicencesCourses } from "@/components/office/StaffLicencesCourses";
+import { StaffInstructorTypes } from "@/components/office/StaffInstructorTypes";
+import { getTeachingData } from "@/lib/services/teaching";
 import { eq } from "drizzle-orm";
 import { instructorCourseType as instructorCourseTypeTable, qualification as qualificationTable } from "@/lib/db/schema";
 import { staffAvailabilityView } from "@/lib/services/availability";
@@ -63,12 +64,19 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
   const inviteStatus = !instructor.userId ? "none" : membership?.status === "active" ? "accepted" : "pending";
   const availability = await staffAvailabilityView(repos, ctx, instructor.id, weekStart(new Date()));
   const centreMode = settings[0]?.staffManagedBy ?? "staff";
-  const [qualTypes, courseTypes, held, teachRows] = await Promise.all([
-    repos.tenant.qualificationType.list(ctx),
+  const [teachingData, courseTypes, held, teachRows] = await Promise.all([
+    getTeachingData(repos, ctx),
     repos.tenant.courseType.list(ctx),
     repos.tenant.qualification.list(ctx, eq(qualificationTable.instructorId, instructor.id)),
     repos.tenant.instructorCourseType.list(ctx, eq(instructorCourseTypeTable.instructorId, instructor.id)),
   ]);
+  // What is on file for each type they hold, so unticking it asks first.
+  const fmtDay = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+  const recorded: Record<string, string> = {};
+  for (const q of held) {
+    const bits = [q.docKey ? "an uploaded copy" : "", q.certNo ? "the certificate number" : "", q.expiryDate ? `the expiry date (${fmtDay(q.expiryDate)})` : "", q.verified ? "your verification" : ""].filter(Boolean);
+    if (bits.length) recorded[q.qualificationTypeId] = bits.join(", ").replace(/^./, (c) => c.toUpperCase());
+  }
   const under18 = isUnder18(instructor.dateOfBirth);
   const age = ageOn(instructor.dateOfBirth);
   const canEdit = can(ctx, "staff.edit");
@@ -107,22 +115,25 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
 
 
           <Card>
-            <h2 id="licences" className="mb-2 scroll-mt-6 font-semibold text-navy">Licences &amp; courses they can teach</h2>
+            <h2 id="licences" className="mb-2 scroll-mt-6 font-semibold text-navy">Instructor types &amp; courses they can teach</h2>
             {canEdit && !left ? (
-              <StaffLicencesCourses
+              <StaffInstructorTypes
                 instructorId={instructor.id}
                 name={instructor.name.split(" ")[0] ?? instructor.name}
-                licenceTypes={qualTypes.filter((q) => q.active).sort((a, b) => a.rank - b.rank).map((q) => ({ id: q.id, name: q.name }))}
-                heldTypeIds={held.map((q) => q.qualificationTypeId)}
-                courseTypes={courseTypes.filter((c) => c.active && c.listed).sort((a, b) => a.name.localeCompare(b.name)).map((c) => ({ id: c.id, name: c.name, group: c.category || (c.audience === "youth" ? "Youth" : c.audience === "adult" ? "Adult" : "Courses") }))}
-                teaches={teachRows.map((r) => r.courseTypeId)}
+                data={teachingData}
+                heldTypeIds={[...new Set(held.map((q) => q.qualificationTypeId))].filter((id) => teachingData.types.some((t) => t.id === id))}
+                approvedIds={teachRows.map((r) => r.courseTypeId)}
+                recorded={recorded}
               />
-            ) : approvedCourses.length === 0 ? (
-              <p className="text-sm text-slate-400">None set yet.</p>
             ) : (
-              <ul className="flex flex-wrap gap-2">
-                {approvedCourses.map((c) => <li key={c.id} className="rounded-full bg-teal/10 px-3 py-1 text-xs font-medium text-teal">{c.name}</li>)}
-              </ul>
+              <>
+                {held.length === 0 ? <p className="text-sm text-slate-400">No instructor types recorded yet.</p> : (
+                  <ul className="mb-2 flex flex-wrap gap-2">
+                    {[...new Set(held.map((q) => q.qualificationTypeId))].map((id) => <li key={id} className="rounded-full bg-navy/5 px-3 py-1 text-xs font-medium text-navy">{teachingData.types.find((t) => t.id === id)?.name ?? "Retired type"}</li>)}
+                  </ul>
+                )}
+                {approvedCourses.length ? <p className="text-xs text-slate-500">Approved for: {approvedCourses.map((c) => c.name).join(", ")}</p> : null}
+              </>
             )}
           </Card>
         </div>
@@ -148,7 +159,7 @@ export default async function StaffProfilePage({ params }: { params: Promise<{ i
           {payOn && can(ctx, "finance.view") ? (
             <Card>
               <div id="pay" className="mb-1 flex scroll-mt-6 items-center justify-between"><h2 className="font-semibold text-navy">Pay</h2><a href="/learn?topic=pay-rates" target="_blank" rel="noreferrer" className="text-xs font-medium text-teal hover:underline">📖 Read the guide</a></div>
-              <p className="mb-3 text-xs text-slate-500">How {instructor.name.split(" ")[0] ?? instructor.name} is paid. Everyone&rsquo;s rates, and the standard rate for each role, are in <a href="/office/settings?tab=pay#pay-rates" className="font-medium text-teal hover:underline">Settings → Pay rates</a>.</p>
+              <p className="mb-3 text-xs text-slate-500">How {instructor.name.split(" ")[0] ?? instructor.name} is paid. Everyone&rsquo;s rates, and the standard rate for each place, are in <a href="/office/settings?tab=pay#pay-rates" className="font-medium text-teal hover:underline">Settings → Pay rates</a>.</p>
               <PersonPayRates
                 currency={currency}
                 person={{ id: instructor.id, name: instructor.name, employment: instructor.employmentType }}

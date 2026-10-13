@@ -103,7 +103,5 @@ export const trialDaysSchema = z.coerce.number().int().min(1, "Enter 1–365 day
 /** First issue message, for a one-line error back to the form. */
 export const firstIssue = (e: z.ZodError, fallback = "Please check the values") => e.issues[0]?.message ?? fallback;
 
-/** A licence the office records for someone. */
-export const staffLicenceSchema = z.object({ instructorId: idSchema, qualificationTypeId: idSchema, expiryDate: isoDateSchema.nullable().optional() });
-/** The course types someone can teach. */
-export const teachableCoursesSchema = z.object({ instructorId: idSchema, courseTypeIds: z.array(idSchema).max(300) });
+/** The instructor types someone holds and the courses they're approved for (their profile's tick boxes). */
+export const instructorTypesSchema = z.object({ instructorId: idSchema, typeIds: z.array(idSchema).max(200), approvedCourseIds: z.array(idSchema).max(300) });

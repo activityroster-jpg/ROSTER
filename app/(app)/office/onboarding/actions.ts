@@ -14,6 +14,7 @@ import {
   type SlotStyle,
 } from "@/lib/db/schema";
 import { writeAudit } from "@/lib/services/audit";
+import { createInstructorType, ownLadder } from "@/lib/services/instructor-types";
 import { linkInstructorUser } from "@/lib/services/invite";
 import { serializeFeatures } from "@/lib/features";
 import { packFor } from "@/lib/packs";
@@ -179,7 +180,11 @@ export async function addTeamMemberAction(input: {
   };
 }
 
-/** Add a custom qualification / instructor type ("job type") on the fly. */
+/**
+ * Add the centre's own instructor type on the fly. It gets its own ladder and
+ * a place on courses (places are instructor types), so it can be linked to
+ * courses in Course setup and rostered.
+ */
 export async function addQualificationTypeAction(input: {
   name: string;
   discipline?: string;
@@ -192,44 +197,25 @@ export async function addQualificationTypeAction(input: {
   if (existing.some((q) => q.name.trim().toLowerCase() === name.toLowerCase())) {
     return { ok: false, error: "That type already exists" };
   }
-  const codes = new Set(existing.map((q) => q.code));
-  let code = toCode(name);
-  while (codes.has(code)) code = `${code}_${Math.random().toString(36).slice(2, 5).toUpperCase()}`;
-  const maxRank = existing.reduce((m, q) => Math.max(m, q.rank), 0);
-
-  const created = await repos.tenant.qualificationType.insert(ctx, {
-    name,
-    code,
-    rank: maxRank + 10,
-    discipline: input.discipline?.trim() || null,
-    expiryTracked: false,
-    defaultValidMonths: null,
-    active: true,
-  });
-  await writeAudit(repos, ctx, { action: "create", entity: "qualification_type", entityId: created.id, after: { name } });
+  const created = await createInstructorType(repos, ctx, { name, code: toCode(name), rank: 20, discipline: input.discipline?.trim() || ownLadder(name) });
+  await writeAudit(repos, ctx, { action: "create", entity: "qualification_type", entityId: created.id, after: { name, place: Boolean(created.placeId) } });
   revalidatePath("/office/onboarding");
   revalidatePath("/office/staff");
   revalidatePath("/office/settings");
-  return { ok: true, id: created.id, name: created.name, discipline: created.discipline ?? null };
+  return { ok: true, id: created.id, name: created.name, discipline: created.discipline };
 }
 
-/** Add any of the centre's pack's instructor types it is missing (by name). */
-export async function addDefaultGradesAction(): Promise<{ ok: boolean; created: { id: string; name: string; discipline: string | null }[] }> {
+/** Add any of the centre's pack's instructor types it is missing (by name), each with its place on courses. */
+export async function addDefaultGradesAction(): Promise<{ ok: boolean; created: { id: string; name: string; code: string; rank: number; discipline: string | null }[] }> {
   const { ctx, repos, organisation } = await requireTenant({ permission: "settings.edit" });
   const pack = packFor(organisation.activityType);
   const existing = await repos.tenant.qualificationType.list(ctx);
   const haveNames = new Set(existing.map((q) => q.name.trim().toLowerCase()));
-  const haveCodes = new Set(existing.map((q) => q.code));
-  const created: { id: string; name: string; discipline: string | null }[] = [];
+  const created: { id: string; name: string; code: string; rank: number; discipline: string | null }[] = [];
   for (const g of pack.grades) {
     if (haveNames.has(g.name.toLowerCase())) continue;
-    let code = g.code;
-    while (haveCodes.has(code)) code = `${g.code}_${Math.random().toString(36).slice(2, 5).toUpperCase()}`;
-    haveCodes.add(code);
-    const row = await repos.tenant.qualificationType.insert(ctx, {
-      ...g, code, defaultValidMonths: g.defaultValidMonths ?? null, active: true,
-    });
-    created.push({ id: row.id, name: row.name, discipline: row.discipline ?? null });
+    const row = await createInstructorType(repos, ctx, { name: g.name, code: g.code, rank: g.rank, discipline: g.discipline ?? null, expiryTracked: g.expiryTracked, defaultValidMonths: g.defaultValidMonths ?? null, needsSupervision: g.needsSupervision, supervises: g.supervises });
+    created.push({ id: row.id, name: row.name, code: g.code, rank: g.rank, discipline: row.discipline });
   }
   if (created.length) await writeAudit(repos, ctx, { action: "add_default_grades", entity: "qualification_type", after: { count: created.length } });
   revalidatePath("/office/onboarding");

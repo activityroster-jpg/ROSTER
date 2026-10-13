@@ -1,10 +1,9 @@
 import { managedByOffice } from "@/lib/domain/availability";
 import { availability as availabilityTable } from "@/lib/db/schema";
 import { requireTenant } from "@/lib/tenant/require";
-import { packFor } from "@/lib/packs";
 import { isUnder18 } from "@/lib/domain/age";
 import { listStaffWithFit } from "@/lib/services/staff";
-import { getTeachingMatrix } from "@/lib/services/teaching";
+import { getTeachingData, getTeachingMatrix } from "@/lib/services/teaching";
 import { Card } from "@/components/ui";
 import { JoinRequests, type JoinRequestRow } from "@/components/office/JoinRequests";
 import { AddInstructorForm } from "@/components/office/AddInstructorForm";
@@ -17,21 +16,13 @@ import { listOfficeMembers } from "@/lib/services/office-access";
 export const dynamic = "force-dynamic";
 
 export default async function StaffPage() {
-  const { ctx, repos, organisation } = await requireTenant({ permission: "staff.view" });
-  const [staff, qualTypes, teaching, courseTypes, complianceTypes] = await Promise.all([
+  const { ctx, repos } = await requireTenant({ permission: "staff.view" });
+  const [staff, teaching, teachingData, complianceTypes] = await Promise.all([
     listStaffWithFit(repos, ctx),
-    repos.tenant.qualificationType.list(ctx),
     getTeachingMatrix(repos, ctx),
-    repos.tenant.courseType.list(ctx),
+    getTeachingData(repos, ctx),
     repos.tenant.complianceType.list(ctx),
   ]);
-  const qualChoices = qualTypes
-    .filter((q) => q.active)
-    .sort((a, b) => a.rank - b.rank)
-    .map((q) => ({ id: q.id, name: q.name }));
-  const courseChoices = courseTypes
-    .filter((c) => c.active && c.listed)
-    .map((c) => ({ id: c.id, name: c.name, audience: c.audience, scheme: c.scheme, category: c.category }));
   const checkChoices = complianceTypes
     .filter((c) => c.active)
     .map((c) => ({ id: c.id, name: c.name, mandatory: Boolean(c.mandatory) }));
@@ -111,8 +102,8 @@ export default async function StaffPage() {
           : "The quickest way: a name and email, and they set up the rest from the invite. Or give them your company code (Settings) and they can join from the app."}</p>
         <QuickAddStaff officeMode={settingsRow?.staffManagedBy === "office"} />
         <details className="mt-4 border-t border-slate-100 pt-3">
-          <summary className="cursor-pointer text-sm font-medium text-navy">Add with all details (courses, licences, checks)</summary>
-          <div className="mt-3"><AddInstructorForm courses={courseChoices} quals={qualChoices} checks={checkChoices} certsLabel={packFor(organisation.activityType).wording.certsLabel} /></div>
+          <summary className="cursor-pointer text-sm font-medium text-navy">Add with all details (instructor types, checks)</summary>
+          <div className="mt-3"><AddInstructorForm teaching={teachingData} checks={checkChoices} /></div>
         </details>
       </Card>
 

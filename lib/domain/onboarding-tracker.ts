@@ -27,8 +27,8 @@ export interface TrackerStepDef {
 /** Built-in steps, in the order they show. Manual labels match the original checklist so old ticks carry over. */
 export const TRACKER_STEPS: readonly TrackerStepDef[] = [
   { key: "app", label: "Added to the app", auto: true, recommended: true, hint: "Ticks itself when they accept their invite and sign in." },
-  { key: "licences", label: "Licences they hold set", auto: true, recommended: true, hint: "Ticks itself once a licence or instructor qualification is on their profile." },
-  { key: "courses", label: "Courses they can teach set", auto: true, recommended: true, hint: "Ticks itself once at least one course they can teach is ticked." },
+  { key: "licences", label: "Instructor types they hold set", auto: true, recommended: true, hint: "Ticks itself once an instructor type or certificate is ticked on their profile." },
+  { key: "courses", label: "Courses they can teach", auto: true, recommended: true, hint: "Ticks itself once their instructor types cover at least one of your courses." },
   { key: "pay", label: "Pay rate set", auto: true, recommended: true, needsPay: true, hint: "Ticks itself when a pay rate applies to them: their own, or your standard rate." },
   { key: "first-aid", label: "First aid certificate added", auto: true, recommended: true, hint: "Ticks itself when a first aid certificate is recorded for them." },
   { key: "vetting", label: "DBS or vetting check recorded", auto: true, recommended: true, hint: "Ticks itself when their DBS, PVG, AccessNI or Garda vetting check is recorded." },

@@ -32,6 +32,39 @@ export interface TypeInfo {
   supervises: boolean;
 }
 
+/** Map a scheme name (RYA, PADI, …) to the ladder that covers it. Used only for a course with no course-map rows. */
+export function schemeDiscipline(scheme: string | null): string | null {
+  const s = (scheme ?? "").toLowerCase();
+  if (s.includes("freedive")) return "freediving";
+  if (s.includes("efr") || s.includes("first aid")) return "first_aid";
+  if (s.includes("padi") || s.includes("scuba") || s.includes("dive") || s.includes("ssi") || s.includes("bsac")) return "diving";
+  if (s.includes("windsurf")) return "windsurf";
+  if (s.includes("paddleboard") || s.includes("sup")) return "sup";
+  if (s.includes("powerboat")) return "powerboat";
+  if (s.includes("keelboat")) return "keelboat";
+  if (s.includes("motor")) return "motor_cruising";
+  if (s.includes("cruising")) return "cruising";
+  if (s.includes("shorebased")) return "shorebased";
+  if (s.includes("sailability")) return "dinghy";
+  if (s.includes("sailing") || s.includes("onboard")) return "dinghy";
+  return null;
+}
+
+/** An instructor type as the tick boxes show it. */
+export interface TypeOption { id: string; name: string; code: string; discipline: string | null; rank: number }
+/** A course the centre runs, as the tick boxes' "courses they can teach" needs it. */
+export interface TeachCourse { id: string; name: string; discipline: string | null; group: string }
+/** Everything the instructor-type tick boxes need, serialisable for the browser. */
+export interface TeachingData {
+  types: TypeOption[];
+  courses: TeachCourse[];
+  rules: TeachRule[];
+  /** Older per-course staffing rules (every listed type required), for courses with no course map. */
+  staffing: { courseTypeId: string; qualificationTypeId: string }[];
+  /** Types that teach one of the centre's courses (or are needed alongside one): shown first, the rest behind "Show every instructor type". Empty = show all. */
+  relevantTypeIds: string[];
+}
+
 /** The rules for each course. */
 export function rulesByCourse(rules: readonly TeachRule[]): Map<string, TeachRule[]> {
   const out = new Map<string, TeachRule[]>();
@@ -48,6 +81,55 @@ export function canTeachByRules(rules: readonly TeachRule[] | undefined, held: R
   return rules.some((r) => held.has(r.qualificationTypeId)
     && (!r.alsoRequiresTypeId || held.has(r.alsoRequiresTypeId))
     && (!r.needsApproval || approved.has(r.courseTypeId)));
+}
+
+/** A course as the "who teaches it" rules need it. */
+export interface CourseForTeaching { id: string; /** The activity its scheme belongs to (lib/services/teaching schemeDiscipline), for unmapped courses. */ discipline: string | null }
+
+/**
+ * The courses someone teaches, one rule for the server and the live preview
+ * beside the tick boxes: a course with course-map rows follows them
+ * (canTeachByRules). A course without any falls back, in order, to the
+ * centre's per-person tick for it, its older staffing rules (every listed
+ * type required), then its activity against the ladders the person holds.
+ * Returns course id → whether the course map decided it (true) or a fallback
+ * did by activity (false), for the courses they teach.
+ */
+export function coursesTaught(
+  courses: readonly CourseForTeaching[],
+  rules: ReadonlyMap<string, readonly TeachRule[]>,
+  held: ReadonlySet<string>,
+  approved: ReadonlySet<string>,
+  types: ReadonlyMap<string, Pick<TypeInfo, "discipline">>,
+  staffingRequired?: ReadonlyMap<string, readonly string[]>,
+): Map<string, boolean> {
+  const ladders = new Set([...held].map((id) => types.get(id)?.discipline).filter((d): d is string => Boolean(d)));
+  const out = new Map<string, boolean>();
+  for (const c of courses) {
+    const byMap = canTeachByRules(rules.get(c.id), held, approved);
+    if (byMap !== null) { if (byMap) out.set(c.id, true); continue; }
+    if (approved.has(c.id)) { out.set(c.id, true); continue; }
+    const required = staffingRequired?.get(c.id);
+    if (required && required.length > 0) { if (required.every((id) => held.has(id))) out.set(c.id, true); continue; }
+    if (c.discipline && ladders.has(c.discipline)) out.set(c.id, false);
+  }
+  return out;
+}
+
+/**
+ * Courses that need the Principal's approval for someone holding these types:
+ * a course whose only way in for them is a row marked "needs approval" (a
+ * Dinghy Instructor on Day Sailing). Courses they already teach outright are
+ * left out.
+ */
+export function approvalCourses(rules: ReadonlyMap<string, readonly TeachRule[]>, held: ReadonlySet<string>): string[] {
+  const out: string[] = [];
+  for (const [courseTypeId, list] of rules) {
+    const outright = list.some((r) => !r.needsApproval && held.has(r.qualificationTypeId) && (!r.alsoRequiresTypeId || held.has(r.alsoRequiresTypeId)));
+    if (outright) continue;
+    if (list.some((r) => r.needsApproval && held.has(r.qualificationTypeId) && (!r.alsoRequiresTypeId || held.has(r.alsoRequiresTypeId)))) out.push(courseTypeId);
+  }
+  return out;
 }
 
 /** Can someone holding these types fill a place of this type? A place with no type (Volunteer, an older generic place) is open to anyone. */

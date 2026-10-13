@@ -14,7 +14,8 @@ import { requireTenant } from "@/lib/tenant/require";
 import { getAuth } from "@/lib/auth";
 import { dobSchema, protectedContactsSchema, instructorSchema, complianceItemSchema, qualificationSchema } from "@/lib/validation/entities";
 import { writeAudit } from "@/lib/services/audit";
-import { idSchema, managedBySchema, staffLicenceSchema, teachableCoursesSchema } from "@/lib/validation/actions";
+import { idSchema, instructorTypesSchema, managedBySchema } from "@/lib/validation/actions";
+import { setInstructorTypes } from "@/lib/services/instructor-types";
 import { hasFreshStepUp } from "@/lib/auth/step-up-server";
 import { deleteInstructorIfUnreferenced } from "@/lib/services/retire";
 import { linkInstructorUser } from "@/lib/services/invite";
@@ -52,7 +53,7 @@ export async function setupInstructorAction(_prev: ActionState, formData: FormDa
   }
   const email = String(formData.get("email") ?? "").trim().toLowerCase() || null;
   const dobParsed = dobSchema.safeParse(formData.get("dateOfBirth"));
-  if (!dobParsed.success) return { ok: false, error: "Enter their date of birth. It decides which working-hours rules and privacy protections apply." };
+  if (!dobParsed.success) return { ok: false, error: "Enter their date of birth. It decides which under-18 privacy protections apply." };
   if (!plausibleStaffDob(dobParsed.data)) return { ok: false, error: "That date of birth doesn't look right (staff must be between 13 and 90)." };
   const employmentType: EmploymentType = (EMPLOYMENT_TYPES as readonly string[]).includes(String(formData.get("employmentType")))
     ? (String(formData.get("employmentType")) as EmploymentType)
@@ -433,38 +434,19 @@ export async function setManagedByAction(input: unknown): Promise<{ ok: boolean;
   return { ok: true };
 }
 
-/** The office records a licence someone holds (from their staff page). Both ids must be this centre's. */
-export async function addStaffLicenceAction(input: unknown): Promise<{ ok: boolean; error?: string }> {
+/** The office ticks the instructor types someone holds and the courses they're approved for (their profile). */
+export async function setInstructorTypesAction(input: unknown): Promise<{ ok: boolean; error?: string; message?: string }> {
   const { ctx, repos } = await requireTenant({ permission: "staff.edit" });
-  const parsed = staffLicenceSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Pick a licence" };
-  const [person, type] = await Promise.all([repos.tenant.instructor.findById(ctx, parsed.data.instructorId), repos.tenant.qualificationType.findById(ctx, parsed.data.qualificationTypeId)]);
-  if (!person || !type) return { ok: false, error: "Not found" };
-  const created = await repos.tenant.qualification.insert(ctx, { instructorId: person.id, qualificationTypeId: type.id, certNo: null, expiryDate: parsed.data.expiryDate ?? null, verified: false });
-  await writeAudit(repos, ctx, { action: "create", entity: "qualification", entityId: created.id, after: { instructorId: person.id, licence: type.name, expiryDate: created.expiryDate } });
-  revalidatePath(`/office/staff/${person.id}`);
+  const parsed = instructorTypesSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Please check the ticks" };
+  const r = await setInstructorTypes(repos, ctx, parsed.data);
+  if (!r.ok) return r;
+  revalidatePath(`/office/staff/${parsed.data.instructorId}`);
   revalidatePath("/office/staff");
-  return { ok: true };
-}
-
-/** The office sets which course types someone can teach (replaces the list). Only this centre's course types count. */
-export async function setTeachableCoursesAction(input: unknown): Promise<{ ok: boolean; error?: string; message?: string }> {
-  const { ctx, repos } = await requireTenant({ permission: "staff.edit" });
-  const parsed = teachableCoursesSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: "Please check the list" };
-  const person = await repos.tenant.instructor.findById(ctx, parsed.data.instructorId);
-  if (!person) return { ok: false, error: "Not found" };
-  const valid = new Set((await repos.tenant.courseType.list(ctx)).map((c) => c.id));
-  const wanted = new Set(parsed.data.courseTypeIds.filter((id) => valid.has(id)));
-  const current = await repos.tenant.instructorCourseType.list(ctx, eq(instructorCourseTypeTable.instructorId, person.id));
-  const have = new Set(current.map((r) => r.courseTypeId));
-  for (const r of current) if (!wanted.has(r.courseTypeId)) await repos.tenant.instructorCourseType.delete(ctx, r.id);
-  const add = [...wanted].filter((id) => !have.has(id));
-  if (add.length) await repos.tenant.instructorCourseType.insertMany(ctx, add.map((courseTypeId) => ({ instructorId: person.id, courseTypeId })));
-  await writeAudit(repos, ctx, { action: "set_teachable_courses", entity: "instructor", entityId: person.id, after: { count: wanted.size } });
-  revalidatePath(`/office/staff/${person.id}`);
-  revalidatePath("/office/staff");
-  return { ok: true, message: `Saved: ${wanted.size} course${wanted.size === 1 ? "" : "s"}` };
+  revalidatePath("/office/rota");
+  revalidatePath("/office/courses");
+  const bits = [r.added ? `${r.added} type${r.added === 1 ? "" : "s"} added` : "", r.removed ? `${r.removed} removed` : ""].filter(Boolean);
+  return { ok: true, message: bits.length ? `Saved: ${bits.join(", ")}. Upload a copy of each new one under Licences & documents.` : "Saved" };
 }
 
 const remindSchema = z.object({ kind: z.enum(["availability", "licences"]), instructorIds: z.array(idSchema).min(1).max(1000) });

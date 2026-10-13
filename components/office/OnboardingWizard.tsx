@@ -20,10 +20,10 @@ import {
 } from "@/app/(app)/office/onboarding/actions";
 import { FEATURE_META } from "@/lib/features";
 import { OPTIONAL_FEATURES, type CourseAudience, type OptionalFeature } from "@/lib/db/schema";
-import { qualTeachDiscipline, courseTeachDiscipline } from "@/lib/rya/teaching-map";
+import { schemeDiscipline, type TeachingData, type TypeOption } from "@/lib/domain/teaching";
+import { InstructorTypesEditor, approvalsToSave, taughtCount, type TypesValue } from "./InstructorTypesEditor";
 
 export interface CourseTypeOpt { id: string; name: string; scheme: string | null; audience: CourseAudience; category: string | null; active: boolean }
-export interface QualOpt { id: string; name: string; discipline: string | null }
 export interface TeamMember { name: string; employment: string; quals: number; courses?: number; invited?: boolean }
 
 const EMPLOYMENT = [
@@ -44,7 +44,7 @@ export function OnboardingWizard({
   centreName,
   wording,
   courseTypes,
-  quals: initialQuals,
+  teaching,
   existingStaff,
   initialFeatures,
   initialSlotStyle,
@@ -56,7 +56,8 @@ export function OnboardingWizard({
   /** The centre's activity pack words (RYA / PADI …). */
   wording: PackWording;
   courseTypes: CourseTypeOpt[];
-  quals: QualOpt[];
+  /** The instructor types, every listed course and the course map, for the team step's tick boxes. */
+  teaching: TeachingData;
   existingStaff: TeamMember[];
   initialFeatures: OptionalFeature[];
   initialSlotStyle: string;
@@ -64,7 +65,6 @@ export function OnboardingWizard({
   initialStaffManagedBy?: "staff" | "office";
   initialTracker: TrackerConfig;
 }) {
-  const [quals, setQuals] = useState<QualOpt[]>(initialQuals);
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [pending, startTransition] = useTransition();
@@ -107,37 +107,28 @@ export function OnboardingWizard({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [employment, setEmployment] = useState("employed");
-  const [chosenQuals, setChosenQuals] = useState<Set<string>>(new Set());
-  const [chosenTeach, setChosenTeach] = useState<Set<string>>(new Set());
-  const toggleTeach = (id: string) => setChosenTeach((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const [chosen, setChosen] = useState<TypesValue>({ typeIds: new Set(), approvedIds: new Set() });
   const [newType, setNewType] = useState("");
+  // Types added during setup (the centre's own, or the rest of the default list), on top of the ones loaded.
+  const [extraTypes, setExtraTypes] = useState<TypeOption[]>([]);
 
-  // Courses this instructor can teach are picked from the ones the centre runs.
-  const runCourses = useMemo(() => allCourses.filter((c) => selectedCourses.has(c.id)), [allCourses, selectedCourses]);
-
-  // Selecting a licence auto-ticks the courses they can teach (matched by
-  // discipline). Deselecting a licence removes those courses again, unless
-  // another still-held licence covers the same discipline.
-  const toggleQual = (id: string) => {
-    const qual = quals.find((q) => q.id === id);
-    const turningOn = !chosenQuals.has(id);
-    const nextQuals = new Set(chosenQuals);
-    turningOn ? nextQuals.add(id) : nextQuals.delete(id);
-    setChosenQuals(nextQuals);
-
-    const d = qual ? qualTeachDiscipline(qual.name) : null;
-    if (!d) return;
-    setChosenTeach((teach) => {
-      const n = new Set(teach);
-      const matches = runCourses.filter((c) => courseTeachDiscipline(c) === d);
-      if (turningOn) {
-        for (const c of matches) n.add(c.id);
-      } else if (!quals.some((q) => nextQuals.has(q.id) && qualTeachDiscipline(q.name) === d)) {
-        for (const c of matches) n.delete(c.id);
-      }
-      return n;
-    });
-  };
+  // The tick boxes see the courses the centre runs (ticked in step 2) and their course-map rows; the courses
+  // each person can teach follow from the types ticked.
+  const teamData: TeachingData = useMemo(() => {
+    const runIds = new Set(allCourses.filter((c) => selectedCourses.has(c.id)).map((c) => c.id));
+    const rules = teaching.rules.filter((r) => runIds.has(r.courseTypeId));
+    const relevant = new Set<string>();
+    for (const r of rules) { relevant.add(r.qualificationTypeId); if (r.alsoRequiresTypeId) relevant.add(r.alsoRequiresTypeId); }
+    for (const t of extraTypes) relevant.add(t.id);
+    const known = new Set(teaching.types.map((t) => t.id));
+    return {
+      types: [...teaching.types, ...extraTypes.filter((t) => !known.has(t.id))],
+      courses: allCourses.filter((c) => runIds.has(c.id)).map((c) => ({ id: c.id, name: c.name, discipline: schemeDiscipline(c.scheme), group: c.category ?? c.scheme ?? "Courses" })),
+      rules,
+      staffing: teaching.staffing.filter((r) => runIds.has(r.courseTypeId)),
+      relevantTypeIds: relevant.size ? [...relevant] : [],
+    };
+  }, [teaching, allCourses, selectedCourses, extraTypes]);
 
   const addType = () => {
     const name = newType.trim();
@@ -146,15 +137,17 @@ export function OnboardingWizard({
     startTransition(async () => {
       const res = await addQualificationTypeAction({ name });
       if (res.ok && res.id) {
-        setQuals((q) => [...q, { id: res.id!, name: res.name!, discipline: res.discipline ?? null }]);
-        setChosenQuals((s) => new Set(s).add(res.id!));
+        setExtraTypes((t) => [...t, { id: res.id!, name: res.name!, code: "", discipline: res.discipline ?? null, rank: 20 }]);
+        setChosen((c) => ({ ...c, typeIds: new Set(c.typeIds).add(res.id!) }));
         setNewType("");
       } else setMsg(res.error ?? "Could not add type");
     });
   };
   const addAllTypes = () => startTransition(async () => {
     const res = await addDefaultGradesAction();
-    if (res.ok && res.created.length) setQuals((q) => [...q, ...res.created.map((c) => ({ id: c.id, name: c.name, discipline: c.discipline }))]);
+    if (res.ok && res.created.length) {
+      setExtraTypes((t) => [...t, ...res.created.map((c) => ({ id: c.id, name: c.name, code: c.code ?? "", discipline: c.discipline, rank: c.rank ?? 20 }))]);
+    }
   });
   const addAllCourses = () => startTransition(async () => {
     const res = await addDefaultCoursesAction();
@@ -200,10 +193,11 @@ export function OnboardingWizard({
     setMsg(null);
     if (!name.trim()) { setMsg("Enter a name"); return; }
     startTransition(async () => {
-      const res = await addTeamMemberAction({ name, email, employmentType: employment, qualificationTypeIds: [...chosenQuals], courseTypeIds: [...chosenTeach] });
+      const approvals = approvalsToSave(teamData, chosen);
+      const res = await addTeamMemberAction({ name, email, employmentType: employment, qualificationTypeIds: [...chosen.typeIds], courseTypeIds: approvals });
       if (res.ok) {
-        setTeam((t) => [...t, { name: name.trim(), employment, quals: chosenQuals.size, courses: chosenTeach.size, invited: res.invited }]);
-        setName(""); setEmail(""); setChosenQuals(new Set()); setChosenTeach(new Set());
+        setTeam((t) => [...t, { name: name.trim(), employment, quals: chosen.typeIds.size, courses: taughtCount(teamData, chosen), invited: res.invited }]);
+        setName(""); setEmail(""); setChosen({ typeIds: new Set(), approvedIds: new Set() });
         setMsg(res.message ?? null);
       } else setMsg(res.error ?? "Could not add");
     });
@@ -396,7 +390,7 @@ export function OnboardingWizard({
       {step === 3 ? (
         <div className="rounded-card border border-slate-200 bg-white p-6">
           <h2 className="font-display text-lg font-semibold text-navy">Add your team</h2>
-          <p className="mt-1 text-sm text-slate-500">Add each instructor, tick the certs they hold and the courses they can teach. Add their email and we&apos;ll send them an invite to upload their certs themselves. Got a spreadsheet? <a href="/office/staff/import" className="font-semibold text-teal hover:underline">Import your instructors</a> instead.</p>
+          <p className="mt-1 text-sm text-slate-500">Add each instructor and tick the instructor types they hold (as many as apply): the courses they can teach follow from the types. Add their email and we&apos;ll send them an invite to upload a copy of each licence themselves. Got a spreadsheet? <a href="/office/staff/import" className="font-semibold text-teal hover:underline">Import your instructors</a> instead.</p>
 
           <form onSubmit={addMember} className="mt-4 rounded-lg bg-canvas p-4">
             <div className="grid gap-3 sm:grid-cols-3">
@@ -406,48 +400,20 @@ export function OnboardingWizard({
                 {EMPLOYMENT.map((e) => <option key={e.value} value={e.value}>{e.label}</option>)}
               </select>
             </div>
-            <div className="mt-3 flex items-center justify-between">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Certs / instructor type</p>
-              <button type="button" onClick={addAllTypes} disabled={pending} className="text-xs font-semibold text-teal hover:underline disabled:opacity-50">{wording.addAllTypes}</button>
-            </div>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {quals.map((q) => {
-                const on = chosenQuals.has(q.id);
-                return (
-                  <button key={q.id} type="button" onClick={() => toggleQual(q.id)}
-                    className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${on ? "border-teal bg-teal text-white" : "border-slate-300 text-slate-600 hover:border-slate-400"}`}>
-                    {on ? "✓ " : ""}{q.name}
-                  </button>
-                );
-              })}
+            <div className="mt-4">
+              <InstructorTypesEditor data={teamData} value={chosen} onChange={setChosen} personName={name.split(" ")[0]} compact />
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <input
                 value={newType}
                 onChange={(e) => setNewType(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addType(); } }}
-                placeholder="Add another type / job role…"
+                placeholder="Your own instructor type, if it isn't listed…"
                 className="min-w-[12rem] flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-xs outline-none focus:border-teal"
               />
               <button type="button" onClick={addType} disabled={pending} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-navy hover:bg-slate-50 disabled:opacity-50">+ Add type</button>
+              <button type="button" onClick={addAllTypes} disabled={pending} className="text-xs font-semibold text-teal hover:underline disabled:opacity-50">{wording.addAllTypes}</button>
             </div>
-
-            <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">Courses they can teach</p>
-            {runCourses.length === 0 ? (
-              <p className="mt-1 text-xs text-slate-400">Pick the courses you run in the previous step and they&apos;ll appear here.</p>
-            ) : (
-              <div className="mt-2 flex flex-wrap gap-2">
-                {runCourses.map((c) => {
-                  const on = chosenTeach.has(c.id);
-                  return (
-                    <button key={c.id} type="button" onClick={() => toggleTeach(c.id)}
-                      className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${on ? "border-teal bg-teal text-white" : "border-slate-300 text-slate-600 hover:border-slate-400"}`}>
-                      {on ? "✓ " : ""}{c.name}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
 
             <div className="mt-4 flex items-center gap-3">
               <button type="submit" disabled={pending} className="rounded-lg bg-navy px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:opacity-60">
@@ -462,7 +428,7 @@ export function OnboardingWizard({
               {team.map((m, i) => (
                 <li key={i} className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-sm">
                   <span className="font-medium text-navy">{m.name}{m.invited ? <span className="ml-2 rounded-full bg-teal/15 px-2 py-0.5 text-[10px] font-semibold text-teal">invited</span> : null}</span>
-                  <span className="text-xs text-slate-400 capitalize">{m.employment}{m.quals ? ` · ${m.quals} qual${m.quals > 1 ? "s" : ""}` : ""}{m.courses ? ` · teaches ${m.courses}` : ""}</span>
+                  <span className="text-xs text-slate-400"><span className="capitalize">{m.employment}</span>{m.quals ? ` · ${m.quals} instructor type${m.quals > 1 ? "s" : ""}` : ""}{m.courses ? ` · teaches ${m.courses} course${m.courses > 1 ? "s" : ""}` : ""}</span>
                 </li>
               ))}
             </ul>
