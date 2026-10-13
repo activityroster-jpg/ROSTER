@@ -151,8 +151,14 @@ function Waiting({ item, lines, onMessage }: { item: InboxItem; lines: LineOptio
   const [pick, setPick] = useState("");
   const [adding, setAdding] = useState(false);
   const run = (f: () => Promise<FinanceResult>) => start(async () => { const r = await f(); onMessage(r.ok ? r.message ?? "Done" : r.error ?? "Something went wrong"); router.refresh(); });
-  const sameCurrency = item.currency ? lines.filter((l) => l.currency === item.currency) : lines;
-  const ordered = [...sameCurrency].sort((a, b) => item.totalMinor == null ? b.date.localeCompare(a.date) : Math.abs(a.amountMinor - item.totalMinor) - Math.abs(b.amountMinor - item.totalMinor)).slice(0, 40);
+  // Every line without a receipt: same currency first, nearest amount first; then the rest, nearest date first.
+  const near = (d: string) => Math.abs(Date.parse(d) - Date.parse(item.receiptDate ?? item.receivedAt.slice(0, 10)));
+  const ordered = [...lines].sort((a, b) => {
+    const sa = a.currency === item.currency, sb = b.currency === item.currency;
+    if (sa !== sb) return sa ? -1 : 1;
+    if (sa && item.totalMinor != null) return Math.abs(a.amountMinor - item.totalMinor) - Math.abs(b.amountMinor - item.totalMinor);
+    return near(a.date) - near(b.date);
+  }).slice(0, 60);
   const read = item.readStatus === "read";
   return (
     <div className="rounded-card border border-slate-200 bg-white p-4">
@@ -174,7 +180,7 @@ function Waiting({ item, lines, onMessage }: { item: InboxItem; lines: LineOptio
       <div className="mt-3 space-y-2">
         {item.suggestions.length ? (
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-medium text-slate-500">Same amount:</span>
+            <span className="text-xs font-medium text-slate-500">Likely:</span>
             {item.suggestions.map((l) => (
               <button key={l.id} type="button" disabled={pending} onClick={() => run(() => attachInboxAction(item.id, l.id))} className="rounded-full border border-teal/40 bg-teal/5 px-3 py-1 text-xs font-medium text-teal hover:bg-teal/10 disabled:opacity-50">
                 Attach to {lineLabel(l)}

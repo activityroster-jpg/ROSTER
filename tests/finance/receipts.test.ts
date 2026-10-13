@@ -40,8 +40,15 @@ describe("matching a receipt to a line", () => {
     const r = matchReceipt(receipt, [line({ id: "a", counterparty: "Tesco", description: "Milk" }), line({ id: "b" })]);
     expect(r).toEqual({ auto: null, suggestions: ["b", "a"] });
   });
-  it("ignores lines in another currency, outside a week, or with a receipt already", () => {
-    expect(matchReceipt(receipt, [line({ currency: "EUR" }), line({ id: "l2", date: "2026-10-20" }), line({ id: "l3", hasReceipt: true })]).suggestions).toEqual([]);
+  it("ignores lines outside a week, with a receipt already, or in another currency from someone else", () => {
+    expect(matchReceipt(receipt, [line({ currency: "EUR", counterparty: "Adobe", description: "Acrobat" }), line({ id: "l2", date: "2026-10-20" }), line({ id: "l3", hasReceipt: true })]).suggestions).toEqual([]);
+  });
+  it("matches a receipt in another currency on supplier and date", () => {
+    const usd = { totalMinor: 25_00, currency: "USD", date: "2026-10-08", supplier: "Fly.io", fromAddress: "billing@fly.io" };
+    const fly = line({ id: "fly", date: "2026-10-09", amountMinor: 19_50, counterparty: "Fly.io", description: "Cloud Backup" });
+    expect(matchReceipt(usd, [fly, line({ id: "cf" })])).toEqual({ auto: "fly", suggestions: ["fly"] });
+    // Two Fly.io lines that week: suggest both, attach neither.
+    expect(matchReceipt(usd, [fly, line({ id: "fly2", date: "2026-10-10", amountMinor: 8_00, counterparty: "Fly.io" })])).toEqual({ auto: null, suggestions: ["fly", "fly2"] });
   });
   it("knows a supplier by its web domain, and by earlier matches", () => {
     expect(domainWords("no-reply@aws.amazon.com")).toEqual(["aws", "amazon"]);

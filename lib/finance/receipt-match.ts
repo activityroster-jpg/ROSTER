@@ -6,8 +6,10 @@
  * receipts), and is dated within a week of the receipt. The receipt is attached
  * on its own only when exactly one line is a candidate AND that line names the
  * same supplier (by the supplier's name or the sender's web domain, or a
- * domain an earlier receipt from that supplier was matched to). Anything less
- * certain is left for the owner, with the likeliest lines suggested first.
+ * domain an earlier receipt from that supplier was matched to). A receipt in a
+ * currency none of the lines in its week use (US$ on a sterling card) matches
+ * on supplier and date alone, and is attached when exactly one line fits.
+ * Anything less certain is left for the owner, likeliest lines first.
  */
 
 export interface ReceiptFacts {
@@ -86,10 +88,19 @@ export function namesSupplier(line: Pick<LineFacts, "counterparty" | "descriptio
 export function matchReceipt(receipt: ReceiptFacts, lines: readonly LineFacts[], known: ReadonlyMap<string, readonly string[]> = new Map()): MatchResult {
   if (receipt.totalMinor == null || !receipt.currency) return { auto: null, suggestions: [] };
   const currency = receipt.currency.toUpperCase();
-  const candidates = lines
-    .filter((l) => !l.hasReceipt && l.currency === currency && l.amountMinor === receipt.totalMinor && daysBetween(l.date, receipt.date) <= MATCH_WINDOW_DAYS)
+  const open = lines.filter((l) => !l.hasReceipt && daysBetween(l.date, receipt.date) <= MATCH_WINDOW_DAYS);
+  const exact = open
+    .filter((l) => l.currency === currency && l.amountMinor === receipt.totalMinor)
     .map((l) => ({ id: l.id, supplier: namesSupplier(l, receipt, known), days: daysBetween(l.date, receipt.date) }))
     .sort((a, b) => Number(b.supplier) - Number(a.supplier) || a.days - b.days);
-  const only = candidates.length === 1 ? candidates[0]! : null;
-  return { auto: only?.supplier ? only.id : null, suggestions: candidates.map((c) => c.id) };
+  // A receipt in another currency (a US$ invoice paid on a sterling card) can't
+  // match on amount: match on the supplier and the date instead.
+  const foreign = open.some((l) => l.currency === currency) ? [] : open
+    .filter((l) => namesSupplier(l, receipt, known))
+    .map((l) => ({ id: l.id, days: daysBetween(l.date, receipt.date) }))
+    .sort((a, b) => a.days - b.days);
+  const only = exact.length === 1 ? exact[0]! : null;
+  const auto = only?.supplier ? only.id : exact.length === 0 && foreign.length === 1 ? foreign[0]!.id : null;
+  const suggestions = [...exact.map((c) => c.id), ...foreign.map((c) => c.id).filter((id) => !exact.some((c) => c.id === id))];
+  return { auto, suggestions };
 }
