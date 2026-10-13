@@ -7,9 +7,12 @@ import {
   addCourseTypeAction,
   deleteCourseTypeAction,
   reactivateCourseTypeAction,
+  setCourseTeachersAction,
   updateCourseTypeAction,
   type CourseTypeInput,
 } from "@/app/(app)/office/course-setup/actions";
+import { schemeDiscipline, type TypeOption } from "@/lib/domain/teaching";
+import { CourseTeachersEditor, teacherSummary, type TeacherTick } from "./CourseTeachersEditor";
 
 export interface CourseTypeRow {
   id: string;
@@ -19,6 +22,8 @@ export interface CourseTypeRow {
   defaultCapacity: number;
   studentsPerInstructor: number;
   active: boolean;
+  /** Who can teach it: the instructor types linked to it (the course map). */
+  teachers: TeacherTick[];
 }
 
 const AUDIENCES = [
@@ -29,9 +34,12 @@ const AUDIENCES = [
 
 const cell = "rounded border border-slate-300 px-2 py-1 text-sm outline-none focus:border-teal";
 
-function Row({ row, onMsg }: { row: CourseTypeRow; onMsg: (m: { ok: boolean; text: string }) => void }) {
+function Row({ row, types, onMsg }: { row: CourseTypeRow; types: TypeOption[]; onMsg: (m: { ok: boolean; text: string }) => void }) {
   const router = useRouter();
   const [pending, start] = useTransition();
+  const [editingTeachers, setEditingTeachers] = useState(false);
+  const [teachers, setTeachers] = useState<TeacherTick[]>(row.teachers);
+  const anyTypes = types.some((t) => t.discipline);
   const [v, setV] = useState<CourseTypeInput>({
     name: row.name,
     scheme: row.scheme ?? "",
@@ -58,6 +66,7 @@ function Row({ row, onMsg }: { row: CourseTypeRow; onMsg: (m: { ok: boolean; tex
         <td className="px-4 py-2 capitalize">{row.audience}</td>
         <td className="px-4 py-2">{row.defaultCapacity}</td>
         <td className="px-4 py-2">1:{row.studentsPerInstructor}</td>
+        <td className="px-4 py-2 text-xs">{teacherSummary(types, row.teachers) || "—"}</td>
         <td className="px-4 py-2 text-right">
           <span className="mr-2 text-xs">Retired</span>
           <button type="button" disabled={pending} onClick={() => run(() => reactivateCourseTypeAction(row.id))} className="text-xs font-medium text-teal hover:underline">Reactivate</button>
@@ -67,6 +76,7 @@ function Row({ row, onMsg }: { row: CourseTypeRow; onMsg: (m: { ok: boolean; tex
   }
 
   return (
+    <>
     <tr>
       <td className="px-4 py-2"><input aria-label="Course type name" value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} className={`${cell} w-full min-w-[10rem] font-medium text-navy`} /></td>
       <td className="px-4 py-2"><input aria-label="Scheme" value={v.scheme ?? ""} onChange={(e) => setV({ ...v, scheme: e.target.value })} placeholder="—" className={`${cell} w-full min-w-[8rem]`} /></td>
@@ -78,6 +88,12 @@ function Row({ row, onMsg }: { row: CourseTypeRow; onMsg: (m: { ok: boolean; tex
       <td className="px-4 py-2"><input aria-label="Capacity" type="number" min={1} value={v.defaultCapacity} onChange={(e) => setV({ ...v, defaultCapacity: e.target.value })} className={`${cell} w-20`} /></td>
       <td className="px-4 py-2">
         <span className="flex items-center gap-1 text-slate-500">1:<input aria-label="Students per instructor" type="number" min={1} value={v.studentsPerInstructor} onChange={(e) => setV({ ...v, studentsPerInstructor: e.target.value })} className={`${cell} w-16`} /></span>
+      </td>
+      <td className="max-w-[14rem] px-4 py-2">
+        <button type="button" onClick={() => setEditingTeachers((x) => !x)} className="text-left text-xs hover:underline" aria-expanded={editingTeachers}>
+          {row.teachers.length ? <span className="text-navy">{teacherSummary(types, row.teachers)}</span> : anyTypes ? <span className="font-semibold text-amber">⚠ Pick who can teach it</span> : <span className="text-slate-400">By activity</span>}
+          <span className="ml-1 text-teal">{editingTeachers ? "close" : "edit"}</span>
+        </button>
       </td>
       <td className="whitespace-nowrap px-4 py-2 text-right">
         {dirty ? (
@@ -93,22 +109,37 @@ function Row({ row, onMsg }: { row: CourseTypeRow; onMsg: (m: { ok: boolean; tex
         </button>
       </td>
     </tr>
+    {editingTeachers ? (
+      <tr className="bg-slate-50/70">
+        <td colSpan={7} className="px-4 py-3">
+          <CourseTeachersEditor types={types} value={teachers} onChange={setTeachers} ladder={schemeDiscipline(row.scheme)} courseName={row.name} />
+          <div className="mt-2 flex items-center gap-3">
+            <button type="button" disabled={pending} onClick={() => run(async () => { const r = await setCourseTeachersAction(row.id, teachers.map((x) => ({ typeId: x.typeId, needsApproval: x.needsApproval }))); if (r.ok) setEditingTeachers(false); return r; })} className="rounded bg-teal px-3 py-1 text-xs font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{pending ? "Saving…" : "Save who can teach it"}</button>
+            <button type="button" onClick={() => { setTeachers(row.teachers); setEditingTeachers(false); }} className="text-xs text-slate-500 hover:text-navy">Cancel</button>
+          </div>
+        </td>
+      </tr>
+    ) : null}
+    </>
   );
 }
 
 /** Editable course-type catalogue: edit fields inline, add, and delete/retire. */
-export function CourseTypeTable({ rows, schemePlaceholder = "e.g. RYA Youth Sailing" }: { rows: CourseTypeRow[]; schemePlaceholder?: string }) {
+export function CourseTypeTable({ rows, types, schemePlaceholder = "e.g. RYA Youth Sailing" }: { rows: CourseTypeRow[]; types: TypeOption[]; schemePlaceholder?: string }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const blank: CourseTypeInput = { name: "", scheme: "", audience: "all", defaultCapacity: 8, studentsPerInstructor: 6 };
   const [nv, setNv] = useState<CourseTypeInput>(blank);
+  const [newTeachers, setNewTeachers] = useState<TeacherTick[]>([]);
+  // The centre's own course must say who can teach it (when it has any instructor types).
+  const needTeachers = types.some((t) => t.discipline);
 
   const add = () =>
     start(async () => {
-      const res = await addCourseTypeAction(nv);
+      const res = await addCourseTypeAction({ ...nv, teachers: newTeachers.map((x) => ({ typeId: x.typeId, needsApproval: x.needsApproval })) });
       setMsg({ ok: res.ok, text: res.ok ? res.message ?? "Added" : res.error ?? "Could not add" });
-      if (res.ok) { setNv(blank); router.refresh(); }
+      if (res.ok) { setNv(blank); setNewTeachers([]); router.refresh(); }
     });
 
   const active = rows.filter((r) => r.active);
@@ -125,11 +156,12 @@ export function CourseTypeTable({ rows, schemePlaceholder = "e.g. RYA Youth Sail
               <th className="px-4 py-3">Audience</th>
               <th className="px-4 py-3">Capacity</th>
               <th className="px-4 py-3">Ratio</th>
+              <th className="px-4 py-3">Who can teach it</th>
               <th className="px-4 py-3"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {active.map((r) => <Row key={`${r.id}-${r.active}`} row={r} onMsg={setMsg} />)}
+            {active.map((r) => <Row key={`${r.id}-${r.active}`} row={r} types={types} onMsg={setMsg} />)}
             <tr className="bg-teal/5">
               <td className="px-4 py-2"><input aria-label="New course type name" value={nv.name} onChange={(e) => setNv({ ...nv, name: e.target.value })} placeholder="Add a course type…" className={`${cell} w-full min-w-[10rem]`} /></td>
               <td className="px-4 py-2"><input aria-label="New scheme" value={nv.scheme ?? ""} onChange={(e) => setNv({ ...nv, scheme: e.target.value })} placeholder={schemePlaceholder} className={`${cell} w-full min-w-[8rem]`} /></td>
@@ -140,17 +172,26 @@ export function CourseTypeTable({ rows, schemePlaceholder = "e.g. RYA Youth Sail
               </td>
               <td className="px-4 py-2"><input aria-label="New capacity" type="number" min={1} value={nv.defaultCapacity} onChange={(e) => setNv({ ...nv, defaultCapacity: e.target.value })} className={`${cell} w-20`} /></td>
               <td className="px-4 py-2"><span className="flex items-center gap-1 text-slate-500">1:<input aria-label="New students per instructor" type="number" min={1} value={nv.studentsPerInstructor} onChange={(e) => setNv({ ...nv, studentsPerInstructor: e.target.value })} className={`${cell} w-16`} /></span></td>
+              <td className="px-4 py-2 text-xs text-slate-500">{newTeachers.length ? teacherSummary(types, newTeachers) : needTeachers ? "Tick below" : "—"}</td>
               <td className="px-4 py-2 text-right">
-                <button type="button" disabled={pending || !nv.name.trim()} onClick={add} className="rounded bg-teal px-3 py-1 text-xs font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{pending ? "…" : "Add"}</button>
+                <button type="button" disabled={pending || !nv.name.trim() || (needTeachers && newTeachers.length === 0)} onClick={add} title={needTeachers && newTeachers.length === 0 ? "Tick at least one instructor type who can teach it" : undefined} className="rounded bg-teal px-3 py-1 text-xs font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{pending ? "…" : "Add"}</button>
               </td>
             </tr>
+            {nv.name.trim() && needTeachers ? (
+              <tr className="bg-teal/5">
+                <td colSpan={7} className="px-4 pb-3">
+                  <p className="mb-1 text-xs font-semibold text-navy">Who can teach {nv.name.trim()}? <span className="font-normal text-slate-500">(required)</span></p>
+                  <CourseTeachersEditor types={types} value={newTeachers} onChange={setNewTeachers} ladder={schemeDiscipline(nv.scheme ?? null)} courseName={nv.name.trim()} />
+                </td>
+              </tr>
+            ) : null}
           </tbody>
         </table>
       </div>
       {retired.length > 0 ? (
         <details className="mt-3 rounded-card border border-slate-200 bg-white">
           <summary className="cursor-pointer px-4 py-2 text-sm font-semibold text-navy">Retired course types <span className="font-normal text-slate-400">({retired.length}) · old courses still show them</span></summary>
-          <table className="w-full min-w-[720px] text-left text-sm"><tbody className="divide-y divide-slate-100 border-t border-slate-100">{retired.map((r) => <Row key={`${r.id}-${r.active}`} row={r} onMsg={setMsg} />)}</tbody></table>
+          <table className="w-full min-w-[720px] text-left text-sm"><tbody className="divide-y divide-slate-100 border-t border-slate-100">{retired.map((r) => <Row key={`${r.id}-${r.active}`} row={r} types={types} onMsg={setMsg} />)}</tbody></table>
         </details>
       ) : null}
       {msg ? <p role="status" className={`mt-2 text-sm ${msg.ok ? "text-starboard" : "text-port"}`}>{msg.text}</p> : null}

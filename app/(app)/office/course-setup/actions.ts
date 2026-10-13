@@ -9,6 +9,8 @@ import { COURSE_AUDIENCES } from "@/lib/db/schema";
 import { normaliseDefaultSchedule } from "@/lib/domain";
 import { PACKS, isActivityType, packFor } from "@/lib/packs";
 import { setCourseTypeKit } from "@/lib/services/kit";
+import { setCourseTeachers } from "@/lib/services/instructor-types";
+import { courseTeachersSchema as teachersSchema, idSchema } from "@/lib/validation/actions";
 
 export type CourseTypeResult = { ok: boolean; error?: string; message?: string };
 
@@ -46,15 +48,38 @@ export async function updateCourseTypeAction(id: string, input: CourseTypeInput)
   return { ok: true, message: "Saved" };
 }
 
-/** Add a new course type to the catalogue. */
-export async function addCourseTypeAction(input: CourseTypeInput): Promise<CourseTypeResult> {
+/**
+ * Add a new course type to the catalogue, with who can teach it: the centre's
+ * own course must say which instructor types are applicable (when it has
+ * any), so the roster can check who can teach it.
+ */
+export async function addCourseTypeAction(input: CourseTypeInput & { teachers?: unknown }): Promise<CourseTypeResult> {
   const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const parsed = fields.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Please check the values" };
+  const teachers = teachersSchema.safeParse(input.teachers ?? []);
+  if (!teachers.success) return { ok: false, error: "Please check who can teach it" };
+  const hasTypes = (await repos.tenant.qualificationType.list(ctx)).some((q) => q.active && q.discipline);
+  if (hasTypes && teachers.data.length === 0) return { ok: false, error: "Tick at least one instructor type who can teach it" };
   const created = await repos.tenant.courseType.insert(ctx, { ...parsed.data, active: true });
-  await writeAudit(repos, ctx, { action: "create", entity: "course_type", entityId: created.id, after: parsed.data });
+  if (teachers.data.length) await setCourseTeachers(repos, ctx, created.id, teachers.data);
+  await writeAudit(repos, ctx, { action: "create", entity: "course_type", entityId: created.id, after: { ...parsed.data, teachers: teachers.data.length } });
   revalidate();
   return { ok: true, message: `${parsed.data.name} added` };
+}
+
+/** Course setup: which instructor types can teach a course type (with the Principal's approval where ticked). */
+export async function setCourseTeachersAction(courseTypeId: string, rows: unknown): Promise<CourseTypeResult> {
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
+  if (!idSchema.safeParse(courseTypeId).success) return { ok: false, error: "Invalid request" };
+  const parsed = teachersSchema.safeParse(rows);
+  if (!parsed.success) return { ok: false, error: "Please check who can teach it" };
+  const r = await setCourseTeachers(repos, ctx, courseTypeId, parsed.data);
+  if (!r.ok) return r;
+  revalidate();
+  revalidatePath("/office/rota");
+  revalidatePath("/office/staff");
+  return { ok: true, message: r.count ? `Saved: ${r.count} instructor type${r.count === 1 ? "" : "s"} can teach ${r.name}` : `${r.name} has no instructor types linked now; it falls back to the course's activity` };
 }
 
 /**

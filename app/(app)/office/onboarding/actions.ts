@@ -14,7 +14,8 @@ import {
   type SlotStyle,
 } from "@/lib/db/schema";
 import { writeAudit } from "@/lib/services/audit";
-import { createInstructorType, ownLadder } from "@/lib/services/instructor-types";
+import { createInstructorType, ownLadder, setCourseTeachers } from "@/lib/services/instructor-types";
+import { courseTeachersSchema } from "@/lib/validation/actions";
 import { linkInstructorUser } from "@/lib/services/invite";
 import { serializeFeatures } from "@/lib/features";
 import { packFor } from "@/lib/packs";
@@ -59,10 +60,17 @@ export async function addCustomCourseAction(input: {
   name: string;
   audience: string;
   category?: string;
+  /** Who can teach it: required when the centre has instructor types. */
+  teachers?: unknown;
 }): Promise<{ ok: boolean; error?: string; id?: string }> {
   const { ctx, repos } = await requireTenant({ permission: "settings.edit" });
   const name = (input.name ?? "").trim();
   if (!name) return { ok: false, error: "Give the course a name" };
+  const teachers = courseTeachersSchema.safeParse(input.teachers ?? []);
+  if (!teachers.success) return { ok: false, error: "Please check who can teach it" };
+  if (teachers.data.length === 0 && (await repos.tenant.qualificationType.list(ctx)).some((q) => q.active && q.discipline)) {
+    return { ok: false, error: "Tick at least one instructor type who can teach it" };
+  }
   const audience: CourseAudience = (COURSE_AUDIENCES as readonly string[]).includes(input.audience)
     ? (input.audience as CourseAudience)
     : "all";
@@ -74,10 +82,11 @@ export async function addCustomCourseAction(input: {
     category: input.category?.trim() || null,
     defaultCapacity: 8,
     studentsPerInstructor: 4,
-    requiresSafetyBoat: audience === "youth",
+    requiresSafetyBoat: false,
     active: true,
   });
-  await writeAudit(repos, ctx, { action: "create", entity: "course_type", entityId: created.id, after: { name, audience } });
+  if (teachers.data.length) await setCourseTeachers(repos, ctx, created.id, teachers.data);
+  await writeAudit(repos, ctx, { action: "create", entity: "course_type", entityId: created.id, after: { name, audience, teachers: teachers.data.length } });
   revalidatePath("/office/onboarding");
   revalidatePath("/office/courses");
   revalidatePath("/office/settings");

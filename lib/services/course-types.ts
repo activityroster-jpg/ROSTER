@@ -1,7 +1,8 @@
 import { eq } from "drizzle-orm";
 import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
-import { course as courseTable, instructorCourseType } from "@/lib/db/schema";
+import { course as courseTable, instructorCourseType, payRate as payRateTable, qualificationCourseType as qualificationCourseTypeTable } from "@/lib/db/schema";
+import { runAtomic } from "@/lib/db/batch";
 
 export type DeleteCourseTypeOutcome =
   | { outcome: "not_found" }
@@ -9,10 +10,11 @@ export type DeleteCourseTypeOutcome =
   | { outcome: "deleted"; name: string };
 
 /**
- * Delete a course type, or retire it if anything still uses it. Courses and
- * instructor approvals RESTRICT-reference course types, and config is
- * deactivate-never-delete, so an in-use type is set inactive (history keeps
- * rendering) and only an unused one is actually removed. Tenant scoped.
+ * Delete a course type, or retire it if anything still uses it. Courses,
+ * instructor approvals and pay rates RESTRICT-reference course types, and
+ * config is deactivate-never-delete, so an in-use type is set inactive
+ * (history keeps rendering) and only an unused one is actually removed, with
+ * its "who can teach it" rows in the same write. Tenant scoped.
  */
 export async function deleteOrRetireCourseType(
   repos: Repositories,
@@ -23,16 +25,18 @@ export async function deleteOrRetireCourseType(
   const existing = await t.courseType.findById(ctx, id);
   if (!existing) return { outcome: "not_found" };
 
-  const [usedByCourses, usedByApprovals] = await Promise.all([
+  const [usedByCourses, usedByApprovals, usedByRates, teachers] = await Promise.all([
     t.course.count(ctx, eq(courseTable.courseTypeId, id)),
     t.instructorCourseType.count(ctx, eq(instructorCourseType.courseTypeId, id)),
+    t.payRate.count(ctx, eq(payRateTable.courseTypeId, id)),
+    t.qualificationCourseType.list(ctx, eq(qualificationCourseTypeTable.courseTypeId, id)),
   ]);
 
-  if (usedByCourses + usedByApprovals > 0) {
+  if (usedByCourses + usedByApprovals + usedByRates > 0) {
     await t.courseType.update(ctx, id, { active: false });
     return { outcome: "retired", name: existing.name };
   }
-  await t.courseType.delete(ctx, id);
+  await runAtomic(repos.db, [...teachers.map((r) => t.qualificationCourseType.deleteStatement(ctx, r.id)), t.courseType.deleteStatement(ctx, id)]);
   return { outcome: "deleted", name: existing.name };
 }
 
@@ -64,6 +68,15 @@ export async function moveCoursesToType(
   for (const a of fromApprovals) {
     if (!already.has(a.instructorId)) await t.instructorCourseType.insert(ctx, { instructorId: a.instructorId, courseTypeId: toId });
     await t.instructorCourseType.delete(ctx, a.id);
+  }
+
+  // Who can teach it: a target with no instructor types linked takes the merged type's.
+  const [fromTeachers, toTeachers] = await Promise.all([
+    t.qualificationCourseType.list(ctx, eq(qualificationCourseTypeTable.courseTypeId, fromId)),
+    t.qualificationCourseType.list(ctx, eq(qualificationCourseTypeTable.courseTypeId, toId)),
+  ]);
+  if (toTeachers.length === 0 && fromTeachers.length) {
+    await runAtomic(repos.db, fromTeachers.map((r) => t.qualificationCourseType.insertStatement(ctx, { qualificationTypeId: r.qualificationTypeId, courseTypeId: toId, alsoRequiresTypeId: r.alsoRequiresTypeId, needsApproval: r.needsApproval })));
   }
 
   await deleteOrRetireCourseType(repos, ctx, fromId);

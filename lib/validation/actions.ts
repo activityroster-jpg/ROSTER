@@ -103,5 +103,7 @@ export const trialDaysSchema = z.coerce.number().int().min(1, "Enter 1–365 day
 /** First issue message, for a one-line error back to the form. */
 export const firstIssue = (e: z.ZodError, fallback = "Please check the values") => e.issues[0]?.message ?? fallback;
 
+/** Who can teach a course type: instructor types, each outright or only with the Principal's approval. */
+export const courseTeachersSchema = z.array(z.object({ typeId: idSchema, needsApproval: z.boolean() })).max(100);
 /** The instructor types someone holds and the courses they're approved for (their profile's tick boxes). */
 export const instructorTypesSchema = z.object({ instructorId: idSchema, typeIds: z.array(idSchema).max(200), approvedCourseIds: z.array(idSchema).max(300) });

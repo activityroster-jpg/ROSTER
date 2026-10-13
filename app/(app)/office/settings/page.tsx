@@ -26,6 +26,7 @@ import { FeatureNotice } from "@/components/office/FeatureNotice";
 import { listAllPayRates } from "@/lib/services/pay-rates";
 import { PayRatesSettings } from "@/components/office/PayRatesEditor";
 import { bySeniority } from "@/lib/domain/role-rank";
+import { ladderGroup } from "@/lib/domain/ladders";
 import { instructor as instructorTable } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import type { Repositories } from "@/lib/db/repositories";
@@ -236,23 +237,22 @@ export default async function SettingsPage() {
           ]}
         />
         <ConfigManager
-          title="Roles"
-          kind="role"
-          items={toItems(roles, (r) => r.name, (r) => [r.countsTowardRatio ? "counts in ratio" : "", r.isSafetyCover ? "safety cover" : "", r.isFirstAider ? "first aider" : ""].filter(Boolean).join(" · "))}
+          title="Instructor types and certificates"
+          kind="grade"
+          items={toItems(grades, (g) => g.name, (g) => (g.discipline ? `${ladderGroup(g.discipline).label} ladder · rank ${g.rank}` : "certificate"))}
           extraFields={[
-            { name: "countsTowardRatio", label: "Counts in ratio", type: "checkbox" },
-            { name: "isSafetyCover", label: "Safety cover", type: "checkbox" },
-            { name: "isFirstAider", label: "First aider", type: "checkbox" },
+            { name: "discipline", label: "Ladder, e.g. dinghy or windsurf (leave blank for a certificate that doesn't teach on its own)", type: "text" },
+            { name: "rank", label: "Rank on the ladder (a higher rank can fill a lower place)", type: "number" },
+            { name: "expiryTracked", label: "Has an expiry date", type: "checkbox" },
           ]}
         />
         <ConfigManager
-          title="Certs"
-          kind="grade"
-          items={toItems(grades, (g) => g.name, (g) => g.discipline ?? "")}
+          title="Places on courses"
+          kind="role"
+          items={toItems(roles, (r) => r.name, (r) => [r.qualificationTypeId ? "instructor type" : "", r.countsTowardRatio ? "counts in ratio" : "", r.isSafetyCover ? "safety cover" : "", r.isFirstAider ? "first aider" : ""].filter(Boolean).join(" · "))}
           extraFields={[
-            { name: "discipline", label: "Discipline", type: "text" },
-            { name: "rank", label: "Rank", type: "number" },
-            { name: "expiryTracked", label: "Has an expiry date", type: "checkbox" },
+            { name: "countsTowardRatio", label: "Counts in ratio", type: "checkbox" },
+            { name: "isFirstAider", label: "First aider", type: "checkbox" },
           ]}
         />
         <ConfigManager

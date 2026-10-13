@@ -63,6 +63,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
   const typeByCourse = new Map(courseRows.map((c) => [c.id, c.courseTypeId]));
   const qualifiedFor = (instructorId: string, courseId: string): boolean | null => { const g = qualificationGap(teaching.get(instructorId) ?? [], holdsAny.has(instructorId), typeByCourse.get(courseId) ?? ""); return g.known ? g.qualified : null; };
   const places = pickerPlaces(roles, tc);
+  const typeCodes = new Map((await repos.tenant.qualificationType.list(ctx)).filter((q) => q.active).map((q) => [q.id, q.code]));
   const placeById = new Map(places.map((p) => [p.id, p]));
   const staffingRoles = staffingRolesOf(roles, tc);
   const fills = fillsByInstructor(tc, instructors.map((i) => i.id));
@@ -241,7 +242,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
 
       {activeTypes.length === 0 ? <RestoreCourseTypes courseListName={packFor(organisation.activityType).wording.courseListName} /> : null}
 
-      <CoursePlanner courseTypes={activeTypes} events={events} slotStyle={slotStyle} roles={places} relevantByType={Object.fromEntries(activeTypes.map((c) => [c.id, relevantPlacesFor(tc, c.id)]))} leadByType={Object.fromEntries(activeTypes.flatMap((c) => { const lead = leadPlaceFor(tc, c.id); return lead ? [[c.id, lead]] : []; }))} locations={plannerLocations} equipment={plannerEquipment} />
+      <CoursePlanner courseTypes={activeTypes} events={events} slotStyle={slotStyle} roles={places} relevantByType={Object.fromEntries(activeTypes.map((c) => [c.id, relevantPlacesFor(tc, c.id)]))} leadByType={Object.fromEntries(activeTypes.flatMap((c) => { const lead = leadPlaceFor(tc, c.id); return lead ? [[c.id, lead]] : []; }))} instructorTypes={[...tc.types.values()].filter((t) => t.discipline).sort((a, b) => a.rank - b.rank).map((t) => ({ id: t.id, name: t.name, code: typeCodes.get(t.id) ?? "", discipline: t.discipline, rank: t.rank }))} locations={plannerLocations} equipment={plannerEquipment} />
 
       <div className="mb-3 flex items-center gap-2">
         <h2 className="font-display text-lg font-semibold text-navy">Courses</h2>

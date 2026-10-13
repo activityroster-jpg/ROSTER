@@ -5,10 +5,11 @@ vi.mock("@/lib/r2", () => ({ deleteDocument: vi.fn(async () => {}) }));
 import { eq } from "drizzle-orm";
 import { createTestDb } from "@/tests/helpers/test-db";
 import { seedFullOrg } from "@/tests/helpers/seed-fixtures";
-import { createInstructorType, setInstructorTypes, syncPlacesForType } from "@/lib/services/instructor-types";
+import { createInstructorType, setCourseTeachers, setInstructorTypes, syncPlacesForType } from "@/lib/services/instructor-types";
+import { deleteOrRetireCourseType } from "@/lib/services/course-types";
 import { getTeachingMatrix } from "@/lib/services/teaching";
 import { deleteDocument } from "@/lib/r2";
-import { auditLog, instructorCourseType, qualification } from "@/lib/db/schema";
+import { auditLog, instructorCourseType, qualification, qualificationCourseType } from "@/lib/db/schema";
 import type { Repositories } from "@/lib/db/repositories";
 import type { SystemTenantContext } from "@/lib/tenant/context";
 
@@ -68,5 +69,29 @@ describe("instructor types on someone's profile", () => {
     expect(await repos.tenant.roleType.findById(ctx, place.id)).toMatchObject({ name: "Kayak Lead", active: false });
     // A held certificate (no ladder) gets no place.
     expect((await createInstructorType(repos, ctx, { name: "Radio Licence", discipline: null })).placeId).toBeNull();
+  });
+
+  it("sets who can teach a course type: adds, removes, switches approval, keeps an existing 'also needs'", async () => {
+    const [di, si, pbi, sbc] = await Promise.all([typeId("DI"), typeId("SI"), typeId("PBI"), typeId("SBC")]);
+    const own = await repos.tenant.courseType.insert(ctx, { name: "Club Night", scheme: null, audience: "all", defaultCapacity: 8, studentsPerInstructor: 6, active: true });
+    const rows = async () => (await repos.tenant.qualificationCourseType.list(ctx, eq(qualificationCourseType.courseTypeId, own.id))).map((r) => [r.qualificationTypeId, Boolean(r.needsApproval)]).sort();
+    expect(await setCourseTeachers(repos, ctx, own.id, [{ typeId: di, needsApproval: true }, { typeId: si, needsApproval: false }, { typeId: sbc, needsApproval: false }])).toMatchObject({ ok: true, count: 2 });
+    expect(await rows()).toEqual([[di, true], [si, false]].sort()); // a certificate alone never teaches
+    await setCourseTeachers(repos, ctx, own.id, [{ typeId: di, needsApproval: false }]);
+    expect(await rows()).toEqual([[di, false]]);
+
+    // Safety Boat Course keeps "also needs the Safety Boat certificate" when saved again.
+    const sbCourse = await courseId("Safety Boat Course");
+    await setCourseTeachers(repos, ctx, sbCourse, [{ typeId: pbi, needsApproval: false }]);
+    const kept = (await repos.tenant.qualificationCourseType.list(ctx, eq(qualificationCourseType.courseTypeId, sbCourse)));
+    expect(kept.map((r) => [r.qualificationTypeId, r.alsoRequiresTypeId])).toEqual([[pbi, sbc]]);
+    expect((await repos.tenant.auditLog.list(ctx, eq(auditLog.action, "set_course_teachers"))).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("deletes an unused course type with its 'who can teach it' rows", async () => {
+    const own = await repos.tenant.courseType.insert(ctx, { name: "Taster", scheme: null, audience: "all", defaultCapacity: 8, studentsPerInstructor: 6, active: true });
+    await setCourseTeachers(repos, ctx, own.id, [{ typeId: await typeId("DI"), needsApproval: false }]);
+    expect(await deleteOrRetireCourseType(repos, ctx, own.id)).toEqual({ outcome: "deleted", name: "Taster" });
+    expect(await repos.tenant.qualificationCourseType.list(ctx, eq(qualificationCourseType.courseTypeId, own.id))).toEqual([]);
   });
 });

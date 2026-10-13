@@ -14,11 +14,12 @@ import { getCourseEditorData, type CourseEditorData } from "@/lib/services/cours
 import { createCourseTypeResolver, TYPE_NEW, TYPE_ONEOFF } from "@/lib/services/course-type-resolve";
 import { syncHoursForCourse } from "@/lib/services/hours";
 import { assignBlockMessage, notifyRosterChange } from "@/lib/services/assignment";
-import { firstIssue, idSchema, studentsSchema } from "@/lib/validation/actions";
+import { courseTeachersSchema, firstIssue, idSchema, studentsSchema } from "@/lib/validation/actions";
 import { eq } from "drizzle-orm";
-import { courseRoleRequirement as courseRoleRequirementTable, courseSession as courseSessionTable, courseStaff as courseStaffTable } from "@/lib/db/schema";
+import { courseRoleRequirement as courseRoleRequirementTable, courseSession as courseSessionTable, courseStaff as courseStaffTable, qualificationCourseType as qualificationCourseTypeTable } from "@/lib/db/schema";
 import { cleanRoleLines, suggestRoles } from "@/lib/domain/staffing";
 import { getTeachingContext, leadPlaceFor, staffingRolesOf } from "@/lib/services/teaching";
+import { setCourseTeachers } from "@/lib/services/instructor-types";
 import { problemsForCourse, problemsSuffix } from "@/lib/services/problems";
 import { setCourseEquipment, setCourseLocations, setCourseStaffing } from "@/lib/services/course-resources";
 import { clearDayStaff, setDayStaff } from "@/lib/services/session-staff";
@@ -101,12 +102,19 @@ export async function createCourseFlexibleAction(input: {
   roles?: { roleTypeId: string; count: number }[];
   locationIds?: string[];
   equipmentIds?: string[];
-  /** A manually-typed course type instead of courseTypeId; optionally added to the regular list. */
-  newType?: { name: string; addToList: boolean };
+  /** A manually-typed course type instead of courseTypeId; optionally added to the regular list. `teachers` = who can teach it. */
+  newType?: { name: string; addToList: boolean; teachers?: unknown };
 }): Promise<ActionState> {
   const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const newTypeName = typeof input.newType?.name === "string" ? input.newType.name.trim().slice(0, 120) : "";
   if (!input.courseTypeId && !newTypeName) return { ok: false, error: "Pick a course type, or type one in" };
+  // The centre's own course type says who can teach it (when the centre has instructor types).
+  const teachers = courseTeachersSchema.safeParse(input.newType?.teachers ?? []);
+  if (!teachers.success) return { ok: false, error: "Please check who can teach it" };
+  if (newTypeName && teachers.data.length === 0 && (await repos.tenant.qualificationType.list(ctx)).some((q) => q.active && q.discipline)) {
+    const existing = (await repos.tenant.courseType.list(ctx)).find((c) => c.name.trim().toLowerCase() === newTypeName.toLowerCase());
+    if (!existing) return { ok: false, error: "Tick at least one instructor type who can teach it" };
+  }
   const rawSessions = Array.isArray(input.sessions) ? input.sessions : [];
   const sessions: NewCourseSession[] = [];
   for (const s of rawSessions) {
@@ -132,6 +140,10 @@ export async function createCourseFlexibleAction(input: {
       const resolver = await createCourseTypeResolver(repos, ctx);
       const type = await resolver.resolve(newTypeName, "all", input.newType?.addToList === true ? TYPE_NEW : TYPE_ONEOFF);
       courseTypeId = type.id;
+      // A type that has nobody linked yet takes the ticked instructor types.
+      if (teachers.data.length && (await repos.tenant.qualificationCourseType.count(ctx, eq(qualificationCourseTypeTable.courseTypeId, type.id))) === 0) {
+        await setCourseTeachers(repos, ctx, type.id, teachers.data);
+      }
     }
     await createCourseWithSessions(repos, ctx, {
       courseTypeId,

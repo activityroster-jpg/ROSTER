@@ -22,6 +22,7 @@ import { FEATURE_META } from "@/lib/features";
 import { OPTIONAL_FEATURES, type CourseAudience, type OptionalFeature } from "@/lib/db/schema";
 import { schemeDiscipline, type TeachingData, type TypeOption } from "@/lib/domain/teaching";
 import { InstructorTypesEditor, approvalsToSave, taughtCount, type TypesValue } from "./InstructorTypesEditor";
+import { CourseTeachersEditor, type TeacherTick } from "./CourseTeachersEditor";
 
 export interface CourseTypeOpt { id: string; name: string; scheme: string | null; audience: CourseAudience; category: string | null; active: boolean }
 export interface TeamMember { name: string; employment: string; quals: number; courses?: number; invited?: boolean }
@@ -90,6 +91,9 @@ export function OnboardingWizard({
   const [ccName, setCcName] = useState("");
   const [ccAudience, setCcAudience] = useState<CourseAudience>("youth");
   const [ccCategory, setCcCategory] = useState("");
+  const [ccTeachers, setCcTeachers] = useState<TeacherTick[]>([]);
+  // "Who can teach it" rows for courses added here, so the team step sees them straight away.
+  const [extraRules, setExtraRules] = useState<TeachingData["rules"]>([]);
 
   const grouped = useMemo(() => {
     const byAudience = new Map<CourseAudience, Map<string, CourseTypeOpt[]>>();
@@ -116,7 +120,7 @@ export function OnboardingWizard({
   // each person can teach follow from the types ticked.
   const teamData: TeachingData = useMemo(() => {
     const runIds = new Set(allCourses.filter((c) => selectedCourses.has(c.id)).map((c) => c.id));
-    const rules = teaching.rules.filter((r) => runIds.has(r.courseTypeId));
+    const rules = [...teaching.rules, ...extraRules].filter((r) => runIds.has(r.courseTypeId));
     const relevant = new Set<string>();
     for (const r of rules) { relevant.add(r.qualificationTypeId); if (r.alsoRequiresTypeId) relevant.add(r.alsoRequiresTypeId); }
     for (const t of extraTypes) relevant.add(t.id);
@@ -128,7 +132,7 @@ export function OnboardingWizard({
       staffing: teaching.staffing.filter((r) => runIds.has(r.courseTypeId)),
       relevantTypeIds: relevant.size ? [...relevant] : [],
     };
-  }, [teaching, allCourses, selectedCourses, extraTypes]);
+  }, [teaching, allCourses, selectedCourses, extraTypes, extraRules]);
 
   const addType = () => {
     const name = newType.trim();
@@ -169,8 +173,11 @@ export function OnboardingWizard({
     if (!ccName.trim()) { setMsg("Name your course first"); return; }
     setMsg(null);
     startTransition(async () => {
-      const res = await addCustomCourseAction({ name: ccName, audience: ccAudience, category: ccCategory });
+      const res = await addCustomCourseAction({ name: ccName, audience: ccAudience, category: ccCategory, teachers: ccTeachers.map((x) => ({ typeId: x.typeId, needsApproval: x.needsApproval })) });
       if (res.ok && res.id) {
+        const courseTypeId = res.id;
+        setExtraRules((r) => [...r, ...ccTeachers.map((x) => ({ qualificationTypeId: x.typeId, courseTypeId, alsoRequiresTypeId: null, needsApproval: x.needsApproval }))]);
+        setCcTeachers([]);
         const opt: CourseTypeOpt = { id: res.id, name: ccName.trim(), scheme: ccCategory.trim() || "Centre course", audience: ccAudience, category: ccCategory.trim() || null, active: true };
         setAllCourses((c) => [...c, opt]);
         setSelectedCourses((s) => new Set(s).add(res.id!));
@@ -371,6 +378,12 @@ export function OnboardingWizard({
               </select>
               <input value={ccCategory} onChange={(e) => setCcCategory(e.target.value)} placeholder="Group (optional)" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
             </div>
+            {ccName.trim() && teamData.types.some((t) => t.discipline) ? (
+              <div className="mt-3 rounded-lg border border-slate-200 bg-white p-3">
+                <p className="mb-1 text-xs font-semibold text-navy">Who can teach {ccName.trim()}? <span className="font-normal text-slate-500">(required)</span></p>
+                <CourseTeachersEditor types={teamData.types} value={ccTeachers} onChange={setCcTeachers} ladder={null} courseName={ccName.trim()} />
+              </div>
+            ) : null}
             <button onClick={addCustom} disabled={pending} className="mt-3 rounded-lg bg-navy px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:opacity-60">
               {pending ? "Adding…" : "+ Add course"}
             </button>

@@ -6,6 +6,8 @@ import { createCourseFlexibleAction, type FlexSession } from "@/app/(app)/office
 import { CourseEditorModal } from "@/components/office/CourseEditorModal";
 import { describeDefaultSchedule, expandDefaultSchedule, type DefaultSession } from "@/lib/domain/schedule-defaults";
 import { PlaceSelect, type PlaceOption } from "./PlaceSelect";
+import { CourseTeachersEditor, type TeacherTick } from "./CourseTeachersEditor";
+import type { TypeOption } from "@/lib/domain/teaching";
 
 interface EventUi { id: string; courseId: string; date: string; slot: string; startAt: number; endAt: number; courseName: string; audience: string }
 interface CourseTypeUi { id: string; name: string; audience: "youth" | "adult" | "all"; schedule?: DefaultSession[] }
@@ -29,7 +31,7 @@ const fmtDay = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString(
 let seq = 0;
 const OTHER = "__other";
 
-export function CoursePlanner({ courseTypes, events, slotStyle, roles = [], relevantByType = {}, leadByType = {}, locations = [], equipment = [] }: {
+export function CoursePlanner({ courseTypes, events, slotStyle, roles = [], relevantByType = {}, leadByType = {}, instructorTypes = [], locations = [], equipment = [] }: {
   courseTypes: CourseTypeUi[]; events: EventUi[]; slotStyle: "slots" | "times";
   /** The centre's places (each an instructor type, plus Volunteer). */
   roles?: PlaceOption[];
@@ -37,6 +39,8 @@ export function CoursePlanner({ courseTypes, events, slotStyle, roles = [], rele
   relevantByType?: Record<string, string[]>;
   /** Course type id → its lead place (Dinghy Instructor for Level 1), the default for a new staff line. */
   leadByType?: Record<string, string>;
+  /** The centre's instructor types, for "who can teach it" on a course type typed in under Other. */
+  instructorTypes?: TypeOption[];
   locations?: Option[]; equipment?: Option[];
 }) {
   const router = useRouter();
@@ -47,6 +51,8 @@ export function CoursePlanner({ courseTypes, events, slotStyle, roles = [], rele
   // "Other" — a manually-typed type, kept off the regular list unless ticked.
   const [otherType, setOtherType] = useState("");
   const [addToList, setAddToList] = useState(false);
+  const [otherTeachers, setOtherTeachers] = useState<TeacherTick[]>([]);
+  const needTeachers = instructorTypes.some((t) => t.discipline);
   const isOther = courseTypeId === OTHER;
   const typeSchedule = courseTypes.find((c) => c.id === courseTypeId)?.schedule ?? [];
   const [scheduleStart, setScheduleStart] = useState(() => new Date().toISOString().slice(0, 10));
@@ -106,6 +112,7 @@ export function CoursePlanner({ courseTypes, events, slotStyle, roles = [], rele
     setMsg(null);
     if (!courseTypeId) { setMsg({ ok: false, text: "Pick a course type first." }); return; }
     if (isOther && !otherType.trim()) { setMsg({ ok: false, text: "Type the course type name." }); return; }
+    if (isOther && needTeachers && otherTeachers.length === 0 && !courseTypes.some((c) => c.name.trim().toLowerCase() === otherType.trim().toLowerCase())) { setMsg({ ok: false, text: "Tick at least one instructor type who can teach it." }); return; }
     if (rows.length === 0) { setMsg({ ok: false, text: "Add at least one session (click a day in the calendar or ‘Add session’)." }); return; }
     // Exact times apply in "set times" mode, or per row when ticked in slot mode.
     const timed = (r: Row) => slotStyle === "times" || r.useTimes;
@@ -114,9 +121,9 @@ export function CoursePlanner({ courseTypes, events, slotStyle, roles = [], rele
     start(async () => {
       const res = await createCourseFlexibleAction({
         courseTypeId: isOther ? "" : courseTypeId, name, sessions, roles: roleReqs, locationIds, equipmentIds,
-        newType: isOther ? { name: otherType.trim(), addToList } : undefined,
+        newType: isOther ? { name: otherType.trim(), addToList, teachers: otherTeachers.map((x) => ({ typeId: x.typeId, needsApproval: x.needsApproval })) } : undefined,
       });
-      if (res.ok) { setRows([]); setName(""); if (isOther) { setCourseTypeId(""); setOtherType(""); setAddToList(false); } setNeeds([]); setLocationIds([]); setEquipmentIds([]); setMsg({ ok: true, text: res.message ?? "Created" }); router.refresh(); }
+      if (res.ok) { setRows([]); setName(""); if (isOther) { setCourseTypeId(""); setOtherType(""); setAddToList(false); setOtherTeachers([]); } setNeeds([]); setLocationIds([]); setEquipmentIds([]); setMsg({ ok: true, text: res.message ?? "Created" }); router.refresh(); }
       else setMsg({ ok: false, text: res.error ?? "Could not create" });
     });
   };
@@ -196,6 +203,12 @@ export function CoursePlanner({ courseTypes, events, slotStyle, roles = [], rele
                   Add to my regular course list
                 </label>
                 {!addToList ? <p className="text-[11px] text-slate-400">Left unticked, it&apos;s a one-off and won&apos;t clutter your list. You can add it later in Course setup.</p> : null}
+                {needTeachers && otherType.trim() ? (
+                  <div className="rounded-lg border border-slate-200 bg-white p-2.5">
+                    <p className="mb-1 text-xs font-semibold text-navy">Who can teach it? <span className="font-normal text-slate-500">(required)</span></p>
+                    <CourseTeachersEditor types={instructorTypes} value={otherTeachers} onChange={setOtherTeachers} ladder={null} courseName={otherType.trim()} />
+                  </div>
+                ) : null}
               </div>
             ) : null}
           </div>

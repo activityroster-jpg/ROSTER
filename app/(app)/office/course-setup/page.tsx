@@ -13,7 +13,14 @@ export const dynamic = "force-dynamic";
 export default async function CourseSetupPage() {
   const { ctx, repos, organisation } = await requireTenant({ permission: "roster.edit" });
   const pack = packFor(organisation.activityType);
-  const courseTypes = await repos.tenant.courseType.list(ctx);
+  const [courseTypes, qualTypes, mapRows] = await Promise.all([
+    repos.tenant.courseType.list(ctx),
+    repos.tenant.qualificationType.list(ctx),
+    repos.tenant.qualificationCourseType.list(ctx),
+  ]);
+  // The instructor types for "who can teach it", and each course's current list.
+  const types = qualTypes.filter((q) => q.active).sort((a, b) => a.rank - b.rank || a.name.localeCompare(b.name)).map((q) => ({ id: q.id, name: q.name, code: q.code, discipline: q.discipline ?? null, rank: q.rank }));
+  const teachersOf = (courseTypeId: string) => mapRows.filter((r) => r.courseTypeId === courseTypeId).map((r) => ({ typeId: r.qualificationTypeId, needsApproval: Boolean(r.needsApproval), alsoRequiresTypeId: r.alsoRequiresTypeId ?? null }));
 
   const rows: CourseTypeRow[] = courseTypes
     .filter((c) => c.listed)
@@ -25,6 +32,7 @@ export default async function CourseSetupPage() {
       defaultCapacity: c.defaultCapacity,
       studentsPerInstructor: c.studentsPerInstructor,
       active: Boolean(c.active),
+      teachers: teachersOf(c.id),
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
@@ -32,7 +40,7 @@ export default async function CourseSetupPage() {
   const oneOffs = await Promise.all(
     courseTypes
       .filter((c) => !c.listed && c.active)
-      .map(async (c) => ({ id: c.id, name: c.name, courses: await repos.tenant.course.count(ctx, eq(courseTable.courseTypeId, c.id)) })),
+      .map(async (c) => ({ id: c.id, name: c.name, courses: await repos.tenant.course.count(ctx, eq(courseTable.courseTypeId, c.id)), teachers: teachersOf(c.id) })),
   );
   oneOffs.sort((a, b) => a.name.localeCompare(b.name));
   const listedChoices = rows.filter((r) => r.active).map((r) => ({ id: r.id, name: r.name }));
@@ -42,13 +50,17 @@ export default async function CourseSetupPage() {
     <div>
       <h1 className="mb-1 font-display text-2xl font-semibold text-navy">Course setup</h1>
       <p className="mb-4 text-sm text-slate-500">
-        Your course-type catalogue. Edit any field in place, add new types, or delete ones you don&apos;t run. A type
+        Your course-type catalogue. Edit any field in place, say which instructor types can teach each course, add new types, or delete ones you don&apos;t run. A type
         that&apos;s already used by courses is retired rather than deleted, so past courses still show it.
       </p>
       <a href="/learn?topic=courses" target="_blank" rel="noreferrer" className="mb-4 inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-navy hover:bg-slate-50">📖 Read the guide</a>
-      <CourseTypeTable rows={rows} schemePlaceholder={pack.wording.schemePlaceholder} />
+      {(() => {
+        const missing = rows.filter((r) => r.active && r.teachers.length === 0).length;
+        return missing && types.some((t) => t.discipline) ? <p className="mb-3 rounded-lg border border-amber/40 bg-amber/10 px-3 py-2 text-sm text-navy">⚠ {missing} course type{missing === 1 ? " has" : "s have"} no instructor types linked. Use &ldquo;Pick who can teach it&rdquo; so the roster can check who&apos;s qualified (until then it goes by the course&apos;s activity).</p> : null;
+      })()}
+      <CourseTypeTable rows={rows} types={types} schemePlaceholder={pack.wording.schemePlaceholder} />
       <AddPackLists others={PACK_OPTIONS.filter((o) => o.id !== pack.id)} />
-      <OneOffCourseTypes items={oneOffs} listed={listedChoices} />
+      <OneOffCourseTypes items={oneOffs} listed={listedChoices} types={types} />
       <KitRules
         courseTypes={listedChoices}
         equipmentTypes={equipmentTypes.filter((e) => e.active).map((e) => ({ id: e.id, name: e.name })).sort((a, b) => a.name.localeCompare(b.name))}

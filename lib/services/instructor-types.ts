@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
-import { instructorCourseType as instructorCourseTypeTable, qualification as qualificationTable } from "@/lib/db/schema";
+import { instructorCourseType as instructorCourseTypeTable, qualification as qualificationTable, qualificationCourseType as qualificationCourseTypeTable } from "@/lib/db/schema";
 import { runAtomic } from "@/lib/db/batch";
 import { deleteDocument } from "@/lib/r2";
 import { auditStatement } from "./audit";
@@ -106,4 +106,51 @@ export async function syncPlacesForType(repos: Repositories, ctx: AnyTenantConte
   if (!places.length) return 0;
   await runAtomic(repos.db, places.map((r) => repos.tenant.roleType.updateStatement(ctx, r.id, patch)));
   return places.length;
+}
+
+/** One "who can teach it" row for a course type. */
+export interface TeacherRow { typeId: string; needsApproval: boolean }
+
+/**
+ * Set which instructor types can teach a course type (Course setup), the
+ * course map that decides who can teach it. Rows for types no longer ticked
+ * go; new ones are added; "with the Principal's approval" is updated. An
+ * existing row's "also needs" certificate is kept. Only the centre's active
+ * types with a ladder count (a certificate alone never teaches). One
+ * all-or-nothing write, audited.
+ */
+export async function setCourseTeachers(
+  repos: Repositories,
+  ctx: AnyTenantContext,
+  courseTypeId: string,
+  rows: readonly TeacherRow[],
+): Promise<{ ok: true; count: number; name: string } | { ok: false; error: string }> {
+  const t = repos.tenant;
+  const course = await t.courseType.findById(ctx, courseTypeId);
+  if (!course) return { ok: false, error: "Course type not found" };
+  const [types, current] = await Promise.all([
+    t.qualificationType.list(ctx),
+    t.qualificationCourseType.list(ctx, eq(qualificationCourseTypeTable.courseTypeId, courseTypeId)),
+  ]);
+  const teaching = new Map(types.filter((q) => q.active && q.discipline).map((q) => [q.id, q]));
+  const wanted = new Map<string, boolean>();
+  for (const r of rows) if (teaching.has(r.typeId)) wanted.set(r.typeId, Boolean(r.needsApproval));
+  const have = new Map(current.map((r) => [r.qualificationTypeId, r]));
+  const ops = [
+    // A row for a retired type (or one without a ladder) is left as it is: only what the editor shows is changed.
+    ...current.filter((r) => teaching.has(r.qualificationTypeId) && !wanted.has(r.qualificationTypeId)).map((r) => t.qualificationCourseType.deleteStatement(ctx, r.id)),
+    ...[...wanted].filter(([id]) => !have.has(id)).map(([qualificationTypeId, needsApproval]) => t.qualificationCourseType.insertStatement(ctx, { qualificationTypeId, courseTypeId, needsApproval })),
+    ...[...wanted].filter(([id, approval]) => have.has(id) && Boolean(have.get(id)!.needsApproval) !== approval).map(([id, needsApproval]) => t.qualificationCourseType.updateStatement(ctx, have.get(id)!.id, { needsApproval })),
+  ];
+  if (ops.length === 0) return { ok: true, count: wanted.size, name: course.name };
+  const nameOf = (id: string) => types.find((q) => q.id === id)?.name ?? "Instructor type";
+  const audit = auditStatement(repos, ctx, {
+    action: "set_course_teachers",
+    entity: "course_type",
+    entityId: courseTypeId,
+    before: { types: current.map((r) => nameOf(r.qualificationTypeId)) },
+    after: { types: [...wanted].map(([id, approval]) => (approval ? `${nameOf(id)} (with approval)` : nameOf(id))) },
+  });
+  await runAtomic(repos.db, [...ops, ...(audit ? [audit] : [])]);
+  return { ok: true, count: wanted.size, name: course.name };
 }

@@ -2,20 +2,25 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { moveCoursesToTypeAction, setCourseTypeListedAction } from "@/app/(app)/office/course-setup/actions";
+import { moveCoursesToTypeAction, setCourseTeachersAction, setCourseTypeListedAction } from "@/app/(app)/office/course-setup/actions";
+import type { TypeOption } from "@/lib/domain/teaching";
+import { CourseTeachersEditor, teacherSummary, type TeacherTick } from "./CourseTeachersEditor";
 
-interface Item { id: string; name: string; courses: number }
+interface Item { id: string; name: string; courses: number; teachers: TeacherTick[] }
 
 /**
  * One-off course types — typed in manually or imported without a match. They
  * stay off the regular list; from here each can be added to the list, or its
  * courses moved under the right existing type.
  */
-export function OneOffCourseTypes({ items, listed }: { items: Item[]; listed: { id: string; name: string }[] }) {
+export function OneOffCourseTypes({ items, listed, types }: { items: Item[]; listed: { id: string; name: string }[]; types: TypeOption[] }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [target, setTarget] = useState<Record<string, string>>({});
+  const [editing, setEditing] = useState<string | null>(null);
+  const [teachers, setTeachers] = useState<TeacherTick[]>([]);
+  const anyTypes = types.some((t) => t.discipline);
 
   if (items.length === 0) return null;
 
@@ -37,6 +42,10 @@ export function OneOffCourseTypes({ items, listed }: { items: Item[]; listed: { 
           <li key={it.id} className="flex flex-wrap items-center gap-3 px-4 py-2.5 text-sm">
             <span className="font-medium text-navy">{it.name}</span>
             <span className="text-xs text-slate-400">{it.courses} course{it.courses === 1 ? "" : "s"}</span>
+            <button type="button" onClick={() => { setEditing(editing === it.id ? null : it.id); setTeachers(it.teachers); }} className="text-xs hover:underline">
+              {it.teachers.length ? <span className="text-slate-600">Taught by {teacherSummary(types, it.teachers)}</span> : anyTypes ? <span className="font-semibold text-amber">⚠ Pick who can teach it</span> : null}
+              {anyTypes ? <span className="ml-1 text-teal">{editing === it.id ? "close" : "edit"}</span> : null}
+            </button>
             <span className="ml-auto flex flex-wrap items-center gap-2">
               <button type="button" disabled={pending} onClick={() => run(() => setCourseTypeListedAction(it.id, true))} className="rounded border border-teal px-2.5 py-1 text-xs font-semibold text-teal hover:bg-teal hover:text-white disabled:opacity-50">
                 ＋ Add to list
@@ -53,6 +62,12 @@ export function OneOffCourseTypes({ items, listed }: { items: Item[]; listed: { 
                 </>
               ) : null}
             </span>
+            {editing === it.id ? (
+              <div className="basis-full rounded-lg bg-slate-50 p-3">
+                <CourseTeachersEditor types={types} value={teachers} onChange={setTeachers} ladder={null} courseName={it.name} />
+                <button type="button" disabled={pending} onClick={() => run(async () => { const r = await setCourseTeachersAction(it.id, teachers.map((x) => ({ typeId: x.typeId, needsApproval: x.needsApproval }))); if (r.ok) setEditing(null); return r; })} className="mt-2 rounded bg-teal px-3 py-1 text-xs font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{pending ? "Saving…" : "Save who can teach it"}</button>
+              </div>
+            ) : null}
           </li>
         ))}
       </ul>
