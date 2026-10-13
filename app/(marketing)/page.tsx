@@ -4,6 +4,7 @@ import { AlertTriangle, Anchor, ArrowRight, BookOpen, CalendarCheck, CalendarOff
 import { LeadCapture } from "@/components/marketing/LeadCapture";
 import { ComplianceFlow } from "@/components/marketing/ComplianceFlow";
 import { ScreenShot } from "@/components/marketing/ScreenShot";
+import { HomeExplainer } from "@/components/marketing/HomeExplainer";
 import { SCREENS } from "@/lib/screens";
 import { apexDomain, COMPANY } from "@/lib/config";
 
@@ -176,6 +177,9 @@ export default function MarketingHome() {
           </div>
         </div>
       </section>
+
+      {/* The two-minute explainer, once it's on the site */}
+      <HomeExplainer />
 
       {/* Trust strip */}
       <section className="border-b border-slate-200 bg-white">

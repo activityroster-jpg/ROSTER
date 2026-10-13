@@ -17,4 +17,8 @@ export const SERIES = [
   { n: 11, slug: "settings-and-office-access", title: "Settings and office access", learn: "settings" },
   { n: 12, slug: "the-instructor-app", title: "For instructors: the app", learn: "app" },
 ];
-export const byNumber = (n) => SERIES.find((v) => v.n === n);
+/** Videos outside the numbered series: the homepage explainer (no "Video N of 12" card, a sign-up call at the end). */
+export const EXTRAS = [
+  { n: 0, slug: "explainer", title: "ActivityRoster in two minutes", learn: "getting-started", extra: true },
+];
+export const byNumber = (n) => SERIES.find((v) => v.n === n) ?? EXTRAS.find((v) => v.n === n);

@@ -87,6 +87,7 @@ const mode = q.get("mode") || "intro";
 const n = Number(q.get("n") || 1), total = Number(q.get("total") || 12);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const title = esc(q.get("title") || "");
+const extra = q.get("extra") === "1"; // the homepage explainer: no series card, a sign-up call at the end
 const cells = ["", "", "m", "m", "", "", "", "m", "b"];
 const logo = (delay = 0) => `<div class="logo"><div class="mark">${cells.map((c, i) => `<i class="${c}" style="animation-delay:${(delay + i * 0.09).toFixed(2)}s${c === "b" ? `, ${(delay + 1.45).toFixed(2)}s` : ""}"></i>`).join("")}</div><div class="word"><span class="a">Activity</span><span class="r">Roster</span></div></div>`;
 const segs = Array.from({ length: total }, (_, i) => `<b class="${i + 1 < n ? "done" : i + 1 === n ? "now" : ""}"></b>`).join("");
@@ -95,19 +96,19 @@ document.body.className = mode;
 if (mode === "intro") {
   root.innerHTML = `
     <div class="layer logo-wrap">${logo(0.15)}<div class="tag">Staff rostering for sailing &amp; watersports centres</div></div>
-    <div class="layer"><div class="card"><div class="kicker">Video ${n} of ${total}</div><div class="segs">${segs}</div><div class="title">${title}</div><div class="sub">ActivityRoster how-to series</div></div></div>`;
+    <div class="layer"><div class="card"><div class="kicker">${extra ? "Two-minute tour" : `Video ${n} of ${total}`}</div>${extra ? '<div style="height:40px"></div>' : `<div class="segs">${segs}</div>`}<div class="title">${title}</div><div class="sub">${extra ? "Staff rostering for sailing &amp; watersports centres" : "ActivityRoster how-to series"}</div></div></div>`;
 } else if (mode === "outro") {
   const next = esc(q.get("next") || "");
   const nn = q.get("nextN");
   root.innerHTML = `
-    <div class="layer"><div class="o1">${next ? `<div class="next">Next · Video ${esc(nn)} of ${total}</div><div class="next-title">${next}</div>` : `<div class="next">That's the series</div><div class="next-title">Thanks for watching</div>`}</div>
-      <div class="guide o2">Step-by-step guides: <b>activityroster.com/learn</b></div>
-      <div class="guide o3" style="margin-top:14px;font-size:28px">Start your free month at <b>activityroster.com</b></div></div>
+    <div class="layer"><div class="o1">${extra ? `<div class="next">Your first month is free</div><div class="next-title">Start at activityroster.com</div>` : next ? `<div class="next">Next · Video ${esc(nn)} of ${total}</div><div class="next-title">${next}</div>` : `<div class="next">That's the series</div><div class="next-title">Thanks for watching</div>`}</div>
+      <div class="guide o2">${extra ? "No card needed to try it. Step-by-step guides at <b>activityroster.com/learn</b>" : "Step-by-step guides: <b>activityroster.com/learn</b>"}</div>
+      ${extra ? "" : `<div class="guide o3" style="margin-top:14px;font-size:28px">Start your free month at <b>activityroster.com</b></div>`}</div>
     <div class="small-logo">${logo(0)}</div>`;
 } else {
   const shot = q.get("shot");
   root.innerHTML = `${shot ? `<img class="shot" src="${esc(shot)}">` : ""}<div class="fade"></div>
-    <div class="layer"><div class="t-kicker">How-to · ${n} of ${total}</div><div class="t-title">${title}</div></div>
+    <div class="layer"><div class="t-kicker">${extra ? "Two-minute tour" : `How-to · ${n} of ${total}`}</div><div class="t-title">${title}</div></div>
     <div class="t-logo">${logo(0)}</div>`;
 }
 // The renderer calls this to show the frame at time t (seconds).

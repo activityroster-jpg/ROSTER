@@ -25,6 +25,7 @@ on:
 
 permissions:
   contents: write
+  actions: read # to fetch the latest how-to videos from the Make videos run
 
 concurrency:
   group: deploy-production
@@ -135,6 +136,33 @@ jobs:
           else
             echo "::warning::OUTREACH_CRON_SECRET is not set; receipts emailed in cannot reach the app until it is."
           fi
+      - name: Publish the how-to videos (from the latest Make videos run)
+        # The website plays the videos from storage. Copies the newest finished
+        # set (MP4, poster, captions) into public/videos/; nothing personal in
+        # them (a made-up centre). Never fails the deploy.
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          RUN="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow videos.yml --status success --limit 1 --json databaseId --jq '.[0].databaseId')"
+          if [ -z "$RUN" ]; then echo "No finished video run yet."; exit 0; fi
+          mkdir -p "$RUNNER_TEMP/vids"
+          if ! gh run download "$RUN" --repo "$GITHUB_REPOSITORY" --name activityroster-videos --dir "$RUNNER_TEMP/vids"; then
+            echo "::warning::The latest videos have expired (they're kept 30 days). Run Make videos, then deploy again; the videos already on the site stay."
+            exit 0
+          fi
+          put() { npx wrangler r2 object put "activityroster-docs/public/videos/$1" --file "$2" --content-type "$3" --remote > /dev/null && echo "published $1"; }
+          for dir in "$RUNNER_TEMP"/vids/*/; do
+            name="$(basename "$dir")"
+            if [ ! -f "$dir$name.mp4" ]; then continue; fi
+            put "$name.mp4" "$dir$name.mp4" video/mp4
+            if [ -f "$dir$name-thumbnail.png" ]; then put "$name.png" "$dir$name-thumbnail.png" image/png; fi
+            if [ ! -f "$dir$name.en.vtt" ] && [ -f "$dir$name.en.srt" ]; then
+              { printf 'WEBVTT\n\n'; sed -E 's/([0-9]{2}:[0-9]{2}:[0-9]{2}),([0-9]{3})/\1.\2/g' "$dir$name.en.srt"; } > "$dir$name.en.vtt"
+            fi
+            if [ -f "$dir$name.en.vtt" ]; then put "$name.vtt" "$dir$name.en.vtt" "text/vtt"; fi
+          done
+
       - name: Smoke test
         id: smoke
         run: |

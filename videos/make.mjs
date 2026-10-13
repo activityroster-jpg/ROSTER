@@ -147,10 +147,10 @@ async function makeVideo(browser, meta, script) {
   await ffmpeg(["-f", "concat", "-safe", "0", "-i", join(work, "frames.txt"), "-vf", `scale=1920:1080:flags=lanczos,fps=${FPS},format=yuv420p`, "-c:v", "libx264", "-preset", "medium", "-crf", "18", "-r", String(FPS), main]);
 
   // 4. Intro and outro cards
-  const next = byNumber(meta.n + 1);
+  const next = meta.extra ? null : byNumber(meta.n + 1);
   const intro = join(work, "intro.mp4"), outro = join(work, "outro.mp4");
-  const introLen = await renderCard(browser, { mode: "intro", n: meta.n, total: TOTAL, title: meta.title }, intro, work);
-  await renderCard(browser, { mode: "outro", n: meta.n, total: TOTAL, ...(next ? { next: next.title, nextN: next.n } : {}) }, outro, work);
+  const introLen = await renderCard(browser, { mode: "intro", n: meta.n, total: TOTAL, title: meta.title, ...(meta.extra ? { extra: 1 } : {}) }, intro, work);
+  await renderCard(browser, { mode: "outro", n: meta.n, total: TOTAL, ...(meta.extra ? { extra: 1 } : next ? { next: next.title, nextN: next.n } : {}) }, outro, work);
   const mainLen = await durationOf(main);
 
   // 5. Picture: intro + walk-through + outro
@@ -171,6 +171,10 @@ async function makeVideo(browser, meta, script) {
   const add = (file, chain) => { inputs.push("-i", file); const idx = inputs.length / 2; chains.push(`[${idx}:a]${fmt},${chain}[s${chains.length}]`); };
   for (const l of voiced) add(l.file, `adelay=${Math.round(l.at * 1000)}:all=1`);
   if (brand.sting) add(brand.sting, "volume=0.75,adelay=120:all=1");
+  // A script can ask for the music bed quietly under the narration too (the homepage explainer).
+  if (brand.music && script.musicUnder) {
+    add(brand.music, `aloop=loop=-1:size=2147483647,atrim=0:${mainLen.toFixed(3)},asetpts=PTS-STARTPTS,volume=0.07,afade=t=in:st=0:d=1.5,afade=t=out:st=${Math.max(0, mainLen - 2.5).toFixed(3)}:d=2.5,adelay=${Math.round(introLen * 1000)}:all=1`);
+  }
   if (brand.music) {
     add(brand.music, `atrim=0:${introLen.toFixed(3)},asetpts=PTS-STARTPTS,volume=0.30,afade=t=in:st=0:d=0.6,afade=t=out:st=${Math.max(0, introLen - 1.4).toFixed(3)}:d=1.4`);
     add(brand.music, `atrim=0:${outroLen.toFixed(3)},asetpts=PTS-STARTPTS,volume=0.30,afade=t=in:st=0:d=0.8,afade=t=out:st=${Math.max(0, outroLen - 1.6).toFixed(3)}:d=1.6,adelay=${Math.round(outroStart * 1000)}:all=1`);
@@ -184,19 +188,22 @@ async function makeVideo(browser, meta, script) {
   if (brand.sting || brand.music) console.log(`  sound: ${[brand.sting && "logo sting", brand.music && "music bed"].filter(Boolean).join(" + ")}`);
 
   // 7. Captions, thumbnail, chapters and description
-  writeFileSync(join(out, `${name}.en.srt`), captions(steps.map((s) => s.say), starts, voice.lines.map((l) => l.seconds)));
+  const srt = captions(steps.map((s) => s.say), starts, voice.lines.map((l) => l.seconds));
+  writeFileSync(join(out, `${name}.en.srt`), srt);
+  // The same captions for the website's player (WebVTT: a header, and dots in the timestamps).
+  writeFileSync(join(out, `${name}.en.vtt`), `WEBVTT\n\n${srt.replace(/(\d\d:\d\d:\d\d),(\d\d\d)/g, "$1.$2")}`);
   if (rec.thumb) {
     copyFileSync(rec.thumb, join(work, "shot.png"));
-    await renderThumb(browser, { n: meta.n, total: TOTAL, title: meta.title, shot: pathToFileURL(join(work, "shot.png")).href }, join(out, `${name}-thumbnail.png`));
+    await renderThumb(browser, { n: meta.n, total: TOTAL, title: meta.title, ...(meta.extra ? { extra: 1 } : {}), shot: pathToFileURL(join(work, "shot.png")).href }, join(out, `${name}-thumbnail.png`));
   }
   const chapters = [`0:00 Intro`, ...steps.map((s, i) => (s.chapter ? `${chapterTs(starts[i])} ${s.chapter}` : null)).filter(Boolean), `${chapterTs(introLen + mainLen)} What's next`];
   const yt = [
-    `TITLE`, `${meta.title} | ActivityRoster how-to ${meta.n} of ${TOTAL}`, ``,
+    `TITLE`, meta.extra ? `${meta.title} | Staff rostering for sailing and watersports centres` : `${meta.title} | ActivityRoster how-to ${meta.n} of ${TOTAL}`, ``,
     `DESCRIPTION`, script.description.trim(), ``,
     `Chapters`, ...chapters, ``,
     `Step-by-step guide: https://activityroster.com/learn?topic=${meta.learn}`,
     `Start your free month: https://activityroster.com`, ``,
-    `This is video ${meta.n} of ${TOTAL} in the ActivityRoster how-to series: staff rostering for RYA sailing and watersports centres.${next ? ` Next: ${next.title}.` : ""}`,
+    meta.extra ? `ActivityRoster: staff rostering for RYA sailing and watersports centres. The how-to series walks through each part step by step.` : `This is video ${meta.n} of ${TOTAL} in the ActivityRoster how-to series: staff rostering for RYA sailing and watersports centres.${next ? ` Next: ${next.title}.` : ""}`,
     `The centre, people and courses shown are made up.`, ``,
     `TAGS`, (script.tags ?? []).concat(["ActivityRoster", "sailing centre rostering", "RYA instructor scheduling", "watersports staff rota"]).join(", "), ``,
     `CAPTIONS: upload ${name}.en.srt as English subtitles.`,

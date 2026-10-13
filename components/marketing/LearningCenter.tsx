@@ -5,6 +5,8 @@ import { ScreenShot } from "./ScreenShot";
 import { GUIDE_SCREENS, SCREENS } from "@/lib/screens";
 import { PROVIDERS } from "@/lib/integrations/catalogue";
 import { GUIDE_STAGES, SECTIONS, type Block } from "@/lib/learn/sections";
+import { videosForSection } from "@/lib/learn/videos";
+import { GuideVideo } from "./GuideVideo";
 
 function BlockView({ b }: { b: Block }) {
   switch (b.kind) {
@@ -147,6 +149,8 @@ export function LearningCenter({ initialTopic }: { initialTopic?: string }) {
               <p className="mt-1 text-sm text-slate-500">{section.blurb}</p>
             </div>
           </div>
+          {/* The section's how-to video leads it, when there is one. */}
+          {videosForSection(section.id).map((v) => <div key={`${section.id}-${v.file}`} className="mt-6"><GuideVideo video={v} /></div>)}
           <GuideScreens sectionId={section.id} />
 
           <div className="mt-6 space-y-3">
