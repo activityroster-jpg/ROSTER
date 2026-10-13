@@ -1,15 +1,16 @@
 import { NextResponse } from "next/server";
 import { clientIp, rateLimit } from "@/lib/security/rate-limit";
-import { describeViolation, parseCspReports } from "@/lib/security/csp";
+import { CSP_REPORT_DIGEST, describeViolation, parseCspReports } from "@/lib/security/csp";
 import { getEnv, getRepositories } from "@/lib/cf/bindings";
 import { resolveHost } from "@/lib/tenant/host";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Browser CSP violation sink for the report-only nonce policy. Persists a
- * sample per centre into the error log (Dev Center → Errors) so the policy can
- * be enforced with confidence. Heavily rate-limited; never fails loudly.
+ * Browser CSP violation sink for the nonce policy (enforced: a report means a
+ * script was refused). Persists a sample per centre into the error log (Dev
+ * Center → Errors), grouped there by whose script it was. Heavily
+ * rate-limited; never fails loudly.
  */
 export async function POST(req: Request) {
   const perIp = await rateLimit(`csp-report:${clientIp(req)}`, 20, 60);
@@ -44,7 +45,7 @@ export async function POST(req: Request) {
         userEmail: null,
         path,
         message: describeViolation(v),
-        digest: "csp-report-only",
+        digest: CSP_REPORT_DIGEST,
         userAgent,
       });
     }

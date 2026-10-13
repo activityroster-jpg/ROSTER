@@ -4,7 +4,7 @@ import { PIN_COOKIE, pinIdleSecondsFrom } from "@/lib/auth/pin";
 import { LV_COOKIE, LV_DEVICE_COOKIE, LV_IDLE_MAX_AGE_S, LV_SESSION_COOKIE } from "@/lib/auth/login-verify";
 import { DEVICE_COOKIE, DEVICE_HEADER, DEVICE_MAX_AGE_S, PATH_HEADER, isDeviceId } from "@/lib/auth/device";
 import { CENTRE_COOKIE } from "@/lib/auth/centre-cookie";
-import { enforcedPolicy, isNonceCspPath, makeNonce, noncePolicy } from "@/lib/security/csp";
+import { enforcedPolicy, isNativeAppRequest, isNonceCspPath, makeNonce } from "@/lib/security/csp";
 import { PREVIEW_COOKIE, isPreviewGated, previewGateOn, previewToken } from "@/lib/preview/gate";
 
 /**
@@ -69,16 +69,16 @@ export async function middleware(req: NextRequest) {
   const fwd = new Headers(req.headers);
   fwd.set(DEVICE_HEADER, deviceId);
   fwd.set(PATH_HEADER, path);
-  // Content-Security-Policy (lib/security/csp): the static policy is enforced on
-  // every page; the signed-in surfaces also get the nonce policy, report-only
-  // for now. The request header lets Next stamp the nonce on its own scripts;
-  // the response headers have the browser evaluate the policies.
-  const nonce = isNonceCspPath(path) ? makeNonce() : undefined;
-  const cspReportOnly = nonce ? noncePolicy(nonce) : null;
-  if (cspReportOnly) fwd.set("content-security-policy-report-only", cspReportOnly);
+  // Content-Security-Policy (lib/security/csp): the signed-in surfaces get the
+  // strict nonce policy, everything else (and the Android app's shell, which
+  // injects its own inline bridge script) the static one. The request header
+  // lets Next stamp the nonce on its own scripts; the response header has the
+  // browser enforce it.
+  const nonce = isNonceCspPath(path) && !isNativeAppRequest(req.headers) ? makeNonce() : undefined;
+  const csp = enforcedPolicy(nonce);
+  if (nonce) fwd.set("content-security-policy", csp);
   const withCsp = <T extends NextResponse>(res: T): T => {
-    res.headers.set("Content-Security-Policy", enforcedPolicy(nonce));
-    if (cspReportOnly) res.headers.set("Content-Security-Policy-Report-Only", cspReportOnly);
+    res.headers.set("Content-Security-Policy", csp);
     return res;
   };
   const next = () => {

@@ -20,8 +20,8 @@ export function CspSummary({ groups }: { groups: CspGroup[] }) {
       <h2 className="mb-1 font-semibold text-navy">CSP reports, grouped</h2>
       <p className={`mb-3 text-sm font-medium ${ours.length ? "text-port" : "text-starboard"}`}>
         {ours.length
-          ? `Not yet: ${ours.reduce((n, g) => n + g.count, 0)} report${ours.length === 1 ? "" : "s"} point at our own code. Those need fixing before the stricter policy goes on.`
-          : "Nothing points at our own code: the stricter policy can be switched on (staging first)."}
+          ? `${ours.reduce((n, g) => n + g.count, 0)} report${ours.reduce((n, g) => n + g.count, 0) === 1 ? "" : "s"} point at our own code: the policy is enforced, so something of ours was refused for a visitor. Fix first.`
+          : "Nothing points at our own code: the strict policy is enforced and nothing of ours is being refused."}
       </p>
       <ul className="divide-y divide-slate-100 text-sm">
         {groups.map((g) => (

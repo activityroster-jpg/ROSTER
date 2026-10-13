@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getScriptNonceFromHeader } from "next/dist/server/app-render/get-script-nonce-from-header";
-import { STATIC_POLICY, describeViolation, enforcedPolicy, isNonceCspPath, makeNonce, noncePolicy, parseCspReports } from "@/lib/security/csp";
+import { ENFORCE_NONCE_POLICY, NATIVE_APP_ID, STATIC_POLICY, describeViolation, enforcedPolicy, isNativeAppRequest, isNonceCspPath, makeNonce, noncePolicy, parseCspReports } from "@/lib/security/csp";
 
 describe("nonce CSP", () => {
   it("keeps the enforced static policy pragmatic and framing-proof", () => {
@@ -11,22 +11,29 @@ describe("nonce CSP", () => {
     expect(enforcedPolicy()).toBe(STATIC_POLICY);
   });
 
-  it("hands Next the nonce through the enforced header without changing script-src", () => {
-    // OpenNext copies response headers onto the request and Next reads the
-    // enforced header first (lib/security/csp.ts), so the nonce must be found
-    // there by Next's own parser, and only in a directive browsers do not
-    // apply to script elements.
+  it("enforces the strict nonce policy on the signed-in surfaces, and Next's own parser finds the nonce in it", () => {
+    expect(ENFORCE_NONCE_POLICY).toBe(true);
     const n = makeNonce();
     const p = enforcedPolicy(n);
+    expect(p).toBe(noncePolicy(n));
     expect(getScriptNonceFromHeader(p)).toBe(n);
     expect(getScriptNonceFromHeader(STATIC_POLICY)).toBeUndefined();
-    expect(p.startsWith(`script-src-attr 'nonce-${n}'; `)).toBe(true);
-    expect(p).toContain("script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com");
+    expect(p).toContain(`script-src 'nonce-${n}' 'strict-dynamic'`);
+    expect(p).not.toContain("'unsafe-inline' https://challenges");
+    expect(p).not.toContain("'unsafe-eval'"); // tests run outside `next dev`
+    expect(p).toContain("worker-src 'self'");
+    expect(p).toContain("frame-ancestors 'none'");
     expect(p.split("'nonce-").length).toBe(2);
   });
 
+  it("the Android app's shell (Capacitor injects an inline bridge) is recognised by its package id", () => {
+    expect(isNativeAppRequest(new Headers({ "x-requested-with": NATIVE_APP_ID }))).toBe(true);
+    expect(isNativeAppRequest(new Headers({ "x-requested-with": "XMLHttpRequest" }))).toBe(false);
+    expect(isNativeAppRequest(new Headers())).toBe(false);
+  });
+
   it("covers the signed-in surfaces and not the marketing site", () => {
-    for (const p of ["/office", "/office/courses", "/portal/leave", "/admin/security", "/app/join", "/sign-in", "/two-factor"]) expect(isNonceCspPath(p)).toBe(true);
+    for (const p of ["/office", "/office/courses", "/portal/leave", "/admin/security", "/app/join", "/sign-in", "/verify-login", "/two-factor"]) expect(isNonceCspPath(p)).toBe(true);
     for (const p of ["/", "/pricing", "/learn", "/blog/x", "/api/auth/x", "/.well-known/assetlinks.json", "/applications"]) expect(isNonceCspPath(p)).toBe(false);
   });
 
@@ -43,7 +50,7 @@ describe("nonce CSP", () => {
     const legacy = parseCspReports({ "csp-report": { "document-uri": "https://x.activityroster.com/office", "violated-directive": "script-src-elem", "blocked-uri": "inline", "source-file": "https://x.activityroster.com/office", "line-number": 12, "script-sample": "window.__x" } });
     expect(legacy).toHaveLength(1);
     expect(legacy[0]!.violatedDirective).toBe("script-src-elem");
-    expect(describeViolation(legacy[0]!)).toBe("CSP (report-only): script-src-elem blocked inline from https://x.activityroster.com/office:12 — “window.__x”");
+    expect(describeViolation(legacy[0]!)).toBe("CSP blocked: script-src-elem blocked inline from https://x.activityroster.com/office:12 — “window.__x”");
 
     const modern = parseCspReports([{ type: "csp-violation", body: { documentURL: "https://x/portal", effectiveDirective: "connect-src", blockedURL: "https://evil.example" } }]);
     expect(modern).toHaveLength(1);
@@ -58,6 +65,7 @@ describe("CSP reports: whose are they?", () => {
   it("sorts reports into our code, extensions, dev tools and outside services", async () => {
     const { classifyCspMessage, groupCspReports } = await import("@/lib/security/csp");
     expect(classifyCspMessage("CSP (report-only): script-src-elem blocked https://activityroster.com/_next/static/chunks/app.js").verdict).toBe("ours");
+    expect(classifyCspMessage("CSP blocked: script-src-elem blocked https://activityroster.com/_next/static/chunks/app.js").verdict).toBe("ours");
     expect(classifyCspMessage("CSP (report-only): script-src-elem blocked inline from https://loughshore.activityroster.com/office:12 — “self.__next_f”").verdict).toBe("ours");
     expect(classifyCspMessage("CSP (report-only): script-src blocked inline from chrome-extension://abc/content.js:3").verdict).toBe("extension");
     expect(classifyCspMessage("CSP (report-only): script-src blocked eval").verdict).toBe("dev");

@@ -6,7 +6,7 @@ import { ErrorStatus } from "@/components/admin/ErrorStatus";
 import { ResolveCspReports } from "@/components/admin/ResolveCspReports";
 import { GhostButton } from "@/components/admin/GhostButton";
 import { CspSummary } from "@/components/admin/CspSummary";
-import { groupCspReports } from "@/lib/security/csp";
+import { CSP_REPORT_DIGESTS, groupCspReports } from "@/lib/security/csp";
 import type { ErrorReport } from "@/lib/db/schema";
 
 export const dynamic = "force-dynamic";
@@ -29,15 +29,16 @@ export default async function AdminErrorsPage() {
   }
   const groups = [...buckets.values()];
   const openCount = reports.filter((r) => r.status !== "resolved").length;
-  const cspOpen = reports.filter((r) => r.digest === "csp-report-only" && r.status !== "resolved").length;
-  const cspGroups = groupCspReports(reports.filter((r) => r.digest === "csp-report-only" && r.status !== "resolved"));
+  const isCsp = (d: string | null) => (CSP_REPORT_DIGESTS as readonly string[]).includes(d ?? "");
+  const cspOpen = reports.filter((r) => isCsp(r.digest) && r.status !== "resolved").length;
+  const cspGroups = groupCspReports(reports.filter((r) => isCsp(r.digest) && r.status !== "resolved"));
 
   return (
     <div>
       <h1 className="mb-1 font-display text-2xl font-bold text-navy">Error log</h1>
       <p className="mb-6 text-sm text-slate-500">
         Issues users have reported, bucketed by centre. {openCount} open · {reports.length} total. You&apos;re also emailed each one.
-        {cspOpen ? <> {cspOpen} {cspOpen === 1 ? "is an open" : "are open"} browser CSP report{cspOpen === 1 ? "" : "s"} (report-only policy — nothing was blocked). <ResolveCspReports count={cspOpen} /></> : null}
+        {cspOpen ? <> {cspOpen} {cspOpen === 1 ? "is an open" : "are open"} browser CSP report{cspOpen === 1 ? "" : "s"}: a script the policy refused, grouped below by whose it was. <ResolveCspReports count={cspOpen} /></> : null}
       </p>
 
       <CspSummary groups={cspGroups} />

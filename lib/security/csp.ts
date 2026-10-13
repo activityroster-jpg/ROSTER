@@ -8,25 +8,26 @@
  * needed.
  *
  * `noncePolicy` is the stricter per-request policy for the signed-in app
- * surfaces. Today it ships REPORT-ONLY: it is evaluated alongside the enforced
- * one and any would-be violation is posted to /api/csp-report and shown in the
- * Dev Center error log. Once a quiet week has passed, enforce it by moving
- * `noncePolicy` into the enforced header in middleware for the app paths.
+ * surfaces, ENFORCED since 13 October 2026 (report-only from 3 October; a week
+ * of real use reported nothing of ours). Only scripts carrying the request's
+ * nonce run, plus whatever those scripts load ('strict-dynamic'); a blocked
+ * script is posted to /api/csp-report and shown in the Dev Center error log.
+ * To step back to report-only, set `ENFORCE_NONCE_POLICY` to false below.
  *
- * Both headers are set in middleware. On Workers, OpenNext copies every
- * middleware and next.config response header onto the request as well, and
- * Next takes the nonce from the request's `content-security-policy` header
- * before the report-only one, so the enforced policy must carry the nonce or
- * Next never stamps it and every script is reported (6 Oct). `enforcedPolicy`
- * therefore adds the nonce in a `script-src-attr` directive, listed first:
- * Next's parser takes the first directive starting with "script-src", while
- * browsers read `script-src-attr` as governing inline event-handler attributes
- * only (React emits none), so script elements stay governed by the unchanged
- * `script-src`. tests/security/csp.test.ts checks this against Next's own
- * parser, so a Next upgrade that changes it fails CI rather than silently
- * dropping the nonce. Marketing pages are prerendered, so they cannot carry a
- * per-request nonce; they get the static policy only.
+ * Middleware sets the header on the response and on the request: Next reads
+ * the nonce from the request's `content-security-policy` header and stamps it
+ * on its own scripts (tests/security/csp.test.ts checks this against Next's
+ * own parser, so a Next upgrade that changes it fails CI rather than silently
+ * dropping the nonce). Marketing pages are prerendered, so they cannot carry a
+ * per-request nonce; they get the static policy only. So does the Android
+ * app: its native shell (Capacitor) injects its bridge as an inline script
+ * without a nonce, which the strict policy would block.
  */
+export const ENFORCE_NONCE_POLICY = true;
+
+/** The Android app's package id, sent by its WebView as X-Requested-With on every request. */
+export const NATIVE_APP_ID = "com.activityroster.app";
+export const isNativeAppRequest = (headers: Headers): boolean => headers.get("x-requested-with") === NATIVE_APP_ID;
 export const STATIC_POLICY = [
   "default-src 'self'",
   "base-uri 'self'",
@@ -46,12 +47,12 @@ export const STATIC_POLICY = [
   "upgrade-insecure-requests",
 ].join("; ");
 
-/** The enforced policy; with a nonce (app paths) it also carries the `script-src-attr` nonce described above. */
+/** The enforced policy: the strict nonce policy on the signed-in surfaces (when a nonce is given), the static one elsewhere. */
 export function enforcedPolicy(nonce?: string): string {
-  return nonce ? `script-src-attr 'nonce-${nonce}'; ${STATIC_POLICY}` : STATIC_POLICY;
+  return nonce && ENFORCE_NONCE_POLICY ? noncePolicy(nonce) : STATIC_POLICY;
 }
 
-const APP_PREFIXES = ["/office", "/portal", "/admin", "/app", "/sign-in", "/two-factor", "/pin", "/set-pin", "/security", "/verify-device", "/reset-password"];
+const APP_PREFIXES = ["/office", "/portal", "/admin", "/app", "/sign-in", "/verify-login", "/two-factor", "/pin", "/set-pin", "/security", "/verify-device", "/reset-password"];
 
 export const isNonceCspPath = (path: string): boolean => APP_PREFIXES.some((p) => path === p || path.startsWith(`${p}/`) || path.startsWith(`${p}?`));
 
@@ -60,22 +61,34 @@ export function makeNonce(): string {
   return btoa(String.fromCharCode(...bytes));
 }
 
+/** React and Turbopack need eval() in `next dev` only; production never gets it. */
+const DEV_EVAL = process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : "";
+
 export function noncePolicy(nonce: string): string {
   return [
     "default-src 'self'",
     "base-uri 'self'",
     "object-src 'none'",
-    "frame-ancestors 'self'",
+    "frame-ancestors 'none'",
     "img-src 'self' data: https:",
     "font-src 'self' https://fonts.gstatic.com data:",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    `script-src 'nonce-${nonce}' 'strict-dynamic' 'self' https://challenges.cloudflare.com`,
+    // 'self' and the host are for browsers without 'strict-dynamic'; with it, only the nonce
+    // and what nonced scripts load count (Next's chunks and the Turnstile script both do).
+    `script-src 'nonce-${nonce}' 'strict-dynamic' 'self' https://challenges.cloudflare.com${DEV_EVAL}`,
+    // The offline-week service worker (public/sw.js); without this it would fall under script-src and be refused.
+    "worker-src 'self'",
     "connect-src 'self' https://api.stripe.com https://*.ingest.sentry.io https://*.ingest.de.sentry.io https://challenges.cloudflare.com",
     "form-action 'self' https://checkout.stripe.com https://billing.stripe.com",
     "frame-src https://js.stripe.com https://hooks.stripe.com https://challenges.cloudflare.com",
+    "upgrade-insecure-requests",
     "report-uri /api/csp-report",
   ].join("; ");
 }
+
+/** Where a browser's CSP report lands in the error log: the current digest, and the one used while the policy was report-only. */
+export const CSP_REPORT_DIGEST = ENFORCE_NONCE_POLICY ? "csp" : "csp-report-only";
+export const CSP_REPORT_DIGESTS = ["csp", "csp-report-only"] as const;
 
 export interface CspViolation {
   documentUri: string | null;
@@ -123,18 +136,18 @@ export function parseCspReports(body: unknown): CspViolation[] {
 /** One line for the error log. */
 export function describeViolation(v: CspViolation): string {
   const where = v.sourceFile ? ` from ${v.sourceFile}${v.line != null ? `:${v.line}` : ""}` : "";
-  return `CSP (report-only): ${v.violatedDirective ?? "unknown directive"} blocked ${v.blockedUri ?? "inline"}${where}${v.sample ? ` — “${v.sample}”` : ""}`;
+  return `${ENFORCE_NONCE_POLICY ? "CSP blocked" : "CSP (report-only)"}: ${v.violatedDirective ?? "unknown directive"} blocked ${v.blockedUri ?? "inline"}${where}${v.sample ? ` — “${v.sample}”` : ""}`;
 }
 
 export type CspVerdict = "ours" | "cloudflare" | "extension" | "dev" | "third-party";
 export interface CspGroup { key: string; directive: string; blocked: string; verdict: CspVerdict; count: number; pages: string[]; last: Date }
 
 export const CSP_VERDICT_TEXT: Record<CspVerdict, string> = {
-  ours: "Our own code. Must be fixed before the policy is switched on, or this would break.",
-  cloudflare: "Cloudflare's own bot-detection script, which Cloudflare adds to our pages (/cdn-cgi/). Not our code and pages work without it: safe. Switched on, it just stops running on signed-in pages.",
-  extension: "A browser extension on the visitor's computer (password manager, translator, ad blocker). Switching on would only stop the extension touching our pages: safe.",
-  dev: "Developer tools or a local test run. Never happens on the live site for ordinary users: safe.",
-  "third-party": "Something outside ActivityRoster tried to load (often injected by an extension or a network). Safe unless it's a service we added on purpose.",
+  ours: "Our own code, and the policy is enforced: this script was refused for that visitor and part of the page may not have worked. Fix first.",
+  cloudflare: "Cloudflare's own bot-detection script, which Cloudflare adds to our pages (/cdn-cgi/). Not our code; pages work without it. Nothing to do.",
+  extension: "A browser extension on the visitor's computer (password manager, translator, ad blocker) was stopped from touching our pages. Nothing to do.",
+  dev: "Developer tools or a local test run. Never happens on the live site for ordinary users. Nothing to do.",
+  "third-party": "Something outside ActivityRoster tried to load (often injected by an extension or a network) and was refused. Nothing to do unless it's a service we added on purpose.",
 };
 
 /**
@@ -142,7 +155,7 @@ export const CSP_VERDICT_TEXT: Record<CspVerdict, string> = {
  * whose it is. Pure: the Dev Center groups the open reports by this.
  */
 export function classifyCspMessage(message: string, ownHosts: readonly string[] = ["activityroster.com"]): { directive: string; blocked: string; verdict: CspVerdict } {
-  const m = /^CSP \(report-only\): (\S+) blocked (\S+)(?: from (\S+?))?(?::\d+)?(?: — .*)?$/.exec(message.trim());
+  const m = /^CSP(?: \(report-only\)| blocked): (\S+) blocked (\S+)(?: from (\S+?))?(?::\d+)?(?: — .*)?$/.exec(message.trim());
   const directive = m?.[1] ?? "unknown";
   const blockedRaw = m?.[2] ?? "unknown";
   const source = m?.[3] ?? "";

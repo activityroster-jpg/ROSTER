@@ -1,5 +1,7 @@
 "use server";
 
+import { CSP_REPORT_DIGESTS } from "@/lib/security/csp";
+
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { idSchema, isoDateSchema, trialDaysSchema } from "@/lib/validation/actions";
@@ -95,7 +97,8 @@ export async function setErrorStatusAction(id: string, status: string): Promise<
 export async function resolveCspReportsAction(): Promise<Result & { count?: number }> {
   await requirePlatformAdmin();
   const { control } = await getRepositories();
-  const count = await control.resolveErrorReportsByDigest("csp-report-only");
+  let count = 0;
+  for (const digest of CSP_REPORT_DIGESTS) count += await control.resolveErrorReportsByDigest(digest);
   revalidatePath("/admin/errors");
   return { ok: true, count };
 }

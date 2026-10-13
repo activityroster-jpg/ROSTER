@@ -15,8 +15,11 @@ const latestCode = (): string | null => {
   return all.length ? all[all.length - 1]![1]! : null;
 };
 
+/** Scripts the strict Content-Security-Policy refused, as the browser logs them: any one fails the test. */
+const cspRefusals: string[] = [];
 async function signIn(browser: Browser, email: string): Promise<Page> {
   const page = await (await browser.newContext()).newPage();
+  page.on("console", (m) => { if (/Content.Security.Policy|Refused to (execute|load|create)/i.test(m.text())) cspRefusals.push(`${page.url()}: ${m.text().slice(0, 300)}`); });
   await page.goto(`${E2E.base}/sign-in`);
   await page.fill("input[type=email]", email);
   await page.fill("input[type=password]", E2E.password);
@@ -83,4 +86,7 @@ test("assign, confirm the day, see it confirmed in the app, undo", async ({ brow
   await expect(day).toContainText("Pending");
   await app.reload();
   await expect(app.getByText(/Pending: your centre hasn.t confirmed this day yet/).first()).toBeVisible();
+
+  // The strict CSP is enforced on every page above: nothing of ours may have been refused.
+  expect(cspRefusals).toEqual([]);
 });
