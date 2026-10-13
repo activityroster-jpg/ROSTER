@@ -51,6 +51,29 @@ export async function recordSecurityEvent(
   }
 }
 
+/** Plain-English names for security events, for the security pages. */
+export const EVENT_LABEL: Record<string, string> = {
+  sessions_revoked: "Signed out all other devices",
+  pin_set: "PIN set",
+  pin_reset: "PIN reset",
+  pin_reset_failed: "Failed PIN reset attempt",
+  pin_failed: "Wrong PIN entered",
+  pin_locked: "PIN locked after repeated attempts",
+  pin_reset_code_sent: "PIN reset code emailed",
+  recovery_email_set: "Recovery email changed",
+  password_changed: "Password changed",
+  new_device: "Sign-in from a new device",
+  reauth_passed: "Identity re-confirmed",
+  reauth_failed: "Failed identity check",
+  invite_accepted: "Centre invite accepted",
+  ghost_start: "Ghost Mode started (platform owner)",
+  ghost_end: "Ghost Mode ended (platform owner)",
+  two_factor_enabled: "Second step turned on",
+  two_factor_disabled: "Second step turned off",
+};
+/** Events worth a second look, shown in amber. */
+export const WARN_EVENTS = new Set(["pin_reset_failed", "pin_failed", "pin_locked", "reauth_failed", "new_device"]);
+
 /** Short, human description of a browser from its user-agent string. */
 export function describeAgent(ua: string | null): string {
   if (!ua) return "an unknown device";

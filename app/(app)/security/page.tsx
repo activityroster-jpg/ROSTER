@@ -3,32 +3,12 @@ import { requireTenant } from "@/lib/tenant/require";
 import { getRepositories } from "@/lib/cf/bindings";
 import { TwoFactorSetup } from "@/components/office/TwoFactorSetup";
 import { RecoveryEmailForm } from "@/components/office/RecoveryEmailForm";
-import { describeAgent } from "@/lib/security/events";
+import { EVENT_LABEL, WARN_EVENTS as WARN, describeAgent } from "@/lib/security/events";
 import { TrustedDevices } from "@/components/office/TrustedDevices";
 import { SignOutEverywhere } from "@/components/office/SignOutEverywhere";
 import { maskEmail } from "@/lib/security/mask";
 import { OfficeUsersSecurity, type OfficeUserSecurityRow } from "@/components/office/OfficeUsersSecurity";
 
-const EVENT_LABEL: Record<string, string> = {
-  sessions_revoked: "Signed out all other devices",
-  pin_set: "PIN set",
-  pin_reset: "PIN reset",
-  pin_reset_failed: "Failed PIN reset attempt",
-  pin_failed: "Wrong PIN entered",
-  pin_locked: "PIN locked after repeated attempts",
-  pin_reset_code_sent: "PIN reset code emailed",
-  recovery_email_set: "Recovery email changed",
-  password_changed: "Password changed",
-  new_device: "Sign-in from a new device",
-  reauth_passed: "Identity re-confirmed",
-  reauth_failed: "Failed identity check",
-  invite_accepted: "Centre invite accepted",
-  ghost_start: "Ghost Mode started (platform owner)",
-  ghost_end: "Ghost Mode ended (platform owner)",
-  two_factor_enabled: "Second step turned on",
-  two_factor_disabled: "Second step turned off",
-};
-const WARN = new Set(["pin_reset_failed", "pin_failed", "pin_locked", "reauth_failed", "new_device"]);
 
 export const dynamic = "force-dynamic";
 
