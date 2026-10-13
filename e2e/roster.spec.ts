@@ -77,7 +77,7 @@ test("assign, confirm the day, see it confirmed in the app, undo", async ({ brow
   // Kim's ticket has no expiry date, so confirming warns first; go ahead.
   await expect(day).toContainText("1 ticket undated");
   await day.getByRole("button", { name: "Confirm", exact: true }).click();
-  await expect(office.getByText(/No expiry date recorded on the ticket of Kim Instructor/)).toBeVisible();
+  await expect(office.getByText(/No expiry date recorded on any ticket for Kim Instructor/)).toBeVisible();
   await office.getByRole("button", { name: "Yes, go ahead" }).click();
   await expect(office.getByText(/1 day confirmed/)).toBeVisible();
   await expect(day).toContainText("Confirmed");

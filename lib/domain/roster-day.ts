@@ -26,11 +26,11 @@ export function diffDayShifts(before: DayShifts | null, now: DayShifts): Record<
 export interface HeldTicket { instructorId: string; qualificationTypeId: string; expiryDate: string | null }
 
 /**
- * Before a day is confirmed: the people on it whose ticket for their place has
- * no expiry date recorded, so the app can't warn when it lapses. The ticket is
- * the place's instructor type when they hold it; someone placed on the
- * strength of a higher type is flagged only when none of their types has a
- * date. Places with no instructor type are not checked. Pure.
+ * Before a day is confirmed: the people on it in an instructor-type place
+ * with no expiry date on any of their tickets, so the app can't warn when
+ * their qualification lapses. (An RYA instructor's tickets share one
+ * validity, so one dated ticket is enough.) Places with no instructor type
+ * are not checked. Pure.
  */
 export function missingExpiry(
   staff: readonly { instructorId: string; roleTypeId: string }[],
@@ -43,9 +43,7 @@ export function missingExpiry(
   for (const m of staff) {
     const typeId = placeType.get(m.roleTypeId);
     if (!typeId) continue;
-    const mine = byPerson.get(m.instructorId) ?? [];
-    const exact = mine.find((h) => h.qualificationTypeId === typeId);
-    if (exact ? !exact.expiryDate : !mine.some((h) => h.expiryDate)) out.add(m.instructorId);
+    if (!(byPerson.get(m.instructorId) ?? []).some((h) => h.expiryDate)) out.add(m.instructorId);
   }
   return [...out];
 }

@@ -59,7 +59,7 @@ export async function getSetupStatus(repos: Repositories, ctx: AnyTenantContext,
     {
       key: "team", label: "Set up your courses and team, with each person's instructor types", href: active.length ? "/office/staff" : "/office/onboarding", stage: "essential",
       done: active.length > 0 && untyped === 0,
-      ...(active.length && untyped ? { hint: `${untyped} ${untyped === 1 ? "person has" : "people have"} no instructor type ticked, so Auto-roster can't place them` } : {}),
+      ...(active.length && untyped ? { hint: `${untyped} ${untyped === 1 ? "person has" : "people have"} no instructor type ticked, so Auto-roster can't check what they can teach` } : {}),
     },
     // When the office keeps availability nobody needs the app, so this step isn't asked of them.
     ...(officeRuns ? [] : [{ key: "invite" as const, label: "Invite your team to the app", href: "/office/staff", done: linked > 0, stage: "essential" as const }]),

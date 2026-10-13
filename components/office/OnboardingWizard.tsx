@@ -440,7 +440,7 @@ export function OnboardingWizard({
           <h2 className="font-display text-lg font-semibold text-navy">Add your team</h2>
           <div className="mt-2 rounded-lg border border-amber/40 bg-amber/10 p-3 text-sm text-slate-700">
             <p className="font-semibold text-navy">This step saves you the most time later.</p>
-            <p className="mt-1">Auto-roster only puts a person on courses their instructor types allow. Add everyone, and tick every type each person holds. Five minutes here saves hours every week, and a person with no type ticked can&apos;t be rostered at all.</p>
+            <p className="mt-1">Auto-roster puts a person only on courses their instructor types allow. Add everyone, and tick every type each person holds: five minutes here saves hours every week. Someone with no type ticked can&apos;t be checked at all, so Auto-roster could put them on any course.</p>
           </div>
           <p className="mt-3 text-sm text-slate-500">Tick the instructor types each person holds (as many as apply): the courses they can teach follow from the types. Add their email to send an invite, so they upload their own licences and fill in their availability. More than about five people? <a href="/office/staff/import" className="font-semibold text-teal hover:underline">Import them from a spreadsheet</a> instead.</p>
 
@@ -516,7 +516,7 @@ export function OnboardingWizard({
                 const text = teamChatMessage(centreName, joinCode, finishBy);
                 return (
                   <div className="mt-4">
-                    <textarea readOnly value={text} rows={8} className="w-full rounded-lg border border-slate-300 bg-canvas px-3 py-2 text-sm text-slate-700" onFocus={(e) => e.currentTarget.select()} />
+                    <textarea readOnly value={text} rows={11} className="w-full rounded-lg border border-slate-300 bg-canvas px-3 py-2 text-sm text-slate-700" onFocus={(e) => e.currentTarget.select()} />
                     <div className="mt-2 flex flex-wrap items-center gap-3">
                       <button type="button" onClick={async () => { try { await navigator.clipboard.writeText(text); setCopied("Copied. Paste it into your team chat."); } catch { setCopied("Select the message and copy it."); } }}
                         className="rounded-lg bg-navy px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700">Copy message</button>

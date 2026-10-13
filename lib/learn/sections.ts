@@ -46,7 +46,7 @@ export const SECTIONS: Section[] = [
       { kind: "steps", items: [
         "How you run. Rostering is the essential core and always on. The extras are optional: anything you tick becomes an optional step after the essentials. We recommend rostering only to start. Then choose Morning / afternoon / evening sessions (recommended: quickest to set up and roster) or set start and end times, and whether staff use the app (recommended) or the office runs availability. Leave the availability window at 4 weeks.",
         "Courses. Tick every course you will ever run, across the whole year, not just this month's. Each comes with its staffing and ratios set; add your own for anything not listed.",
-        "Team. This step saves you the most time later. Add everyone and tick every instructor type each person holds: Auto-roster only places people on courses their types allow, and someone with no type can't be rostered. Leave “Email them an invite” ticked. More than about five people? Import them from a spreadsheet.",
+        "Team. This step saves you the most time later. Add everyone and tick every instructor type each person holds: Auto-roster only places people on courses their types allow; someone with no type ticked can't be checked, so it could put them on any course. Leave “Email them an invite” ticked. More than about five people? Import them from a spreadsheet.",
         "Invite. Invites come from ActivityRoster rather than from you, so they're easy to ignore or miss in spam. Copy the ready-made message and send it on your team chat: it says the invite is real, to check spam, the date to finish by, and your centre code for anyone whose email went astray.",
         "Onboarding. Choose whether each instructor's page shows an onboarding checklist. Keep the recommended steps; most tick themselves.",
         "Roster PDF. Keep the default layout, or upload an example of the roster you use today (a PDF or a photo) and we'll set up your downloadable roster in the same style.",
@@ -499,7 +499,7 @@ export const SECTIONS: Section[] = [
       { kind: "sub", text: "Expiry alerts" },
       { kind: "p", text: "Anything expiring within your lead time is flagged on the dashboard and the staff list. Instructors are reminded in the app and by email, and every Monday admins get one email listing what has expired or is about to. Expired mandatory checks stop an instructor being rostered until they're renewed." },
       { kind: "tip", text: "“Not cleared to roster” always shows the actual reason (e.g. “DBS missing”, “First Aid expired”) rather than a vague label." },
-      { kind: "p", text: "An alert needs a date. Before you confirm a roster day, the Roster page lists anyone on it whose ticket for their place has no expiry date recorded, and asks you to check before confirming. Most dates arrive when staff upload their own tickets after their invite." },
+      { kind: "p", text: "An alert needs a date. Before you confirm a roster day, the Roster page lists anyone on it with no expiry date on any of their tickets, and asks you to add the dates before confirming. Most dates arrive when staff upload their own tickets after their invite." },
     ],
   },
   {
@@ -512,7 +512,7 @@ export const SECTIONS: Section[] = [
       { kind: "sub", text: "Confirm each day" },
       { kind: "steps", items: [
         "Build the week: put instructors on courses. As soon as someone is assigned they see the shift in the app marked Pending. Nobody gets a message yet, so you can move people around freely.",
-        "On the Roster page, the strip above the board shows each day: Pending or ✓ Confirmed, how many sessions and people, and any sessions still short of staff. Press Confirm on a day, or “Confirm whole week” for every pending day at once. A day still short of staff asks you first, and so does a day with someone on it whose ticket for their place has no expiry date recorded (the day shows “⚠ undated”), because the app can't warn you if that ticket has lapsed. Add the dates on Instructors, then confirm. For your first week, confirm one day at a time and watch who accepts.",
+        "On the Roster page, the strip above the board shows each day: Pending or ✓ Confirmed, how many sessions and people, and any sessions still short of staff. Press Confirm on a day, or “Confirm whole week” for every pending day at once. A day still short of staff asks you first, and so does a day with someone on it who has no expiry date on any of their tickets (the day shows “⚠ undated”), because the app can't warn you if that ticket has lapsed. Add the dates on Instructors, then confirm. For your first week, confirm one day at a time and watch who accepts.",
         "Confirming tells everyone on that day: a notice in the app, and an email if they allow it, listing their shifts. In the app the shift turns to Confirmed. Messages go out in the background, so the page doesn't wait.",
         "Changing a confirmed day? It stays confirmed, and anyone you add, take off or move is told straight away.",
         "Need to rework a day? Press Undo on it: it goes back to Pending and nobody is told. Make your changes, then confirm it again: only the people whose shifts changed hear about it.",

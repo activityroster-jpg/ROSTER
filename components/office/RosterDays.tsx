@@ -5,7 +5,7 @@ import { useState, useTransition } from "react";
 import { askConfirm } from "@/lib/ui/ask-confirm";
 import { confirmDaysAction, undoDayAction } from "@/app/(app)/office/rota/actions";
 
-export interface DayState { date: string; confirmed: boolean; sessions: number; people: number; short: number; /** People on the day whose ticket for their place has no expiry date recorded. */ noExpiry?: string[] }
+export interface DayState { date: string; confirmed: boolean; sessions: number; people: number; short: number; /** People on the day with no expiry date on any of their tickets. */ noExpiry?: string[] }
 
 // Spelled out by hand: Node and browsers punctuate toLocaleDateString differently, which breaks hydration.
 const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -31,7 +31,7 @@ export function RosterDays({ days, staffAccept }: { days: DayState[]; staffAccep
     const undated = [...new Set(list.flatMap((d) => d.noExpiry ?? []))];
     const warnings = [
       ...short.map((d) => `${fmt(d.date)}: ${d.short} session${d.short === 1 ? "" : "s"} still short of staff`),
-      ...(undated.length ? [`No expiry date recorded on the ticket ${undated.length === 1 ? "of" : "for"} ${undated.join(", ")}, so the app can't warn you if it has lapsed. Check their tickets on Instructors`] : []),
+      ...(undated.length ? [`No expiry date recorded on any ticket for ${undated.join(", ")}, so the app can't warn you if their qualification has lapsed. Add the dates on Instructors`] : []),
     ];
     if (warnings.length && !(await askConfirm(`${warnings.join(". ")}. Confirm anyway?`))) return;
     const r = await confirmDaysAction(list.map((d) => d.date));
