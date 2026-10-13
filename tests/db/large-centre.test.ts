@@ -18,7 +18,8 @@ import { getAttendanceBoard } from "@/lib/services/timeclock";
 import { listLeave } from "@/lib/services/leave";
 import { listOpenShifts } from "@/lib/services/openshifts";
 import { getSetupStatus } from "@/lib/services/setup";
-import { confirmationSummary, publishedWeeks, publishWeek } from "@/lib/services/roster";
+import { confirmationSummary } from "@/lib/services/roster";
+import { confirmDays, confirmedDays } from "@/lib/services/roster-days";
 import { getPayrollLines, getInstructorHours } from "@/lib/services/finance";
 import { getDaySheet } from "@/lib/services/emergency";
 import { listOfficeMembers } from "@/lib/services/office-access";
@@ -154,7 +155,7 @@ describe("a large centre: every page loads within Cloudflare's limits", () => {
     const n = await page(async () => {
       const board = await getBoard(repos, ctx, week());
       expect(board.days.flatMap((d) => d.sessions).length).toBe(240);
-      await Promise.all([getWeekRota(repos, ctx, week()), publishedWeeks(repos, ctx), findProblems(repos, ctx, { from: week(), to: addDays(week(), 7) })]);
+      await Promise.all([getWeekRota(repos, ctx, week()), confirmedDays(repos, ctx), findProblems(repos, ctx, { from: week(), to: addDays(week(), 7) })]);
     });
     expect(n).toBeLessThan(QUERY_BUDGET);
   });
@@ -255,9 +256,9 @@ describe("a large centre: every page loads within Cloudflare's limits", () => {
     expect(n).toBeLessThan(QUERY_BUDGET);
   });
 
-  it("Publishing a busy week tells everyone on it", async () => {
+  it("Confirming a busy week tells everyone on it", async () => {
     const n = await page(async () => {
-      const r = await publishWeek(repos, ctx, week(), { notify: true });
+      const r = await confirmDays(repos, ctx, [0, 1, 2, 3, 4, 5, 6].map((d) => addDays(week(), d)));
       expect(r).toBeTruthy();
     });
     expect(n).toBeLessThan(QUERY_BUDGET);

@@ -293,7 +293,7 @@ export function OnboardingWizard({
             <div className="mt-4 grid gap-2 sm:grid-cols-2">
               {([
                 { v: "staff", title: "Yes, they use the app", hint: "Each instructor marks when they're free and confirms their sessions. A slot counts as busy until they answer." },
-                { v: "office", title: "No, the office runs it", hint: "Nobody signs up. Everyone counts as free unless you mark them busy, and published rosters go out by email." },
+                { v: "office", title: "No, the office runs it", hint: "Nobody signs up. Everyone counts as free unless you mark them busy, and confirmed roster days go out by email." },
               ] as const).map((o) => (
                 <button key={o.v} type="button" onClick={() => setManagedBy(o.v)} aria-pressed={managedBy === o.v}
                   className={`rounded-lg border p-3 text-left transition ${managedBy === o.v ? "border-teal bg-teal/5" : "border-slate-200 hover:border-slate-300"}`}>

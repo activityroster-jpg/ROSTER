@@ -10,7 +10,7 @@ import { createCourseWithSessions } from "@/lib/services/courses";
 import { getWeekAvailabilityMatrix, markLeaveBusy, setAvailability, setAvailabilityBulk } from "@/lib/services/availability";
 import { assignStaff } from "@/lib/services/assignment";
 import { findProblems } from "@/lib/services/problems";
-import { publishWeek } from "@/lib/services/roster";
+import { confirmDays } from "@/lib/services/roster-days";
 import { addDays, weekStart } from "@/lib/services/schedule";
 import { effectiveAvailability, horizonFor, indexAvailability, managedByOffice } from "@/lib/domain/availability";
 import { availability as availabilityTable, courseStaff as courseStaffTable } from "@/lib/db/schema";
@@ -92,7 +92,9 @@ describe("office-managed staff in a centre", () => {
     if (!c.ok) expect(c.reason).toBe("unavailable");
   });
 
-  it("publishing confirms office-managed people, asks the others, and names anyone with no app or email", async () => {
+  it("confirming a day accepts for office-managed people (when staff accept shifts), and names anyone with no app or email", async () => {
+    const st = (await repos.tenant.orgSettings.list(ctx))[0]!;
+    await repos.tenant.orgSettings.update(ctx, st.id, { staffAcceptShifts: true });
     const dee = await person("Dee");
     await repos.tenant.instructor.update(ctx, dee.id, { email: null });
     const eve = await person("Eve", { managedBy: "staff" });
@@ -102,9 +104,8 @@ describe("office-managed staff in a centre", () => {
     await repos.tenant.courseStaff.insert(ctx, { courseId, instructorId: dee.id, roleTypeId: roleId, status: "assigned" });
     expect((await assignStaff(repos, ctx, { courseId, instructorId: eve.id, roleTypeId: roleId })).ok).toBe(true);
 
-    const r = await publishWeek(repos, ctx, nextMonday);
-    expect(r.instructorsNotified).toBe(2);
-    expect(r.askedToConfirm).toBe(1);
+    const r = await confirmDays(repos, ctx, [nextMonday]);
+    expect(r.notified).toBe(2);
     expect(r.unreachable).toEqual(["Dee"]);
     const statuses = Object.fromEntries((await repos.tenant.courseStaff.list(ctx, eq(courseStaffTable.courseId, courseId))).map((a) => [a.instructorId, a.status]));
     expect(statuses[dee.id]).toBe("confirmed");

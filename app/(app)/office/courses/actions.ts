@@ -362,7 +362,7 @@ export async function updateSessionTimesAction(
 
   const r = await moveSession(repos, ctx, { courseId, sessionId, date, slot, startAt: at(startTime), endAt: at(endTime) }, Boolean(input.confirmed));
   if (!r.ok) return "clashes" in r ? { ok: false, clashes: r.clashes, error: `Moving it makes a clash: ${r.clashes.join("; ")}.` } : { ok: false, error: r.error };
-  // Everyone on the course hears when a published session moves.
+  // Everyone on the course hears when a session on a confirmed day moves.
   const course = await repos.tenant.course.findById(ctx, courseId);
   const assigned = await repos.tenant.courseStaff.list(ctx, eq(courseStaffTable.courseId, courseId));
   for (const a of assigned) await notifyRosterChange(repos, ctx, a.instructorId, course?.name ?? "a course", [date, ...(r.before.date !== date ? [r.before.date] : [])], "moved");

@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 /**
  * The delivery job: every two minutes the roster-tick worker calls this with
  * the cron secret, and it sends queued emails and phone notifications (bulk
- * notices such as a published week). Each run is bounded, so a big centre's
+ * notices such as a confirmed week). Each run is bounded, so a big centre's
  * notices go out over a few runs, never past Cloudflare's per-request limits.
  */
 async function drain(req: Request) {

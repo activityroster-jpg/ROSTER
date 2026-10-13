@@ -7,7 +7,7 @@ import { createTestDb } from "@/tests/helpers/test-db";
 import { seedFullOrg } from "@/tests/helpers/seed-fixtures";
 import { buildIcs, icsEscape, icsFloating, icsFold } from "@/lib/domain/ics";
 import { calendarFeedFor, issueCalendarToken, resolveCalendarToken, revokeCalendarToken } from "@/lib/services/calendar-feed";
-import { publishWeek } from "@/lib/services/roster";
+import { confirmDays } from "@/lib/services/roster-days";
 import { createCourseWithSessions } from "@/lib/services/courses";
 import { assignStaff } from "@/lib/services/assignment";
 import { setAvailability } from "@/lib/services/availability";
@@ -57,10 +57,10 @@ describe("calendar feed", () => {
     expect(await resolveCalendarToken(repos, `${ctx.organisationId}.${"A".repeat(32)}`)).toBeNull();
     expect(await resolveCalendarToken(repos, "nonsense")).toBeNull();
 
-    // Draft week: nothing yet. Published: the shift, as typed.
+    // Pending day: nothing yet. Confirmed: the shift, as typed.
     let ics = await calendarFeedFor(repos, ctx, me.id, "Alpha");
     expect(ics).not.toContain("Summer Stage 2");
-    await publishWeek(repos, ctx, day);
+    await confirmDays(repos, ctx, [day]);
     ics = await calendarFeedFor(repos, ctx, me.id, "Alpha");
     expect(ics).toContain("Summer Stage 2");
     expect(ics).toContain(`DTSTART:${day.replace(/-/g, "")}T093000`);

@@ -40,6 +40,7 @@ function rawFor(section: SettingsSection, get: Get): Record<string, unknown> {
         enforceAvailabilityChecks: on(get("enforceAvailabilityChecks")),
         checkEquipmentQuantities: on(get("checkEquipmentQuantities")),
         useKitRules: on(get("useKitRules")),
+        staffAcceptShifts: on(get("staffAcceptShifts")),
       };
   }
 }

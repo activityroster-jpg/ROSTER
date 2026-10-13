@@ -30,7 +30,7 @@ export const SCREENS = {
   problems: desktop("problems", "Problems on the roster", "Clashes, people in places they aren't qualified for, sessions with no Senior Instructor on duty and short-staffed sessions, worked out from the roster as it stands now.", "problems"),
   board: desktop("board", "Roster board", "The week as courses by day, with everyone's availability alongside, so you can drag people onto sessions.", "board"),
   boardPeople: desktop("board-people", "People × days", "The same week turned round: a row per instructor, free slots in green, so gaps and double-bookings stand out.", "board"),
-  rota: desktop("rota", "Printable roster", "The published week ready to print or send as a PDF, with locations, kit and this week's problems on top.", "rota"),
+  rota: desktop("rota", "Printable roster", "The week ready to print or send as a PDF, with locations, kit and this week's problems on top.", "rota"),
   courses: { ...desktop("courses", "Courses", "Every course this week on one calendar, colour-coded youth and adult, with a quick way to add more.", "courses"), src2x: "/screens/courses@2x.webp" },
   courseSetup: desktop("course-setup", "Course setup", "Your course catalogue: RYA courses and your own, with audience, capacity and ratio for each.", "courses"),
   courseDetail: desktop("course-detail", "A course", "One course: staffing worked out from the RYA ratio, plus where it runs and the boats it takes.", "rostering"),
@@ -55,7 +55,7 @@ export const SCREENS = {
   appHours: phone("app-hours", "My hours", "Hours and estimated pay, straight from the roster.", "time"),
   appDocuments: phone("app-documents", "My certs", "Instructors upload a photo of each certificate; the office checks and confirms it.", "licences"),
   appLeave: phone("app-leave", "Leave & open shifts", "Request leave and claim open shifts from the phone.", "leave"),
-  appNotifications: phone("app-notifications", "Notifications", "Roster published, a course to confirm, a cert reminder: in the app, and by email if they choose.", "notifications"),
+  appNotifications: phone("app-notifications", "Notifications", "Roster confirmed, a shift change, a cert reminder: in the app, and by email if they choose.", "notifications"),
 } satisfies Record<string, Screen>;
 
 export type ScreenId = keyof typeof SCREENS;

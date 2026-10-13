@@ -1,136 +1,16 @@
-import { and, eq, gte, lt } from "drizzle-orm";
+import { eq, gte } from "drizzle-orm";
 import type { Repositories } from "@/lib/db/repositories";
-import { actorUserId, type AnyTenantContext } from "@/lib/tenant/context";
-import { course as courseTable, courseSession as courseSessionTable, courseStaff as courseStaffTable, instructor as instructorTable, rosterWeek as rosterWeekTable, sessionStaffOverride as overrideTable } from "@/lib/db/schema";
-import { inList } from "@/lib/db/params";
-import { managedByOffice } from "@/lib/domain/availability";
-import { fmtWallTime } from "@/lib/domain/time";
-import { addDays, weekStart } from "./schedule";
-import { notifyInstructors } from "./notifications";
+import type { AnyTenantContext } from "@/lib/tenant/context";
+import { courseSession as courseSessionTable, courseStaff as courseStaffTable } from "@/lib/db/schema";
+import { weekStart } from "./schedule";
 import { emailAdmins } from "./admin-mail";
 import { writeAudit } from "./audit";
 import { syncHoursForCourse } from "./hours";
 import { liveSessions } from "@/lib/domain/sessions";
-import { effectiveStaffBySession } from "@/lib/domain/session-staff";
+import { confirmedDays } from "./roster-days";
 
 /** Monday (YYYY-MM-DD) of the week a date falls in. */
 export const weekOf = (dateIso: string) => weekStart(new Date(`${dateIso}T00:00:00Z`));
-
-/** Weeks the centre has published (Monday → published timestamp). */
-export async function publishedWeeks(repos: Repositories, ctx: AnyTenantContext): Promise<Map<string, Date>> {
-  const rows = await repos.tenant.rosterWeek.list(ctx);
-  return new Map(rows.filter((r) => r.publishedAt).map((r) => [r.weekStart, r.publishedAt!]));
-}
-
-export async function isWeekPublished(repos: Repositories, ctx: AnyTenantContext, dateIso: string): Promise<boolean> {
-  const rows = await repos.tenant.rosterWeek.list(ctx, eq(rosterWeekTable.weekStart, weekOf(dateIso)));
-  return Boolean(rows[0]?.publishedAt);
-}
-
-const fmtMonday = (iso: string) =>
-  new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "long", timeZone: "UTC" });
-
-export interface PublishWeekResult {
-  weekStart: string;
-  publishedAt: Date;
-  /** Sessions in the week at the moment of publishing. */
-  sessions: number;
-  /** Distinct instructors told about it. */
-  instructorsNotified: number;
-  /** Of those, how many were asked to confirm (office-managed people aren't). */
-  askedToConfirm: number;
-  /** Office-managed people on the week with neither the app nor an email address: the office tells them. */
-  unreachable: string[];
-  /** True when the week had been published before (a re-publish). */
-  republished: boolean;
-}
-
-const fmtDay = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
-
-/**
- * Publish (or re-publish) the roster for the week containing `dateIso`.
- * Until a week is published instructors see nothing for it; publishing makes
- * it visible in the app and asks everyone rostered that week to confirm.
- * Idempotent on the week row (one per org + Monday).
- */
-export async function publishWeek(
-  repos: Repositories,
-  ctx: AnyTenantContext,
-  dateIso: string,
-  opts: { notify?: boolean } = {},
-): Promise<PublishWeekResult> {
-  const t = repos.tenant;
-  const monday = weekOf(dateIso);
-  const sunday = addDays(monday, 7);
-  const now = new Date();
-  const by = actorUserId(ctx);
-
-  const existing = (await t.rosterWeek.list(ctx, eq(rosterWeekTable.weekStart, monday)))[0];
-  const republished = Boolean(existing?.publishedAt);
-  if (existing) await t.rosterWeek.update(ctx, existing.id, { publishedAt: now, publishedByUserId: by });
-  else await t.rosterWeek.insert(ctx, { weekStart: monday, publishedAt: now, publishedByUserId: by });
-
-  const sessions = liveSessions(await t.courseSession.list(ctx, and(gte(courseSessionTable.date, monday), lt(courseSessionTable.date, sunday))));
-  const courseIds = new Set(sessions.map((s) => s.courseId));
-  let instructorsNotified = 0, askedToConfirm = 0, autoConfirmed = 0;
-  const unreachable: string[] = [];
-  if (courseIds.size > 0) {
-    // Who is on each session, per-day staffing included (a day-only add is
-    // told, someone skipped for a day isn't counted for it).
-    const [staff, overrides, courses, settingsRows] = await Promise.all([
-      t.courseStaff.listIn(ctx, courseStaffTable.courseId, [...courseIds]),
-      t.sessionStaffOverride.listIn(ctx, overrideTable.courseSessionId, sessions.map((s) => s.id)),
-      t.course.listIn(ctx, courseTable.id, [...courseIds]),
-      t.orgSettings.list(ctx),
-    ]);
-    const settings = settingsRows[0];
-    const people = new Map((await t.instructor.listIn(ctx, instructorTable.id, [...new Set([...staff.map((a) => a.instructorId), ...overrides.map((o) => o.instructorId)])])).map((p) => [p.id, p]));
-    const officeManaged = (id: string) => { const p = people.get(id); return p ? managedByOffice(p, settings) : false; };
-
-    // Office-managed people aren't asked to confirm: the office speaks for them.
-    const toConfirm = staff.filter((a) => a.status === "assigned" && officeManaged(a.instructorId)).map((a) => a.id);
-    if (toConfirm.length) autoConfirmed = await t.courseStaff.updateWhere(ctx, inList(courseStaffTable.id, toConfirm), { status: "confirmed", confirmedAt: now });
-
-    if (opts.notify !== false) {
-      const courseName = new Map(courses.map((c) => [c.id, c.name ?? "Course"]));
-      const sessionById = new Map(sessions.map((s) => [s.id, s]));
-      const mine = new Map<string, typeof sessions>();
-      for (const [sessionId, members] of effectiveStaffBySession(sessions, staff, overrides)) {
-        const s = sessionById.get(sessionId)!;
-        for (const m of members) if (m.status !== "declined") mine.set(m.instructorId, [...(mine.get(m.instructorId) ?? []), s]);
-      }
-      const label = fmtMonday(monday);
-      const items = [...mine].map(([instructorId, list]) => {
-        const p = people.get(instructorId);
-        const office = officeManaged(instructorId);
-        const n = list.length;
-        if (office && p && !p.userId && (!p.email || p.notifyEmail === false)) unreachable.push(p.name);
-        if (!office) askedToConfirm++;
-        const lines = [...list].sort((a, b) => Number(a.startAt) - Number(b.startAt)).map((s) => `${fmtDay(s.date)} · ${fmtWallTime(s.startAt)}–${fmtWallTime(s.endAt)} · ${courseName.get(s.courseId) ?? "Course"}`);
-        return {
-          instructorId,
-          input: {
-            title: `Roster published — week of ${label}`,
-            body: office
-              ? `You're on ${n} session${n === 1 ? "" : "s"} that week.${p?.userId ? " Open the app to see them." : ""}`
-              : `You're on ${n} session${n === 1 ? "" : "s"} that week. Open the app to see them and confirm.`,
-            email: true,
-            detailLines: lines,
-          },
-        };
-      });
-      instructorsNotified = await notifyInstructors(repos, ctx, items);
-    }
-  }
-
-  await writeAudit(repos, ctx, {
-    action: republished ? "republish_week" : "publish_week",
-    entity: "roster_week",
-    entityId: monday,
-    after: { weekStart: monday, sessions: sessions.length, instructorsNotified, ...(autoConfirmed ? { confirmedForOfficeManaged: autoConfirmed } : {}) },
-  });
-  return { weekStart: monday, publishedAt: now, sessions: sessions.length, instructorsNotified, askedToConfirm, unreachable: unreachable.sort(), republished };
-}
 
 export type ConfirmResult = { ok: true } | { ok: false; error: string };
 
@@ -202,7 +82,7 @@ export async function declineAssignment(
 }
 
 export interface ConfirmationSummary {
-  /** Assignments in published weeks (from `fromIso`) nobody has answered yet. */
+  /** Assignments on confirmed roster days (from `fromIso`) nobody has accepted yet. */
   awaiting: number;
   /** Assignments the instructor has declined. */
   declined: number;
@@ -210,11 +90,11 @@ export interface ConfirmationSummary {
   confirmed: number;
 }
 
-/** Where confirmations stand for published weeks on or after `fromIso`. */
+/** Where staff replies stand for confirmed roster days on or after `fromIso`. */
 export async function confirmationSummary(repos: Repositories, ctx: AnyTenantContext, fromIso: string): Promise<ConfirmationSummary> {
-  const published = await publishedWeeks(repos, ctx);
-  if (published.size === 0) return { awaiting: 0, declined: 0, confirmed: 0 };
-  const sessions = liveSessions(await repos.tenant.courseSession.list(ctx, gte(courseSessionTable.date, fromIso))).filter((s) => published.has(weekOf(s.date)));
+  const confirmed = await confirmedDays(repos, ctx);
+  if (confirmed.size === 0) return { awaiting: 0, declined: 0, confirmed: 0 };
+  const sessions = liveSessions(await repos.tenant.courseSession.list(ctx, gte(courseSessionTable.date, fromIso))).filter((s) => confirmed.has(s.date));
   const courseIds = new Set(sessions.map((s) => s.courseId));
   if (courseIds.size === 0) return { awaiting: 0, declined: 0, confirmed: 0 };
   const staff = await repos.tenant.courseStaff.listIn(ctx, courseStaffTable.courseId, [...courseIds]);

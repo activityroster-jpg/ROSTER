@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { createTestDb } from "@/tests/helpers/test-db";
 import { seedFullOrg } from "@/tests/helpers/seed-fixtures";
-import { confirmAssignment, confirmationSummary, declineAssignment, isWeekPublished, publishWeek, weekOf } from "@/lib/services/roster";
+import { confirmAssignment, confirmationSummary, declineAssignment, weekOf } from "@/lib/services/roster";
+import { confirmDays, isDayConfirmed } from "@/lib/services/roster-days";
 import { getWeekSchedule } from "@/lib/services/schedule";
 import type { Repositories } from "@/lib/db/repositories";
 import type { SystemTenantContext } from "@/lib/tenant/context";
 
-describe("publish week + confirm / decline", () => {
+describe("confirming roster days + staff accept / decline", () => {
   let repos: Repositories;
   let ctx: SystemTenantContext;
   let courseId: string;
@@ -30,26 +31,22 @@ describe("publish week + confirm / decline", () => {
     expect(weekOf("2026-01-11")).toBe("2026-01-05");
   });
 
-  it("publishing a week records it, notifies everyone rostered and is idempotent on the row", async () => {
-    expect(await isWeekPublished(repos, ctx, "2026-01-05")).toBe(false);
-    const r = await publishWeek(repos, ctx, "2026-01-07");
-    expect(r.weekStart).toBe("2026-01-05");
-    expect(r.sessions).toBe(1);
-    expect(r.instructorsNotified).toBe(1);
-    expect(r.republished).toBe(false);
-    expect(await isWeekPublished(repos, ctx, "2026-01-09")).toBe(true);
-
+  it("confirming a day records it, tells everyone on it once, and does nothing the second time", async () => {
+    expect(await isDayConfirmed(repos, ctx, "2026-01-05")).toBe(false);
+    const r = await confirmDays(repos, ctx, ["2026-01-05", "2026-01-06", "2026-01-07", "2026-01-08", "2026-01-09", "2026-01-10", "2026-01-11"]);
+    expect(r.days).toBe(7);
+    expect(r.notified).toBe(1);
+    expect(await isDayConfirmed(repos, ctx, "2026-01-09")).toBe(true);
     const notes = await repos.tenant.notification.list(ctx);
-    expect(notes.some((n) => n.instructorId === instructorId && n.title.startsWith("Roster published"))).toBe(true);
-
-    const again = await publishWeek(repos, ctx, "2026-01-05");
-    expect(again.republished).toBe(true);
-    expect((await repos.tenant.rosterWeek.list(ctx)).filter((w) => w.weekStart === "2026-01-05")).toHaveLength(1);
+    expect(notes.some((n) => n.instructorId === instructorId && n.title.startsWith("Roster confirmed"))).toBe(true);
+    const again = await confirmDays(repos, ctx, ["2026-01-05"]);
+    expect(again.days).toBe(0);
   });
 
-  it("summary only counts published weeks", async () => {
+  it("summary only counts confirmed days", async () => {
     expect(await confirmationSummary(repos, ctx, "2026-01-01")).toEqual({ awaiting: 0, declined: 0, confirmed: 0 });
-    await publishWeek(repos, ctx, "2026-01-05", { notify: false });
+    const session = (await repos.tenant.courseSession.list(ctx))[0]!;
+    await confirmDays(repos, ctx, [session.date]);
     expect(await confirmationSummary(repos, ctx, "2026-01-01")).toEqual({ awaiting: 1, declined: 0, confirmed: 0 });
     // Past sessions drop out of the summary.
     expect(await confirmationSummary(repos, ctx, "2026-02-01")).toEqual({ awaiting: 0, declined: 0, confirmed: 0 });
@@ -67,7 +64,7 @@ describe("publish week + confirm / decline", () => {
   });
 
   it("declining needs a reason, drops the instructor from cover and hours, and can be undone", async () => {
-    await publishWeek(repos, ctx, "2026-01-05", { notify: false });
+    await confirmDays(repos, ctx, [(await repos.tenant.courseSession.list(ctx))[0]!.date]);
     // The fixture's hours row carries clock time; clear it so it behaves like a
     // plain rostered record (sync keeps anything the clock or the office touched).
     for (const h of (await repos.tenant.hoursRecord.list(ctx)).filter((h) => h.instructorId === instructorId)) {

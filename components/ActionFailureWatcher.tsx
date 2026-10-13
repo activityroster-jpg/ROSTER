@@ -15,7 +15,7 @@ const VERSION_CHECK_MIN_MS = 60_000;
  * centre admin "frozen after heavy use" while a fresh window was fine).
  */
 const ACTION_STALL_MS = 90_000;
-/** A save running longer than this shows the "still working" indicator, so a big publish or Auto-roster never looks frozen. */
+/** A save running longer than this shows the "still working" indicator, so confirming a big week or Auto-roster never looks frozen. */
 const SHOW_PROGRESS_MS = 2_500;
 const PAGE_STALL_MS = 40_000;
 /** Saves slower than this are reported (no banner) so the Dev Center shows where time goes. */

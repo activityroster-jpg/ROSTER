@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { requireTenant } from "@/lib/tenant/require";
-import { publishWeek } from "@/lib/services/roster";
+import { confirmDays, undoDayConfirmation } from "@/lib/services/roster-days";
+import { z } from "zod";
 import { isoDateSchema } from "@/lib/validation/actions";
 import { SLOT_CODES, type SlotCode } from "@/lib/db/schema";
 import { parseWelfareSettings, setWelfareDuty } from "@/lib/services/welfare";
@@ -22,23 +23,25 @@ export async function setWelfareDutyAction(date: string, slot: string, name: str
   return { ok: true };
 }
 
-/** Publish (or re-publish) one week's roster and tell everyone on it. */
-export async function publishWeekAction(weekStart: string): Promise<Result> {
+const daysSchema = z.array(isoDateSchema).min(1).max(14);
+
+/** Confirm roster days: everyone on a day hears the first time; after an undo, only the people whose shifts changed. */
+export async function confirmDaysAction(dates: string[]): Promise<Result> {
   const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
-  if (!isoDateSchema.safeParse(weekStart).success) return { ok: false, error: "Invalid week" };
-  const r = await publishWeek(repos, ctx, weekStart);
-  revalidatePath("/office/rota");
-  revalidatePath("/office/courses");
-  revalidatePath("/office");
-  revalidatePath("/portal");
-  const n = r.instructorsNotified;
-  const verb = r.republished ? "Re-published" : "Published";
-  const asked = r.askedToConfirm ? ` (${r.askedToConfirm} asked to confirm)` : "";
+  const parsed = daysSchema.safeParse(dates);
+  if (!parsed.success) return { ok: false, error: "Pick the days to confirm" };
+  const r = await confirmDays(repos, ctx, parsed.data);
+  for (const p of ["/office/rota", "/office/courses", "/office", "/portal"]) revalidatePath(p);
   const unreachable = r.unreachable.length ? ` No app or email for ${r.unreachable.join(", ")}: give them the printed roster.` : "";
-  return {
-    ok: true,
-    message: n
-      ? `${verb} — ${n} ${n === 1 ? "person" : "people"} told${asked}.${unreachable}`
-      : `${verb} — nobody is rostered this week yet`,
-  };
+  if (r.days === 0) return { ok: true, message: "Already confirmed" };
+  return { ok: true, message: `${r.days} day${r.days === 1 ? "" : "s"} confirmed · ${r.notified ? `${r.notified} ${r.notified === 1 ? "person" : "people"} told` : "nobody needed telling"}.${unreachable}` };
+}
+
+/** Put a confirmed day back to pending. Nobody is told. */
+export async function undoDayAction(date: string): Promise<Result> {
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
+  if (!isoDateSchema.safeParse(date).success) return { ok: false, error: "Invalid day" };
+  const r = await undoDayConfirmation(repos, ctx, date);
+  for (const p of ["/office/rota", "/office", "/portal"]) revalidatePath(p);
+  return r.ok ? { ok: true, message: "Back to pending" } : { ok: false, error: "That day isn't confirmed" };
 }

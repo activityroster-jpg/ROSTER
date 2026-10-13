@@ -10,7 +10,7 @@ import { auditStatement } from "./audit";
 import { runAtomic } from "@/lib/db/batch";
 import { planHoursForCourse } from "./hours";
 import { notifyInstructor } from "./notifications";
-import { isWeekPublished } from "./roster";
+import { isDayConfirmed } from "./roster-days";
 import { liveSessions } from "@/lib/domain/sessions";
 import { fitIssue, placeQualificationIssue } from "./place-check";
 
@@ -128,7 +128,7 @@ export async function setDayStaff(repos: Repositories, ctx: AnyTenantContext, in
   });
   const audit = auditStatement(repos, ctx, { action: "set_day_staff", entity: "course_session", entityId: session.id, after: { courseId: session.courseId, date: session.date, instructorId: input.instructorId, roleTypeId: input.roleTypeId, mode: input.mode, overridden, note: input.note ?? null } });
   await runAtomic(repos.db, [write, ...hours.statements, ...(audit ? [audit] : [])]);
-  if (await isWeekPublished(repos, ctx, session.date)) {
+  if (await isDayConfirmed(repos, ctx, session.date)) {
     await notifyInstructor(repos, ctx, input.instructorId, {
       title: input.mode === "add" ? "Added to a day" : "Taken off a day",
       body: input.mode === "add" ? `You're on ${course.name ?? "a course"} on ${session.date} (${session.slot}).` : `You're no longer needed on ${course.name ?? "a course"} on ${session.date} (${session.slot}); the rest of the course stands.`,

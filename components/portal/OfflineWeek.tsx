@@ -7,7 +7,7 @@ export interface OfflineSession { day: string; dayLabel: string; time: string; c
 export const OFFLINE_KEY = "ar.offline.week";
 
 /**
- * Saves the next seven days of my published schedule on this phone and makes
+ * Saves the next seven days of my schedule on this phone and makes
  * sure the offline helper is installed, so a beach with no signal still shows
  * the week (audit A11-1). Only my own shifts: course, time, place, my status.
  */

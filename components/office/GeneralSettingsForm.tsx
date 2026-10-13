@@ -35,6 +35,7 @@ export function GeneralSettingsForm({
   enforceAvailabilityChecks,
   checkEquipmentQuantities = true,
   useKitRules = false,
+  staffAcceptShifts = false,
   holidayPayPercent = null,
   privacyNoticeUrl = "",
   dailyDigestEnabled = false,
@@ -52,6 +53,7 @@ export function GeneralSettingsForm({
   enforceAvailabilityChecks: boolean;
   checkEquipmentQuantities?: boolean;
   useKitRules?: boolean;
+  staffAcceptShifts?: boolean;
   holidayPayPercent?: number | null;
   privacyNoticeUrl?: string;
   dailyDigestEnabled?: boolean;
@@ -89,7 +91,7 @@ export function GeneralSettingsForm({
         </label>
         <label className="flex items-start gap-2 py-1 text-sm text-navy">
           <input type="radio" name="staffManagedBy" value="office" defaultChecked={staffManagedBy === "office"} className="mt-1" />
-          <span><span className="font-medium">The office. Staff don&rsquo;t need to sign up.</span> <span className="text-slate-500">Everyone counts as free unless you mark them busy, nobody is asked to confirm, and published rosters go out by email. You can still invite anyone to the app.</span></span>
+          <span><span className="font-medium">The office. Staff don&rsquo;t need to sign up.</span> <span className="text-slate-500">Everyone counts as free unless you mark them busy, and confirmed roster days go out by email. You can still invite anyone to the app.</span></span>
         </label>
         <p className="mt-1 text-[11px] text-slate-400">You can choose differently for one person on their page in Staff. <a href="/learn?topic=office-managed" target="_blank" rel="noreferrer" className="text-teal hover:underline">📖 Read the guide</a></p>
       </fieldset>
@@ -162,6 +164,10 @@ export function GeneralSettingsForm({
           <label className="flex items-start gap-2 text-sm text-slate-600">
             <input type="checkbox" name="useKitRules" defaultChecked={useKitRules} className="mt-0.5 h-4 w-4 rounded border-slate-300" />
             <span>Use kit rules: a new course gets its equipment from its course type&apos;s kit rules (for example one Pico per two students) <span className="text-slate-400">(set the rules under Course setup; off by default)</span> <a href="/learn?topic=equipment" target="_blank" rel="noreferrer" className="text-teal hover:underline">📖 Guide</a></span>
+          </label>
+          <label className="flex items-start gap-2 text-sm text-slate-600">
+            <input type="checkbox" name="staffAcceptShifts" defaultChecked={staffAcceptShifts} className="mt-0.5 h-4 w-4 rounded border-slate-300" />
+            <span>Ask staff to accept or decline their shifts once you&apos;ve confirmed a day <span className="text-slate-400">(off by default: confirming the day is enough)</span> <a href="/learn?topic=rota" target="_blank" rel="noreferrer" className="text-teal hover:underline">📖 Guide</a></span>
           </label>
         </div>
       </SectionForm>

@@ -131,6 +131,9 @@ export const orgSettings = sqliteTable("org_settings", {
   // When on (the default), rostering blocks an instructor who marked that slot
   // "Busy" in their availability (override allowed).
   enforceAvailabilityChecks: boolCol("enforce_availability_checks").default(true),
+  // Off (the default): the office confirming a day is enough. On: once a day is
+  // confirmed, each person also accepts or declines their shifts in the app.
+  staffAcceptShifts: boolCol("staff_accept_shifts").default(false),
   /** 1 once the centre has instructor-type places and the course map (seeded, or upgraded by lib/services/instructor-types-upgrade.ts). */
   teachingMapVersion: integer("teaching_map_version").notNull().default(0),
   // When on (the default), the problems list flags a date/slot whose courses need
@@ -802,6 +805,30 @@ export const rosterWeek = sqliteTable("roster_week", {
   uniqueIndex("roster_week_org_week_uq").on(t.organisationId, t.weekStart),
 ]);
 export type RosterWeek = typeof rosterWeek.$inferSelect;
+
+/**
+ * A roster day the office has confirmed. Staff see their shifts as pending
+ * until the day is confirmed; confirming tells everyone on it. Undoing puts
+ * the day back to pending (no messages) and keeps who was on it then, so
+ * confirming again tells only the people whose shifts changed. (Weeks
+ * published before this table existed count as confirmed: roster_week.)
+ */
+export const rosterDay = sqliteTable("roster_day", {
+  id: id(),
+  organisationId: orgFk(),
+  /** YYYY-MM-DD. */
+  date: text("date").notNull(),
+  confirmedAt: integer("confirmed_at", { mode: "timestamp_ms" }),
+  confirmedByUserId: text("confirmed_by_user_id"),
+  /** JSON: who was on the day and in which shifts when it was last undone, to tell only changes on reconfirming. */
+  snapshot: text("snapshot"),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, (t) => [
+  index("roster_day_org_idx").on(t.organisationId),
+  uniqueIndex("roster_day_org_date_uq").on(t.organisationId, t.date),
+]);
+export type RosterDay = typeof rosterDay.$inferSelect;
 
 /**
  * Time & attendance: a clock-in/clock-out event, optionally tied to the session

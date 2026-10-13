@@ -40,7 +40,7 @@ export function CalendarFeedCard({ active, createdAt }: { active: boolean; creat
       ) : active ? (
         <p className="text-xs text-slate-600">Your calendar link is on{createdAt ? ` (made ${new Date(createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })})` : ""}. Lost it, or want to stop an old phone seeing it? Make a new one; the old link stops working.</p>
       ) : (
-        <p className="text-xs text-slate-600">See your shifts in your phone's calendar (Apple, Google or Outlook). Only published weeks appear, and they update about every hour.</p>
+        <p className="text-xs text-slate-600">See your shifts in your phone's calendar (Apple, Google or Outlook). Only days your centre has confirmed appear, and they update about every hour.</p>
       )}
       <div className="mt-2 flex flex-wrap items-center gap-3">
         <button type="button" disabled={pending} onClick={make} className="text-sm font-semibold text-teal disabled:opacity-50">{active || url ? "Make a new link" : "Make my calendar link"}</button>

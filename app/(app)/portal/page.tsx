@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { requireTenant } from "@/lib/tenant/require";
 import { addDays, getSessionEvents, weekStart } from "@/lib/services/schedule";
-import { publishedWeeks, weekOf } from "@/lib/services/roster";
+import { confirmedDays } from "@/lib/services/roster-days";
 import { instructor as instructorTable, courseStaff as courseStaffTable } from "@/lib/db/schema";
 import { todayIso } from "@/lib/domain";
 import { Card, StatusPill } from "@/components/ui";
@@ -21,10 +21,10 @@ const SLOT_LABEL: Record<string, string> = { AM: "Morning", PM: "Afternoon", EV:
 const joinNames = (names: string[]) => (names.length <= 2 ? names.join(" and ") : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`);
 
 /**
- * My schedule: every session I'm rostered on in a PUBLISHED week, from today
- * to the end of the centre's availability horizon, grouped by day. Each course
- * is confirmed once (the first card carries the buttons); who else is on it
- * and how many students are shown once the week is published.
+ * My schedule: every session I'm rostered on, from today to the end of the
+ * centre's availability horizon, grouped by day. A day shows as pending until
+ * the office confirms it. When the centre asks staff to accept shifts, each
+ * course is accepted once, on its first confirmed card.
  */
 export default async function PortalSchedulePage() {
   const { ctx, repos, organisation } = await requireTenant();
@@ -46,13 +46,13 @@ export default async function PortalSchedulePage() {
   const weeksAhead = Math.max(1, Math.min(26, settings?.availabilityWeeksAhead ?? 4));
   const horizonEnd = addDays(monday, weeksAhead * 7);
 
-  const [events, myStaff, allStaff, instructors, courses, published, courseLocations, locations, myProblemsAll] = await Promise.all([
+  const [events, myStaff, allStaff, instructors, courses, confirmed, courseLocations, locations, myProblemsAll] = await Promise.all([
     getSessionEvents(repos, ctx, today, horizonEnd),
     repos.tenant.courseStaff.list(ctx, eq(courseStaffTable.instructorId, me.id)),
     repos.tenant.courseStaff.list(ctx),
     repos.tenant.instructor.list(ctx),
     repos.tenant.course.list(ctx),
-    publishedWeeks(repos, ctx),
+    confirmedDays(repos, ctx),
     repos.tenant.courseLocation.list(ctx),
     repos.tenant.location.list(ctx),
     problemsForInstructor(repos, ctx, me.id, { from: today, to: horizonEnd }).then((ps) => ps.filter((p) => ["busy", "on-leave", "double-booked", "not-answered"].includes(p.kind))).catch(() => []),
@@ -61,8 +61,10 @@ export default async function PortalSchedulePage() {
   const membersBySession = effectiveStaffBySession(events, allStaff, overrides);
   // Declines stay visible (the card shows "can't make it"); per-day skips do not.
   const onSession = (sessionId: string) => (membersBySession.get(sessionId) ?? []).some((m) => m.instructorId === me.id);
-  // Only published weeks: a draft roster is the office's business until it goes out.
-  const myProblems = myProblemsAll.filter((p) => published.has(weekOf(p.date)));
+  // Pending days show too (staff see their shifts as soon as they're assigned), so their clashes do.
+  const myProblems = myProblemsAll;
+  // Accept / decline only when the centre asks for it, and only once the office has confirmed the day.
+  const askToAccept = Boolean(settings?.staffAcceptShifts);
   const locationName = new Map(locations.map((l) => [l.id, l.name]));
   const placesOf = (courseId: string) => courseLocations.filter((cl) => cl.courseId === courseId).map((cl) => locationName.get(cl.locationId)).filter((n): n is string => Boolean(n));
   const myByCourse = new Map(myStaff.map((s) => [s.courseId, s]));
@@ -76,19 +78,19 @@ export default async function PortalSchedulePage() {
     (membersBySession.get(sessionId) ?? []).filter((m) => m.instructorId !== me.id && m.status !== "declined").map((m) => nameById.get(m.instructorId) ?? "Instructor");
 
   const mineAll = events.filter((e) => onSession(e.id)).sort((a, b) => a.startAt - b.startAt);
-  const mine = mineAll.filter((e) => published.has(weekOf(e.date)));
-  const pencilled = mineAll.length - mine.length;
+  const mine = mineAll;
+  const pending = mine.filter((e) => !confirmed.has(e.date)).length;
 
   const weekEnd = addDays(today, 7);
   const offline: OfflineSession[] = mine.filter((s) => s.date < weekEnd).map((s) => {
     const row = myByCourse.get(s.courseId);
-    return { day: s.date, dayLabel: `${s.date === today ? "Today · " : s.date === addDays(today, 1) ? "Tomorrow · " : ""}${fmtDay(s.date)}`, time: `${fmtTime(s.startAt)}–${fmtTime(s.endAt)}`, course: s.courseName, place: placesOf(s.courseId).join(", ") || null, note: !row ? "Cover for this day only" : row.status === "declined" ? "You said you can't make it" : row.status === "assigned" ? "Not confirmed yet" : null };
+    return { day: s.date, dayLabel: `${s.date === today ? "Today · " : s.date === addDays(today, 1) ? "Tomorrow · " : ""}${fmtDay(s.date)}`, time: `${fmtTime(s.startAt)}–${fmtTime(s.endAt)}`, course: s.courseName, place: placesOf(s.courseId).join(", ") || null, note: !confirmed.has(s.date) ? "Pending: not confirmed by your centre yet" : !row ? "Cover for this day only" : row.status === "declined" ? "You said you can't make it" : askToAccept && row.status === "assigned" ? "Not accepted yet" : null };
   });
   const byDay = new Map<string, typeof mine>();
   for (const s of mine) byDay.set(s.date, [...(byDay.get(s.date) ?? []), s]);
   const nextMonday = addDays(monday, 7);
   const thisWeek = mine.filter((s) => s.date < nextMonday).length;
-  const toConfirm = new Set(mine.filter((s) => myByCourse.get(s.courseId)?.status === "assigned").map((s) => s.courseId)).size;
+  const toConfirm = askToAccept ? new Set(mine.filter((s) => confirmed.has(s.date) && myByCourse.get(s.courseId)?.status === "assigned").map((s) => s.courseId)).size : 0;
   const seen = new Set<string>();
 
   return (
@@ -96,7 +98,7 @@ export default async function PortalSchedulePage() {
       <OfflineWeek centre={organisation.name} sessions={offline} />
       <h1 className="mb-1 font-display text-xl font-semibold text-navy">My schedule</h1>
       <p className="mb-4 text-sm text-slate-500">
-        {thisWeek === 0 ? "Nothing this week." : `${thisWeek} session${thisWeek === 1 ? "" : "s"} this week.`} Showing the next {weeksAhead} weeks.
+        {thisWeek === 0 ? "Nothing this week." : `${thisWeek} session${thisWeek === 1 ? "" : "s"} this week.`} Showing the next {weeksAhead} weeks.{pending ? ` ${pending} pending: your centre will confirm ${pending === 1 ? "it" : "them"} and you'll get a message.` : ""}
       </p>
       {myProblems.length > 0 ? (
         <div className="mb-4 rounded-card border border-port/40 bg-port/5 px-4 py-3 text-sm text-navy">
@@ -115,16 +117,14 @@ export default async function PortalSchedulePage() {
       ) : null}
       {toConfirm > 0 ? (
         <div className="mb-4 rounded-card border border-amber/50 bg-amber/10 px-4 py-3 text-sm text-navy">
-          <span className="font-semibold">{toConfirm} course{toConfirm === 1 ? "" : "s"} to confirm.</span> Tap “I&apos;ll be there” on each so your centre knows you&apos;ve seen it.
+          <span className="font-semibold">{toConfirm} course{toConfirm === 1 ? "" : "s"} to accept.</span> Tap “I&apos;ll be there” on each so your centre knows you&apos;ve seen it.
         </div>
       ) : null}
       <div className="space-y-4">
         {mine.length === 0 ? (
           <Card>
             <p className="text-sm text-slate-500">
-              {pencilled > 0
-                ? "Your centre has pencilled you in but hasn't published the roster yet — you'll get a notification as soon as it's out."
-                : "No sessions on your roster yet. Set your availability so your centre knows when you're free."}
+              No sessions on your roster yet. Set your availability so your centre knows when you&apos;re free.
             </p>
           </Card>
         ) : (
@@ -137,8 +137,9 @@ export default async function PortalSchedulePage() {
                 {sessions.map((s) => {
                   const mineRow = myByCourse.get(s.courseId) ?? null;
                   const dayOnly = !mineRow;
-                  const first = !dayOnly && !seen.has(s.courseId);
-                  seen.add(s.courseId);
+                  const dayConfirmed = confirmed.has(s.date);
+                  const first = !dayOnly && dayConfirmed && !seen.has(s.courseId);
+                  if (dayConfirmed) seen.add(s.courseId);
                   const others = colleaguesOf(s.id);
                   const students = studentsByCourse.get(s.courseId) ?? 0;
                   return (
@@ -154,8 +155,12 @@ export default async function PortalSchedulePage() {
                         </div>
                         <StatusPill tone="neutral">{SLOT_LABEL[s.slot] ?? s.slot}</StatusPill>
                       </div>
-                      {dayOnly ? (
+                      {!dayConfirmed ? (
+                        <p className="mt-2 text-xs font-medium text-amber">Pending: your centre hasn&apos;t confirmed this day yet.{dayOnly ? " Cover for this day only." : ""}</p>
+                      ) : dayOnly ? (
                         <p className="mt-2 text-xs text-teal">Cover for this day only.</p>
+                      ) : !askToAccept ? (
+                        <p className={`mt-2 text-xs ${mineRow?.status === "declined" ? "text-port" : "text-starboard"}`}>{mineRow?.status === "declined" ? "You can't make this course" : "✓ Confirmed"}</p>
                       ) : first && mineRow ? (
                         <ConfirmAssignment assignmentId={mineRow.id} status={mineRow.status} declineNote={mineRow.declineNote} />
                       ) : (
@@ -170,9 +175,6 @@ export default async function PortalSchedulePage() {
             </div>
           ))
         )}
-        {mine.length > 0 && pencilled > 0 ? (
-          <p className="text-center text-xs text-slate-400">{pencilled} more session{pencilled === 1 ? "" : "s"} pencilled in for weeks your centre hasn&apos;t published yet.</p>
-        ) : null}
       </div>
       {teamContacts.length ? (
         <Card>

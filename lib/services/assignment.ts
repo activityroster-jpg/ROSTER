@@ -18,7 +18,7 @@ import { blocksRostering, describeBusy, effectiveAvailability, managedByOffice }
 import { auditStatement } from "./audit";
 import { planHoursForCourse } from "./hours";
 import { notifyInstructor } from "./notifications";
-import { publishedWeeks, weekOf } from "./roster";
+import { confirmedDays } from "./roster-days";
 import { liveSessions } from "@/lib/domain/sessions";
 import { fmtWallTime } from "@/lib/domain/time";
 import { placeQualificationIssue } from "./place-check";
@@ -344,8 +344,8 @@ export async function bulkAssignStaff(
 
 /**
  * In-app + push (and email, if they allow it) about a roster change, for the
- * dates whose week has been published. Unpublished weeks stay quiet: the
- * instructor hears about those when the week is published.
+ * days the office has confirmed. A confirmed day stays confirmed and the
+ * person hears straight away; pending days stay quiet until confirmed.
  */
 export async function notifyRosterChange(
   repos: Repositories,
@@ -356,13 +356,14 @@ export async function notifyRosterChange(
   change: "added" | "removed" | "moved",
 ): Promise<void> {
   try {
-    const published = await publishedWeeks(repos, ctx);
-    const affected = [...new Set(dates)].filter((d) => published.has(weekOf(d))).sort();
+    const confirmed = await confirmedDays(repos, ctx);
+    const affected = [...new Set(dates)].filter((d) => confirmed.has(d)).sort();
+    const accept = Boolean((await repos.tenant.orgSettings.list(ctx))[0]?.staffAcceptShifts);
     if (affected.length === 0) return;
     const when = affected.length === 1 ? `on ${affected[0]}` : `on ${affected.length} dates from ${affected[0]}`;
     const title = change === "added" ? `You're on ${courseName}` : change === "removed" ? `You're off ${courseName}` : `${courseName} has moved`;
     const body = change === "added"
-      ? `You've been rostered on ${courseName} ${when}. Open the app to see the details and confirm.`
+      ? `You've been rostered on ${courseName} ${when}. Open the app to see the details${accept ? " and accept or decline" : ""}.`
       : change === "removed"
         ? `You're no longer on ${courseName} ${when}.`
         : `The time or date of ${courseName} has changed ${when} — check your schedule.`;

@@ -54,7 +54,7 @@ export function QuickAddStaff({ officeMode = false }: { officeMode?: boolean }) 
         {msg ? <span className={`text-sm ${msg.ok ? "text-starboard" : "text-port"}`}>{msg.text}</span> : null}
       </div>
       <p className="mt-1 text-[11px] text-slate-400">{officeMode
-        ? "Staff don't need to sign up: the office keeps their availability. Add their courses, certificates and date of birth from their profile; email is optional (published rosters go out by email)."
+        ? "Staff don't need to sign up: the office keeps their availability. Add their courses, certificates and date of birth from their profile; email is optional (confirmed roster days go out by email)."
         : "They fill in their own phone, date of birth and certificates from the invite. Add courses and checks later from their profile."}</p>
     </div>
   );

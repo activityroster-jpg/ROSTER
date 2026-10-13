@@ -574,7 +574,7 @@ function SessionPanel({ data, selected, canEdit, preselect, instructors, byId, o
       </div>
       <ConfirmDialog open={askRemove !== null} title={`Take ${askRemove?.name ?? ""} off ${s.courseName}?`} confirmLabel="Remove from the course" busy={pending} onCancel={() => setAskRemove(null)}
         onConfirm={() => { const m = askRemove; setAskRemove(null); if (m) remove(m, "course"); }}
-        consequences={[meta?.multiDay ? "They come off every day of this course, not just this one (use “skip this day” for one day)." : "They come off this session.", "Their unapproved pay lines for it are removed; approved ones are kept and flagged.", "If the week is published they are told straight away.", "Any open role this leaves shows on the board and the problems list."]} />
+        consequences={[meta?.multiDay ? "They come off every day of this course, not just this one (use “skip this day” for one day)." : "They come off this session.", "Their unapproved pay lines for it are removed; approved ones are kept and flagged.", "If the day is confirmed they are told straight away.", "Any open role this leaves shows on the board and the problems list."]} />
     </div>
   );
 }

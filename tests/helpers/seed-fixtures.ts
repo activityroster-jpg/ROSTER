@@ -157,6 +157,7 @@ export async function seedFullOrg(
   await t.availabilityNote.insert(ctx, { instructorId: instructor.id, date: "2026-01-05", note: `Note ${opts.slug}` });
   await t.payRate.insert(ctx, { instructorId: instructor.id, rate: 25, unit: "hour" });
   await t.rosterWeek.insert(ctx, { weekStart: "2026-01-05", publishedAt: null, publishedByUserId: null });
+  await t.rosterDay.insert(ctx, { date: "2025-01-01", confirmedAt: null, confirmedByUserId: null, snapshot: null });
   await t.hoursRecord.insert(ctx, {
     instructorId: instructor.id,
     courseSessionId: session.id,

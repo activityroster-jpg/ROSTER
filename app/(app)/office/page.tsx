@@ -139,7 +139,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="font-display text-lg font-semibold text-navy">Next: build your first week</h2>
-              <p className="text-sm text-slate-600">Add a course, drop in its sessions, then put instructors on it. Publish the week and your team sees it in the app.</p>
+              <p className="text-sm text-slate-600">Add a course, drop in its sessions, then put instructors on it. Your team sees their shifts as pending straight away; confirm each day on the roster and they get a message.</p>
             </div>
             <div className="flex items-center gap-3">
               <Link href="/office/courses" className="rounded-lg bg-teal px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700">Add a course</Link>
@@ -185,7 +185,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         {ratioOn ? <Tile href="/office/courses" label="Courses to cover" value={uncovered} sub="Understaffed / no cover" tone={uncovered > 0 ? "amber" : "navy"} /> : null}
         <Tile href="/office/leave" label="Leave to approve" value={pendingLeave} sub="Pending requests" tone={pendingLeave > 0 ? "amber" : "navy"} />
         <Tile href="/office/leave" label="Open shifts" value={openShifts} sub="Need cover" tone={openShifts > 0 ? "amber" : "navy"} />
-        <Tile href="/office/rota" label="Awaiting confirmation" value={confirmations.awaiting} sub={confirmations.declined ? `${confirmations.declined} can't make it` : "On published weeks"} tone={confirmations.declined > 0 ? "port" : confirmations.awaiting > 0 ? "amber" : "navy"} />
+        <Tile href="/office/rota" label="Awaiting replies" value={confirmations.awaiting} sub={confirmations.declined ? `${confirmations.declined} can't make it` : "On confirmed days"} tone={confirmations.declined > 0 ? "port" : confirmations.awaiting > 0 ? "amber" : "navy"} />
         <Tile href="#problems" label="Problems on the roster" value={problems.problems.length} sub={problems.blocks ? `${problems.blocks} blocking · next 4 weeks` : "Next 4 weeks"} tone={problems.blocks > 0 ? "port" : problems.warns > 0 ? "amber" : "navy"} />
       </div>
 

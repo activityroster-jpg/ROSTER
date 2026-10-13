@@ -9,7 +9,8 @@ import { createCourseWithSessions } from "@/lib/services/courses";
 import { setCourseStaffing, setCourseLocations } from "@/lib/services/course-resources";
 import { setAvailability } from "@/lib/services/availability";
 import { assignStaff } from "@/lib/services/assignment";
-import { publishWeek, confirmAssignment, weekOf } from "@/lib/services/roster";
+import { confirmAssignment, weekOf } from "@/lib/services/roster";
+import { confirmDays } from "@/lib/services/roster-days";
 import { getWeekRota } from "@/lib/services/schedule";
 import { syncHoursForCourse, markApproval } from "@/lib/services/hours";
 import { getPayrollLines } from "@/lib/services/finance";
@@ -20,7 +21,7 @@ import { fmtWallTime } from "@/lib/domain/time";
 
 /**
  * One course from creation to payroll (audit Part E phase 2, "lifecycle" test):
- * create → staffing → availability → assign → publish → confirm → move a session
+ * create → staffing → availability → assign → confirm the days → accept → move a session
  * → problems → cancel a day → payroll → restore → delete refused. Times are
  * wall-clock throughout: what was typed is what every reader shows.
  */
@@ -59,9 +60,9 @@ describe("course lifecycle, end to end", () => {
     expect([fmtWallTime(sat.sessions[0]!.startAt), fmtWallTime(sat.sessions[0]!.endAt)]).toEqual(["09:30", "12:15"]);
     expect(sat.sessions[0]!.staff.map((m) => m.status)).toEqual(["assigned"]);
 
-    // 4. Publish and confirm.
-    const pub = await publishWeek(repos, ctx, "2027-05-01");
-    expect(pub.instructorsNotified).toBe(1);
+    // 4. Confirm the days, and the instructor accepts.
+    const pub = await confirmDays(repos, ctx, ["2027-05-01", "2027-05-02"]);
+    expect(pub.notified).toBe(1);
     const a = (await repos.tenant.courseStaff.list(ctx)).find((x) => x.courseId === courseId)!;
     expect((await confirmAssignment(repos, ctx, instructorId, a.id)).ok).toBe(true);
 
@@ -99,7 +100,7 @@ describe("course lifecycle, end to end", () => {
 
     // 9. The change log tells the story in order.
     const actions = (await repos.tenant.auditLog.list(ctx)).map((x) => x.action);
-    for (const expected of [/^create$/, /^set_staffing$/, /^set_course_locations$/, /^set_availability$/, /pay_rate/, /^assign_staff$/, /publish/, /^confirm_assignment$/, /cancel/, /^restore_session/]) {
+    for (const expected of [/^create$/, /^set_staffing$/, /^set_course_locations$/, /^set_availability$/, /pay_rate/, /^assign_staff$/, /^confirm_roster_days$/, /^confirm_assignment$/, /cancel/, /^restore_session/]) {
       expect(actions.some((a) => expected.test(a)), `audit should contain ${expected}`).toBe(true);
     }
   });

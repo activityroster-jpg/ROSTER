@@ -128,7 +128,7 @@ export function HelpAssistant({ surface }: { surface: "office" | "site" }) {
           <div className="space-y-3">
             <p className="text-slate-600">
               {surface === "office"
-                ? "Ask how to do something, like adding staff or publishing the roster. I'll find the answer in the guides."
+                ? "Ask how to do something, like adding staff or confirming the roster. I'll find the answer in the guides."
                 : "Ask anything about ActivityRoster, like how setup works or what it costs. I'll find the answer in the guides."}
             </p>
             <div className="flex flex-col items-start gap-1.5">

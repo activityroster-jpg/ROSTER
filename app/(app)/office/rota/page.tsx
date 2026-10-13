@@ -4,8 +4,8 @@ import { addDays, getWeekRota, weekStart } from "@/lib/services/schedule";
 import { RotaDownload } from "@/components/office/RotaDownload";
 import { parseRotaTemplate } from "@/lib/rota/template";
 import { RotaView } from "@/components/office/RotaView";
-import { PublishWeek } from "@/components/office/PublishWeek";
-import { publishedWeeks } from "@/lib/services/roster";
+import { RosterDays } from "@/components/office/RosterDays";
+import { weekDayStates } from "@/lib/services/roster-days";
 import { parseWelfareSettings } from "@/lib/services/welfare";
 import { can } from "@/lib/auth/rbac";
 import { availabilityHorizon } from "@/lib/services/availability";
@@ -26,11 +26,10 @@ export default async function RotaPage({ searchParams }: { searchParams: Promise
   // The board is the roster (view and edit); the print templates stay one click away.
   const view: "board" | "print" = sp.view === "print" || !canEdit ? "print" : "board";
   const board = view === "board" ? await getBoard(repos, ctx, monday) : null;
-  const [rota, published, settingsRows, problems] = await Promise.all([getWeekRota(repos, ctx, monday), publishedWeeks(repos, ctx), repos.tenant.orgSettings.list(ctx), findProblems(repos, ctx, { from: monday, to: addDays(monday, 7) })]);
+  const [rota, dayStates, settingsRows, problems] = await Promise.all([getWeekRota(repos, ctx, monday), weekDayStates(repos, ctx, monday), repos.tenant.orgSettings.list(ctx), findProblems(repos, ctx, { from: monday, to: addDays(monday, 7) })]);
   const flags: Record<string, string[]> = Object.fromEntries(Object.entries(problems.bySession).map(([id, ps]) => [id, ps.map((p) => `${p.instructorName ? `${p.instructorName}: ` : ""}${problemLabel(p.kind)} (${p.detail})`)]));
   const rotaTemplate = parseRotaTemplate(settingsRows[0]?.rotaTemplate);
   const welfare = parseWelfareSettings(settingsRows[0]?.welfareOfficers, settingsRows[0]?.welfareDuty);
-  const publishedAt = published.get(monday) ?? null;
   const horizon = availabilityHorizon(settingsRows[0]);
   // Nobody is "asked" when the office keeps availability, so there's no window to warn about.
   const beyondWindow = monday >= horizon.to && settingsRows[0]?.staffManagedBy !== "office";
@@ -66,7 +65,12 @@ export default async function RotaPage({ searchParams }: { searchParams: Promise
         </div>
       </div>
 
-      <PublishWeek weekStart={monday} publishedAt={publishedAt ? publishedAt.toISOString() : null} sessions={total} assigned={allStaff.length} confirmed={confirmed} declined={declined} />
+      {canEdit ? <RosterDays staffAccept={Boolean(settingsRows[0]?.staffAcceptShifts)} days={dayStates.map((d) => {
+        const day = rota.find((r) => r.date === d.date);
+        const sessions = day?.sessions ?? [];
+        return { date: d.date, confirmed: d.confirmed, sessions: sessions.length, people: new Set(sessions.flatMap((x) => x.staff.filter((m) => m.status !== "declined").map((m) => m.instructorId))).size, short: sessions.filter((x) => !x.coverageOk).length };
+      })} /> : null}
+      {settingsRows[0]?.staffAcceptShifts && allStaff.length ? <p className="mb-3 text-xs text-slate-500 print:hidden">Accepted {confirmed} of {allStaff.length}{declined ? <> · <span className="font-semibold text-port">{declined} can&apos;t make it</span></> : null}.</p> : null}
       {beyondWindow ? (
         <p className="mb-4 rounded-lg border border-amber/40 bg-amber/10 px-3 py-2 text-xs text-navy print:hidden">
           Instructors haven&apos;t been asked about this week yet: they can set availability {horizon.weeksAhead} week{horizon.weeksAhead === 1 ? "" : "s"} ahead, so nothing here is blocked by availability.{" "}

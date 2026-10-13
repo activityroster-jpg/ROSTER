@@ -390,7 +390,7 @@ export const SECTIONS: Section[] = [
       { kind: "sub", text: "No signal on the beach" },
       { kind: "p", text: "Each time you open My schedule with a signal, the next seven days are saved on your phone. If the schedule can't load later, you see that saved week instead, with the time it was saved. Signing out removes it from the phone. Face ID or fingerprint unlocks the app in place of typing your PIN (Settings → App), and the PIN is always there as the fallback." },
       { kind: "sub", text: "Shifts in your own calendar" },
-      { kind: "p", text: "In the app, Settings → Calendar → “Make my calendar link”, then “Add to my calendar” (or Google Calendar). Published shifts appear in the phone's own calendar with the course, your role, the time and the place, and update about every hour. The link is private and shown only once; “Make a new link” replaces it and the old one stops working, and “Turn off” stops it entirely. It never contains colleagues' names or contact details." },
+      { kind: "p", text: "In the app, Settings → Calendar → “Make my calendar link”, then “Add to my calendar” (or Google Calendar). Shifts on confirmed days appear in the phone's own calendar with the course, your role, the time and the place, and update about every hour. The link is private and shown only once; “Make a new link” replaces it and the old one stops working, and “Turn off” stops it entirely. It never contains colleagues' names or contact details." },
       { kind: "sub", text: "Your company code" },
       { kind: "steps", items: [
         "Open Settings → “Company code · instructor app”. Each centre has its own 6-character code — copy it and share it with your team (a notice board, a WhatsApp group, your welcome email).",
@@ -406,7 +406,7 @@ export const SECTIONS: Section[] = [
       { kind: "sub", text: "What the app adds" },
       { kind: "bullets", items: [
         "Phone notifications for roster changes, new open shifts, leave decisions and expiring certs (they can switch these off).",
-        "One-tap “I'll be there” on each published course — or “Can't make it” with a reason, so the office can find cover. Colleagues, student numbers and the location show once the week is published.",
+        "Every shift as soon as you're assigned, marked Pending until your centre confirms the day, then Confirmed. Colleagues, student numbers and the location show on each card. If your centre asks you to accept shifts: one-tap “I'll be there”, or “Can't make it” with a reason so the office can find cover.",
         "Availability has “Same as last week”, “All free” and “Clear week” so a regular pattern takes two taps.",
         "Settings: update your name and mobile number, change your PIN, and set or change your password. Docs has a Replace button for a renewed cert.",
         "Face ID / fingerprint instead of typing the PIN every time; the PIN stays as the fallback.",
@@ -465,8 +465,8 @@ export const SECTIONS: Section[] = [
         "Settings → General → “Who keeps staff availability up to date?” → choose “The office. Staff don't need to sign up.” and save.",
         "Add your staff in Staff (a name is enough; email is optional, and no invite is sent unless you tick it).",
         "Everyone now counts as free unless you mark them busy. On the Availability page, paint the days people can't work with the Busy brush, or set each person's usual week on their page.",
-        "Roster as normal. Office-managed people are recorded as confirmed straight away; nobody is asked to confirm.",
-        "Publish the week. Everyone with an email gets a list of their sessions; anyone with no app and no email is named so you can hand them the printed roster.",
+        "Roster as normal. Office-managed people are never asked to accept shifts.",
+        "Confirm each day on the Roster page. Everyone with an email gets a list of their sessions; anyone with no app and no email is named so you can hand them the printed roster.",
       ] },
       { kind: "sub", text: "On each staff member's page" },
       { kind: "bullets", items: [
@@ -587,12 +587,14 @@ export const SECTIONS: Section[] = [
     blurb: "A clean, printable roster for the wall or the inbox.",
     blocks: [
       { kind: "p", text: "The Roster page shows the whole week: each day, each session, who's working, their role, the location/classroom and the times." },
-      { kind: "sub", text: "Publish the week" },
+      { kind: "sub", text: "Confirm each day" },
       { kind: "steps", items: [
-        "Build the week on Courses — add courses and sessions, then put instructors on them. Until you publish, instructors see nothing for that week, so you can move people around freely.",
-        "On the Roster page press “Publish week”. Everyone on that week gets a notification (and an email if they allow it) asking them to confirm.",
-        "Instructors tap “I'll be there” in the app. If someone can't make it they must say why; you get an email, the course shows “can't make it” and the dashboard counts it under Awaiting confirmation so you can find cover or post an open shift.",
-        "Changed something after publishing? Anyone you add, remove or move in a published week is told straight away. “Re-publish & remind everyone” nudges the whole week again.",
+        "Build the week: put instructors on courses. As soon as someone is assigned they see the shift in the app marked Pending. Nobody gets a message yet, so you can move people around freely.",
+        "On the Roster page, the strip above the board shows each day: Pending or ✓ Confirmed, how many sessions and people, and any sessions still short of staff. Press Confirm on a day, or “Confirm whole week” for every pending day at once. A day still short of staff asks you first.",
+        "Confirming tells everyone on that day: a notice in the app, and an email if they allow it, listing their shifts. In the app the shift turns to Confirmed. Messages go out in the background, so the page doesn't wait.",
+        "Changing a confirmed day? It stays confirmed, and anyone you add, take off or move is told straight away.",
+        "Need to rework a day? Press Undo on it: it goes back to Pending and nobody is told. Make your changes, then confirm it again: only the people whose shifts changed hear about it.",
+        "Want staff to accept their shifts too? Settings → Checks → “Ask staff to accept or decline their shifts”. Then, once a day is confirmed, each person taps “I'll be there” or “Can't make it” with a reason; you get an email, the course shows “can't make it” and the dashboard counts it under Awaiting replies. Off by default: confirming the day is enough.",
       ] },
       { kind: "sub", text: "The PDF" },
       { kind: "p", text: "“Download PDF” on the Roster page produces a proper document, not a picture of the screen. It is a breakdown of each day: a row for every course, with the course name on the left, then its times, then who is working, then any extras you have turned on (number of students booked, location, equipment, staff roles). Pick the period beside the button: one day, the week, or the whole month. The columns, the style (Classic, Bold, Minimal or Compact) and portrait or landscape follow what you chose when you set up, and you can change them any time under Settings → Roster PDF." },
@@ -855,7 +857,7 @@ export const SECTIONS: Section[] = [
     label: "The Help button",
     blurb: "Ask a question in your own words and get the answer from these guides.",
     blocks: [
-      { kind: "p", text: "Every page in the office, and every page of this website, has a small Help button in the bottom-right corner. Press it, type a question such as “How do I publish the roster?”, and it answers with the right passage from the Learning Centre, plus a link to the full guide." },
+      { kind: "p", text: "Every page in the office, and every page of this website, has a small Help button in the bottom-right corner. Press it, type a question such as “How do I confirm the roster?”, and it answers with the right passage from the Learning Centre, plus a link to the full guide." },
       { kind: "sub", text: "Using it" },
       { kind: "steps", items: [
         "Press Help in the bottom-right corner. It opens a small panel so you can keep working.",

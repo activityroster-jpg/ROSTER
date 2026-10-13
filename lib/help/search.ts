@@ -205,7 +205,7 @@ export function answerQuestion(question: string, path?: string | null): HelpRepl
   for (const s of SMALLTALK) if (s.test.test(q)) return { kind: "smalltalk", message: s.reply, related: [] };
   const { docs, df, avgLen, words } = index();
   const terms = queryTerms(q, df, words);
-  if (terms.length === 0) return { kind: "not-found", message: "Ask me a question in a few words, for example “How do I publish the roster?”.", related: [] };
+  if (terms.length === 0) return { kind: "not-found", message: "Ask me a question in a few words, for example “How do I confirm the roster?”.", related: [] };
 
   const N = docs.length;
   const pageTopics = new Set(topicsForPage(path));

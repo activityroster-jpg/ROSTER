@@ -12,7 +12,7 @@ import { auditStatement } from "./audit";
 import { runAtomic } from "@/lib/db/batch";
 import { syncHoursForCourse } from "./hours";
 import { notifyInstructor } from "./notifications";
-import { publishedWeeks, weekOf } from "./roster";
+import { confirmedDays } from "./roster-days";
 
 /**
  * Cancelling (weather, no bookings, an instructor off sick) is the everyday
@@ -148,8 +148,8 @@ export async function restoreSessions(repos: Repositories, ctx: AnyTenantContext
   await runAtomic(repos.db, [...ops, ...(audit ? [audit] : [])]);
   await syncHoursForCourse(repos, ctx, courseId);
   const staff = await t.courseStaff.list(ctx, eq(courseStaffTable.courseId, courseId));
-  const published = await publishedWeeks(repos, ctx);
-  if (targets.some((s) => published.has(weekOf(s.date)))) {
+  const confirmed = await confirmedDays(repos, ctx);
+  if (targets.some((s) => confirmed.has(s.date))) {
     for (const instructorId of new Set(staff.filter((a) => a.status !== "declined").map((a) => a.instructorId))) {
       await notifyInstructor(repos, ctx, instructorId, { title: `${courseName} is back on`, body: `The cancelled session${targets.length === 1 ? "" : "s"} on ${dates} will now run as rostered.`, email: true });
     }
@@ -162,7 +162,7 @@ export type DeleteVerdict = { ok: true } | { ok: false; reason: string };
 /**
  * Delete is for drafts nobody was ever rostered on. Anything with staff, pay
  * lines that were approved or clocked, or a session in a published week must
- * be cancelled instead, so the history and the money stay right.
+ * be cancelled instead, so the history and the money stay right. (A session on a confirmed roster day counts as published.)
  */
 export async function canDeleteCourse(repos: Repositories, ctx: AnyTenantContext, courseId: string): Promise<DeleteVerdict> {
   const t = repos.tenant;
@@ -170,21 +170,20 @@ export async function canDeleteCourse(repos: Repositories, ctx: AnyTenantContext
   if (staff > 0) return { ok: false, reason: "People are rostered on this course. Cancel it instead, so they're told and the history stays." };
   const sessions = await t.courseSession.list(ctx, eq(courseSessionTable.courseId, courseId));
   if (sessions.length) {
-    const published = await publishedWeeks(repos, ctx);
-    if (sessions.some((s) => published.has(weekOf(s.date)))) return { ok: false, reason: "This course is in a published week. Cancel it instead." };
+    const confirmed = await confirmedDays(repos, ctx);
+    if (sessions.some((s) => confirmed.has(s.date))) return { ok: false, reason: "This course is on a confirmed roster day. Cancel it instead." };
     const records = await t.hoursRecord.listIn(ctx, hoursRecordTable.courseSessionId, sessions.map((s) => s.id));
     if (records.some((r) => r.approved || r.actualMinutes != null || r.overrideMinutes != null || r.overridePay != null)) return { ok: false, reason: "Payroll lines for this course have been approved or edited. Cancel it instead." };
   }
   return { ok: true };
 }
 
-/** The same test for removing one session: nobody rostered, week not published, nothing approved. */
+/** The same test for removing one session: nobody rostered, day not confirmed, nothing approved. */
 export async function canRemoveSession(repos: Repositories, ctx: AnyTenantContext, session: CourseSession): Promise<DeleteVerdict> {
   const t = repos.tenant;
   const staff = await t.courseStaff.count(ctx, eq(courseStaffTable.courseId, session.courseId));
   if (staff > 0) return { ok: false, reason: "People are rostered on this course. Cancel the day instead, so they're told." };
-  const published = await publishedWeeks(repos, ctx);
-  if (published.has(weekOf(session.date))) return { ok: false, reason: "This week is published. Cancel the day instead." };
+  if ((await confirmedDays(repos, ctx)).has(session.date)) return { ok: false, reason: "This roster day is confirmed. Cancel the day instead." };
   const records = await t.hoursRecord.list(ctx, eq(hoursRecordTable.courseSessionId, session.id));
   if (records.some((r) => r.approved || r.actualMinutes != null || r.overrideMinutes != null || r.overridePay != null)) return { ok: false, reason: "A payroll line for this session has been approved or edited. Cancel the day instead." };
   return { ok: true };

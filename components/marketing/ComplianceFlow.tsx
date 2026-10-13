@@ -2,7 +2,7 @@ import { ArrowDown, ArrowRight, CalendarPlus, Check, Send, Users } from "lucide-
 
 /**
  * How a centre's week comes together, in three tiles: add the courses, pick
- * the staff (the checks run here), publish. Used on the homepage and the
+ * the staff (the checks run here), confirm. Used on the homepage and the
  * search pages; the strip underneath shows what happens when plans change.
  */
 const CHECKS = ["Right instructor type", "Available", "Senior Instructor on", "Ratio (when switched on)"];
@@ -24,7 +24,7 @@ function StepNumber({ n, light = false }: { n: number; light?: boolean }) {
 
 export function ComplianceFlow({ showStrip = true }: { showStrip?: boolean }) {
   return (
-    <figure aria-label="Your week in three steps: add your courses, select your staff, publish">
+    <figure aria-label="Your week in three steps: add your courses, select your staff, confirm">
       <ol className="grid items-stretch gap-3 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)] lg:gap-4">
         <li className="rounded-card border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex items-center gap-3"><StepNumber n={1} /><CalendarPlus className="h-5 w-5 text-teal" aria-hidden="true" /></div>
@@ -49,7 +49,7 @@ export function ComplianceFlow({ showStrip = true }: { showStrip?: boolean }) {
 
         <li className="flex flex-col justify-center rounded-card bg-starboard p-5 text-white shadow-sm">
           <div className="flex items-center gap-3"><StepNumber n={3} light /><Send className="h-5 w-5" aria-hidden="true" /></div>
-          <p className="mt-3 font-display text-lg font-semibold">Publish: ready to run</p>
+          <p className="mt-3 font-display text-lg font-semibold">Confirm: ready to run</p>
           <p className="mt-1 text-sm text-white/85">In every instructor&rsquo;s app, on the printed roster and on the emergency sheet.</p>
         </li>
       </ol>

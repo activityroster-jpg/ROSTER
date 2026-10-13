@@ -63,7 +63,7 @@ export async function eraseOrganisationData(
   const order = [
     // 1. rows that reference courses / people / config
     t.sessionStaffOverride, t.courseStaff, t.courseEquipment, t.courseLocation, t.courseRoleRequirement, t.courseSession,
-    t.hoursRecord, t.availability, t.availabilityNote, t.payRate, t.rosterWeek,
+    t.hoursRecord, t.availability, t.availabilityNote, t.payRate, t.rosterWeek, t.rosterDay,
     t.courseTypeStaffing, t.qualificationCourseType, t.courseTypeEquipment,
     t.qualification, t.complianceItem,
     // 2. courses (reference courseType)

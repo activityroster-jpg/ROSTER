@@ -4,7 +4,7 @@ import type { AnyTenantContext, SystemTenantContext } from "@/lib/tenant/context
 import { instructor as instructorTable } from "@/lib/db/schema";
 import { buildIcs, type IcsEvent } from "@/lib/domain/ics";
 import { sessionsForInstructor, staffBySession } from "./session-staff";
-import { publishedWeeks, weekOf } from "./roster";
+import { confirmedDays } from "./roster-days";
 import { addDays } from "./schedule";
 import { writeAudit } from "./audit";
 import { todayIso } from "@/lib/domain/time";
@@ -71,21 +71,21 @@ export async function resolveCalendarToken(repos: Repositories, token: string): 
   return { ctx, instructorId: row.id, orgName: org.name };
 }
 
-/** The feed itself: published shifts from a month back to six months ahead. */
+/** The feed itself: shifts on confirmed roster days, from a month back to six months ahead (pending days stay off people's calendars). */
 export async function calendarFeedFor(repos: Repositories, ctx: AnyTenantContext, instructorId: string, orgName: string, now: number = Date.now()): Promise<string> {
   const settings = (await repos.tenant.orgSettings.list(ctx))[0];
   const today = todayIso(settings?.timezone ?? undefined, now);
   const from = addDays(today, -31);
   const to = addDays(today, 183);
-  const [mine, published, courses, roles, courseLocations, locations] = await Promise.all([
+  const [mine, confirmed, courses, roles, courseLocations, locations] = await Promise.all([
     sessionsForInstructor(repos, ctx, instructorId),
-    publishedWeeks(repos, ctx),
+    confirmedDays(repos, ctx),
     repos.tenant.course.list(ctx),
     repos.tenant.roleType.list(ctx),
     repos.tenant.courseLocation.list(ctx),
     repos.tenant.location.list(ctx),
   ]);
-  const shown = mine.filter((s) => s.date >= from && s.date < to && published.has(weekOf(s.date)));
+  const shown = mine.filter((s) => s.date >= from && s.date < to && confirmed.has(s.date));
   const members = await staffBySession(repos, ctx, shown);
   const courseName = new Map(courses.map((c) => [c.id, c.name ?? "Course"]));
   const roleName = new Map(roles.map((r) => [r.id, r.name]));
