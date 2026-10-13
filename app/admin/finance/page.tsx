@@ -34,6 +34,7 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
   const rows = inYear.map((t) => ({
     id: t.id, date: t.date, category: t.category, categoryLabel: CATEGORY_BY_KEY[t.category]?.label ?? t.category, group: CATEGORY_BY_KEY[t.category]?.group ?? "operating",
     description: t.description, counterparty: t.counterparty, amountMinor: t.amountMinor, vatMinor: t.vatMinor, currency: t.currency, source: t.source, receiptRef: t.receiptRef, notes: t.notes,
+    receiptName: t.receiptKey ? t.receiptName ?? "receipt" : null, receiptType: t.receiptKey ? t.receiptType : null,
   }));
   const tab = (v: string, label: string) => <Link href={`/admin/finance?fy=${fy}&view=${v}`} className={`rounded-md px-3 py-1 text-sm font-medium ${view === v ? "bg-navy text-white" : "text-slate-500 hover:text-navy"}`}>{label}</Link>;
   const money = (m: number) => fmtMinor(m, cur);

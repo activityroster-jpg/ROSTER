@@ -39,10 +39,10 @@ export async function GET(req: Request) {
       lines.push([capital, k, major(v)].map(cell).join(","));
     }
   } else {
-    lines = [["Date", "Section", "Category", "Description", "Supplier/customer", "Amount", "VAT", "Currency", `Amount (${cur})`, "Source", "Reference", "Notes"].map(cell).join(",")];
+    lines = [["Date", "Section", "Category", "Description", "Supplier/customer", "Amount", "VAT", "Currency", `Amount (${cur})`, "Source", "Reference", "Receipt attached", "Notes"].map(cell).join(",")];
     for (const t of all.filter((t) => t.date >= from && t.date < to).sort((a, b) => a.date.localeCompare(b.date))) {
       const c = CATEGORY_BY_KEY[t.category];
-      lines.push([t.date, c ? GROUP_LABEL[c.group] : "", c?.label ?? t.category, t.description, t.counterparty, major(t.amountMinor), t.vatMinor != null ? major(t.vatMinor) : "", t.currency, major(toReporting(t.amountMinor, t.currency, settings)), t.source, t.receiptRef, t.notes].map(cell).join(","));
+      lines.push([t.date, c ? GROUP_LABEL[c.group] : "", c?.label ?? t.category, t.description, t.counterparty, major(t.amountMinor), t.vatMinor != null ? major(t.vatMinor) : "", t.currency, major(toReporting(t.amountMinor, t.currency, settings)), t.source, t.receiptRef, t.receiptKey ? t.receiptName ?? "yes" : "", t.notes].map(cell).join(","));
     }
   }
   return new Response(`﻿${lines.join("\r\n")}\r\n`, {

@@ -5,6 +5,7 @@ import { requirePlatformAdmin } from "@/lib/platform/admin";
 import { getDb, getEnv, getRepositories } from "@/lib/cf/bindings";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { CATEGORY_BY_KEY } from "@/lib/finance/categories";
+import { deleteReceipt } from "@/lib/finance/receipts";
 import { backfillStripeRevenue } from "@/lib/billing/finance-sync";
 import { financeSettingsSchema, financeTransactionSchema, firstIssue, idSchema, isoDateSchema } from "@/lib/validation/actions";
 
@@ -71,7 +72,9 @@ export async function updateTransactionAction(id: string, fd: FormData): Promise
 export async function deleteTransactionAction(id: string): Promise<FinanceResult> {
   const p = await platform();
   if (!idSchema.safeParse(id).success) return { ok: false, error: "Not found" };
+  const row = await p.findFinanceTransaction(id);
   const ok = await p.deleteFinanceTransaction(id);
+  if (ok) await deleteReceipt(row?.receiptKey);
   revalidatePath("/admin/finance");
   return ok ? { ok: true, message: "Deleted" } : { ok: false, error: "Not found" };
 }

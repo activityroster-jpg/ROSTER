@@ -607,6 +607,10 @@ export const financeTransaction = sqliteTable("finance_transaction", {
   /** Stripe invoice / charge id so webhooks and backfills never double-count. */
   externalId: text("external_id"),
   receiptRef: text("receipt_ref"), // invoice number, link or file name
+  /** The uploaded receipt (photo or PDF) in private storage, its original name and type. */
+  receiptKey: text("receipt_key"),
+  receiptName: text("receipt_name"),
+  receiptType: text("receipt_type"),
   notes: text("notes"),
   createdAt: createdAt(),
   updatedAt: updatedAt(),

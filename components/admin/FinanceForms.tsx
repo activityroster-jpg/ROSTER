@@ -99,6 +99,59 @@ export function AddTransactionForm() {
 export interface TxRow {
   id: string; date: string; category: string; categoryLabel: string; group: string; description: string; counterparty: string | null;
   amountMinor: number; vatMinor: number | null; currency: "GBP" | "EUR"; source: "manual" | "stripe"; receiptRef: string | null; notes: string | null;
+  /** The uploaded receipt's name and type, or null when none is attached. */
+  receiptName: string | null; receiptType: string | null;
+}
+
+/**
+ * A line's receipt: open it, attach one (a PDF or a photo, up to 10 MB), replace
+ * it or take it off. Files go to the upload route, not a server action, because
+ * a phone photo is bigger than an action will take.
+ */
+function ReceiptCell({ row, onMessage }: { row: TxRow; onMessage: (m: string) => void }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const inputId = `receipt-${row.id}`;
+  const upload = async (file: File | undefined) => {
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) { onMessage("That file is too big (10 MB at most)."); return; }
+    setBusy(true);
+    const fd = new FormData();
+    fd.set("id", row.id);
+    fd.set("file", file);
+    try {
+      const res = await fetch("/api/admin/finance/receipt", { method: "POST", body: fd });
+      const body = (await res.json().catch(() => ({}))) as { error?: string };
+      onMessage(res.ok ? "Receipt attached" : body.error ?? "Could not attach the receipt");
+      if (res.ok) router.refresh();
+    } catch { onMessage("Could not attach the receipt. Check your connection."); }
+    setBusy(false);
+  };
+  const remove = async () => {
+    if (!await askConfirm("Take the receipt off this line? The file is deleted.")) return;
+    setBusy(true);
+    const res = await fetch(`/api/admin/finance/receipt?id=${encodeURIComponent(row.id)}`, { method: "DELETE" }).catch(() => null);
+    onMessage(res?.ok ? "Receipt removed" : "Could not remove the receipt");
+    if (res?.ok) router.refresh();
+    setBusy(false);
+  };
+  const picker = (label: string, cls: string) => (
+    <label htmlFor={inputId} className={`cursor-pointer ${cls} ${busy ? "pointer-events-none opacity-50" : ""}`}>
+      {busy ? "Uploading…" : label}
+      <input id={inputId} type="file" accept="application/pdf,image/png,image/jpeg,image/webp" className="sr-only" disabled={busy}
+        onChange={(e) => { void upload(e.currentTarget.files?.[0]); e.currentTarget.value = ""; }} />
+    </label>
+  );
+  if (!row.receiptName) return picker("+ Receipt", "text-teal hover:underline");
+  return (
+    <span className="inline-flex items-center gap-2">
+      <a href={`/api/admin/finance/receipt?id=${encodeURIComponent(row.id)}`} target="_blank" rel="noreferrer" title={row.receiptName} className="max-w-[7rem] truncate text-teal hover:underline">
+        {row.receiptType === "application/pdf" ? "📄" : "🖼"} {row.receiptName}
+      </a>
+      {picker("Replace", "text-slate-400 hover:text-navy")}
+      <button type="button" onClick={remove} disabled={busy} className="text-slate-400 hover:text-port">Remove</button>
+    </span>
+  );
 }
 
 /** The log: edit in place, delete, filter by group/category. */
@@ -110,14 +163,15 @@ export function TransactionTable({ rows }: { rows: TxRow[] }) {
   const [msg, setMsg] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const fmt = (minor: number, cur: string) => new Intl.NumberFormat("en-GB", { style: "currency", currency: cur }).format(minor / 100);
-  const visible = rows.filter((r) => (!filter || r.group === filter || r.category === filter) && (!q || `${r.description} ${r.counterparty ?? ""} ${r.categoryLabel}`.toLowerCase().includes(q.toLowerCase())));
+  const matches = (r: TxRow) => !filter || r.group === filter || r.category === filter || (filter === "no-receipt" && !r.receiptName && CATEGORY_BY_KEY[r.category]?.effect === "cost" && r.source === "manual");
+  const visible = rows.filter((r) => matches(r) && (!q || `${r.description} ${r.counterparty ?? ""} ${r.categoryLabel}`.toLowerCase().includes(q.toLowerCase())));
 
   const save = (id: string, form: HTMLFormElement) => start(async () => {
     const r = await updateTransactionAction(id, new FormData(form));
     setMsg(r.ok ? "Saved" : r.error ?? "Could not save");
     if (r.ok) { setEditing(null); router.refresh(); }
   });
-  const del = async (id: string) => { if (!await askConfirm("Delete this line? Your accountant will not see it.")) return; start(async () => { const r = await deleteTransactionAction(id); setMsg(r.ok ? "Deleted" : r.error ?? "Failed"); router.refresh(); }); };
+  const del = async (id: string) => { if (!await askConfirm("Delete this line? Your accountant will not see it, and any receipt attached is deleted too.")) return; start(async () => { const r = await deleteTransactionAction(id); setMsg(r.ok ? "Deleted" : r.error ?? "Failed"); router.refresh(); }); };
 
   return (
     <div>
@@ -125,6 +179,7 @@ export function TransactionTable({ rows }: { rows: TxRow[] }) {
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search…" className="w-48 rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none focus:border-teal" aria-label="Search transactions" />
         <select value={filter} onChange={(e) => setFilter(e.target.value)} className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm" aria-label="Filter">
           <option value="">All lines</option>
+          <option value="no-receipt">Costs with no receipt</option>
           {GROUPS.map((g) => <option key={g} value={g}>{GROUP_LABEL[g]}</option>)}
           <optgroup label="One category">{FINANCE_CATEGORIES.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}</optgroup>
         </select>
@@ -132,15 +187,15 @@ export function TransactionTable({ rows }: { rows: TxRow[] }) {
         {msg ? <span className="ml-auto text-xs text-slate-500" role="status">{msg}</span> : null}
       </div>
       <div className="overflow-x-auto rounded-card border border-slate-200 bg-white">
-        <table className="w-full min-w-[820px] text-left text-sm">
+        <table className="w-full min-w-[960px] text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-            <tr><th className="px-3 py-2">Date</th><th className="px-3 py-2">Category</th><th className="px-3 py-2">What for</th><th className="px-3 py-2">Who</th><th className="px-3 py-2 text-right">Amount</th><th className="px-3 py-2 text-right">VAT</th><th className="px-3 py-2">Ref</th><th className="px-3 py-2"></th></tr>
+            <tr><th className="px-3 py-2">Date</th><th className="px-3 py-2">Category</th><th className="px-3 py-2">What for</th><th className="px-3 py-2">Who</th><th className="px-3 py-2 text-right">Amount</th><th className="px-3 py-2 text-right">VAT</th><th className="px-3 py-2">Receipt</th><th className="px-3 py-2">Ref</th><th className="px-3 py-2"></th></tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {visible.length === 0 ? <tr><td colSpan={8} className="px-3 py-8 text-center text-slate-400">Nothing here yet.</td></tr> : visible.map((r) => (
+            {visible.length === 0 ? <tr><td colSpan={9} className="px-3 py-8 text-center text-slate-400">Nothing here yet.</td></tr> : visible.map((r) => (
               editing === r.id ? (
                 <tr key={r.id} className="bg-teal/5">
-                  <td colSpan={8} className="px-3 py-3">
+                  <td colSpan={9} className="px-3 py-3">
                     <form onSubmit={(e) => { e.preventDefault(); save(r.id, e.currentTarget); }} className="space-y-3">
                       <TxFields defaults={{ date: r.date, category: r.category, description: r.description, counterparty: r.counterparty ?? "", amount: (r.amountMinor / 100).toFixed(2), vat: r.vatMinor != null ? (r.vatMinor / 100).toFixed(2) : "", currency: r.currency, receiptRef: r.receiptRef ?? "", notes: r.notes ?? "" }} />
                       <div className="flex gap-3"><button disabled={pending} className="rounded-lg bg-teal px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50">Save</button><button type="button" onClick={() => setEditing(null)} className="text-sm text-slate-500">Cancel</button></div>
@@ -155,6 +210,7 @@ export function TransactionTable({ rows }: { rows: TxRow[] }) {
                   <td className="px-3 py-2 text-slate-500">{r.counterparty ?? "—"}</td>
                   <td className={`whitespace-nowrap px-3 py-2 text-right font-medium ${isInflow(CATEGORY_BY_KEY[r.category]) ? "text-starboard" : "text-navy"}`}>{r.group === "capital" ? <span className="mr-1 text-[10px] font-normal text-slate-400">{isInflow(CATEGORY_BY_KEY[r.category]) ? "in" : "out"}</span> : null}{fmt(r.amountMinor, r.currency)}</td>
                   <td className="whitespace-nowrap px-3 py-2 text-right text-slate-500">{r.vatMinor != null ? fmt(r.vatMinor, r.currency) : "—"}</td>
+                  <td className="whitespace-nowrap px-3 py-2 text-xs"><ReceiptCell row={r} onMessage={setMsg} /></td>
                   <td className="max-w-[10rem] truncate px-3 py-2 text-xs text-slate-500">{r.receiptRef?.startsWith("http") ? <a href={r.receiptRef} target="_blank" rel="noreferrer" className="text-teal hover:underline">link</a> : r.receiptRef ?? "—"}</td>
                   <td className="whitespace-nowrap px-3 py-2 text-right text-xs">
                     <button onClick={() => { setEditing(r.id); setMsg(null); }} className="text-teal hover:underline">Edit</button>

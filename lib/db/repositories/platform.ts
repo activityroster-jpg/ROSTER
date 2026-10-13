@@ -513,6 +513,11 @@ export class PlatformRepository {
     return { row: rows[0]!, created: true };
   }
 
+  async findFinanceTransaction(id: string): Promise<FinanceTransaction | null> {
+    const rows = await this.db.select().from(financeTransaction).where(eq(financeTransaction.id, id)).limit(1);
+    return rows[0] ?? null;
+  }
+
   async updateFinanceTransaction(id: string, patch: Partial<Omit<NewFinanceTransaction, "id" | "createdAt">>): Promise<FinanceTransaction | null> {
     const rows = await this.db.update(financeTransaction).set({ ...patch, updatedAt: new Date() }).where(eq(financeTransaction.id, id)).returning();
     return rows[0] ?? null;
