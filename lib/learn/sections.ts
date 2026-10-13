@@ -21,7 +21,7 @@ export interface Section {
   blocks: Block[];
 }
 
-export const SECTIONS: Section[] = [
+const ALL_SECTIONS: Section[] = [
   {
     id: "getting-started",
     icon: "🚀",
@@ -942,22 +942,31 @@ export const SECTIONS: Section[] = [
 ];
 
 /**
- * The order a centre meets the guides in, following the quickest route to a
- * first roster: sign up and set up (courses, then team with their instructor
- * types), invite the team, put the courses on the calendar, build the roster,
- * check licences and confirm; then running the season, the later extras, the
- * account and data topics, with help and troubleshooting last. SECTIONS is kept
- * in the same order; the Learning Centre shows these as headings.
+ * The guide's route, in the order of the how-to video series (1 to 12): each
+ * step opens with its video's topic, followed by the topics that go with it.
+ * Account, billing and help come after the series.
  */
-export const GUIDE_STAGES: { label: string; ids: string[] }[] = [
-  { label: "Sign up and set up", ids: ["getting-started", "places", "instructor-types", "staff", "staff-import", "onboarding-tracker"] },
-  { label: "Invite your team", ids: ["app", "office-managed"] },
-  { label: "Put your courses on the calendar", ids: ["courses", "import", "integrations"] },
-  { label: "Build the roster", ids: ["availability", "board", "rostering", "bulk", "problems"] },
-  { label: "Check licences and confirm", ids: ["licences", "rota"] },
-  { label: "Run the season", ids: ["dashboard", "leave", "time", "notifications"] },
-  { label: "Later: pay, kit and settings", ids: ["pay-rates", "locations", "equipment", "settings", "roles"] },
-  { label: "Account, billing & data", ids: ["plans", "billing", "trial-survey", "admin-security", "data", "retention"] },
+export const GUIDE_STAGES: { label: string; video?: number; ids: string[] }[] = [
+  { video: 1, label: "Sign up and the setup wizard", ids: ["getting-started", "onboarding-tracker"] },
+  { video: 2, label: "Your team and their instructor types", ids: ["instructor-types", "places", "staff-import"] },
+  { video: 3, label: "Inviting your team", ids: ["staff", "office-managed"] },
+  { video: 4, label: "Getting courses on the calendar", ids: ["import", "courses", "integrations"] },
+  { video: 5, label: "Availability", ids: ["availability"] },
+  { video: 6, label: "The roster board and Auto-roster", ids: ["board", "rostering", "bulk", "problems"] },
+  { video: 7, label: "Confirming days, and what staff see", ids: ["rota", "licences", "dashboard", "notifications"] },
+  { video: 8, label: "Printing, the PDF and the emergency sheet", ids: ["if-the-platform-is-down"] },
+  { video: 9, label: "Leave and open shifts", ids: ["leave"] },
+  { video: 10, label: "Pay rates and payroll", ids: ["pay-rates", "time"] },
+  { video: 11, label: "Settings and office access", ids: ["settings", "roles", "admin-security", "locations", "equipment"] },
+  { video: 12, label: "For instructors: the app", ids: ["app"] },
+  { label: "Account, billing & data", ids: ["plans", "billing", "trial-survey", "data", "retention"] },
   { label: "Dive centres", ids: ["dive-centres"] },
-  { label: "Help & troubleshooting", ids: ["help-assistant", "feature-requests", "if-the-platform-is-down"] },
+  { label: "Help", ids: ["help-assistant", "feature-requests"] },
 ];
+
+/** Every section, in the guide's route order (GUIDE_STAGES). */
+export const SECTIONS: Section[] = GUIDE_STAGES.flatMap((g) => g.ids).map((id) => {
+  const found = ALL_SECTIONS.find((x) => x.id === id);
+  if (!found) throw new Error(`Learning Centre: no section "${id}"`);
+  return found;
+});

@@ -105,8 +105,8 @@ export function LearningCenter({ initialTopic }: { initialTopic?: string }) {
         <p className="text-sm font-semibold uppercase tracking-wide text-teal">Learning Centre</p>
         <h1 className="mt-1 font-display text-3xl font-bold text-navy sm:text-4xl">How to use ActivityRoster</h1>
         <p className="mx-auto mt-3 max-w-2xl text-slate-600">
-          A step-by-step guide to every part of the platform, in the order you&apos;ll need it: set up your centre,
-          add courses and instructors, build the roster, then run the season. Help and troubleshooting are at the end.
+          Twelve short videos, each with a step-by-step guide, in the order you&apos;ll need them: set up your centre,
+          add your team and courses, build and confirm the roster, then leave, pay and the instructor app.
         </p>
       </div>
 
@@ -122,7 +122,7 @@ export function LearningCenter({ initialTopic }: { initialTopic?: string }) {
                 <li key={s.id} className="flex-none lg:flex-auto">
                   {stage ? (
                     <p className={`hidden px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400 lg:block ${stageIndex > 0 ? "pt-4" : ""}`}>
-                      {stageIndex + 1}. {stage.label}
+                      {stage.video ? <><span aria-hidden="true">▶ </span>{stage.video}. </> : null}{stage.label}
                     </p>
                   ) : null}
                   <button

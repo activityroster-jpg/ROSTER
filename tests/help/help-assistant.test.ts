@@ -169,6 +169,16 @@ describe("Learning Centre order", () => {
     const staged = GUIDE_STAGES.flatMap((g) => g.ids);
     expect(staged).toEqual(SECTIONS.map((s) => s.id));
     expect(SECTIONS[0]!.id).toBe("getting-started");
-    expect(SECTIONS.at(-1)!.id).toBe("if-the-platform-is-down");
+    expect(SECTIONS.at(-1)!.id).toBe("feature-requests");
+  });
+  it("follows the video series: each of the 12 videos leads its own step, in order, once", async () => {
+    const { GUIDE_STAGES } = await import("@/lib/learn/sections");
+    const { VIDEOS } = await import("@/lib/learn/videos");
+    const withVideo = GUIDE_STAGES.filter((g) => g.video);
+    expect(withVideo.map((g) => g.video)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+    for (const v of VIDEOS) {
+      expect(v.sections).toHaveLength(1);
+      expect(withVideo[v.n - 1]!.ids[0]).toBe(v.sections[0]);
+    }
   });
 });
