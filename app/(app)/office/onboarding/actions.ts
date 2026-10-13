@@ -15,6 +15,7 @@ import {
 } from "@/lib/db/schema";
 import { writeAudit } from "@/lib/services/audit";
 import { createInstructorType, ownLadder, setCourseTeachers } from "@/lib/services/instructor-types";
+import { fillCourseMap } from "@/lib/services/instructor-types-upgrade";
 import { courseTeachersSchema } from "@/lib/validation/actions";
 import { linkInstructorUser } from "@/lib/services/invite";
 import { serializeFeatures } from "@/lib/features";
@@ -245,7 +246,9 @@ export async function addDefaultCoursesAction(): Promise<{ ok: boolean; created:
     const row = await repos.tenant.courseType.insert(ctx, { ...c, active: true });
     created.push({ id: row.id, name: row.name, scheme: row.scheme, audience: row.audience, category: row.category ?? null });
   }
-  if (created.length) await writeAudit(repos, ctx, { action: "add_default_courses", entity: "course_type", after: { count: created.length } });
+  // Who can teach each new course (the course map), for centres on instructor types.
+  const linked = created.length ? await fillCourseMap(repos, ctx, organisation.activityType) : 0;
+  if (created.length) await writeAudit(repos, ctx, { action: "add_default_courses", entity: "course_type", after: { count: created.length, linked } });
   revalidatePath("/office/onboarding");
   revalidatePath("/office/courses");
   revalidatePath("/office/settings");

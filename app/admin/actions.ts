@@ -26,6 +26,7 @@ import { ORG_STATUSES, SUBSCRIPTION_STATUSES, PLANS, ORG_TIERS, ERROR_REPORT_STA
 import { writeAudit } from "@/lib/services/audit";
 import { fairUseSchema } from "@/lib/services/fair-use";
 import { removeTestCentre } from "@/lib/services/test-centre";
+import { upgradeInstructorTypes, type UpgradeReport } from "@/lib/services/instructor-types-upgrade";
 
 type Result = { ok: boolean; error?: string };
 
@@ -370,4 +371,26 @@ export async function setMaintenanceAction(on: boolean, message: string): Promis
   console.info(`[ops] maintenance ${on ? "ON" : "off"} by ${email}`);
   revalidatePath("/", "layout");
   return { ok: true };
+}
+
+/**
+ * Move an existing RYA centre onto instructor types (lib/services/instructor-types-upgrade).
+ * `dryRun` reports what would change and writes nothing. Run it on staging first;
+ * on production the deploy has already recorded the database bookmark.
+ */
+export async function upgradeInstructorTypesAction(organisationId: string, dryRun: boolean): Promise<Result & { report?: UpgradeReport; name?: string }> {
+  const { email } = await requirePlatformAdmin();
+  if (!idSchema.safeParse(organisationId).success) return { ok: false, error: "Not found" };
+  const repos = await getRepositories();
+  const org = await repos.control.organisationById(organisationId);
+  if (!org) return { ok: false, error: "Not found" };
+  try {
+    const report = await upgradeInstructorTypes(repos, { organisationId: org.id, slug: org.slug, system: true, reason: `instructor types upgrade by ${email}` }, { dryRun: dryRun === true, today: new Date().toISOString().slice(0, 10), activityType: org.activityType });
+    if (!dryRun) console.info(`[ops] instructor types upgrade for ${org.slug} by ${email}: ${JSON.stringify(report)}`);
+    revalidatePath("/admin");
+    return { ok: true, report, name: org.name };
+  } catch (err) {
+    console.error(`[ops] instructor types upgrade failed for ${org.slug}`, err);
+    return { ok: false, error: `It stopped part way (${(err as Error).message}). Safe to run again: it carries on where it left off.` };
+  }
 }

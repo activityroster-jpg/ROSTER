@@ -22,6 +22,7 @@ import { mailProviderOrder, readMailFailover } from "@/lib/ops/mail-status";
 import { leavingDeadline } from "@/lib/services/leaving";
 import { readIncident, readMaintenance } from "@/lib/ops/incident";
 import { OpsControls } from "@/components/admin/OpsControls";
+import { InstructorTypesUpgrade } from "@/components/admin/InstructorTypesUpgrade";
 import { trialState } from "@/lib/billing/trial";
 
 export const dynamic = "force-dynamic";
@@ -71,6 +72,9 @@ export default async function AdminOverviewPage({ searchParams }: { searchParams
     Promise.all([readLastBackup(), readLastRehearsal(), readMailFailover(), readIncident(), readMaintenance()]),
   ]);
   const fairUse = { fairUsePeople: pricing.fairUsePeople ?? DEFAULT_PRICING.fairUsePeople, fairUseAlertAt: pricing.fairUseAlertAt ?? DEFAULT_PRICING.fairUseAlertAt, inviteDailyCap: pricing.inviteDailyCap ?? DEFAULT_PRICING.inviteDailyCap };
+  // RYA centres still on the generic places (set up before instructor types), for the upgrade card.
+  const mapVersions = await platform.teachingMapVersions().catch(() => new Map<string, number>());
+  const toUpgrade = allOrgs.filter((o) => o.activityType === "rya_centre" && mapVersions.has(o.id) && (mapVersions.get(o.id) ?? 0) < 1).map((o) => ({ id: o.id, name: o.name, slug: o.slug })).sort((a, b) => a.name.localeCompare(b.name));
   let bigCentres: Awaited<ReturnType<typeof centresOverAlert>> = [];
   try { bigCentres = await centresOverAlert(db, fairUse.fairUseAlertAt); } catch { /* cosmetic */ }
   const now = Date.now();
@@ -174,6 +178,14 @@ export default async function AdminOverviewPage({ searchParams }: { searchParams
         <p className="mb-3 text-xs text-slate-500">For an incident: tell everyone what is happening, or pause editing while you fix it. The runbook is docs/runbooks/incident.md.</p>
         <OpsControls incident={incident ? { message: incident.message, level: incident.level } : null} maintenance={maintenance ? { on: maintenance.on, message: maintenance.message } : null} />
       </Card>
+
+      {toUpgrade.length ? (
+        <Card className="mb-8">
+          <h2 className="mb-1 font-semibold text-navy">Instructor types upgrade ({toUpgrade.length})</h2>
+          <p className="mb-3 text-xs text-slate-500">RYA centres set up before instructor types still use the generic Instructor, Senior, Assistant and Safety Boat Driver places. Upgrading gives them the instructor-type ladder, a place per type, who-can-teach links for the RYA courses and the new ratios, and converts their upcoming courses (past courses keep their old places). Preview first; it changes nothing. Run it on staging before production, and on production only after Deploy production (which records the database bookmark). Safe to run again.</p>
+          <InstructorTypesUpgrade centres={toUpgrade} />
+        </Card>
+      ) : null}
 
       {allOrgs.some((o) => leavingDeadline(o)) ? (
         <Card className="mb-8">

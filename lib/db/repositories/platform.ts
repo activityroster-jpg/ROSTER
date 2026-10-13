@@ -6,6 +6,7 @@ import {
   membership,
   user,
   instructor,
+  orgSettings,
   course,
   courseSession,
   auditLog,
@@ -120,6 +121,12 @@ export class PlatformRepository {
     for (const r of crs) ensure(r.org).courses = Number(r.n);
     for (const r of ses) ensure(r.org).sessions = Number(r.n);
     return map;
+  }
+
+  /** Each centre's instructor-types version (0 = still on the generic places), for the Dev Center upgrade panel. */
+  async teachingMapVersions(): Promise<Map<string, number>> {
+    const rows = await this.db.select({ org: orgSettings.organisationId, v: orgSettings.teachingMapVersion }).from(orgSettings);
+    return new Map(rows.map((r) => [r.org, Number(r.v ?? 0)]));
   }
 
   /** When each centre last did anything (latest audit-log entry), for the overview. */

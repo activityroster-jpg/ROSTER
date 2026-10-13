@@ -9,7 +9,8 @@ import { COURSE_AUDIENCES } from "@/lib/db/schema";
 import { normaliseDefaultSchedule } from "@/lib/domain";
 import { PACKS, isActivityType, packFor } from "@/lib/packs";
 import { setCourseTypeKit } from "@/lib/services/kit";
-import { setCourseTeachers } from "@/lib/services/instructor-types";
+import { createInstructorType, setCourseTeachers } from "@/lib/services/instructor-types";
+import { fillCourseMap } from "@/lib/services/instructor-types-upgrade";
 import { courseTeachersSchema as teachersSchema, idSchema } from "@/lib/validation/actions";
 
 export type CourseTypeResult = { ok: boolean; error?: string; message?: string };
@@ -132,7 +133,8 @@ export async function restoreCourseTypesAction(): Promise<CourseTypeResult> {
     await repos.tenant.courseType.insert(ctx, { ...ct, active: true });
     added++;
   }
-  await writeAudit(repos, ctx, { action: "restore_defaults", entity: "course_type", after: { restored, added } });
+  const linked = added ? await fillCourseMap(repos, ctx, organisation.activityType) : 0;
+  await writeAudit(repos, ctx, { action: "restore_defaults", entity: "course_type", after: { restored, added, linked } });
   revalidate();
   const n = restored + added;
   return { ok: true, message: n ? `${n} course type${n === 1 ? "" : "s"} back on your list` : "Your course list was already complete" };
@@ -200,7 +202,7 @@ export async function setKitRulesAction(input: { courseTypeId: string; rules: { 
  * present are skipped. Audited.
  */
 export async function addPackListsAction(packId: string): Promise<CourseTypeResult> {
-  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
+  const { ctx, repos, organisation } = await requireTenant({ permission: "roster.edit" });
   if (!isActivityType(packId)) return { ok: false, error: "Unknown activity type" };
   const pack = PACKS[packId];
   const [courseTypes, grades] = await Promise.all([repos.tenant.courseType.list(ctx), repos.tenant.qualificationType.list(ctx)]);
@@ -215,13 +217,14 @@ export async function addPackListsAction(packId: string): Promise<CourseTypeResu
   }
   for (const g of pack.grades) {
     if (haveGrades.has(g.name.trim().toLowerCase())) continue;
-    let code = g.code;
-    while (haveCodes.has(code)) code = `${g.code}_${Math.random().toString(36).slice(2, 5).toUpperCase()}`;
-    haveCodes.add(code);
-    await repos.tenant.qualificationType.insert(ctx, { ...g, code, defaultValidMonths: g.defaultValidMonths ?? null, active: true });
+    // Each instructor type with a ladder gets its place on courses (places are instructor types).
+    await createInstructorType(repos, ctx, { name: g.name, code: haveCodes.has(g.code) ? undefined : g.code, rank: g.rank, discipline: g.discipline ?? null, expiryTracked: g.expiryTracked, defaultValidMonths: g.defaultValidMonths ?? null, needsSupervision: g.needsSupervision, supervises: g.supervises });
+    haveCodes.add(g.code);
     ratings++;
   }
-  await writeAudit(repos, ctx, { action: "add_pack_lists", entity: "course_type", after: { pack: packId, courses, ratings } });
+  // Who can teach the added RYA courses: only for a centre not waiting on the instructor-types upgrade.
+  const linked = courses ? await fillCourseMap(repos, ctx, organisation.activityType) : 0;
+  await writeAudit(repos, ctx, { action: "add_pack_lists", entity: "course_type", after: { pack: packId, courses, ratings, linked } });
   revalidate();
   revalidatePath("/office/staff");
   revalidatePath("/office/settings");
