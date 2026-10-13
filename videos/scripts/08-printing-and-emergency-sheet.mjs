@@ -1,7 +1,7 @@
 /**
  * Video 8: Printing, the PDF and the emergency sheet. Lakeside Sailing
  * Centre (videos/seed.test.ts): this week's print view, the PDF download and
- * its layout, the emergency sheet, and what to do if the platform is down.
+ * its layout, the emergency sheet, and getting the roster round to everyone.
  */
 const thisMonday = (() => { const d = new Date(); const x = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())); x.setUTCDate(x.getUTCDate() - ((x.getUTCDay() + 6) % 7)); return x.toISOString().slice(0, 10); })();
 
@@ -9,7 +9,7 @@ export default {
   who: "sam@demo.example",
   warm: [`/office/rota?week=${thisMonday}&view=print`, "/office/rota/emergency"],
   start: `/office/rota?week=${thisMonday}`,
-  description: `Getting the roster off the screen with ActivityRoster: the print view, downloading the roster PDF for a day, a week or a month, changing its layout, the emergency sheet for the duty officer, and what to do if the platform is ever down.`,
+  description: `Getting the roster off the screen with ActivityRoster: the print view, downloading the roster PDF for a day, a week or a month, changing its layout, the emergency sheet for the duty officer, and getting the roster round to your team.`,
   tags: ["roster PDF", "print staff rota", "emergency contact sheet", "sailing centre safety", "duty officer"],
   steps: [
     { chapter: "Print view", say: "Plenty of centres still pin the roster up. On the Roster page, switch to Print view.",
@@ -33,9 +33,9 @@ export default {
     { say: "Print it for the duty officer or the safety boat, or download it. Use the arrows for another day.",
       do: async (h) => { await h.unhighlight(); await h.point(h.page.getByRole("button", { name: /Print/ })); await h.wait(500); await h.point(h.page.getByRole("link", { name: /Next day/ })); } },
 
-    { chapter: "If the platform is down", say: "And if the internet, or the platform, is ever down: your team's app keeps the week on their phone, so they can still see their shifts.", pause: 0.8, thumb: true,
-      do: async (h) => { await h.page.mouse.move(1380, 790); await h.wait(300); } },
-    { say: "Admins can also get the day's roster by email each morning, switched on in Settings. The guide, If the platform is down, has the full plan. Next video: leave and open shifts.", pause: 1.0,
-      do: async (h) => { await h.goto("/office/settings"); await h.highlight(h.page.locator('input[name="dailyDigestEnabled"]').locator("xpath=ancestor::label[1]")); } },
+    { chapter: "Getting it to everyone", say: "To get the roster to everyone, download the PDF and send it round, or pin it up. And your team's app keeps their week on their phone, even out of signal on the water.", pause: 0.8, thumb: true,
+      do: async (h) => { await h.goto(`/office/rota?week=${thisMonday}&view=print`); await h.page.mouse.move(1380, 790); await h.highlight(h.page.getByRole("link", { name: /Download PDF/ })); } },
+    { say: "Admins can also have the day's roster emailed to them each morning: switch it on in Settings. Next video: leave and open shifts.", pause: 1.0,
+      do: async (h) => { await h.unhighlight(); await h.goto("/office/settings"); await h.highlight(h.page.locator('input[name="dailyDigestEnabled"]').locator("xpath=ancestor::label[1]")); } },
   ],
 };

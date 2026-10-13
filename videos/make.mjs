@@ -10,18 +10,28 @@
  * Needs the app running locally with the video seed (see the Make videos
  * workflow). Env: VIDEO_BASE (default http://demo.localhost:8788), DEV_LOG
  * (the dev server's log, for the sign-in code), PW_CHROMIUM (optional browser
- * path), and a voice key (see lib/tts.mjs).
+ * path), VIDEO_RESET (a command that puts the demo centre back as seeded; run
+ * before every video so each one starts from the same place), and a voice
+ * key (see lib/tts.mjs).
+ *
+ * Every finished video is checked (lib/qa.mjs): no step that missed, no
+ * stretch with nothing said, narration that ends before the end card, and a
+ * file that plays to the end. A video that fails is made once more from a
+ * fresh demo centre; if it fails again the run fails, so a faulty set is
+ * never published.
  */
 import { readFileSync, readdirSync, mkdirSync, writeFileSync, rmSync, existsSync, copyFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { createRequire } from "node:module";
+import { spawnSync } from "node:child_process";
 import { SERIES, byNumber } from "./series.mjs";
 import { voiceLines } from "./lib/tts.mjs";
 import { brandAudio } from "./lib/brand-audio.mjs";
 import { renderCard, renderThumb, FPS } from "./lib/cards.mjs";
 import { OVERLAY, VIEWPORT, SCALE, recordSteps } from "./lib/record.mjs";
-import { ffmpeg, durationOf } from "./lib/ffmpeg.mjs";
+import { ffmpeg, durationOf, FFMPEG } from "./lib/ffmpeg.mjs";
+import { editDeadAir, checkVideo } from "./lib/qa.mjs";
 
 const require = createRequire(import.meta.url);
 const { chromium } = require("playwright");
@@ -36,12 +46,23 @@ const PIN = "4826";
 const TOTAL = SERIES.length;
 const only = (() => { const i = process.argv.indexOf("--only"); return i > 0 ? new Set(process.argv[i + 1].split(",").map(Number)) : null; })();
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const DRY = Boolean(process.env.VIDEO_DRY);
 
 const latestCode = () => {
   if (!existsSync(LOG)) return null;
   const all = [...readFileSync(LOG, "utf8").matchAll(/(\d{6}) is your ActivityRoster sign-in code/g)];
   return all.length ? all.at(-1)[1] : null;
 };
+
+/** Put the demo centre back exactly as seeded (VIDEO_RESET), so no video depends on what an earlier one did. */
+function resetDemo() {
+  const cmd = process.env.VIDEO_RESET;
+  if (!cmd) return;
+  const t = Date.now();
+  const r = spawnSync("bash", ["-c", cmd], { encoding: "utf8", timeout: 600_000 });
+  if (r.status !== 0) throw new Error(`Couldn't reset the demo centre: ${(r.stderr || r.stdout || "").slice(-800)}`);
+  console.log(`  fresh demo centre (${Math.round((Date.now() - t) / 1000)}s)`);
+}
 
 async function signIn(browser, email, base) {
   const ctx = await browser.newContext({ viewport: VIEWPORT, deviceScaleFactor: SCALE, locale: "en-GB", timezoneId: "Europe/London" });
@@ -67,6 +88,17 @@ async function signIn(browser, email, base) {
     await page.waitForURL((u) => !u.pathname.startsWith("/pin"));
   }
   return page;
+}
+
+/** The one gain (dB) that brings a track to about -16 LUFS without its true peak going over -1.5 dB. */
+function levelGain(file) {
+  const r = spawnSync(FFMPEG, ["-hide_banner", "-i", file, "-af", "loudnorm=I=-16:TP=-1.5:LRA=11:print_format=json", "-f", "null", "-"], { encoding: "utf8", maxBuffer: 64 << 20 });
+  const m = /\{[^{}]*"input_i"[^{}]*\}/.exec(r.stderr ?? "");
+  if (!m) return 0;
+  const { input_i, input_tp } = JSON.parse(m[0]);
+  const i = Number(input_i), tp = Number(input_tp);
+  if (!Number.isFinite(i) || !Number.isFinite(tp)) return 0;
+  return Math.min(-16 - i, -1.5 - tp);
 }
 
 const ts = (s, sep = ",") => { const ms = Math.round(s * 1000); const h = Math.floor(ms / 3600000), m = Math.floor(ms / 60000) % 60, sec = Math.floor(ms / 1000) % 60; return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}${sep}${String(ms % 1000).padStart(3, "0")}`; };
@@ -133,12 +165,24 @@ async function makeVideo(browser, meta, script) {
   const warnings = [];
   const guarded = steps.map((s, i) => ({ ...s, do: s.do ? async (h) => { try { await s.do(h); } catch (e) { warnings.push(`line ${i + 1}: ${String(e).split("\n")[0]}`); console.log(`  ⚠ line ${i + 1}: ${String(e).split("\n")[0]}`); } } : undefined }));
   // VIDEO_DRY=1: play the steps quickly and report what didn't work, without making the video.
-  const dry = Boolean(process.env.VIDEO_DRY);
+  const dry = DRY;
   const rec = await recordSteps(page, guarded, voice.lines.map((l) => (dry ? 0.2 : l.seconds)), { base, workDir: work, thumbAt });
   if (dry) { await page.screenshot({ path: join(work, "end.png") }).catch(() => {}); }
   await page.context().close();
-  if (dry) { console.log(warnings.length ? `  ${warnings.length} warning(s)` : "  all steps ran"); return { name, warnings }; }
+  if (dry) { console.log(warnings.length ? `  ${warnings.length} warning(s)` : "  all steps ran"); return { name, warnings, problems: warnings, notes: [] }; }
   console.log(`  recorded ${rec.frames.length} frames, ${rec.end.toFixed(1)}s`);
+
+  // Edit out dead air: stretches where the screen is still and nothing is being said.
+  const said = voice.lines.map((l, i) => [rec.marks[i], rec.marks[i] + l.seconds]);
+  const edit = editDeadAir(rec.frames, rec.end, said);
+  if (edit.cuts || edit.sped) {
+    const { at } = edit;
+    rec.frames = rec.frames.map((f) => ({ ...f, t: at(f.t) }));
+    rec.marks = rec.marks.map(at);
+    const was = rec.end;
+    rec.end = at(rec.end);
+    console.log(`  edited out ${(was - rec.end).toFixed(1)}s of dead air (${edit.cuts} still stretch(es) cut${edit.sped ? `, ${edit.sped} silent stretch(es) sped up` : ""})`);
+  }
 
   // 3. Main segment from the timed frames
   const list = rec.frames.map((f, i) => `file '${f.file}'\nduration ${Math.max(0.001, (rec.frames[i + 1]?.t ?? rec.end) - f.t).toFixed(4)}`).join("\n") + `\nfile '${rec.frames.at(-1).file}'\n`;
@@ -172,16 +216,30 @@ async function makeVideo(browser, meta, script) {
   for (const l of voiced) add(l.file, `adelay=${Math.round(l.at * 1000)}:all=1`);
   if (brand.sting) add(brand.sting, "volume=0.75,adelay=120:all=1");
   // A script can ask for the music bed quietly under the narration too (the homepage explainer).
+  // The track is 20 seconds, so it repeats, each repeat crossfaded into the next (a plain loop jumps audibly at the join).
   if (brand.music && script.musicUnder) {
-    add(brand.music, `aloop=loop=-1:size=2147483647,atrim=0:${mainLen.toFixed(3)},asetpts=PTS-STARTPTS,volume=0.07,afade=t=in:st=0:d=1.5,afade=t=out:st=${Math.max(0, mainLen - 2.5).toFixed(3)}:d=2.5,adelay=${Math.round(introLen * 1000)}:all=1`);
+    const xf = 1.5, copies = Math.max(1, Math.ceil(mainLen / ((await durationOf(brand.music)) - xf)));
+    const first = inputs.length / 2 + 1;
+    const parts = [];
+    for (let i = 0; i < copies; i++) { inputs.push("-i", brand.music); parts.push(`[${first + i}:a]${fmt}[bed${i}]`); }
+    let bed = "[bed0]";
+    for (let i = 1; i < copies; i++) { parts.push(`${bed}[bed${i}]acrossfade=d=${xf}[bedx${i}]`); bed = `[bedx${i}]`; }
+    parts.push(`${bed}atrim=0:${mainLen.toFixed(3)},asetpts=PTS-STARTPTS,volume=0.07,afade=t=in:st=0:d=1.5,afade=t=out:st=${Math.max(0, mainLen - 2.5).toFixed(3)}:d=2.5,adelay=${Math.round(introLen * 1000)}:all=1[s${chains.length}]`);
+    chains.push(parts.join(";"));
   }
   if (brand.music) {
     add(brand.music, `atrim=0:${introLen.toFixed(3)},asetpts=PTS-STARTPTS,volume=0.30,afade=t=in:st=0:d=0.6,afade=t=out:st=${Math.max(0, introLen - 1.4).toFixed(3)}:d=1.4`);
     add(brand.music, `atrim=0:${outroLen.toFixed(3)},asetpts=PTS-STARTPTS,volume=0.30,afade=t=in:st=0:d=0.8,afade=t=out:st=${Math.max(0, outroLen - 1.6).toFixed(3)}:d=1.6,adelay=${Math.round(outroStart * 1000)}:all=1`);
   }
   if (chains.length) {
-    const mix = `${chains.map((_, i) => `[s${i}]`).join("")}amix=inputs=${chains.length}:normalize=0:dropout_transition=0,apad,atrim=0:${total.toFixed(3)},loudnorm=I=-16:TP=-1.5:LRA=11[aout]`;
-    await ffmpeg(["-i", picture, ...inputs, "-filter_complex", `${chains.join(";")};${mix}`, "-map", "0:v", "-map", "[aout]", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-movflags", "+faststart", final]);
+    // Mix, then level the whole track with one fixed gain: about -16 LUFS for YouTube, never over
+    // -1.5 dB true peak. One gain for the whole video (no automatic levelling riding up between
+    // sentences and clipping the next word in).
+    const mixed = join(work, "mix.wav");
+    const mix = `${chains.map((_, i) => `[s${i}]`).join("")}amix=inputs=${chains.length}:normalize=0:dropout_transition=0,apad,atrim=0:${total.toFixed(3)}[aout]`;
+    await ffmpeg(["-i", picture, ...inputs, "-filter_complex", `${chains.join(";")};${mix}`, "-map", "[aout]", "-c:a", "pcm_f32le", "-ar", "48000", mixed]);
+    const gain = levelGain(mixed);
+    await ffmpeg(["-i", picture, "-i", mixed, "-map", "0:v", "-map", "1:a", "-af", `volume=${gain.toFixed(2)}dB`, "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-movflags", "+faststart", final]);
   } else {
     await ffmpeg(["-i", picture, "-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo", "-map", "0:v", "-map", "1:a", "-c:v", "copy", "-c:a", "aac", "-shortest", "-movflags", "+faststart", final]);
   }
@@ -211,9 +269,17 @@ async function makeVideo(browser, meta, script) {
     `VOICE: ${voice.provider.label}${brand.music || brand.sting ? " · music and sting: ElevenLabs" : ""}`,
   ].join("\n");
   writeFileSync(join(out, `${name}-youtube.txt`), yt + "\n");
-  if (warnings.length) writeFileSync(join(out, `${name}-warnings.txt`), warnings.join("\n") + "\n");
-  console.log(`  ✓ ${final} (${(await durationOf(final)).toFixed(1)}s)${warnings.length ? `, ${warnings.length} warning(s)` : ""}`);
-  return { name, warnings };
+
+  // 8. Check the finished video.
+  const qa = await checkVideo({ final, main, introLen, outroStart, total, starts, lines: steps.map((s) => s.say), voice: voice.lines, warnings, music: Boolean(brand.music && script.musicUnder) });
+  const report = [...qa.problems.map((p) => `PROBLEM: ${p}`), ...qa.notes.map((n) => `note: ${n}`)];
+  rmSync(join(out, `${name}-warnings.txt`), { force: true });
+  if (qa.problems.length) writeFileSync(join(out, `${name}-warnings.txt`), report.join("\n") + "\n");
+  for (const p of qa.problems) console.log(`  ✗ ${p}`);
+  for (const n of qa.notes) console.log(`  · ${n}`);
+  const length = await durationOf(final);
+  console.log(`  ${qa.problems.length ? "✗" : "✓"} ${final} (${length.toFixed(1)}s)${qa.problems.length ? `, ${qa.problems.length} problem(s)` : ", checks passed"}`);
+  return { name, title: meta.title, length, problems: qa.problems, notes: qa.notes };
 }
 
 const scripts = readdirSync(join(ROOT, "videos", "scripts")).filter((f) => /^\d\d-.*\.mjs$/.test(f)).sort();
@@ -225,8 +291,28 @@ for (const file of scripts) {
   const meta = byNumber(n);
   if (!meta) throw new Error(`${file}: no video ${n} in series.mjs`);
   const script = (await import(pathToFileURL(join(ROOT, "videos", "scripts", file)).href)).default;
-  made.push(await makeVideo(browser, meta, script));
+  let result;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    if (attempt > 1) console.log(`  ↻ making video ${n} again from a fresh demo centre`);
+    try {
+      resetDemo();
+      result = await makeVideo(browser, meta, script);
+    } catch (e) {
+      console.log(`  ✗ ${String(e).split("\n")[0]}`);
+      result = { name: `${String(n).padStart(2, "0")}-${meta.slug}`, title: meta.title, length: 0, problems: [`couldn't be made: ${String(e).split("\n")[0]}`], notes: [] };
+    }
+    if (!result.problems.length || DRY) break;
+  }
+  made.push(result);
 }
 await browser.close();
-console.log(`\nMade ${made.length} video(s) in videos/out.`);
-if (made.some((m) => m.warnings.length)) console.log("Some steps didn't find what they were looking for: see the -warnings.txt files.");
+
+// The run's report: one line per video (shown on the workflow run's page).
+const failed = made.filter((m) => m.problems.length);
+const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+writeFileSync(join(OUT, "checks.md"), [
+  `| Video | Length | Checks |`, `|---|---|---|`,
+  ...made.map((m) => `| ${m.name} | ${m.length ? mmss(m.length) : "–"} | ${m.problems.length ? `✗ ${m.problems.join("; ")}` : `✓ passed${m.notes.length ? ` (${m.notes.join("; ")})` : ""}`} |`),
+].join("\n") + "\n");
+console.log(`\nMade ${made.length} video(s) in videos/out: ${made.length - failed.length} passed the checks${failed.length ? `, ${failed.length} failed (${failed.map((m) => m.name).join(", ")})` : ""}.`);
+if (failed.length) process.exitCode = 1;

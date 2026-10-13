@@ -4,6 +4,8 @@ name: Make videos
 # copy of the app with a made-up centre (never staging or production), and
 # keeps the finished files for 30 days as a download on this run's page:
 # Actions → Make videos → the run → Artifacts → activityroster-videos.
+# Every video is checked before it's kept (the table on the run's page); the
+# run only succeeds, and the deploy only publishes the set, when all pass.
 #
 # The narration voice comes from whichever key is set (Settings → Secrets and
 # variables → Actions): ELEVENLABS_API_KEY (recommended), GOOGLE_TTS_API_KEY,
@@ -85,6 +87,9 @@ jobs:
         run: |
           npx wrangler d1 migrations apply DB --local
           SEED_DB="$(ls .wrangler/state/v3/d1/miniflare-D1DatabaseObject/*.sqlite | grep -v metadata)" npm run videos:seed
+          # A clean copy: every video starts from it, so none depends on what an earlier one did.
+          echo "CLEAN_DB=$RUNNER_TEMP/clean-demo.sqlite" >> "$GITHUB_ENV"
+          CLEAN_DB="$RUNNER_TEMP/clean-demo.sqlite" bash videos/reset-demo.sh snapshot
       - name: Start the app
         run: |
           nohup npx next dev -p 8787 > videos-dev.log 2>&1 &
@@ -96,8 +101,14 @@ jobs:
           done
           echo "::error::The app didn't start"; tail -50 videos-dev.log; exit 1
       - name: Make the videos
+        # Each video: a fresh demo centre, record, edit out dead air, then check
+        # the finished file (lib/qa.mjs). A video that fails its checks is made
+        # again; if it still fails, this step fails, so the set isn't published.
+        env:
+          VIDEO_RESET: bash videos/reset-demo.sh
         run: node videos/make.mjs ${{ inputs.only != '' && format('--only {0}', inputs.only) || '' }}
       - name: Keep the videos for download
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
           name: activityroster-videos
@@ -113,6 +124,7 @@ jobs:
             echo
             echo "Download them from **Artifacts → activityroster-videos** at the bottom of this page."
             echo
+            if [ -f videos/out/checks.md ]; then cat videos/out/checks.md; echo; fi
             for f in videos/out/*/*.mp4; do echo "- $(basename "$f") · $(du -h "$f" | cut -f1)"; done
             for f in videos/out/*/*-youtube.txt; do echo "- $(basename "$f"): $(grep '^VOICE:' "$f" || true)"; done
             for f in videos/out/*/*-warnings.txt; do echo; echo "⚠ $(basename "$f"):"; sed 's/^/    /' "$f"; done

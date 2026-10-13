@@ -158,14 +158,14 @@ Tags: confirm roster, staff shift notifications, sailing centre rota, instructor
 
 ## 8. Printing, the PDF and the emergency sheet
 
-Getting the roster off the screen, and staying safe when the internet isn't there.
+Getting the roster off the screen and round to your team.
 
 In this video:
 - The print view, laid out day by day
 - Downloading the roster PDF for a day, a week or a month
 - Changing the PDF layout
 - The emergency sheet for the duty officer or the safety boat
-- What to do if the platform is ever down
+- Sending the roster round, and the morning roster email
 
 Guide: https://activityroster.com/learn?topic=printing
 Start your free month: https://activityroster.com

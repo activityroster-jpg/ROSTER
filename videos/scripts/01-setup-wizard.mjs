@@ -8,7 +8,7 @@ const HOME = "http://localhost:8788";
 export default {
   who: "jo@newcentre.example",
   host: "newcentre",
-  warm: ["/office/onboarding"],
+  warm: ["/office/onboarding", "/office"],
   start: "/office/onboarding",
   prepare: async (page) => {
     await page.goto(`${HOME}/#get-demo`);

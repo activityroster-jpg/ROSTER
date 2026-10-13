@@ -70,6 +70,18 @@ async function fetchAudio(p, text, ctx) {
 }
 
 /**
+ * Trim the silence the engines leave at either end, keeping a few
+ * milliseconds of it so the first and last sounds aren't clipped, and fade
+ * the very edges so a line never starts or stops with a click. Then
+ * normalise to one format (48 kHz mono WAV).
+ */
+async function trim(src, wav) {
+  const cut = "silenceremove=start_periods=1:start_threshold=-55dB:start_silence=0.06";
+  // Take out any rumble, trim the start, flip, trim the end and fade it out, flip back, fade the start in.
+  await ffmpeg(["-i", src, "-af", `highpass=f=50,${cut},areverse,${cut},afade=t=in:d=0.04,areverse,afade=t=in:d=0.012`, "-ar", "48000", "-ac", "1", wav]);
+}
+
+/**
  * Make (or reuse) the audio for every line. Returns, per line, a 48 kHz mono
  * WAV and its length in seconds. With no voice, the length is estimated from
  * the words so the timing can still be checked.
@@ -86,7 +98,10 @@ export async function voiceLines(lines) {
       continue;
     }
     const key = createHash("sha256").update(`${p.id}|${p.voice}|${process.env.ELEVENLABS_MODEL ?? ""}|${text}`).digest("hex").slice(0, 24);
-    const wav = join(CACHE, `${key}.wav`);
+    // .t2: the gentler trim below (the first version cut right into the voice, which clicked).
+    const wav = join(CACHE, `${key}.t2.wav`);
+    const saved = join(CACHE, `${key}.mp3`);
+    if (!existsSync(wav) && existsSync(saved)) await trim(saved, wav);
     if (!existsSync(wav)) {
       let got;
       try { got = await fetchAudio(p, text, { previous: lines[i - 1], next: lines[i + 1] }); }
@@ -100,8 +115,7 @@ export async function voiceLines(lines) {
       }
       let src = got.file;
       if (!src) { src = join(CACHE, `${key}.${got.ext}`); writeFileSync(src, got.bytes); }
-      // Trim the silence the engines leave at either end, then normalise to one format.
-      await ffmpeg(["-i", src, "-af", "silenceremove=start_periods=1:start_threshold=-50dB,areverse,silenceremove=start_periods=1:start_threshold=-50dB,areverse", "-ar", "48000", "-ac", "1", wav]);
+      await trim(src, wav);
     }
     out.push({ file: wav, seconds: await durationOf(wav) });
   }

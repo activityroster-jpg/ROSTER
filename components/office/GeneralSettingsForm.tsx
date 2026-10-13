@@ -115,7 +115,7 @@ export function GeneralSettingsForm({
       </div>
       </div>
       </SectionForm>
-      <SectionForm section="digest" title="If the platform is ever down">
+      <SectionForm section="digest" title="Morning roster email">
         <label className="flex items-start gap-2 text-sm text-slate-600">
           <input type="checkbox" name="dailyDigestEnabled" defaultChecked={dailyDigestEnabled} className="mt-0.5 h-4 w-4 rounded border-slate-300" />
           <span>Email every admin the day&rsquo;s roster each morning at
