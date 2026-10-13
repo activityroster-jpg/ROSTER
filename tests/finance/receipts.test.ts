@@ -21,7 +21,7 @@ vi.mock("@/lib/finance/receipt-reader", () => ({ readReceipt: (...a: unknown[]) 
 
 import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { addTransactionAction, deleteTransactionAction } from "@/app/admin/finance/actions";
-import { decideInbound, ingestInbound, mailboxOf } from "@/lib/finance/receipt-inbox";
+import { decideInbound, gmailCode, ingestInbound, mailboxOf } from "@/lib/finance/receipt-inbox";
 import { domainWords, matchReceipt, namesSupplier, type LineFacts } from "@/lib/finance/receipt-match";
 
 // --- matching (pure) ---------------------------------------------------------
@@ -92,6 +92,12 @@ describe("what an emailed message is", () => {
   it("picks out Gmail's forwarding confirmation code", async () => {
     const d = await decideInbound(eml({ from: "Gmail Team <forwarding-noreply@google.com>", subject: "(#123456789) Gmail Forwarding Confirmation", id: "g1", text: "Confirmation code: 123456789" }), { from: "forwarding-noreply@google.com", to: TO }, settings, admins);
     expect(d).toMatchObject({ kind: "gmail", code: "123456789" });
+  });
+  it("finds Gmail's code wherever Google puts it", () => {
+    expect(gmailCode("(#987654321) Gmail Forwarding Confirmation - Receive Mail from a@gmail.com", null, null)).toBe("987654321");
+    expect(gmailCode("Gmail Forwarding Confirmation", null, "<p>Confirmation code: <b>123456789</b></p>")).toBe("123456789");
+    expect(gmailCode("Gmail Forwarding Confirmation", "Confirmation code:&nbsp;555666777", null)).toBe("555666777");
+    expect(gmailCode("Gmail Forwarding Confirmation", "Confirmation code 555666777", null)).toBe("555666777");
   });
   it("holds mail not forwarded by the owner's Gmail, and keeps nothing from it", async () => {
     const d = await decideInbound(eml({ from: "Spammer <x@evil.test>", subject: "Invoice", id: "s1", pdf: true }), { from: "x@evil.test", to: TO }, settings, admins);

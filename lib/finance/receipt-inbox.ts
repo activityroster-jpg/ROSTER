@@ -114,6 +114,20 @@ export function forwardedSender(email: Email): { address: string; name: string |
   return m[2] ? { address: m[2].toLowerCase(), name: m[1]?.trim() || null } : { address: m[1]!.toLowerCase(), name: null };
 }
 
+/**
+ * The code in Gmail's forwarding confirmation. Google puts it in the subject
+ * as "(#123456789)" and in the body after "Confirmation code", often wrapped in
+ * formatting, so the HTML is flattened to text before looking.
+ */
+export function gmailCode(subject: string | null | undefined, text: string | null | undefined, html: string | null | undefined): string | null {
+  const flat = (html ?? "").replace(/<[^>]+>/g, " ").replace(/&nbsp;|&#160;/g, " ");
+  for (const body of [subject ?? "", text ?? "", flat]) {
+    const m = /\(#?\s*(\d{6,12})\s*\)/.exec(body) ?? /confirmation\s+code[^0-9]{0,40}(\d{6,12})/i.exec(body);
+    if (m) return m[1]!;
+  }
+  return null;
+}
+
 /** An SPF check the receiving server recorded as failed (absent or passed is fine). */
 function spfFailed(email: Email): boolean {
   const h = email.headers.find((x) => x.key === "received-spf")?.value.trim().toLowerCase() ?? "";
@@ -137,8 +151,7 @@ export async function decideInbound(raw: ArrayBuffer, envelope: { from: string; 
   const messageId = (email.messageId?.trim() || `no-id:${envelope.from}:${email.date ?? ""}:${subject ?? ""}`).slice(0, 500);
 
   if (mailboxOf(envelope.from) === GMAIL_FORWARDING_SENDER || fromAddress === GMAIL_FORWARDING_SENDER) {
-    const body = `${subject ?? ""}\n${email.text ?? email.html ?? ""}`;
-    const code = /confirmation code:\s*(\d{6,12})/i.exec(body)?.[1] ?? /\((?:#)?(\d{6,12})\)/.exec(subject ?? "")?.[1] ?? null;
+    const code = gmailCode(subject, email.text, email.html);
     return { kind: "gmail", messageId, subject, code, file: pickReceiptFile(email) };
   }
 
