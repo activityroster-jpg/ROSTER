@@ -139,8 +139,8 @@ test("seed the video centres", async () => {
   await course("Wednesday Club Night", /Club|Improving|Stage 3/, [{ date: addDays(NEXT_MON, 2), slots: ["EV"] }], [["Emma Hall", "SI"]]);
   await course("Powerboat Level 2", /Powerboat Level 2/, [{ date: addDays(NEXT_MON, 5), slots: ["AM", "PM"] }, { date: addDays(NEXT_MON, 6), slots: ["AM", "PM"] }], []);
 
-  // Availability: a usual week for app users, with exceptions
-  for (const p of people.filter((x) => x.app)) {
+  // Availability: a usual week for app users, with exceptions (Lucy hasn't set hers yet, for the reminder)
+  for (const p of people.filter((x) => x.app && x.name !== "Lucy Green")) {
     for (let wd = 0; wd <= 6; wd++) for (const slot of ["AM", "PM", "EV"]) {
       await t.availability.insert(ctx, { instructorId: ins[p.name]!, weekday: wd, date: null, slot: slot as never, status: (wd === 0 || wd === 6) && p.name === "Olivia Dean" ? "busy" : "available", setBy: "self" } as never);
     }

@@ -17,12 +17,14 @@ export default {
     { say: "You can also have the day's roster emailed to every admin each morning.",
       do: async (h) => { await h.unhighlight(); await h.scrollTo(h.page.locator('input[name="dailyDigestEnabled"]')); await h.highlight(h.page.locator('input[name="dailyDigestEnabled"]').locator("xpath=ancestor::label[1]")); } },
 
-    { chapter: "Roster checks", say: "Roster and welfare holds the checks that keep the roster safe.",
-      do: async (h) => { await h.unhighlight(); await h.click(h.page.getByRole("button", { name: "Roster & welfare" }).or(h.page.getByRole("tab", { name: "Roster & welfare" })).first()); await h.wait(900); } },
+    { chapter: "Roster checks", say: "Further down General are the checks that keep the roster safe.",
+      do: async (h) => { await h.unhighlight(); await h.scrollTo(h.page.locator('input[name="enforceLicenceChecks"]')); await h.highlight(h.page.locator('input[name="enforceLicenceChecks"]').locator("xpath=ancestor::label[1]")); } },
     { say: "Block anyone with a missing or expired licence. Flag courses short of instructors for their ratio. Stop double-bookings. And don't roster anyone who's busy.",
-      do: async (h) => { await h.highlight(h.page.locator('input[name="enforceLicenceChecks"]').locator("xpath=ancestor::label[1]")); await h.wait(900); await h.highlight(h.page.locator('input[name="enforceConflictChecks"]').locator("xpath=ancestor::label[1]")); } },
+      do: async (h) => { await h.wait(900); await h.highlight(h.page.locator('input[name="enforceConflictChecks"]').locator("xpath=ancestor::label[1]")); await h.wait(900); await h.highlight(h.page.locator('input[name="enforceAvailabilityChecks"]').locator("xpath=ancestor::label[1]")); } },
     { say: "Each one is on by default. If you switch one off, the roster still shows the problem, it just doesn't stop you.",
-      do: async (h) => { await h.highlight(h.page.locator('input[name="enforceAvailabilityChecks"]').locator("xpath=ancestor::label[1]")); } },
+      do: async (h) => { await h.unhighlight(); await h.wait(300); } },
+    { say: "Roster and welfare has your welfare officers, the roster PDF layout, and each course's usual times.",
+      do: async (h) => { await h.scrollTop(); await h.click(h.page.getByRole("button", { name: "Roster & welfare" }).or(h.page.getByRole("tab", { name: "Roster & welfare" })).first()); await h.wait(900); } },
     { say: "The other tabs cover pay rates, the time clock, your lists of things like locations, and your data: exports, and closing the account.",
       do: async (h) => { await h.unhighlight(); await h.point(h.page.getByRole("button", { name: "Time & clock" }).or(h.page.getByRole("tab", { name: "Time & clock" })).first()); await h.wait(500); await h.point(h.page.getByRole("button", { name: "Data & account" }).or(h.page.getByRole("tab", { name: "Data & account" })).first()); } },
 

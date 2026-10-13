@@ -48,7 +48,7 @@ export default {
     { say: "Pick the course type. Its staffing and ratio come with it.",
       do: async (h) => { await h.unhighlight(); await h.select(h.page.getByRole("heading", { name: "Add a course" }).locator("xpath=..").locator("select").first(), { label: "Start Paddleboarding" }); } },
     { say: "Then click the days it runs on the calendar. Each click adds a session, at your usual times, and you can change the times for any session.",
-      do: async (h) => { await h.scrollTop(); await h.click(h.page.getByRole("button", { name: /^[+＋] Add$/ }).nth(4)); await h.wait(700); await h.scrollTo(h.page.getByRole("heading", { name: "Add a course" })); await h.highlight(h.page.getByText(/Sessions \(\d+\)/i).locator("xpath=..")); } },
+      do: async (h) => { await h.scrollTop(); await h.click(h.page.getByRole("button", { name: /^Add a session on/ }).nth(4)); await h.wait(700); await h.scrollTo(h.page.getByRole("heading", { name: "Add a course" })); await h.highlight(h.page.getByText(/Sessions \(\d+\)/i).locator("xpath=..")); } },
     { say: "Press Create course, and it's on the calendar.", pause: 0.8, thumb: true,
       do: async (h) => { await h.unhighlight(); await h.click(h.page.getByRole("button", { name: "Create course" })); await h.wait(2000); await h.scrollTop(); await h.page.mouse.move(1380, 790); } },
     { say: "Next, availability: who's free, and when.", pause: 1.0,

@@ -40,8 +40,8 @@ export default {
     { say: "Once you're used to it, Confirm whole week does every pending day in one go.",
       do: async (h) => { await h.unhighlight(); await h.highlight(h.page.getByRole("button", { name: /Confirm whole week/ })); } },
 
-    { chapter: "Accepting shifts", say: "Want each person to accept their shifts? Turn on Ask staff to accept or decline, in Settings, under Roster.", pause: 0.8, thumb: true,
-      do: async (h) => { await h.unhighlight(); await h.goto("/office/settings"); await h.click(h.page.getByRole("button", { name: "Roster & welfare" }).or(h.page.getByRole("tab", { name: "Roster & welfare" })).first()); await h.wait(800); await h.highlight(h.page.locator('input[name="staffAcceptShifts"]').locator("xpath=ancestor::label[1]")); await h.page.mouse.move(1380, 790); } },
+    { chapter: "Accepting shifts", say: "Want each person to accept their shifts? Turn on Ask staff to accept or decline, in Settings.", pause: 0.8, thumb: true,
+      do: async (h) => { await h.unhighlight(); await h.goto("/office/settings"); await h.scrollTo(h.page.locator('input[name="staffAcceptShifts"]')); await h.highlight(h.page.locator('input[name="staffAcceptShifts"]').locator("xpath=ancestor::label[1]")); await h.page.mouse.move(1380, 790); } },
     { say: "Then the roster shows who's accepted, and anyone who can't make it is flagged, so you can find cover. Next: printing, the PDF, and the emergency sheet.", pause: 1.0,
       do: async (h) => { await h.unhighlight(); } },
   ],

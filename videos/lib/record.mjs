@@ -50,7 +50,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 export function helpers(page, base) {
   let pos = { x: 720, y: 420 };
   const center = async (target) => {
-    const loc = typeof target === "string" ? page.locator(target).first() : target;
+    // The first visible match: pages often carry a hidden copy (the phone layout, a closed tab).
+    const loc = (typeof target === "string" ? page.locator(target) : target).filter({ visible: true }).first();
     await loc.waitFor({ state: "visible", timeout: 60_000 });
     await loc.scrollIntoViewIfNeeded();
     const b = await loc.boundingBox();
@@ -78,7 +79,7 @@ export function helpers(page, base) {
     select: async (target, value) => { const c = await center(target); await glide(c.x, c.y); await sleep(150); await c.loc.selectOption(value); await sleep(300); return c.loc; },
     highlight: async (target) => { const c = await center(target); await page.evaluate((r) => window.__highlight(r), c.box); },
     unhighlight: async () => { await page.evaluate(() => window.__highlight(null)); },
-    scrollTo: async (target) => { const loc = typeof target === "string" ? page.locator(target).first() : target; await loc.evaluate((el) => el.scrollIntoView({ behavior: "smooth", block: "center" })); await sleep(700); },
+    scrollTo: async (target) => { const loc = (typeof target === "string" ? page.locator(target) : target).filter({ visible: true }).first(); await loc.evaluate((el) => el.scrollIntoView({ behavior: "smooth", block: "center" })); await sleep(700); },
     scrollTop: async () => { await page.evaluate(() => window.scrollTo({ top: 0, behavior: "smooth" })); await sleep(600); },
   };
 }
