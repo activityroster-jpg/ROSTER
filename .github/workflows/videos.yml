@@ -1,0 +1,122 @@
+name: Make videos
+
+# Makes the how-to videos from the scripts in videos/scripts, on a throwaway
+# copy of the app with a made-up centre (never staging or production), and
+# keeps the finished files for 30 days as a download on this run's page:
+# Actions → Make videos → the run → Artifacts → activityroster-videos.
+#
+# The narration voice comes from whichever key is set (Settings → Secrets and
+# variables → Actions): ELEVENLABS_API_KEY (recommended), GOOGLE_TTS_API_KEY,
+# or AZURE_SPEECH_KEY. With none, a free preview voice is used, good enough to
+# check the timing. Only the script text is sent to the voice service.
+
+on:
+  workflow_dispatch:
+    inputs:
+      only:
+        description: "Video numbers to make, comma separated (blank = every video with a script)"
+        required: false
+        default: ""
+  push:
+    branches: ["claude/new-session-2wxbwe"]
+    paths: ["videos/**", ".github/workflows/videos.yml"]
+
+concurrency:
+  group: videos-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  videos:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+      APP_APEX_DOMAIN: localhost:8787
+      NEXT_PUBLIC_APEX_DOMAIN: localhost:8787
+      VIDEO_BASE: http://demo.localhost:8788
+      DEV_LOG: videos-dev.log
+      ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+      ELEVENLABS_VOICE_ID: ${{ vars.ELEVENLABS_VOICE_ID }}
+      GOOGLE_TTS_API_KEY: ${{ secrets.GOOGLE_TTS_API_KEY }}
+      AZURE_SPEECH_KEY: ${{ secrets.AZURE_SPEECH_KEY }}
+      AZURE_SPEECH_REGION: ${{ vars.AZURE_SPEECH_REGION }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - run: npm ci || npm install
+      - name: Install the browser and ffmpeg
+        run: |
+          npx playwright install --with-deps chromium
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+      - name: Preview voice (only when no voice key is set)
+        run: |
+          if [ -n "$ELEVENLABS_API_KEY$GOOGLE_TTS_API_KEY$AZURE_SPEECH_KEY" ]; then echo "Using the voice service."; exit 0; fi
+          echo "No voice key set: using the free preview voice."
+          pip install -q "piper-tts==1.2.0" || { echo "::warning::Preview voice unavailable; the video will have captions but no voice."; exit 0; }
+          mkdir -p "$RUNNER_TEMP/piper"
+          base=https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_GB/alan/medium
+          curl -sSL -o "$RUNNER_TEMP/piper/en_GB-alan-medium.onnx" "$base/en_GB-alan-medium.onnx" \
+            && curl -sSL -o "$RUNNER_TEMP/piper/en_GB-alan-medium.onnx.json" "$base/en_GB-alan-medium.onnx.json" \
+            && echo "PIPER_MODEL=$RUNNER_TEMP/piper/en_GB-alan-medium.onnx" >> "$GITHUB_ENV" \
+            || echo "::warning::Preview voice unavailable; the video will have captions but no voice."
+      - name: Reuse narration already made (so unchanged lines aren't paid for twice)
+        uses: actions/cache@v4
+        with:
+          path: videos/.cache/voice
+          key: voice-${{ hashFiles('videos/scripts/**') }}
+          restore-keys: voice-
+      - name: Local settings (a throwaway secret, made fresh each run)
+        run: |
+          {
+            echo "BETTER_AUTH_SECRET=$(openssl rand -base64 32)"
+            echo "BETTER_AUTH_URL=http://localhost:8787"
+            echo "APP_APEX_DOMAIN=localhost:8787"
+            echo "APP_ENV=development"
+          } > .dev.vars
+      - name: Local database and the made-up centres
+        run: |
+          npx wrangler d1 migrations apply DB --local
+          SEED_DB="$(ls .wrangler/state/v3/d1/miniflare-D1DatabaseObject/*.sqlite | grep -v metadata)" npm run videos:seed
+      - name: Start the app
+        run: |
+          nohup npx next dev -p 8787 > videos-dev.log 2>&1 &
+          nohup node e2e/proxy.mjs > videos-proxy.log 2>&1 &
+          for i in $(seq 1 150); do
+            code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 120 http://demo.localhost:8788/sign-in || true)"
+            [ "$code" = "200" ] && echo "app is up" && exit 0
+            sleep 2
+          done
+          echo "::error::The app didn't start"; tail -50 videos-dev.log; exit 1
+      - name: Make the videos
+        run: node videos/make.mjs ${{ inputs.only != '' && format('--only {0}', inputs.only) || '' }}
+      - name: Keep the videos for download
+        uses: actions/upload-artifact@v4
+        with:
+          name: activityroster-videos
+          path: videos/out/
+          retention-days: 30
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## How-to videos"
+            echo
+            echo "Download them from **Artifacts → activityroster-videos** at the bottom of this page."
+            echo
+            for f in videos/out/*/*.mp4; do [ -f "$f" ] && echo "- $(basename "$f") · $(du -h "$f" | cut -f1)"; done
+            for f in videos/out/*/*-youtube.txt; do [ -f "$f" ] && echo "- $(basename "$f"): $(grep '^VOICE:' "$f")"; done
+            for f in videos/out/*/*-warnings.txt; do [ -f "$f" ] && { echo; echo "⚠ $(basename "$f"):"; sed 's/^/    /' "$f"; }; done
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Keep the server log when something fails
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: videos-log
+          path: videos-dev.log
+          retention-days: 7

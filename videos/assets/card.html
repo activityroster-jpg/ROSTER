@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>ActivityRoster video card</title>
+<!--
+  The video series' title cards, rendered frame by frame by videos/lib/cards.mjs.
+  ?mode=intro  logo animation, then "Video N of T" and the title (about 6.5 s)
+  ?mode=outro  what's next and where the guide is (about 4.5 s)
+  ?mode=thumb  a still 1280×720 thumbnail
+  Every animation is CSS; the renderer pauses them and steps currentTime, so
+  the result is the same frame for frame on every run.
+-->
+<style>
+@font-face { font-family: "Fira Sans"; font-weight: 400; src: url(fonts/fira-400.woff2) format("woff2"); }
+@font-face { font-family: "Fira Sans"; font-weight: 600; src: url(fonts/fira-600.woff2) format("woff2"); }
+@font-face { font-family: "Fira Sans"; font-weight: 700; src: url(fonts/fira-700.woff2) format("woff2"); }
+@font-face { font-family: "Fira Sans"; font-weight: 800; src: url(fonts/fira-800.woff2) format("woff2"); }
+:root { --navy: #0a2e52; --navy2: #0d3a66; --blue: #3f9fe0; --muted: #5a6b82; --ink: #ffffff; }
+* { box-sizing: border-box; margin: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: var(--navy); color: var(--ink); font-family: "Fira Sans", Arial, sans-serif; }
+.stage { position: absolute; inset: 0; background: radial-gradient(120% 90% at 50% 40%, var(--navy2), var(--navy) 70%); }
+.grid-bg { position: absolute; inset: 0; opacity: .07; background-image: linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px); background-size: 64px 64px; }
+.layer { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+
+/* ── the logo ── */
+.logo { display: flex; align-items: center; gap: 34px; }
+.mark { display: grid; grid-template-columns: repeat(3, 58px); gap: 19px; }
+.mark i { width: 58px; height: 58px; border-radius: 14px; background: #fff; display: block; animation: pop .55s cubic-bezier(.2, 1.6, .4, 1) both; }
+.mark i.m { background: var(--muted); }
+.mark i.b { background: var(--blue); box-shadow: 0 0 0 rgba(63,159,224,0); animation: pop .55s cubic-bezier(.2, 1.6, .4, 1) both, glow 1.2s ease-out 1.45s both; }
+.word { font-size: 96px; letter-spacing: -1.5px; line-height: 1; overflow: hidden; }
+.word span { display: inline-block; animation: rise .7s cubic-bezier(.2, .9, .2, 1) both; }
+.word .a { font-weight: 600; animation-delay: 1.05s; }
+.word .r { font-weight: 800; animation-delay: 1.18s; }
+.tag { margin-top: 34px; font-size: 30px; color: #b9cbe0; letter-spacing: .5px; animation: fade .6s ease both 1.7s; }
+@keyframes pop { from { transform: scale(0) rotate(-12deg); opacity: 0; } to { transform: scale(1) rotate(0); opacity: 1; } }
+@keyframes rise { from { transform: translateY(110%); } to { transform: translateY(0); } }
+@keyframes fade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes glow { 0% { box-shadow: 0 0 0 0 rgba(63,159,224,.9); } 100% { box-shadow: 0 0 0 38px rgba(63,159,224,0); } }
+
+/* intro: logo out, card in */
+.intro .logo-wrap { animation: out .55s ease-in both 3.0s; }
+@keyframes out { to { opacity: 0; transform: translateY(-40px) scale(.96); } }
+.card { opacity: 0; animation: cardIn .6s cubic-bezier(.2, .9, .2, 1) both 3.45s, cardOut .4s ease-in both 6.15s; text-align: center; padding: 0 160px; }
+@keyframes cardIn { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: none; } }
+@keyframes cardOut { to { opacity: 0; } }
+.kicker { font-size: 34px; font-weight: 700; letter-spacing: 6px; text-transform: uppercase; color: var(--blue); }
+.segs { display: flex; gap: 12px; justify-content: center; margin: 30px 0 46px; }
+.segs b { width: 54px; height: 10px; border-radius: 5px; background: rgba(255,255,255,.18); display: block; }
+.segs b.done { background: rgba(255,255,255,.55); }
+.segs b.now { background: var(--blue); animation: nowPulse .9s ease-in-out 3.9s 2 alternate both; }
+@keyframes nowPulse { from { transform: scaleY(1); } to { transform: scaleY(2.2); } }
+.title { font-size: 92px; font-weight: 800; line-height: 1.08; letter-spacing: -1px; text-wrap: balance; }
+.sub { margin-top: 30px; font-size: 32px; color: #b9cbe0; }
+
+/* outro */
+.outro .o1 { animation: fade .6s ease both .1s; text-align: center; padding: 0 160px; }
+.outro .o2 { animation: fade .6s ease both .6s; }
+.outro .o3 { animation: fade .6s ease both 1.0s; }
+.next { font-size: 30px; font-weight: 700; letter-spacing: 5px; text-transform: uppercase; color: var(--blue); }
+.next-title { margin-top: 18px; font-size: 72px; font-weight: 800; line-height: 1.1; text-wrap: balance; }
+.guide { margin-top: 48px; font-size: 34px; color: #cfe0f2; }
+.guide b { color: #fff; }
+.small-logo { position: absolute; bottom: 64px; left: 0; right: 0; display: flex; justify-content: center; }
+.small-logo .logo { gap: 16px; transform: scale(.42); transform-origin: center; }
+.small-logo .mark i { animation: none; }
+.small-logo .word span { animation: none; }
+
+/* thumbnail */
+.thumb .layer { align-items: flex-start; justify-content: center; padding: 0 0 0 110px; }
+.thumb .shot { position: absolute; right: -120px; top: 120px; width: 1150px; border-radius: 22px; box-shadow: 0 30px 80px rgba(0,0,0,.45); transform: rotate(-4deg); border: 6px solid rgba(255,255,255,.12); }
+.thumb .fade { position: absolute; inset: 0; background: linear-gradient(90deg, var(--navy) 38%, rgba(10,46,82,.85) 55%, rgba(10,46,82,0) 85%); }
+.thumb .t-kicker { font-size: 40px; font-weight: 700; letter-spacing: 5px; color: var(--blue); text-transform: uppercase; }
+.thumb .t-title { margin-top: 22px; font-size: 104px; font-weight: 800; line-height: 1.02; max-width: 1000px; letter-spacing: -1.5px; }
+.thumb .t-logo { position: absolute; left: 110px; bottom: 90px; }
+.thumb .t-logo .logo { transform: scale(.55); transform-origin: left bottom; }
+.thumb .mark i, .thumb .word span { animation: none; }
+</style>
+</head>
+<body>
+<div class="stage"><div class="grid-bg"></div></div>
+<div id="root"></div>
+<script>
+const q = new URLSearchParams(location.search);
+const mode = q.get("mode") || "intro";
+const n = Number(q.get("n") || 1), total = Number(q.get("total") || 12);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const title = esc(q.get("title") || "");
+const cells = ["", "", "m", "m", "", "", "", "m", "b"];
+const logo = (delay = 0) => `<div class="logo"><div class="mark">${cells.map((c, i) => `<i class="${c}" style="animation-delay:${(delay + i * 0.09).toFixed(2)}s${c === "b" ? `, ${(delay + 1.45).toFixed(2)}s` : ""}"></i>`).join("")}</div><div class="word"><span class="a">Activity</span><span class="r">Roster</span></div></div>`;
+const segs = Array.from({ length: total }, (_, i) => `<b class="${i + 1 < n ? "done" : i + 1 === n ? "now" : ""}"></b>`).join("");
+const root = document.getElementById("root");
+document.body.className = mode;
+if (mode === "intro") {
+  root.innerHTML = `
+    <div class="layer logo-wrap">${logo(0.15)}<div class="tag">Staff rostering for sailing &amp; watersports centres</div></div>
+    <div class="layer"><div class="card"><div class="kicker">Video ${n} of ${total}</div><div class="segs">${segs}</div><div class="title">${title}</div><div class="sub">ActivityRoster how-to series</div></div></div>`;
+} else if (mode === "outro") {
+  const next = esc(q.get("next") || "");
+  const nn = q.get("nextN");
+  root.innerHTML = `
+    <div class="layer"><div class="o1">${next ? `<div class="next">Next · Video ${esc(nn)} of ${total}</div><div class="next-title">${next}</div>` : `<div class="next">That's the series</div><div class="next-title">Thanks for watching</div>`}</div>
+      <div class="guide o2">Step-by-step guides: <b>activityroster.com/learn</b></div>
+      <div class="guide o3" style="margin-top:14px;font-size:28px">Start your free month at <b>activityroster.com</b></div></div>
+    <div class="small-logo">${logo(0)}</div>`;
+} else {
+  const shot = q.get("shot");
+  root.innerHTML = `${shot ? `<img class="shot" src="${esc(shot)}">` : ""}<div class="fade"></div>
+    <div class="layer"><div class="t-kicker">How-to · ${n} of ${total}</div><div class="t-title">${title}</div></div>
+    <div class="t-logo">${logo(0)}</div>`;
+}
+// The renderer calls this to show the frame at time t (seconds).
+window.__seek = (t) => { for (const a of document.getAnimations()) { a.pause(); a.currentTime = t * 1000; } };
+window.__duration = mode === "intro" ? 6.6 : mode === "outro" ? 4.6 : 0;
+window.__ready = document.fonts.ready.then(() => Promise.all([...document.images].map((im) => im.complete ? 1 : new Promise((r) => { im.onload = im.onerror = r; }))));
+</script>
+</body>
+</html>
