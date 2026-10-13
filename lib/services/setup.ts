@@ -1,53 +1,83 @@
 import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
-import type { SetupMode } from "@/lib/db/schema";
-import { instructor as instructorTable } from "@/lib/db/schema";
-import { isNotNull } from "drizzle-orm";
+import type { Organisation, SetupMode } from "@/lib/db/schema";
+import { instructor as instructorTable, rosterDay as rosterDayTable, rosterWeek as rosterWeekTable, sessionStaffOverride as overrideTable } from "@/lib/db/schema";
+import { eq, isNotNull } from "drizzle-orm";
+
+export type SetupStepKey = "signup" | "team" | "invite" | "courses" | "roster" | "confirm" | "pay" | "plan";
 
 export interface SetupStep {
+  key: SetupStepKey;
   label: string;
   href: string;
   done: boolean;
+  /** "later" steps aren't needed to roster: pay rates, choosing a plan. */
+  stage: "essential" | "later";
+  /** Why a step isn't done yet, when there's something specific to fix. */
+  hint?: string;
 }
 
 export interface SetupStatus {
   setupMode: SetupMode;
   steps: SetupStep[];
+  /** Over the essential steps only. */
   completePct: number;
+  /** Every essential step done. */
   complete: boolean;
+  hasStaff: boolean;
+  /** At least one roster day confirmed (or a week published before days were confirmed one by one). */
+  firstDayConfirmed: boolean;
 }
 
 /**
- * A getting-started checklist derived from the org's real data (no extra table):
- * whether they've added staff, courses, pay rates, invited an instructor and
- * taken a booking. Drives the office onboarding card. Tenant scoped.
+ * The getting-started checklist, in the order a centre gets rostering quickly:
+ * sign up, set up courses and team (each person with their instructor types),
+ * invite the team, put the courses on the calendar, build the first roster,
+ * check tickets and confirm the first day; then, later, pay rates and a plan.
+ * Derived from the centre's real data (no extra table). Tenant scoped.
  */
-export async function getSetupStatus(repos: Repositories, ctx: AnyTenantContext): Promise<SetupStatus> {
+export async function getSetupStatus(repos: Repositories, ctx: AnyTenantContext, organisation?: Pick<Organisation, "stripeSubscriptionId"> | null): Promise<SetupStatus> {
   const t = repos.tenant;
-  const [settings, instructors, linked, courses, payRates, assignments] = await Promise.all([
+  const [settings, active, linked, courses, payRates, assignments, dayAdds, confirmedDays, publishedWeeks] = await Promise.all([
     t.orgSettings.list(ctx),
-    t.instructor.count(ctx),
+    t.instructor.list(ctx, eq(instructorTable.status, "active")),
     t.instructor.count(ctx, isNotNull(instructorTable.userId)),
     t.course.count(ctx),
     t.payRate.count(ctx),
     t.courseStaff.count(ctx),
+    t.sessionStaffOverride.count(ctx, eq(overrideTable.mode, "add")),
+    t.rosterDay.count(ctx, isNotNull(rosterDayTable.confirmedAt)),
+    t.rosterWeek.count(ctx, isNotNull(rosterWeekTable.publishedAt)),
   ]);
+  const held = active.length ? new Set((await t.qualification.list(ctx)).map((q) => q.instructorId)) : new Set<string>();
+  const untyped = active.filter((i) => !held.has(i.id)).length;
+  const officeRuns = settings[0]?.staffManagedBy === "office";
+  const firstDayConfirmed = confirmedDays + publishedWeeks > 0;
 
   const steps: SetupStep[] = [
-    { label: "Add your staff", href: "/office/staff", done: instructors > 0 },
-    { label: "Create your first course", href: "/office/courses", done: courses > 0 },
-    { label: "Roster staff onto a course", href: "/office/courses", done: assignments > 0 },
-    { label: "Set pay rates", href: "/office/settings?tab=pay#pay-rates", done: payRates > 0 },
+    { key: "signup", label: "Sign up and choose your PIN", href: "/office", done: true, stage: "essential" },
+    {
+      key: "team", label: "Set up your courses and team, with each person's instructor types", href: active.length ? "/office/staff" : "/office/onboarding", stage: "essential",
+      done: active.length > 0 && untyped === 0,
+      ...(active.length && untyped ? { hint: `${untyped} ${untyped === 1 ? "person has" : "people have"} no instructor type ticked, so Auto-roster can't place them` } : {}),
+    },
     // When the office keeps availability nobody needs the app, so this step isn't asked of them.
-    ...(settings[0]?.staffManagedBy === "office" ? [] : [{ label: "Invite an instructor to the app", href: "/office/staff", done: linked > 0 }]),
+    ...(officeRuns ? [] : [{ key: "invite" as const, label: "Invite your team to the app", href: "/office/staff", done: linked > 0, stage: "essential" as const }]),
+    { key: "courses", label: "Put your courses on the calendar", href: "/office/courses", done: courses > 0, stage: "essential" },
+    { key: "roster", label: "Build your first roster (Auto-roster)", href: "/office/rota", done: assignments + dayAdds > 0, stage: "essential" },
+    { key: "confirm", label: "Check tickets, then confirm your first day", href: "/office/rota", done: firstDayConfirmed, stage: "essential" },
+    { key: "pay", label: "Set pay rates, before your first pay run", href: "/office/settings?tab=pay#pay-rates", done: payRates > 0, stage: "later" },
+    ...(organisation !== undefined ? [{ key: "plan" as const, label: "Choose a plan before your trial ends", href: "/office/billing", done: Boolean(organisation?.stripeSubscriptionId), stage: "later" as const }] : []),
   ];
 
-  const doneCount = steps.filter((s) => s.done).length;
-  const completePct = Math.round((doneCount / steps.length) * 100);
+  const essential = steps.filter((s) => s.stage === "essential");
+  const doneCount = essential.filter((s) => s.done).length;
   return {
     setupMode: settings[0]?.setupMode ?? "basic",
     steps,
-    completePct,
-    complete: doneCount === steps.length,
+    completePct: Math.round((doneCount / essential.length) * 100),
+    complete: doneCount === essential.length,
+    hasStaff: active.length > 0,
+    firstDayConfirmed,
   };
 }

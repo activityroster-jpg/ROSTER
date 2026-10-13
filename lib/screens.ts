@@ -88,8 +88,11 @@ export const GUIDE_SCREENS: Partial<Record<string, ScreenId[]>> = {
   "if-the-platform-is-down": ["emergency"],
 };
 
-/** The demo tour: the office first, then the instructor app. */
+/** The demo tour, in the order a new centre gets going: set up, courses, the roster, the season; then the instructor app. */
 export const TOUR: { group: string; ids: ScreenId[] }[] = [
-  { group: "The office", ids: ["dashboard", "board", "boardPeople", "problems", "courses", "courseDetail", "courseDays", "staff", "staffProfile", "availability", "leave", "payroll", "rota", "emergency", "equipment", "settings"] },
-  { group: "The instructor app", ids: ["appHome", "appAvailability", "appHours", "appDocuments", "appLeave", "appNotifications"] },
+  { group: "1 · Set up courses and team", ids: ["onboarding", "courseSetup", "staff", "staffImport", "staffProfile"] },
+  { group: "2 · Put courses on the calendar", ids: ["courses", "importCourses", "integrations", "courseDetail", "courseDays"] },
+  { group: "3 · Build and confirm the roster", ids: ["availability", "board", "boardPeople", "problems", "rota", "emergency"] },
+  { group: "4 · Run the season", ids: ["dashboard", "leave", "payroll", "equipment", "settings"] },
+  { group: "The instructor app", ids: ["appHome", "appAvailability", "appDocuments", "appLeave", "appHours", "appNotifications"] },
 ];

@@ -18,32 +18,44 @@ const NEEDS: Record<string, Permission> = {
   "/office/requests": "office.view",
 };
 
+// In the order a centre gets going: set up courses and team, then roster, then
+// the day-to-day pages, then the optional extras and the account pages.
 const NAV = [
   {
-    group: "Operate",
+    group: "Start",
     items: [
       { href: "/office", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/office/courses", label: "Courses", icon: CalendarDays },
-      { href: "/office/rota", label: "Roster", icon: ClipboardList },
-      { href: "/office/availability", label: "Availability", icon: CalendarDays },
-      { href: "/office/timeclock", label: "Time clock", icon: Clock },
-      { href: "/office/leave", label: "Leave & cover", icon: CalendarOff },
     ],
   },
   {
-    group: "People & kit",
+    group: "1 · Set up",
     items: [
+      { href: "/office/course-setup", label: "Course setup", icon: LifeBuoy },
       { href: "/office/staff", label: "Instructors", icon: Users },
+      { href: "/office/courses", label: "Courses", icon: CalendarDays },
+    ],
+  },
+  {
+    group: "2 · Roster",
+    items: [
+      { href: "/office/availability", label: "Availability", icon: CalendarDays },
+      { href: "/office/rota", label: "Roster", icon: ClipboardList },
+      { href: "/office/leave", label: "Leave & cover", icon: CalendarOff },
+      { href: "/office/timeclock", label: "Time clock", icon: Clock },
+    ],
+  },
+  {
+    group: "3 · Pay & extras",
+    items: [
+      { href: "/office/finance", label: "Payroll", icon: Wallet },
       { href: "/office/equipment", label: "Equipment", icon: Ship },
       { href: "/office/locations", label: "Locations", icon: MapPin },
-      { href: "/office/finance", label: "Payroll", icon: Wallet },
     ],
   },
   {
-    group: "Set up",
+    group: "Account",
     items: [
       { href: "/office/settings", label: "Settings", icon: Settings },
-      { href: "/office/course-setup", label: "Course setup", icon: LifeBuoy },
       { href: "/office/billing", label: "Billing", icon: CreditCard },
       { href: "/office/change-log", label: "Change log", icon: History },
       { href: "/office/requests", label: "Requests & ideas", icon: Lightbulb },

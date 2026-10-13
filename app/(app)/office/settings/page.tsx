@@ -10,6 +10,8 @@ import { CourseScheduleDefaults } from "@/components/office/CourseScheduleDefaul
 import { TimeclockSettingsForm } from "@/components/office/TimeclockSettingsForm";
 import { parseDefaultSchedule } from "@/lib/domain";
 import { RotaTemplateForm } from "@/components/office/RotaTemplateForm";
+import { RosterExampleUpload } from "@/components/office/RosterExampleUpload";
+import { listRosterExamples, type RosterExample } from "@/lib/services/roster-example";
 import { parseRotaTemplate } from "@/lib/rota/template";
 import { RetentionForm } from "@/components/office/RetentionForm";
 import { OnboardingTrackerForm } from "@/components/office/OnboardingTrackerEditor";
@@ -104,6 +106,8 @@ export default async function SettingsPage() {
   const s = settings[0];
   const welfare = parseWelfareSettings(s?.welfareOfficers, s?.welfareDuty);
   const joinCode = await repos.control.ensureJoinCode(ctx.organisationId);
+  let rosterExamples: RosterExample[] = [];
+  try { rosterExamples = await listRosterExamples(ctx); } catch { /* storage unavailable: offer the upload anyway */ }
   const retention = await retentionPlan(repos, ctx, s, new Date());
   const tracker = await loadTracker(repos, ctx);
 
@@ -197,6 +201,7 @@ export default async function SettingsPage() {
         </div>
         <p className="mb-3 text-xs text-slate-500">What the downloaded roster shows and how it is laid out. You chose this when you set up; change it here any time.</p>
         <RotaTemplateForm initial={parseRotaTemplate(s?.rotaTemplate)} />
+        <div className="mt-4"><RosterExampleUpload initial={rosterExamples} /></div>
       </Card>
       </div>
 

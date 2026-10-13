@@ -11,7 +11,7 @@ import { sendEmail } from "@/lib/mail";
 import { notifySecurityChange, recordSecurityEvent } from "@/lib/security/events";
 import { authSecret } from "@/lib/security/secrets";
 import { createAuthMiddleware } from "better-auth/api";
-import { LV_PENDING_COOKIE, LV_PROVEN_MAX_AGE_S, lvPendingValue } from "./login-verify";
+import { LV_COOKIE, LV_DEVICE_COOKIE, LV_IDLE_MAX_AGE_S, LV_PENDING_COOKIE, LV_PROVEN_MAX_AGE_S, lvCookieValue, lvDeviceValue, lvPendingValue } from "./login-verify";
 
 /**
  * Better Auth is the source of truth for authentication (email/password, magic
@@ -98,9 +98,18 @@ export function createAuth(db: Database, env: CloudflareEnv) {
         if (!EMAIL_PROOF_PATHS.has(ctx.path)) return;
         const created = ctx.context.newSession;
         if (!created?.session?.id) return;
-        ctx.setCookie(LV_PENDING_COOKIE, await lvPendingValue(authSecret(env), created.session.id), {
-          httpOnly: true, secure: true, sameSite: "lax", path: "/", domain: `.${env.APP_APEX_DOMAIN}`, maxAge: LV_PROVEN_MAX_AGE_S,
-        });
+        const opts = { httpOnly: true, secure: true, sameSite: "lax" as const, path: "/", domain: `.${env.APP_APEX_DOMAIN}` };
+        const secret = authSecret(env);
+        // A new centre owner clicking "Confirm my email" has just proved the
+        // address with the very link we sent: that is the sign-in proof, so
+        // they go straight on to choosing a PIN with no second code and no
+        // "stay signed in?" stop (they stay signed in, 12 idle hours as usual).
+        if (ctx.path === "/verify-email") {
+          ctx.setCookie(LV_COOKIE, await lvCookieValue(secret, created.session.id, "p"), { ...opts, maxAge: LV_IDLE_MAX_AGE_S });
+          ctx.setCookie(LV_DEVICE_COOKIE, await lvDeviceValue(secret, created.user.id), { ...opts, maxAge: LV_IDLE_MAX_AGE_S });
+          return;
+        }
+        ctx.setCookie(LV_PENDING_COOKIE, await lvPendingValue(secret, created.session.id), { ...opts, maxAge: LV_PROVEN_MAX_AGE_S });
       }),
     },
     session: {

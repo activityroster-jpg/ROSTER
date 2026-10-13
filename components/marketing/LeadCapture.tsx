@@ -114,7 +114,7 @@ export function LeadCapture({
           Your centre <span className="font-semibold text-navy">{centreName}</span> is set up at{" "}
           <span className="font-semibold text-navy">{slug}.{apex}</span>.{" "}
           {result.emailSent
-            ? <>We&apos;ve emailed a confirmation link to <span className="font-semibold">{email}</span> — click it to verify and you&apos;ll be taken straight in.</>
+            ? <>We&apos;ve emailed a confirmation link to <span className="font-semibold">{email}</span> — click it, choose a 4-digit PIN, and you&apos;re in. No second code needed.</>
             : <>Sign in with <span className="font-semibold">{email}</span> and the password you just set.</>}
         </p>
         <p className="mt-3 rounded-lg bg-canvas p-3 text-xs text-slate-500">

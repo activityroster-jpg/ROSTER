@@ -12,6 +12,8 @@ import { availabilityHorizon } from "@/lib/services/availability";
 import { findProblems, problemLabel } from "@/lib/services/problems";
 import { getBoard } from "@/lib/services/board";
 import { RosterBoard } from "@/components/office/RosterBoard";
+import { missingExpiry } from "@/lib/domain/roster-day";
+import { instructor as instructorTable, qualification as qualificationTable } from "@/lib/db/schema";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +44,15 @@ export default async function RotaPage({ searchParams }: { searchParams: Promise
   const range = `${new Date(`${monday}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "long", timeZone: "UTC" })} – ${new Date(`${addDays(monday, 6)}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })}`;
   const total = rota.reduce((n, d) => n + d.sessions.length, 0);
 
+  // Before confirming: who is rostered on a ticket with no expiry date recorded (the app can't warn when it lapses).
+  const onWeek = [...new Set(rota.flatMap((d) => d.sessions.flatMap((x) => x.staff.filter((m) => m.status !== "declined").map((m) => m.instructorId))))];
+  const [roleRows, heldRows, peopleRows] = canEdit && onWeek.length
+    ? await Promise.all([repos.tenant.roleType.list(ctx), repos.tenant.qualification.listIn(ctx, qualificationTable.instructorId, onWeek), repos.tenant.instructor.listIn(ctx, instructorTable.id, onWeek)])
+    : [[], [], []];
+  const placeType = new Map(roleRows.map((r) => [r.id, r.qualificationTypeId ?? null]));
+  const held = heldRows.map((q) => ({ instructorId: q.instructorId, qualificationTypeId: q.qualificationTypeId, expiryDate: q.expiryDate ?? null }));
+  const nameOf = new Map(peopleRows.map((p) => [p.id, p.name]));
+
   return (
     <div className={view === "print" ? "mx-auto max-w-4xl" : "w-full"}>
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3 print:mb-3">
@@ -68,7 +79,8 @@ export default async function RotaPage({ searchParams }: { searchParams: Promise
       {canEdit ? <RosterDays staffAccept={Boolean(settingsRows[0]?.staffAcceptShifts)} days={dayStates.map((d) => {
         const day = rota.find((r) => r.date === d.date);
         const sessions = day?.sessions ?? [];
-        return { date: d.date, confirmed: d.confirmed, sessions: sessions.length, people: new Set(sessions.flatMap((x) => x.staff.filter((m) => m.status !== "declined").map((m) => m.instructorId))).size, short: sessions.filter((x) => !x.coverageOk).length };
+        const staff = sessions.flatMap((x) => x.staff.filter((m) => m.status !== "declined"));
+        return { date: d.date, confirmed: d.confirmed, sessions: sessions.length, people: new Set(staff.map((m) => m.instructorId)).size, short: sessions.filter((x) => !x.coverageOk).length, noExpiry: missingExpiry(staff, placeType, held).map((id) => nameOf.get(id) ?? "Someone").sort() };
       })} /> : null}
       {settingsRows[0]?.staffAcceptShifts && allStaff.length ? <p className="mb-3 text-xs text-slate-500 print:hidden">Accepted {confirmed} of {allStaff.length}{declined ? <> · <span className="font-semibold text-port">{declined} can&apos;t make it</span></> : null}.</p> : null}
       {beyondWindow ? (

@@ -121,6 +121,8 @@ export async function addTeamMemberAction(input: {
   employmentType: string;
   qualificationTypeIds: string[];
   courseTypeIds?: string[];
+  /** Email them an invite (default yes when an email is given). */
+  invite?: boolean;
 }): Promise<{ ok: boolean; error?: string; invited?: boolean; message?: string }> {
   const { ctx, repos, organisation } = await requireTenant({ permission: "settings.edit" });
   const name = (input.name ?? "").trim();
@@ -170,7 +172,7 @@ export async function addTeamMemberAction(input: {
 
   // Invite: link a user + membership and email a magic sign-in link (best effort).
   let invited = false;
-  if (email) {
+  if (email && input.invite !== false) {
     const linked = await linkInstructorUser(repos, ctx, instructor.id);
     if (linked.ok) {
       invited = (await sendInvite(repos, ctx, { email: linked.email, userId: linked.userId, kind: "instructor", centreName: organisation.name, slug: organisation.slug, callbackPath: "/welcome?next=/portal/welcome" })) !== "failed";
@@ -184,7 +186,7 @@ export async function addTeamMemberAction(input: {
     invited,
     message: invited
       ? `${name} added — invite emailed to ${email}`
-      : email
+      : email && input.invite !== false
         ? `${name} added — couldn't email the invite, resend from their profile`
         : `${name} added`,
   };

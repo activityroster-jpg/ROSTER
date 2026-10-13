@@ -18,6 +18,7 @@ import { trialEndsAt, trialState } from "@/lib/billing/trial";
 import { getRepositories } from "@/lib/cf/bindings";
 import { TransferOwner } from "@/components/admin/TransferOwner";
 import { fairUseSettings, headcount } from "@/lib/services/fair-use";
+import { listRosterExamples, type RosterExample } from "@/lib/services/roster-example";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +44,8 @@ export default async function CentreDetailPage({ params }: { params: Promise<{ i
   let people: number | null = null;
   try { people = await headcount(db, org); } catch { /* cosmetic */ }
   const officeMembers = await control.officeMembersForOrg(id);
+  let rosterExamples: RosterExample[] = [];
+  try { rosterExamples = await listRosterExamples({ organisationId: org.id, slug: org.slug, system: true, reason: "dev-center: roster example list" }); } catch { /* storage unavailable: show none */ }
   const ghostRows = await control.listGhostVisits(id, 10);
   const ghostSessions: GhostSessionRow[] = await Promise.all(ghostRows.map(async (r) => ({
     id: r.id,
@@ -100,6 +103,22 @@ export default async function CentreDetailPage({ params }: { params: Promise<{ i
         <h2 className="mb-1 font-semibold text-navy">Free trial</h2>
         <p className="mb-3 text-xs text-slate-500">After the trial the centre goes read-only for two weeks, then locks until they add payment. Extend it here when you&apos;ve agreed to.</p>
         <TrialControls id={org.id} state={trialLabel} endsIso={trialEnds.toISOString().slice(0, 10)} />
+      </Card>
+
+      <Card className="mt-6">
+        <h2 className="mb-1 font-semibold text-navy">Roster example</h2>
+        <p className="mb-3 text-xs text-slate-500">What the centre&apos;s roster looks like today, sent from setup or Settings → Roster PDF, so their downloadable roster can be made to match.</p>
+        {rosterExamples.length ? (
+          <ul className="space-y-1.5 text-sm">
+            {rosterExamples.map((e) => (
+              <li key={e.key} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 px-3 py-2">
+                <span className="font-medium text-navy">{e.name}</span>
+                <span className="text-xs text-slate-500">{new Date(e.uploadedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/London" })} · {Math.max(1, Math.round(e.size / 1024))} KB</span>
+                <a href={`/api/admin/centres/${org.id}/roster-example?key=${encodeURIComponent(e.key)}`} className="text-xs font-semibold text-teal hover:underline">Download</a>
+              </li>
+            ))}
+          </ul>
+        ) : <p className="text-sm text-slate-400">None sent yet.</p>}
       </Card>
 
       <Card className="mt-6">

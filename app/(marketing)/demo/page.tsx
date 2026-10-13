@@ -18,7 +18,8 @@ export default function DemoPage() {
         <p className="mx-auto mt-2 max-w-2xl text-slate-600">
           Real screens from the platform, set up as a made-up centre in the middle of July: summer camps, club
           nights and powerboat courses, eighteen instructors, and the problems a real week throws up. Step through
-          the office, then the instructor app.
+          it in the order a new centre gets going: set up courses and team, put the courses on the calendar,
+          build and confirm the roster, run the season; then see the instructor app.
         </p>
       </div>
 

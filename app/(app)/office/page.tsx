@@ -7,7 +7,6 @@ import { isUnder18 } from "@/lib/domain/age";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { requireTenant } from "@/lib/tenant/require";
-import { packFor } from "@/lib/packs";
 import { ONBOARDED_COOKIE } from "@/lib/onboarding";
 import { listStaffWithFit } from "@/lib/services/staff";
 import { addDays, getSessionEvents, getWeekRota, getWeekSchedule, weekStart } from "@/lib/services/schedule";
@@ -56,7 +55,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     getAttendanceBoard(repos, ctx, today),
     listLeave(repos, ctx),
     listOpenShifts(repos, ctx, true),
-    getSetupStatus(repos, ctx),
+    getSetupStatus(repos, ctx, organisation),
     getWeekRota(repos, ctx, monday),
     getSessionEvents(repos, ctx, addDays(monday, -7), addDays(monday, 7 * 12)),
     repos.tenant.orgSettings.list(ctx),
@@ -69,7 +68,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
   // Brand-new centre with no staff yet → guide them through onboarding first,
   // unless they've chosen to skip it (cookie).
-  const hasStaff = setup.steps.find((s) => s.label === "Add your staff")?.done ?? false;
+  const hasStaff = setup.hasStaff;
+  // A first-week nudge: three days in and no day confirmed yet.
+  const signedUpDaysAgo = organisation.createdAt ? (Date.now() - new Date(organisation.createdAt).getTime()) / 86_400_000 : 0;
+  const nudge = !setup.firstDayConfirmed && signedUpDaysAgo >= 3;
   const dismissed = (await cookies()).get(ONBOARDED_COOKIE)?.value === "1";
   if (!hasStaff && !dismissed) redirect("/office/onboarding");
 
@@ -100,52 +102,55 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         </p>
       ) : null}
 
-      {/* Getting started — shown until the checklist is complete */}
+      {/* First-week nudge: a few days in and nothing confirmed yet */}
+      {nudge ? (
+        <div role="status" className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-card border border-amber/50 bg-amber/10 px-4 py-3">
+          <p className="text-sm text-navy"><span className="font-semibold">Your team hasn&apos;t had a roster yet.</span> Open the roster, press Auto-roster, fill any gaps, then confirm a day: everyone on it gets a message.</p>
+          <Link href="/office/rota" className="rounded-lg bg-navy px-3 py-1.5 text-xs font-semibold text-white hover:bg-navy-700">Open the roster →</Link>
+        </div>
+      ) : null}
+
+      {/* Getting started — the route to a first confirmed roster, shown until the essentials are done */}
       {!setup.complete ? (
         <Card className="mb-6 border-teal/40 bg-teal/5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="font-display text-lg font-semibold text-navy">Finish setting up your centre</h2>
-              <p className="text-sm text-slate-600">
-                {setup.setupMode === "basic"
-                  ? packFor(organisation.activityType).wording.defaultsNote
-                  : "You chose full setup — work through these now to get everything ready."}
-              </p>
+              <h2 className="font-display text-lg font-semibold text-navy">Getting started</h2>
+              <p className="text-sm text-slate-600">The quickest route to your first roster, in order. Setting up courses and team takes the longest; after that, rostering is quick.</p>
             </div>
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2">
                 <div className="h-2 w-28 overflow-hidden rounded-full bg-white"><div className="h-full rounded-full bg-teal" style={{ width: `${setup.completePct}%` }} /></div>
                 <span className="text-sm font-semibold text-navy">{setup.completePct}%</span>
               </div>
-              <Link href="/office/onboarding" className="rounded-lg bg-teal px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-700">Guided setup</Link>
+              <a href="/learn?topic=getting-started" target="_blank" rel="noreferrer" className="text-xs font-medium text-teal hover:underline">📖 Read the guide</a>
             </div>
           </div>
-          <ul className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {setup.steps.map((s) => (
-              <li key={s.label}>
-                <Link href={s.href} className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition ${s.done ? "border-slate-200 bg-white text-slate-500" : "border-teal/30 bg-white text-navy hover:border-teal"}`}>
-                  <span className={`flex h-4 w-4 flex-none items-center justify-center rounded-full text-[10px] text-white ${s.done ? "bg-starboard" : "bg-slate-300"}`}>{s.done ? "✓" : ""}</span>
-                  <span className={s.done ? "line-through" : "font-medium"}>{s.label}</span>
-                </Link>
+          <ol className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {setup.steps.filter((s) => s.stage === "essential").map((s, i) => {
+              const next = !s.done && setup.steps.filter((x) => x.stage === "essential").findIndex((x) => !x.done) === i;
+              return (
+                <li key={s.key}>
+                  <Link href={s.href} className={`flex h-full items-start gap-2 rounded-lg border px-3 py-2 text-sm transition ${s.done ? "border-slate-200 bg-white text-slate-500" : next ? "border-teal bg-white text-navy shadow-sm hover:border-teal-700" : "border-teal/30 bg-white text-navy hover:border-teal"}`}>
+                    <span className={`mt-0.5 flex h-5 w-5 flex-none items-center justify-center rounded-full text-[11px] font-bold ${s.done ? "bg-starboard text-white" : next ? "bg-teal text-white" : "bg-slate-200 text-slate-600"}`}>{s.done ? "✓" : i + 1}</span>
+                    <span className="min-w-0">
+                      <span className={s.done ? "line-through" : "font-medium"}>{s.label}</span>
+                      {next ? <span className="ml-1.5 rounded-full bg-teal/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-teal">Next</span> : null}
+                      {!s.done && s.hint ? <span className="block text-xs text-amber">{s.hint}</span> : null}
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ol>
+          <p className="mb-1.5 mt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">Later, once your first roster is out</p>
+          <ul className="flex flex-wrap gap-2">
+            {setup.steps.filter((s) => s.stage === "later").map((s) => (
+              <li key={s.key}>
+                <Link href={s.href} className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs ${s.done ? "border-slate-200 bg-white text-slate-400 line-through" : "border-dashed border-slate-300 bg-white text-navy hover:border-teal"}`}>{s.done ? "✓ " : ""}{s.label}</Link>
               </li>
             ))}
           </ul>
-        </Card>
-      ) : null}
-
-      {/* First course — once the team is in but nothing is on the calendar */}
-      {hasStaff && events.length === 0 ? (
-        <Card className="mb-6 border-teal/40">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="font-display text-lg font-semibold text-navy">Next: build your first week</h2>
-              <p className="text-sm text-slate-600">Add a course, drop in its sessions, then put instructors on it. Your team sees their shifts as pending straight away; confirm each day on the roster and they get a message.</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <Link href="/office/courses" className="rounded-lg bg-teal px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700">Add a course</Link>
-              <Link href="/office/import" className="text-sm font-medium text-teal hover:underline">Import a spreadsheet</Link>
-            </div>
-          </div>
         </Card>
       ) : null}
 

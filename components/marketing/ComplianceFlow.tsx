@@ -37,7 +37,7 @@ export function ComplianceFlow({ showStrip = true }: { showStrip?: boolean }) {
         <li className="rounded-card border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex items-center gap-3"><StepNumber n={2} /><Users className="h-5 w-5 text-teal" aria-hidden="true" /></div>
           <p className="mt-3 font-display text-lg font-semibold text-navy">Select your staff</p>
-          <p className="mt-1 text-sm text-slate-600">See at a glance who&rsquo;s available and who&rsquo;s already assigned, on one availability sheet. Anyone in a place their instructor type doesn&rsquo;t cover and sessions with no Senior Instructor on duty are flagged as you go, plus clashes, ratios and expired licences once you switch those checks on. In a hurry? Auto-roster fills every open place from who&rsquo;s free and qualified, shared out evenly, and tells you if any gap is left.</p>
+          <p className="mt-1 text-sm text-slate-600">See who&rsquo;s free on one sheet, with problems flagged as you go. Or let Auto-roster fill every open place from who&rsquo;s free and qualified.</p>
           <ul className="mt-3 flex flex-wrap gap-1.5" aria-label="Checked as you assign">
             {CHECKS.map((c) => (
               <li key={c} className="inline-flex items-center gap-1 rounded-full bg-starboard/10 px-2 py-0.5 text-[11px] font-semibold text-starboard"><Check className="h-3 w-3" aria-hidden="true" />{c}</li>
@@ -47,7 +47,7 @@ export function ComplianceFlow({ showStrip = true }: { showStrip?: boolean }) {
 
         <Arrow />
 
-        <li className="flex flex-col justify-center rounded-card bg-starboard p-5 text-white shadow-sm">
+        <li className="rounded-card bg-starboard p-5 text-white shadow-sm">
           <div className="flex items-center gap-3"><StepNumber n={3} light /><Send className="h-5 w-5" aria-hidden="true" /></div>
           <p className="mt-3 font-display text-lg font-semibold">Confirm: ready to run</p>
           <p className="mt-1 text-sm text-white/85">In every instructor&rsquo;s app, on the printed roster and on the emergency sheet.</p>

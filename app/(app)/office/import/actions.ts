@@ -8,6 +8,8 @@ import { timeToSlot, toEpochMs } from "@/lib/import/parse";
 import { createCourseTypeResolver } from "@/lib/services/course-type-resolve";
 import { syncHoursForCourse } from "@/lib/services/hours";
 import { managedByOffice } from "@/lib/domain/availability";
+import { and, gte, lte } from "drizzle-orm";
+import { course as courseTable, courseSession as courseSessionTable } from "@/lib/db/schema";
 
 export interface ConfirmedRow {
   name: string;
@@ -25,6 +27,8 @@ export interface ImportResult {
   ok: boolean;
   created: number;
   skipped: number;
+  /** Rows already on the calendar (same course name, date and start time), left as they were. */
+  existing?: number;
   message?: string;
   error?: string;
 }
@@ -60,11 +64,27 @@ export async function importCoursesAction(rows: ConfirmedRow[]): Promise<ImportR
 
   let created = 0;
   let skipped = 0;
+  let existing = 0;
+
+  // Importing an updated spreadsheet again is how a centre adds new courses as
+  // they come in: a course already on the calendar (same name, day and start
+  // time) is left alone rather than added twice.
+  const dates = rows.map((r) => (r.date ?? "").trim()).filter((d) => ISO.test(d)).sort();
+  const already = new Set<string>();
+  if (dates.length) {
+    const sessions = await t.courseSession.list(ctx, and(gte(courseSessionTable.date, dates[0]!), lte(courseSessionTable.date, dates[dates.length - 1]!)));
+    const names = new Map((await t.course.listIn(ctx, courseTable.id, [...new Set(sessions.map((s) => s.courseId))])).map((c) => [c.id, (c.name ?? "").trim().toLowerCase()]));
+    for (const s of sessions) already.add(`${names.get(s.courseId) ?? ""}|${Number(s.startAt)}`);
+  }
 
   for (const raw of rows) {
     const name = (raw.name ?? "").trim();
     const date = (raw.date ?? "").trim();
     if (!name || !ISO.test(date)) { skipped++; continue; }
+    const rowStart = /^\d{2}:\d{2}$/.test(raw.startTime) ? raw.startTime : "";
+    const key = `${name.toLowerCase()}|${toEpochMs(date, rowStart || "09:00")}`;
+    if (already.has(key)) { existing++; continue; }
+    already.add(key);
 
     const audience: CourseAudience = (COURSE_AUDIENCES as readonly string[]).includes(raw.audience)
       ? (raw.audience as CourseAudience)
@@ -123,8 +143,8 @@ export async function importCoursesAction(rows: ConfirmedRow[]): Promise<ImportR
     created++;
   }
 
-  await writeAudit(repos, ctx, { action: "import_courses", entity: "course", after: { created, skipped } });
+  await writeAudit(repos, ctx, { action: "import_courses", entity: "course", after: { created, skipped, existing } });
   revalidatePath("/office/courses");
   revalidatePath("/office");
-  return { ok: true, created, skipped, message: `Imported ${created} course${created === 1 ? "" : "s"}${skipped ? `, skipped ${skipped}` : ""}.` };
+  return { ok: true, created, skipped, existing, message: `Imported ${created} course${created === 1 ? "" : "s"}${existing ? `, ${existing} already on the calendar (left as they were)` : ""}${skipped ? `, skipped ${skipped} incomplete` : ""}.` };
 }

@@ -23,6 +23,7 @@ import { OPTIONAL_FEATURES, type CourseAudience, type OptionalFeature } from "@/
 import { schemeDiscipline, type TeachingData, type TypeOption } from "@/lib/domain/teaching";
 import { InstructorTypesEditor, approvalsToSave, taughtCount, type TypesValue } from "./InstructorTypesEditor";
 import { CourseTeachersEditor, type TeacherTick } from "./CourseTeachersEditor";
+import { RosterExampleUpload, type RosterExampleRow } from "./RosterExampleUpload";
 
 export interface CourseTypeOpt { id: string; name: string; scheme: string | null; audience: CourseAudience; category: string | null; active: boolean }
 export interface TeamMember { name: string; employment: string; quals: number; courses?: number; invited?: boolean }
@@ -39,7 +40,22 @@ const AUDIENCE_ORDER: { key: CourseAudience; label: string; hint: string }[] = [
   { key: "all", label: "All ages", hint: "Runs for any age group" },
 ];
 
-const STEP_LABELS = ["How you run", "Courses", "Team", "Onboarding", "Roster PDF", "Finish"];
+const STEP_LABELS = ["How you run", "Courses", "Team", "Invite", "Onboarding", "Roster PDF", "Finish"];
+const FINISH = STEP_LABELS.length;
+
+/** The message the office sends on its team chat alongside the invites. */
+export function teamChatMessage(centreName: string, joinCode: string | null, finishBy: string): string {
+  return [
+    `Hi all, ${centreName} now uses ActivityRoster for the roster.`,
+    "You should have an email from ActivityRoster inviting you to set up your account. If you can't see it, check your spam or junk folder.",
+    `Please set your password, add your instructor tickets and fill in your availability by ${finishBy}.`,
+    joinCode ? `No email? Go to activityroster.com/app (or the ActivityRoster app), create an account with the email we have for you, and enter our centre code ${joinCode}.` : "No email? Let the office know and we'll send it again.",
+  ].join("\n\n");
+}
+
+const Recommended = ({ children = "Recommended" }: { children?: string }) => (
+  <span className="ml-2 rounded-full bg-starboard/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-starboard">{children}</span>
+);
 
 export function OnboardingWizard({
   centreName,
@@ -52,6 +68,8 @@ export function OnboardingWizard({
   initialWeeksAhead,
   initialStaffManagedBy = "staff",
   initialTracker,
+  joinCode = null,
+  rosterExamples = [],
 }: {
   centreName: string;
   /** The centre's activity pack words (RYA / PADI …). */
@@ -65,6 +83,9 @@ export function OnboardingWizard({
   initialWeeksAhead?: number;
   initialStaffManagedBy?: "staff" | "office";
   initialTracker: TrackerConfig;
+  /** The centre's code for joining from the app, for the team-chat message. */
+  joinCode?: string | null;
+  rosterExamples?: RosterExampleRow[];
 }) {
   const router = useRouter();
   const [step, setStep] = useState(1);
@@ -113,6 +134,8 @@ export function OnboardingWizard({
   const [employment, setEmployment] = useState("employed");
   const [chosen, setChosen] = useState<TypesValue>({ typeIds: new Set(), approvedIds: new Set() });
   const [newType, setNewType] = useState("");
+  const [sendInvite, setSendInvite] = useState(initialStaffManagedBy !== "office");
+  const [copied, setCopied] = useState<string | null>(null);
   // Types added during setup (the centre's own, or the rest of the default list), on top of the ones loaded.
   const [extraTypes, setExtraTypes] = useState<TypeOption[]>([]);
 
@@ -165,7 +188,7 @@ export function OnboardingWizard({
     setMsg(null);
     startTransition(async () => {
       const res = await setSetupPreferencesAction({ features: [...features], slotStyle, availabilityWeeksAhead: weeksAhead, staffManagedBy: managedBy });
-      if (res.ok) setStep(2); else setMsg(res.error ?? "Could not save");
+      if (res.ok) { setSendInvite(managedBy === "staff"); setStep(2); } else setMsg(res.error ?? "Could not save");
     });
   };
 
@@ -201,7 +224,7 @@ export function OnboardingWizard({
     if (!name.trim()) { setMsg("Enter a name"); return; }
     startTransition(async () => {
       const approvals = approvalsToSave(teamData, chosen);
-      const res = await addTeamMemberAction({ name, email, employmentType: employment, qualificationTypeIds: [...chosen.typeIds], courseTypeIds: approvals });
+      const res = await addTeamMemberAction({ name, email, employmentType: employment, qualificationTypeIds: [...chosen.typeIds], courseTypeIds: approvals, invite: sendInvite });
       if (res.ok) {
         setTeam((t) => [...t, { name: name.trim(), employment, quals: chosen.typeIds.size, courses: taughtCount(teamData, chosen), invited: res.invited }]);
         setName(""); setEmail(""); setChosen({ typeIds: new Set(), approvedIds: new Set() });
@@ -214,7 +237,7 @@ export function OnboardingWizard({
     setMsg(null);
     startTransition(async () => {
       const res = await saveOnboardingTrackerAction(tracker);
-      if (res.ok) setStep(5); else setMsg(res.error ?? "Could not save");
+      if (res.ok) setStep(6); else setMsg(res.error ?? "Could not save");
     });
   };
 
@@ -227,7 +250,10 @@ export function OnboardingWizard({
         <h1 className="font-display text-2xl font-bold text-navy">Welcome to ActivityRoster</h1>
         <button onClick={skip} disabled={pending} className="text-sm text-slate-400 hover:text-slate-600">Skip for now →</button>
       </div>
-      <p className="mb-6 text-sm text-slate-500">Let&apos;s get {centreName} rostering. Courses and team are all you need to start — the rest is optional.</p>
+      <div className="mb-6 rounded-card border border-teal/30 bg-teal/5 p-4 text-sm text-slate-700">
+        <p className="font-semibold text-navy">Setting up is the part that takes time. It&apos;s an investment.</p>
+        <p className="mt-1">Allow 20 to 30 minutes for {centreName}. Once every course you run is set up, and every instructor is marked with what they can teach, Auto-roster fills your week in seconds and rostering becomes quick and easy. Steps 1 to {FINISH} are essential; anything extra you switch on comes after, as optional steps.</p>
+      </div>
 
       <div className="mb-6 flex flex-wrap items-center gap-2 text-xs font-semibold">
         {STEP_LABELS.map((label, i) => {
@@ -240,6 +266,12 @@ export function OnboardingWizard({
             </div>
           );
         })}
+        {features.size ? (
+          <div className="flex flex-wrap items-center gap-1.5 border-l border-slate-200 pl-3">
+            <span className="font-semibold uppercase tracking-wide text-slate-400">Optional</span>
+            {[...features].map((f) => <span key={f} className="rounded-full border border-dashed border-slate-300 px-2 py-0.5 font-medium text-slate-500">{FEATURE_META[f].label}</span>)}
+          </div>
+        ) : null}
       </div>
 
       {/* STEP 1 — how you run */}
@@ -248,14 +280,17 @@ export function OnboardingWizard({
           <div className="rounded-card border border-slate-200 bg-white p-6">
             <h2 className="font-display text-lg font-semibold text-navy">What do you want to manage?</h2>
             <p className="mt-1 text-sm text-slate-500">
-              <span className="font-medium text-navy">Courses &amp; team</span> are always included — that&apos;s the rostering core.
-              Switch on anything else you want; you can add these later too.
+              Rostering is the essential core and is always on. Everything else is optional: anything you tick becomes an optional step after the essentials. We recommend rostering only to start; you can switch extras on later in Settings.
             </p>
-            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">Essential</p>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
               <div className="flex items-start gap-3 rounded-lg border border-teal bg-teal/5 p-3">
                 <span className="mt-0.5 flex h-5 w-5 flex-none items-center justify-center rounded bg-teal text-xs text-white">✓</span>
-                <span><span className="block text-sm font-medium text-navy">Courses &amp; team</span><span className="text-xs text-slate-400">Rostering core — always on</span></span>
+                <span><span className="block text-sm font-medium text-navy">Courses, team &amp; rostering</span><span className="text-xs text-slate-400">The core: always on</span></span>
               </div>
+            </div>
+            <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">Optional extras</p>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
               {OPTIONAL_FEATURES.map((f) => {
                 const on = features.has(f);
                 const meta = FEATURE_META[f];
@@ -272,7 +307,7 @@ export function OnboardingWizard({
 
           <div className="rounded-card border border-slate-200 bg-white p-6">
             <h2 className="font-display text-lg font-semibold text-navy">How do your sessions run?</h2>
-            <p className="mt-1 text-sm text-slate-500">Pick what fits how you timetable. You can change this in Settings.</p>
+            <p className="mt-1 text-sm text-slate-500">Morning, afternoon and evening is the quickest to set up and to roster, and suits most centres. You can change this later in Settings.</p>
             <div className="mt-4 grid gap-2 sm:grid-cols-2">
               {[
                 { key: "slots", title: "Morning / afternoon / evening", hint: "Standard AM · PM · EV slots — simplest for most centres" },
@@ -280,7 +315,7 @@ export function OnboardingWizard({
               ].map((o) => (
                 <button key={o.key} type="button" onClick={() => setSlotStyle(o.key)}
                   className={`rounded-lg border p-3 text-left transition ${slotStyle === o.key ? "border-teal bg-teal/5" : "border-slate-200 hover:border-slate-300"}`}>
-                  <span className="block text-sm font-medium text-navy">{o.title}</span>
+                  <span className="block text-sm font-medium text-navy">{o.title}{o.key === "slots" ? <Recommended>Quickest</Recommended> : null}</span>
                   <span className="text-xs text-slate-400">{o.hint}</span>
                 </button>
               ))}
@@ -289,7 +324,7 @@ export function OnboardingWizard({
 
           <div className="rounded-card border border-slate-200 bg-white p-6">
             <h2 className="font-display text-lg font-semibold text-navy">Do your staff need to sign up?</h2>
-            <p className="mt-1 text-sm text-slate-500">Choose who keeps availability up to date. You can change this in Settings, or for one person on their page.</p>
+            <p className="mt-1 text-sm text-slate-500">Choose who keeps availability up to date. We recommend the app: staff fill in their own availability and tickets while you set up the rest. Contractors can be switched to office-run on their own page, and you can change this in Settings.</p>
             <div className="mt-4 grid gap-2 sm:grid-cols-2">
               {([
                 { v: "staff", title: "Yes, they use the app", hint: "Each instructor marks when they're free and confirms their sessions. A slot counts as busy until they answer." },
@@ -297,7 +332,7 @@ export function OnboardingWizard({
               ] as const).map((o) => (
                 <button key={o.v} type="button" onClick={() => setManagedBy(o.v)} aria-pressed={managedBy === o.v}
                   className={`rounded-lg border p-3 text-left transition ${managedBy === o.v ? "border-teal bg-teal/5" : "border-slate-200 hover:border-slate-300"}`}>
-                  <span className="block text-sm font-semibold text-navy">{o.title}</span>
+                  <span className="block text-sm font-semibold text-navy">{o.title}{o.v === "staff" ? <Recommended /> : null}</span>
                   <span className="text-xs text-slate-500">{o.hint}</span>
                 </button>
               ))}
@@ -337,7 +372,7 @@ export function OnboardingWizard({
             <h2 className="font-display text-lg font-semibold text-navy">Which courses do you run?</h2>
             <button type="button" onClick={addAllCourses} disabled={pending} className="flex-none text-xs font-semibold text-teal hover:underline disabled:opacity-50">{wording.addAllCourses}</button>
           </div>
-          <p className="mt-1 text-sm text-slate-500">Grouped by youth and adult. Tick the ones you offer, or add your own below. Missing some? Use &ldquo;{wording.addAllCourses.replace(/^\+ /, "")}&rdquo;. Change anytime in Settings.</p>
+          <p className="mt-1 text-sm text-slate-500">Tick <strong className="text-navy">every course you will ever run</strong>, across the whole year, not just this month&apos;s. Each one comes with its staffing and ratios already set, and a course left out can&apos;t go on the calendar until it&apos;s added. Grouped by youth and adult; add your own below. Missing some? Use &ldquo;{wording.addAllCourses.replace(/^\+ /, "")}&rdquo;.</p>
 
           <div className="mt-5 space-y-5">
             {AUDIENCE_ORDER.filter((a) => grouped.has(a.key)).map((a) => (
@@ -403,7 +438,11 @@ export function OnboardingWizard({
       {step === 3 ? (
         <div className="rounded-card border border-slate-200 bg-white p-6">
           <h2 className="font-display text-lg font-semibold text-navy">Add your team</h2>
-          <p className="mt-1 text-sm text-slate-500">Add each instructor and tick the instructor types they hold (as many as apply): the courses they can teach follow from the types. Add their email and we&apos;ll send them an invite to upload a copy of each licence themselves. Got a spreadsheet? <a href="/office/staff/import" className="font-semibold text-teal hover:underline">Import your instructors</a> instead.</p>
+          <div className="mt-2 rounded-lg border border-amber/40 bg-amber/10 p-3 text-sm text-slate-700">
+            <p className="font-semibold text-navy">This step saves you the most time later.</p>
+            <p className="mt-1">Auto-roster only puts a person on courses their instructor types allow. Add everyone, and tick every type each person holds. Five minutes here saves hours every week, and a person with no type ticked can&apos;t be rostered at all.</p>
+          </div>
+          <p className="mt-3 text-sm text-slate-500">Tick the instructor types each person holds (as many as apply): the courses they can teach follow from the types. Add their email to send an invite, so they upload their own licences and fill in their availability. More than about five people? <a href="/office/staff/import" className="font-semibold text-teal hover:underline">Import them from a spreadsheet</a> instead.</p>
 
           <form onSubmit={addMember} className="mt-4 rounded-lg bg-canvas p-4">
             <div className="grid gap-3 sm:grid-cols-3">
@@ -428,6 +467,10 @@ export function OnboardingWizard({
               <button type="button" onClick={addAllTypes} disabled={pending} className="text-xs font-semibold text-teal hover:underline disabled:opacity-50">{wording.addAllTypes}</button>
             </div>
 
+            <label className="mt-3 flex items-center gap-2 text-sm text-slate-700">
+              <input type="checkbox" checked={sendInvite} onChange={(e) => setSendInvite(e.target.checked)} className="h-4 w-4 rounded border-slate-300 text-teal" />
+              Email them an invite to the app <span className="text-xs text-slate-400">(needs an email address)</span>
+            </label>
             <div className="mt-4 flex items-center gap-3">
               <button type="submit" disabled={pending} className="rounded-lg bg-navy px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700 disabled:opacity-60">
                 {pending ? "Adding…" : "+ Add to team"}
@@ -454,58 +497,101 @@ export function OnboardingWizard({
         </div>
       ) : null}
 
-      {/* STEP 4 — instructor onboarding tracker */}
+      {/* STEP 4 — tell the team the invites are coming */}
       {step === 4 ? (
+        <div className="rounded-card border border-slate-200 bg-white p-6">
+          <h2 className="font-display text-lg font-semibold text-navy">Let your team know the invite is coming</h2>
+          {managedBy === "office" ? (
+            <p className="mt-1 text-sm text-slate-500">You chose to run availability from the office, so nobody needs to sign up. You can skip this step, and invite people later from Instructors if you change your mind.</p>
+          ) : (
+            <>
+              <p className="mt-1 text-sm text-slate-500">
+                {team.filter((m) => m.invited).length
+                  ? `${team.filter((m) => m.invited).length} invite${team.filter((m) => m.invited).length === 1 ? " has" : "s have"} gone out. `
+                  : "No invites have gone out yet: add emails on the team step, or invite people later from Instructors. "}
+                Invites come from ActivityRoster rather than from you, so people often ignore them or they land in spam. Send this message on your team chat (WhatsApp, Slack, email) now, so they know it&apos;s real and when to finish by.
+              </p>
+              {(() => {
+                const finishBy = new Date(Date.now() + 7 * 86_400_000).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
+                const text = teamChatMessage(centreName, joinCode, finishBy);
+                return (
+                  <div className="mt-4">
+                    <textarea readOnly value={text} rows={8} className="w-full rounded-lg border border-slate-300 bg-canvas px-3 py-2 text-sm text-slate-700" onFocus={(e) => e.currentTarget.select()} />
+                    <div className="mt-2 flex flex-wrap items-center gap-3">
+                      <button type="button" onClick={async () => { try { await navigator.clipboard.writeText(text); setCopied("Copied. Paste it into your team chat."); } catch { setCopied("Select the message and copy it."); } }}
+                        className="rounded-lg bg-navy px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700">Copy message</button>
+                      {copied ? <span className="text-xs text-starboard">{copied}</span> : null}
+                    </div>
+                    {joinCode ? <p className="mt-3 text-xs text-slate-500">Your centre code is <span className="font-mono font-semibold text-navy">{joinCode}</span>. Anyone whose invite went astray can join with it from the app; if their email matches your Instructors list they&apos;re linked straight away, otherwise you approve them under Instructors → Join requests.</p> : null}
+                  </div>
+                );
+              })()}
+            </>
+          )}
+          <div className="mt-6 flex justify-between">
+            <button onClick={() => setStep(3)} className="text-sm font-semibold text-slate-500 hover:text-navy">← Back</button>
+            <button onClick={() => { setMsg(null); setStep(5); }} className="rounded-lg bg-teal px-5 py-2.5 font-semibold text-white hover:bg-teal-700">Continue →</button>
+          </div>
+        </div>
+      ) : null}
+
+      {/* STEP 5 — instructor onboarding tracker */}
+      {step === 5 ? (
         <div className="rounded-card border border-slate-200 bg-white p-6">
           <h2 className="font-display text-lg font-semibold text-navy">Track each new instructor&apos;s onboarding?</h2>
           <p className="mt-1 text-sm text-slate-500">A checklist on each instructor&apos;s page showing how far through getting started they are. We&apos;ve ticked the steps we recommend; most of them tick themselves as the person signs up and their details go in. Add your own, or change it later in Settings.</p>
           <div className="mt-4"><OnboardingTrackerEditor value={tracker} onChange={setTracker} payOn={features.has("payroll")} /></div>
           {msg ? <p className="mt-3 text-sm text-port">{msg}</p> : null}
           <div className="mt-6 flex justify-between">
-            <button onClick={() => setStep(3)} className="text-sm font-semibold text-slate-500 hover:text-navy">← Back</button>
+            <button onClick={() => setStep(4)} className="text-sm font-semibold text-slate-500 hover:text-navy">← Back</button>
             <button onClick={saveTrackerThenNext} disabled={pending} className="rounded-lg bg-teal px-5 py-2.5 font-semibold text-white hover:bg-teal-700 disabled:opacity-60">{pending ? "Saving…" : "Continue →"}</button>
           </div>
         </div>
       ) : null}
 
-      {/* STEP 5 — roster PDF layout */}
-      {step === 5 ? (
+      {/* STEP 6 — roster PDF layout */}
+      {step === 6 ? (
         <div className="rounded-card border border-slate-200 bg-white p-6">
           <h2 className="font-semibold text-navy">Your roster PDF</h2>
-          <p className="mb-4 mt-1 text-sm text-slate-500">The roster you download and pin up or email. Choose what goes on it and how it is laid out; you can change this later under Settings → Roster PDF.</p>
-          <RotaTemplateForm initial={DEFAULT_ROTA_TEMPLATE} compact onSaved={() => setStep(6)} />
+          <p className="mb-4 mt-1 text-sm text-slate-500">The roster you download and pin up or email. The defaults suit most centres; you can change this later under Settings → Roster PDF.</p>
+          <div className="mb-5"><RosterExampleUpload initial={rosterExamples} /></div>
+          <RotaTemplateForm initial={DEFAULT_ROTA_TEMPLATE} compact onSaved={() => setStep(FINISH)} />
           <div className="mt-6 flex justify-between">
-            <button onClick={() => setStep(4)} className="text-sm font-semibold text-slate-500 hover:text-navy">← Back</button>
-            <button onClick={() => setStep(6)} className="text-sm font-semibold text-slate-500 hover:text-navy">Keep the defaults →</button>
+            <button onClick={() => setStep(5)} className="text-sm font-semibold text-slate-500 hover:text-navy">← Back</button>
+            <button onClick={() => setStep(FINISH)} className="text-sm font-semibold text-slate-500 hover:text-navy">Keep the defaults →</button>
           </div>
         </div>
       ) : null}
 
-      {/* STEP 6 — finish + funnel for chosen extras */}
-      {step === 6 ? (
+      {/* STEP 7 — finish: courses on the calendar next, then the optional steps */}
+      {step === FINISH ? (
         <div className="rounded-card border border-slate-200 bg-white p-8">
-          <p className="text-center font-display text-2xl font-semibold text-navy">🎉 You&apos;re ready to roster</p>
+          <p className="text-center font-display text-2xl font-semibold text-navy">🎉 The essentials are set up</p>
           <p className="mx-auto mt-2 max-w-md text-center text-sm text-slate-600">
-            {selectedCourses.size} course type{selectedCourses.size === 1 ? "" : "s"} and {team.length} team member{team.length === 1 ? "" : "s"} set up.
+            {selectedCourses.size} course type{selectedCourses.size === 1 ? "" : "s"} and {team.length} team member{team.length === 1 ? "" : "s"} ready. Your dashboard has a checklist for the rest.
           </p>
 
-          {/* Promote booking-system integration */}
-          <div className="mx-auto mt-6 max-w-md rounded-lg border border-teal/40 bg-teal/5 p-4">
-            <p className="font-semibold text-navy">Already take bookings elsewhere?</p>
-            <p className="mt-1 text-sm text-slate-600">Connect WebCollect, Bookwhen, Eola, Class4Kids and more to feed your courses in automatically — no re-typing.</p>
-            <a href="/office/integrations" className="mt-3 inline-block rounded-lg bg-navy px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700">Connect a booking system →</a>
+          <div className="mx-auto mt-6 max-w-xl rounded-lg border border-teal/40 bg-teal/5 p-4">
+            <p className="font-semibold text-navy">Next: put your courses on the calendar</p>
+            <p className="mt-1 text-sm text-slate-600">Add the whole season now, not just the next fortnight. Pick whichever fits how you take bookings:</p>
+            <ul className="mt-3 space-y-2 text-sm text-slate-700">
+              <li><strong className="text-navy">Booking system (quickest).</strong> Connect WebCollect, Bookwhen, Eola, Class4Kids and more once. As new bookings come in, press <em>Check for updates</em> on the Courses page: new courses are added and cancelled ones flagged, and you approve each change. <a href="/office/integrations" className="font-semibold text-teal hover:underline">Connect a booking system →</a></li>
+              <li><strong className="text-navy">Spreadsheet.</strong> Import the season in one go. When new courses come in, import the updated file again: courses already on the calendar are skipped, so only the new ones are added. <a href="/office/import" className="font-semibold text-teal hover:underline">Import courses →</a></li>
+              <li><strong className="text-navy">By hand.</strong> Courses → New course, for the odd one-off. <a href="/office/courses" className="font-semibold text-teal hover:underline">Open Courses →</a></li>
+            </ul>
           </div>
 
           {features.size > 0 ? (
-            <div className="mx-auto mt-6 max-w-md">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Finish setting up your extras</p>
+            <div className="mx-auto mt-6 max-w-xl">
+              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Optional steps</p>
+              <p className="mb-2 text-xs text-slate-500">The extras you switched on. None of them is needed to roster: set them up when you&apos;re ready.</p>
               <ul className="space-y-2">
                 {[...features].map((f) => {
                   const meta = FEATURE_META[f];
                   return (
                     <li key={f}>
-                      <a href={meta.href} className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-sm hover:border-teal">
-                        <span><span className="font-medium text-navy">{meta.label}</span><span className="block text-xs text-slate-400">{meta.blurb}</span></span>
+                      <a href={meta.href} className="flex items-center justify-between rounded-lg border border-dashed border-slate-300 px-3 py-2 text-sm hover:border-teal">
+                        <span><span className="font-medium text-navy">{meta.label}</span><span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-500">Optional</span><span className="block text-xs text-slate-400">{meta.blurb}</span></span>
                         <span className="text-teal">Set up →</span>
                       </a>
                     </li>

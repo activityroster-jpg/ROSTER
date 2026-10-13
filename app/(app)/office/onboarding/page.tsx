@@ -4,6 +4,7 @@ import { OnboardingWizard, type CourseTypeOpt, type TeamMember } from "@/compone
 import { parseFeatures } from "@/lib/features";
 import { trackerOffer } from "@/lib/services/onboarding-tracker";
 import { getTeachingData } from "@/lib/services/teaching";
+import { listRosterExamples, type RosterExample } from "@/lib/services/roster-example";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,9 @@ export default async function OnboardingPage() {
   const staff: TeamMember[] = instructors.map((i) => ({ name: i.name, employment: i.employmentType, quals: 0 }));
 
   const s = settings[0];
+  const joinCode = await repos.control.ensureJoinCode(ctx.organisationId).catch(() => null);
+  let rosterExamples: RosterExample[] = [];
+  try { rosterExamples = await listRosterExamples(ctx); } catch { /* storage unavailable: offer the upload anyway */ }
   return (
     <OnboardingWizard
       centreName={organisation.name}
@@ -34,6 +38,8 @@ export default async function OnboardingPage() {
       initialWeeksAhead={s?.availabilityWeeksAhead ?? 4}
       initialStaffManagedBy={s?.staffManagedBy ?? "staff"}
       initialTracker={await trackerOffer(repos, ctx)}
+      joinCode={joinCode}
+      rosterExamples={rosterExamples}
     />
   );
 }
