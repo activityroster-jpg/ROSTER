@@ -15,7 +15,7 @@ export default {
     { chapter: "Print view", say: "Plenty of centres still pin the roster up. On the Roster page, switch to Print view.",
       do: async (h) => { await h.click(h.page.getByRole("link", { name: "Print view" })); await h.page.waitForURL(/view=print/); await h.wait(1200); } },
     { say: "Each day is laid out as a table: every course, its times, who's on it, and where.",
-      do: async (h) => { await h.highlight(h.page.locator("main table, table").first()); } },
+      do: async (h) => { await h.highlight(h.page.locator("main table, table")); } },
     { say: "Any problem this week, like a session short of staff, is listed at the top, so it isn't missed before you print.",
       do: async (h) => { await h.unhighlight(); await h.scrollTop(); } },
 
@@ -27,11 +27,11 @@ export default {
       do: async (h) => { await h.scrollTo(h.page.locator("#rota-pdf")); await h.highlight(h.page.locator("#rota-pdf")); } },
 
     { chapter: "The emergency sheet", say: "Next, the emergency sheet: everyone on duty today, with their emergency contact and number.",
-      do: async (h) => { await h.unhighlight(); await h.goto("/office/rota/emergency"); await h.highlight(h.page.locator("table").first().or(h.page.getByText("Nobody is rostered on this day.")).first()); } },
+      do: async (h) => { await h.unhighlight(); await h.goto("/office/rota/emergency"); await h.highlight(h.page.locator("table").first().or(h.page.getByText("Nobody is rostered on this day."))); } },
     { say: "Under-eighteens show their parent or guardian too. Only people you allow can see the contacts, and each time the sheet is opened, it's written to the change log.",
       do: async (h) => { await h.unhighlight(); await h.highlight(h.page.getByText("Handle with care.").locator("xpath=..")); } },
     { say: "Print it for the duty officer or the safety boat, or download it. Use the arrows for another day.",
-      do: async (h) => { await h.unhighlight(); await h.point(h.page.getByRole("button", { name: /Print/ }).first()); await h.wait(500); await h.point(h.page.getByRole("link", { name: /Next day/ })); } },
+      do: async (h) => { await h.unhighlight(); await h.point(h.page.getByRole("button", { name: /Print/ })); await h.wait(500); await h.point(h.page.getByRole("link", { name: /Next day/ })); } },
 
     { chapter: "If the platform is down", say: "And if the internet, or the platform, is ever down: your team's app keeps the week on their phone, so they can still see their shifts.", pause: 0.8, thumb: true,
       do: async (h) => { await h.page.mouse.move(1380, 790); await h.wait(300); } },

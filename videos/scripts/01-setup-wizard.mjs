@@ -22,14 +22,14 @@ export default {
     { chapter: "Signing up", say: "Welcome to ActivityRoster. Your first month is free, and signing up takes about a minute, right here on the home page.",
       do: async (h) => { await h.highlight("#get-demo form"); } },
     { say: "Enter your email and a password, your centre's name, and the web address you'd like. Your team will use that address to reach your centre.",
-      do: async (h) => { await h.unhighlight(); await h.point(h.page.getByLabel("Email").first()); await h.wait(500); await h.point(h.page.getByLabel("Centre name").first()); await h.wait(500); await h.point(h.page.getByLabel("Your web address").first()); } },
+      do: async (h) => { await h.unhighlight(); await h.point(h.page.getByLabel("Email")); await h.wait(500); await h.point(h.page.getByLabel("Centre name")); await h.wait(500); await h.point(h.page.getByLabel("Your web address")); } },
     { say: "We send a link to confirm your email. Click it, choose a four-digit PIN for signing in on new devices, and you land straight in the setup wizard.",
       do: async (h) => { await h.point(h.page.getByRole("button", { name: "Start my free month" })); } },
 
     { chapter: "Why setup matters", say: "Here's the wizard, for our made-up centre, Harbour Watersports. Setting up is the part that takes time. Allow twenty to thirty minutes.",
       do: async (h) => { await h.goto("/office/onboarding"); await h.highlight(h.page.getByText("Setting up is the part that takes time").locator("xpath=..")); } },
     { say: "It's an investment. Once every course is set up, and every instructor is marked with what they can teach, Auto-roster fills your week in seconds.",
-      do: async (h) => { await h.wait(600); await h.unhighlight(); await h.point(h.page.getByText("Finish", { exact: true }).first()); } },
+      do: async (h) => { await h.wait(600); await h.unhighlight(); await h.point(h.page.getByText("Finish", { exact: true })); } },
 
     { chapter: "How you run", say: "Step one: how you run. Rostering is always on. The extras, like equipment, locations and payroll, are optional, and you can switch them on later.",
       do: async (h) => { await h.unhighlight(); await h.highlight(h.page.getByRole("heading", { name: "What do you want to manage?" }).locator("xpath=..")); } },
@@ -43,7 +43,7 @@ export default {
       do: async (h) => { await h.click(h.page.getByRole("button", { name: /^Continue →/ })); await h.wait(900); } },
 
     { chapter: "Courses", say: "Step two: courses. Tick every course you will ever run, across the whole year, not just this month's.",
-      do: async (h) => { await h.highlight(h.page.getByRole("heading", { name: "Which courses do you run?" }).locator("xpath=../..").locator("p").first()); } },
+      do: async (h) => { await h.highlight(h.page.getByRole("heading", { name: "Which courses do you run?" }).locator("xpath=../..").locator("p")); } },
     { say: "Each one comes with its staffing and ratios already set. A course you leave out can't go on the calendar until it's added, so if in doubt, leave it ticked.",
       do: async (h) => { await h.unhighlight(); await h.point(h.page.getByRole("button", { name: /Youth Stage 1$/ })); } },
     { say: "Anything not listed, like a club night or a schools programme, add it yourself here.",
