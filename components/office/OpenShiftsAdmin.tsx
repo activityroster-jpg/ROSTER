@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { cancelOpenShiftAction, confirmOpenShiftAction, createOpenShiftAction } from "@/app/(app)/office/leave/actions";
 import { StatusPill } from "@/components/ui";
 import type { OpenShiftRow } from "@/lib/services/openshifts";
+import { PlaceSelect, type PlaceOption } from "./PlaceSelect";
 
 const TONE = { open: "attention", offered: "attention", filled: "covered", cancelled: "neutral" } as const;
 
@@ -14,13 +15,15 @@ export function OpenShiftsAdmin({
   roles,
 }: {
   shifts: OpenShiftRow[];
-  sessions: { id: string; label: string }[];
-  roles: { id: string; name: string }[];
+  /** Upcoming sessions, each with the places for its course's instructor types and its lead place. */
+  sessions: { id: string; label: string; relevant?: string[]; lead?: string | null }[];
+  roles: PlaceOption[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [sessionId, setSessionId] = useState(sessions[0]?.id ?? "");
-  const [roleId, setRoleId] = useState(roles[0]?.id ?? "");
+  const session = sessions.find((s) => s.id === sessionId);
+  const [roleId, setRoleId] = useState(sessions[0]?.lead ?? roles[0]?.id ?? "");
   const [error, setError] = useState<string | null>(null);
 
   const run = (fn: () => Promise<{ ok: boolean; error?: string }>) => {
@@ -37,14 +40,12 @@ export function OpenShiftsAdmin({
       {/* Broadcast a new open shift */}
       <div className="flex flex-wrap items-end gap-2 border-b border-slate-100 p-4">
         <label className="text-xs text-slate-500">Session
-          <select value={sessionId} onChange={(e) => setSessionId(e.target.value)} className="mt-1 block rounded-lg border border-slate-300 px-3 py-2 text-sm">
+          <select value={sessionId} onChange={(e) => { setSessionId(e.target.value); const lead = sessions.find((s) => s.id === e.target.value)?.lead; if (lead) setRoleId(lead); }} className="mt-1 block rounded-lg border border-slate-300 px-3 py-2 text-sm">
             {sessions.length === 0 ? <option value="">No sessions</option> : sessions.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
           </select>
         </label>
-        <label className="text-xs text-slate-500">Role
-          <select value={roleId} onChange={(e) => setRoleId(e.target.value)} className="mt-1 block rounded-lg border border-slate-300 px-3 py-2 text-sm">
-            {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-          </select>
+        <label className="text-xs text-slate-500">Place (instructor type)
+          <PlaceSelect value={roleId} onChange={setRoleId} places={roles} relevant={session?.relevant} ariaLabel="Place (instructor type)" className="mt-1 block rounded-lg border border-slate-300 px-3 py-2 text-sm" />
         </label>
         <button
           disabled={pending || !sessionId || !roleId}

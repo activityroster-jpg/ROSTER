@@ -13,6 +13,7 @@ import {
   equipmentProblems,
   equipmentShortfalls,
   perAssignmentProblems,
+  sessionsOf,
   sortProblems,
   type Problem,
   type ProblemAssignment,
@@ -22,7 +23,8 @@ import {
 } from "@/lib/domain/problems";
 import { availabilityHorizon } from "./availability";
 import { fitReason } from "./staff";
-import { getTeachingMatrix } from "./teaching";
+import { getTeachingContext, getTeachingMatrix, type TeachingContext } from "./teaching";
+import { canFillPlace, unsupervised, type SlotPerson } from "@/lib/domain/teaching";
 import { addDays } from "./schedule";
 import { todayIso } from "@/lib/domain/time";
 
@@ -74,7 +76,7 @@ export async function findProblems(repos: Repositories, ctx: AnyTenantContext, o
   // Everything else only for the courses and dates in that window.
   const windowCourseIds = [...new Set(allSessions.map((x) => x.courseId))];
   const availInWindow = or(and(gte(availabilityTable.date, windowFrom), lt(availabilityTable.date, windowTo)), isNull(availabilityTable.date));
-  const [courseRows, courseTypes, assignmentRows, instructorRows, availRows, complianceTypes, complianceItems, roleTypes, courseEquipment, equipment, teaching, qualifications, equipmentTypes, overrideRows] = await Promise.all([
+  const [courseRows, courseTypes, assignmentRows, instructorRows, availRows, complianceTypes, complianceItems, roleTypes, courseEquipment, equipment, teachingCtx, qualifications, equipmentTypes, overrideRows] = await Promise.all([
     t.course.listIn(ctx, courseTable.id, windowCourseIds),
     t.courseType.list(ctx),
     t.courseStaff.listIn(ctx, courseStaffTable.courseId, windowCourseIds),
@@ -85,7 +87,7 @@ export async function findProblems(repos: Repositories, ctx: AnyTenantContext, o
     t.roleType.list(ctx),
     t.courseEquipment.listIn(ctx, courseEquipmentTable.courseId, windowCourseIds),
     t.equipment.list(ctx),
-    getTeachingMatrix(repos, ctx),
+    getTeachingContext(repos, ctx),
     t.qualification.list(ctx),
     t.equipmentType.list(ctx),
     t.sessionStaffOverride.listIn(ctx, overrideTable.courseSessionId, allSessions.map((x) => x.id)),
@@ -105,10 +107,10 @@ export async function findProblems(repos: Repositories, ctx: AnyTenantContext, o
   let assignments: ProblemAssignment[] = [
     ...assignmentRows
       .filter((a) => inRange.has(a.courseId))
-      .map((a) => { const skips = skipsFor.get(`${a.courseId}|${a.instructorId}`); return { id: a.id, courseId: a.courseId, instructorId: a.instructorId, status: a.status, ...(skips ? { skipSessionIds: skips } : {}) }; }),
+      .map((a) => { const skips = skipsFor.get(`${a.courseId}|${a.instructorId}`); return { id: a.id, courseId: a.courseId, instructorId: a.instructorId, status: a.status, roleTypeId: a.roleTypeId, ...(skips ? { skipSessionIds: skips } : {}) }; }),
     ...overrideRows
       .filter((o) => o.mode === "add" && sessionCourse.has(o.courseSessionId) && inRange.has(sessionCourse.get(o.courseSessionId)!))
-      .map((o) => ({ id: `day:${o.id}`, courseId: sessionCourse.get(o.courseSessionId)!, instructorId: o.instructorId, status: "assigned", onlySessionIds: [o.courseSessionId] })),
+      .map((o) => ({ id: `day:${o.id}`, courseId: sessionCourse.get(o.courseSessionId)!, instructorId: o.instructorId, status: "assigned", roleTypeId: o.roleTypeId, onlySessionIds: [o.courseSessionId] })),
   ];
   if (opts.instructorId) assignments = assignments.filter((a) => a.instructorId === opts.instructorId);
 
@@ -147,12 +149,30 @@ export async function findProblems(repos: Repositories, ctx: AnyTenantContext, o
     }));
   }
 
-  // Qualification match: only for people we know something about (see qualificationGap).
+  // Qualified for the place (lib/services/place-check): a teaching place needs
+  // the course in their instructor types; a place that is an instructor type
+  // needs that type or a higher one on its ladder. Only for people we know
+  // something about (see qualificationGap). Volunteers skip the course check.
+  const teaching = await getTeachingMatrix(repos, ctx, teachingCtx);
   const holdsAny = new Set(qualifications.map((q) => q.instructorId));
-  problems.push(...perAssignmentProblems("not-qualified", "warn", sessions, assignments, courses, instructors, (instructorId, course) => {
-    const gap = qualificationGap(teaching.get(instructorId) ?? [], holdsAny.has(instructorId), course.courseTypeId);
-    return gap.known && !gap.qualified ? `Their qualifications don't cover ${courseTypes.find((ct) => ct.id === course.courseTypeId)?.name ?? "this course type"}` : null;
+  const roleRow = new Map(roleTypes.map((r) => [r.id, r]));
+  problems.push(...perAssignmentProblems("not-qualified", "warn", sessions, assignments, courses, instructors, (instructorId, course, a) => {
+    const role = a.roleTypeId ? roleRow.get(a.roleTypeId) : undefined;
+    if (!holdsAny.has(instructorId)) return null;
+    if (!role || role.countsTowardRatio) {
+      const gap = qualificationGap(teaching.get(instructorId) ?? [], true, course.courseTypeId);
+      if (gap.known && !gap.qualified) return `Their instructor types don't cover ${courseTypes.find((ct) => ct.id === course.courseTypeId)?.name ?? "this course type"}`;
+    }
+    if (role?.qualificationTypeId && !canFillPlace(teachingCtx.held.get(instructorId) ?? new Set(), role.qualificationTypeId, teachingCtx.types)) {
+      return `In a ${role.name} place without being a ${teachingCtx.types.get(role.qualificationTypeId)?.name ?? role.name} (or higher)`;
+    }
+    return null;
   }));
+
+  // Supervision: someone who teaches under a Senior Instructor (Assistant, Dinghy
+  // Instructor…) is on, and nobody who supervises their ladder is on duty in that
+  // slot anywhere at the centre. Only once the centre has recorded a supervisor.
+  if (!opts.instructorId) problems.push(...supervisionProblems(sessions, assignments, courses, roleRow, teachingCtx));
 
   // Ratio and safety cover: when the centre flags them.
   if (settings?.enforceRatioChecks ?? false) {
@@ -231,4 +251,41 @@ export function problemsSuffix(problems: Problem[]): string {
   if (problems.length === 0) return "";
   const shown = problems.slice(0, 3).map((p) => `${p.instructorName ? `${p.instructorName} ` : ""}${p.kind === "double-booked" ? "double-booked" : p.kind === "busy" ? "is Busy" : p.kind === "on-leave" ? "is on leave" : p.kind === "not-answered" ? "hasn't answered availability" : p.kind.replace(/-/g, " ")} (${p.date}${p.slot ? ` ${p.slot}` : ""})`);
   return ` ⚠ ${problems.length} problem${problems.length === 1 ? "" : "s"}: ${shown.join("; ")}${problems.length > 3 ? "; …" : ""}`;
+}
+
+/** One warning per person per slot who teaches under supervision with no supervisor for their ladder on duty in that slot. */
+function supervisionProblems(
+  sessions: readonly ProblemSession[],
+  assignments: readonly ProblemAssignment[],
+  courses: ReadonlyMap<string, ProblemCourse>,
+  roles: ReadonlyMap<string, { name: string; qualificationTypeId: string | null }>,
+  tc: TeachingContext,
+): Problem[] {
+  // Starts once the centre has recorded at least one supervisor (a Senior
+  // Instructor or above): before that every slot would warn.
+  const anySupervisor = [...tc.held.values()].some((held) => [...held].some((id) => tc.types.get(id)?.supervises));
+  if (!anySupervisor) return [];
+  const bySlot = new Map<string, ProblemSession[]>();
+  for (const s of sessions) bySlot.set(`${s.date}|${s.slot}`, [...(bySlot.get(`${s.date}|${s.slot}`) ?? []), s]);
+  const byCourse = new Map<string, ProblemSession[]>();
+  for (const s of sessions) byCourse.set(s.courseId, [...(byCourse.get(s.courseId) ?? []), s]);
+  const out: Problem[] = [];
+  for (const slotSessions of bySlot.values()) {
+    const ids = new Set(slotSessions.map((s) => s.id));
+    const people: (SlotPerson & { session: ProblemSession })[] = [];
+    for (const a of assignments) {
+      if (a.status === "declined") continue;
+      for (const s of sessionsOf(a, byCourse.get(a.courseId) ?? [])) {
+        if (!ids.has(s.id)) continue;
+        const role = a.roleTypeId ? roles.get(a.roleTypeId) : undefined;
+        people.push({ instructorId: a.instructorId, name: "", placeTypeId: role?.qualificationTypeId ?? null, held: tc.held.get(a.instructorId) ?? new Set(), session: s });
+      }
+    }
+    for (const { person, placeType } of unsupervised(people, tc.types)) {
+      const p = people.find((x) => x.instructorId === person.instructorId && x.placeTypeId === person.placeTypeId)!;
+      const course = courses.get(p.session.courseId);
+      out.push({ kind: "no-supervisor", severity: "warn", date: p.session.date, slot: p.session.slot, courseId: p.session.courseId, courseName: course?.name ?? "Course", sessionId: p.session.id, instructorId: person.instructorId, instructorName: null, detail: `${placeType.name} with no Senior Instructor on duty in this slot` });
+    }
+  }
+  return out;
 }

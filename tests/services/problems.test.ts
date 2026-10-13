@@ -29,7 +29,7 @@ describe("problems service", () => {
     repos = seeded.repos; ctx = seeded.ctx;
     instructorId = (await repos.tenant.instructor.list(ctx))[0]!.id;
     courseTypeId = (await repos.tenant.courseType.list(ctx))[0]!.id;
-    roleId = (await repos.tenant.roleType.list(ctx))[0]!.id;
+    roleId = (await repos.tenant.roleType.list(ctx)).find((r) => r.code === "DI" || (r.countsTowardRatio && !r.qualificationTypeId))!.id;
     const st = (await repos.tenant.orgSettings.list(ctx))[0]!;
     await repos.tenant.orgSettings.update(ctx, st.id, { enforceConflictChecks: true });
     inside = addDaysIso(availabilityHorizon(st).from, 2);

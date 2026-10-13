@@ -589,6 +589,13 @@
       "when": 1791831006891,
       "tag": "0083_prospect_activity_type",
       "breakpoints": true
+    },
+    {
+      "idx": 84,
+      "version": "6",
+      "when": 1791848833564,
+      "tag": "0084_instructor_types",
+      "breakpoints": true
     }
   ]
 }

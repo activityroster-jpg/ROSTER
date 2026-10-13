@@ -10,6 +10,11 @@ describe("role abbreviations on the printed rota", () => {
     expect(roleAbbrev("Dive Centre Staff")).toBe("DCS");
     expect(roleAbbrev("Galley / Bar")).toBe("GB");
   });
+  it("uses the instructor type's code for a typed place", () => {
+    expect(roleAbbrev("Powerboat Instructor", "PBI")).toBe("PBI");
+    expect(roleAbbrev("Paddleboard (SUP) Instructor", "SUPI")).toBe("SUPI");
+    expect(roleAbbrev("Volunteer", null)).toBe("V");
+  });
   it("says 'all day' when one person covers every slot", () => {
     expect(welfareLine({ AM: "Conor", PM: "Conor", EV: "Conor" })).toBe("Conor (all day)");
     expect(welfareLine({ AM: "Conor", PM: "Sam" })).toBe("Morning: Conor   Afternoon: Sam");

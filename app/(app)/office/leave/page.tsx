@@ -6,6 +6,7 @@ import { OpenShiftsAdmin } from "@/components/office/OpenShiftsAdmin";
 import { Card } from "@/components/ui";
 import { todayIso } from "@/lib/domain";
 import { GuideLink } from "@/components/GuideLink";
+import { getTeachingContext, leadPlaceFor, pickerPlaces, relevantPlacesFor } from "@/lib/services/teaching";
 
 export const dynamic = "force-dynamic";
 
@@ -13,21 +14,26 @@ export default async function LeavePage() {
   const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const today = todayIso();
 
-  const [leave, shifts, sessions, courses, roles] = await Promise.all([
+  const [leave, shifts, sessions, courses, roles, tc] = await Promise.all([
     listLeave(repos, ctx),
     listOpenShifts(repos, ctx),
     repos.tenant.courseSession.list(ctx),
     repos.tenant.course.list(ctx),
     repos.tenant.roleType.list(ctx),
+    getTeachingContext(repos, ctx),
   ]);
 
   const courseName = new Map(courses.map((c) => [c.id, c.name ?? "Session"]));
+  const courseTypeOf = new Map(courses.map((c) => [c.id, c.courseTypeId]));
   const sessionOptions = sessions
     .filter((s) => s.date >= today)
     .sort((a, b) => (a.date + a.slot).localeCompare(b.date + b.slot))
     .slice(0, 40)
-    .map((s) => ({ id: s.id, label: `${courseName.get(s.courseId) ?? "Session"} · ${s.date} ${s.slot}` }));
-  const roleOptions = roles.filter((r) => r.active).map((r) => ({ id: r.id, name: r.name }));
+    .map((s) => {
+      const ctId = courseTypeOf.get(s.courseId) ?? "";
+      return { id: s.id, label: `${courseName.get(s.courseId) ?? "Session"} · ${s.date} ${s.slot}`, relevant: relevantPlacesFor(tc, ctId), lead: leadPlaceFor(tc, ctId) };
+    });
+  const roleOptions = pickerPlaces(roles, tc);
 
   return (
     <div>

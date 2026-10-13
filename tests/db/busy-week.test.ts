@@ -34,7 +34,7 @@ describe("a busy week: more sessions than D1 takes in one query", () => {
     const seeded = await seedFullOrg(db, { name: "Harbour", slug: "harbour", jurisdiction: "england" });
     repos = seeded.repos; ctx = seeded.ctx;
     const t = repos.tenant;
-    const roleId = (await t.roleType.list(ctx)).find((r) => r.countsTowardRatio)!.id;
+    const roleId = (await t.roleType.list(ctx)).find((r) => r.code === "DI" || (r.countsTowardRatio && !r.qualificationTypeId))!.id;
     const courseTypeId = (await t.courseType.list(ctx))[0]!.id;
     const instructorId = (await t.instructor.list(ctx))[0]!.id;
     const courses = [], sessions = [], staff = [], hours = [];

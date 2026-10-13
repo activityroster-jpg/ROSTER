@@ -1,8 +1,11 @@
 /**
- * Seniority of a role by its name, so staffing rows and role pickers list the
- * higher levels first (Chief Instructor, Senior Instructor, Instructor,
- * Assistant Instructor, then safety and support roles). Pure; a role name
- * nothing here recognises sits with the ordinary instructors.
+ * Seniority of a role, so staffing rows and role pickers list the higher
+ * levels first (Chief Instructor, Senior Instructor, Instructor, Assistant
+ * Instructor, then support roles). A place that is an instructor type goes by
+ * its rank on the ladder (Assistant 10 → 50, Dinghy Instructor 20 → 60,
+ * Senior Instructor 40 → 80, Coach/Assessor 50 → 90, on the same scale as the
+ * names below); any other place goes by its name. Pure; a role name nothing
+ * here recognises sits with the ordinary instructors.
  */
 const RULES: [RegExp, number][] = [
   [/\b(principal|chief|head)\b/i, 100],
@@ -24,10 +27,15 @@ export function roleRank(name: string): number {
   return 40;
 }
 
-/** Highest-ranked first; ties keep their given order. */
-export function bySeniority<T extends { roleName?: string; name?: string }>(roles: readonly T[]): T[] {
+/** An instructor type's ladder rank on the name scale above. */
+export function typeSeniority(typeRank: number): number {
+  return 40 + typeRank;
+}
+
+/** Highest-ranked first; ties keep their given order. `rank` is the place's instructor-type rank (0 or absent for an untyped place). */
+export function bySeniority<T extends { roleName?: string; name?: string; rank?: number }>(roles: readonly T[]): T[] {
   return roles
-    .map((r, i) => ({ r, i, rank: roleRank(r.roleName ?? r.name ?? "") }))
+    .map((r, i) => ({ r, i, rank: r.rank ? typeSeniority(r.rank) : roleRank(r.roleName ?? r.name ?? "") }))
     .sort((a, b) => b.rank - a.rank || a.i - b.i)
     .map((x) => x.r);
 }

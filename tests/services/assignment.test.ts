@@ -22,7 +22,7 @@ describe("assignStaff", () => {
     repos = seeded.repos;
     ctx = seeded.ctx;
     const roles = await repos.tenant.roleType.list(ctx);
-    roleId = (roles.find((r) => r.countsTowardRatio) ?? roles[0]!).id;
+    roleId = (roles.find((r) => r.code === "DI" || (r.countsTowardRatio && !r.qualificationTypeId)) ?? roles[0]!).id;
     courseId = (await repos.tenant.course.list(ctx))[0]!.id;
     fixtureInstructorId = (await repos.tenant.instructor.list(ctx))[0]!.id;
     // These checks are opt-in (off by default); enable them for the enforcement tests.
@@ -139,7 +139,7 @@ describe("bulkAssignStaff", () => {
     repos = seeded.repos;
     ctx = seeded.ctx;
     const roles = await repos.tenant.roleType.list(ctx);
-    roleId = (roles.find((r) => r.countsTowardRatio) ?? roles[0]!).id;
+    roleId = (roles.find((r) => r.code === "DI" || (r.countsTowardRatio && !r.qualificationTypeId)) ?? roles[0]!).id;
     fixtureInstructorId = (await repos.tenant.instructor.list(ctx))[0]!.id;
     courseTypeId = (await repos.tenant.courseType.list(ctx))[0]!.id;
     // Opt into the checks (off by default) so the enforcement assertions hold.

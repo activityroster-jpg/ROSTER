@@ -1,13 +1,14 @@
 /**
- * The rows a course's staffing shows: one per required place ("Instructor 1",
- * "Instructor 2", "Safety Boat Driver"), each with the person in it or empty.
+ * The rows a course's staffing shows: one per required place ("Dinghy
+ * Instructor 1", "Dinghy Instructor 2", "Assistant Instructor"), each with the
+ * person in it or empty.
  * Required places come from the course's role lines, or from what the ratio
  * implies when the office hasn't set lines. Anyone assigned beyond the lines
  * still shows, marked "not required". Pure.
  */
 import { bySeniority } from "./role-rank";
 
-export interface SlotLine { roleTypeId: string; roleName: string; count: number }
+export interface SlotLine { roleTypeId: string; roleName: string; count: number; /** The place's instructor-type rank, for the order (0 or absent: by name). */ rank?: number }
 
 export interface SlotPerson {
   assignmentId: string;
@@ -24,7 +25,7 @@ export interface RoleSlot {
   key: string;
   roleTypeId: string;
   roleName: string;
-  /** "Instructor 1", "Instructor 2", "Safety Boat Driver". */
+  /** "Dinghy Instructor 1", "Dinghy Instructor 2", "Assistant Instructor". */
   label: string;
   person?: SlotPerson;
   /** Assigned but not one of the required places. */

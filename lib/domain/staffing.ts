@@ -13,6 +13,10 @@ export interface StaffingRole {
   countsTowardRatio: boolean;
   isSafetyCover: boolean;
   active: boolean;
+  /** The instructor type this place is (null for Volunteer or an older generic place). */
+  qualificationTypeId?: string | null;
+  /** That type's rank on its ladder (Assistant 10, Dinghy Instructor 20…); 0 when untyped. */
+  rank?: number;
 }
 
 export interface RoleLine {
@@ -26,12 +30,31 @@ export interface StaffingInput {
   ratio: number;
   requiresSafetyBoat: boolean;
   roles: readonly StaffingRole[];
+  /** The place for the course's lead instructor type (lib/services/teaching leadPlaceFor), when it has one. */
+  leadRoleId?: string | null;
 }
 
-/** The role lines the ratio implies: enough ratio-counting instructors, plus one safety-cover role when craft are afloat. */
+/**
+ * The place a course's ratio is filled with when the office hasn't set its
+ * places: the course's lead instructor type when known (Dinghy Instructor for
+ * Level 1); else an older generic teaching place; else the lowest teaching
+ * place that isn't an assistant.
+ */
+export function leadTeachingRole<R extends StaffingRole>(roles: readonly R[], leadRoleId?: string | null): R | undefined {
+  const active = roles.filter((r) => r.active);
+  const lead = leadRoleId ? active.find((r) => r.id === leadRoleId) : undefined;
+  if (lead) return lead;
+  const teaching = active.filter((r) => r.countsTowardRatio && !r.isSafetyCover);
+  const assistant = (r: R) => Number((r.rank ?? 0) < 20);
+  return teaching.find((r) => !r.qualificationTypeId)
+    ?? [...teaching].sort((a, b) => assistant(a) - assistant(b) || (a.rank ?? 0) - (b.rank ?? 0))[0]
+    ?? active.find((r) => r.countsTowardRatio);
+}
+
+/** The role lines the ratio implies: enough ratio-counting instructors in the lead place, plus one safety-cover role where a centre still asks for one. */
 export function suggestRoles(input: StaffingInput): RoleLine[] {
   const active = input.roles.filter((r) => r.active);
-  const instructorRole = active.find((r) => r.countsTowardRatio && !r.isSafetyCover) ?? active.find((r) => r.countsTowardRatio);
+  const instructorRole = leadTeachingRole(input.roles, input.leadRoleId);
   const safetyRole = active.find((r) => r.isSafetyCover);
   const lines: RoleLine[] = [];
   const needed = requiredInstructors(input.students, input.ratio);

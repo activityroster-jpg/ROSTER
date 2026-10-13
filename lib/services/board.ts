@@ -4,9 +4,10 @@ import type { AnyTenantContext } from "@/lib/tenant/context";
 import { getWeekRota, type RotaDay } from "./schedule";
 import { getWeekAvailabilityMatrix } from "./availability";
 import { listStaffWithFit, fitReason } from "./staff";
-import { getTeachingMatrix } from "./teaching";
+import { getTeachingContext, getTeachingMatrix, leadPlaceFor, relevantPlacesFor, staffingRolesOf } from "./teaching";
+import { fillablePlaces } from "@/lib/domain/teaching";
 import { findProblems, problemLabel, qualificationGap } from "./problems";
-import { cleanRoleLines } from "@/lib/domain/staffing";
+import { cleanRoleLines, leadTeachingRole } from "@/lib/domain/staffing";
 import { requiredInstructors } from "@/lib/domain/ratio";
 import { isUnder18 } from "@/lib/domain/age";
 import { addDays } from "./schedule";
@@ -22,9 +23,12 @@ export interface BoardInstructor {
   /** False when licence checks are on and a mandatory check is missing or expired. */
   fit: boolean;
   fitReason: string;
-  /** Course type ids this person's qualifications cover (empty = nothing recorded). */
+  /** Course type ids this person's instructor types cover. */
   teaches: string[];
+  /** Something is on file for them (an instructor type or certificate); with nothing, nobody is judged. */
   knownQualifications: boolean;
+  /** The places (role ids) they can fill: their instructor types, or a lower place on the same ladder. */
+  fills: string[];
   /** Effective availability per `${date}|${slot}` for the week. */
   availability: Record<string, { status: EffectiveStatus; source: AvailabilitySource }>;
 }
@@ -41,8 +45,10 @@ export interface BoardData {
     needs: { roleTypeId: string; roleName: string; count: number }[];
     /** True when the needs come from the course's own role lines (editable), false when worked out from the ratio. */
     explicitRoles: boolean;
+    /** Places whose instructor type can teach this course: the short list in place pickers (the rest behind "Other…"). */
+    relevantRoleIds: string[];
   }>;
-  roles: { id: string; name: string; countsTowardRatio: boolean; isSafetyCover: boolean }[];
+  roles: { id: string; name: string; countsTowardRatio: boolean; isSafetyCover: boolean; qualificationTypeId: string | null; rank: number }[];
   instructors: BoardInstructor[];
   problems: Record<string, string[]>;
   /** How many problems this week and how many block. */
@@ -57,11 +63,12 @@ export interface BoardData {
  */
 export async function getBoard(repos: Repositories, ctx: AnyTenantContext, mondayIso: string): Promise<BoardData> {
   const t = repos.tenant;
+  const tc = await getTeachingContext(repos, ctx);
   const [days, matrix, staff, teaching, problems, roles, courseTypes, settingsRows] = await Promise.all([
     getWeekRota(repos, ctx, mondayIso),
     getWeekAvailabilityMatrix(repos, ctx, mondayIso),
     listStaffWithFit(repos, ctx),
-    getTeachingMatrix(repos, ctx),
+    getTeachingMatrix(repos, ctx, tc),
     findProblems(repos, ctx, { from: mondayIso, to: addDays(mondayIso, 7) }),
     t.roleType.list(ctx),
     t.courseType.list(ctx),
@@ -76,6 +83,7 @@ export async function getBoard(repos: Repositories, ctx: AnyTenantContext, monda
   ]);
   const licenceOn = Boolean(settingsRows[0]?.enforceLicenceChecks);
   const roleById = new Map(roles.map((r) => [r.id, r]));
+  const staffingRoles = staffingRolesOf(roles, tc);
   const courseById = new Map(courses.map((c) => [c.id, c]));
   const ctById = new Map(courseTypes.map((c) => [c.id, c]));
   const liveCount = new Map<string, number>();
@@ -100,7 +108,9 @@ export async function getBoard(repos: Repositories, ctx: AnyTenantContext, monda
       } else if (course && course.staffRequired !== 0) {
         const need = requiredInstructors(course.capacity, course.ratio);
         const counting = covering.filter((m) => roleById.get(m.roleTypeId)?.countsTowardRatio).length;
-        const instructorRole = roles.find((r) => r.active && r.countsTowardRatio && !r.isSafetyCover) ?? roles.find((r) => r.active && r.countsTowardRatio);
+        // The course's lead instructor type (Dinghy Instructor, Powerboat Instructor…), else a generic teaching place (lib/domain/staffing).
+        const leadId = course ? leadPlaceFor(tc, course.courseTypeId) : null;
+        const instructorRole = leadTeachingRole(staffingRoles, leadId);
         if (instructorRole && need > 0) needs.push({ roleTypeId: instructorRole.id, roleName: instructorRole.name, count: need });
         if (instructorRole && counting < need) open.push({ roleTypeId: instructorRole.id, roleName: instructorRole.name, missing: need - counting });
         const safetyRole = roles.find((r) => r.active && r.isSafetyCover);
@@ -108,7 +118,7 @@ export async function getBoard(repos: Repositories, ctx: AnyTenantContext, monda
         if (ct?.requiresSafetyBoat && safetyRole && !covering.some((m) => roleById.get(m.roleTypeId)?.isSafetyCover)) open.push({ roleTypeId: safetyRole.id, roleName: safetyRole.name, missing: 1 });
       }
       openRoles[s.sessionId] = open;
-      sessionMeta[s.sessionId] = { courseTypeId: course?.courseTypeId ?? "", multiDay: (liveCount.get(s.courseId) ?? 0) > 1, courseId: s.courseId, needs, explicitRoles: lines.length > 0 || course?.staffRequired === 0 };
+      sessionMeta[s.sessionId] = { courseTypeId: course?.courseTypeId ?? "", multiDay: (liveCount.get(s.courseId) ?? 0) > 1, courseId: s.courseId, needs, explicitRoles: lines.length > 0 || course?.staffRequired === 0, relevantRoleIds: course ? relevantPlacesFor(tc, course.courseTypeId) : [] };
     }
   }
 
@@ -120,6 +130,7 @@ export async function getBoard(repos: Repositories, ctx: AnyTenantContext, monda
       const availability: BoardInstructor["availability"] = {};
       if (row) for (const k of Object.keys(row.cells)) availability[k] = { status: row.cells[k]!, source: row.sources[k]! };
       const teaches = (teaching.get(x.instructor.id) ?? []).map((c) => c.courseTypeId);
+      const held = tc.held.get(x.instructor.id) ?? new Set<string>();
       return {
         id: x.instructor.id,
         name: x.instructor.name,
@@ -127,7 +138,10 @@ export async function getBoard(repos: Repositories, ctx: AnyTenantContext, monda
         fit: licenceOn ? x.fit.fit : true,
         fitReason: licenceOn ? fitReason(x.fit) : "",
         teaches,
-        knownQualifications: teaches.length > 0,
+        // As the server's check (qualificationGap): types held, or a course they've been approved for.
+        knownQualifications: held.size > 0 || teaches.length > 0,
+        // With nothing on file nobody is judged: they can fill any place.
+        fills: held.size > 0 ? fillablePlaces(held, tc.places, tc.types) : tc.places.map((p) => p.id),
         availability,
       };
     })
@@ -141,7 +155,7 @@ export async function getBoard(repos: Repositories, ctx: AnyTenantContext, monda
     days,
     openRoles,
     sessionMeta,
-    roles: roles.filter((r) => r.active).map((r) => ({ id: r.id, name: r.name, countsTowardRatio: Boolean(r.countsTowardRatio), isSafetyCover: Boolean(r.isSafetyCover) })),
+    roles: staffingRoles.filter((r) => r.active).map((r) => ({ id: r.id, name: r.name, countsTowardRatio: r.countsTowardRatio, isSafetyCover: r.isSafetyCover, qualificationTypeId: r.qualificationTypeId ?? null, rank: r.rank ?? 0 })),
     instructors,
     problems: flags,
     problemCounts: { total: problems.problems.length, blocks: problems.blocks },

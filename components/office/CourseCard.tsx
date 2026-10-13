@@ -4,12 +4,13 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { renameCourseAction, updateSessionTimesAction } from "@/app/(app)/office/courses/actions";
 import { buildRoleSlots, type SlotLine } from "@/lib/domain/role-slots";
-import { issuesOf, CourseSlots } from "./CourseSlots";
+import { issuesOf, CourseSlots, type SlotPlace } from "./CourseSlots";
 
 export interface CardSession { id: string; date: string; startMs: number; endMs: number }
 export interface CardAssigned { id: string; instructorId: string; instructorName: string; roleTypeId: string; roleName: string; isOverride: boolean; status: "assigned" | "confirmed" | "declined"; declineNote?: string | null }
-export interface CardInstructor { id: string; name: string; fit: boolean; reason?: string; avail?: string; qualified?: boolean | null; busyWith?: string }
-export interface CardRole { id: string; name: string }
+export interface CardInstructor { id: string; name: string; fit: boolean; reason?: string; avail?: string; qualified?: boolean | null; /** Places (role ids) they can fill. */ fills?: string[]; busyWith?: string }
+/** A place: its instructor type and rank, for the checks and the order. */
+export type CardRole = SlotPlace;
 export interface CardRatio { ok: boolean; understaffed: boolean; missingSafetyCover: boolean }
 import { StaffingPanel } from "./StaffingPanel";
 import type { StaffingView } from "@/lib/services/course-resources";
@@ -25,7 +26,7 @@ const fmtDate = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString
 const fmtTime = (ms: number) => new Date(ms).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
 
 export function CourseCard({
-  course, audience, sessions, assigned, instructors, roles, ratioOn, ratio, computedRequired, roleNeeds, slotLines, staffing, shade, defaultOpen = false, onChanged,
+  course, audience, sessions, assigned, instructors, roles, relevant, ratioOn, ratio, computedRequired, roleNeeds, slotLines, staffing, shade, defaultOpen = false, onChanged,
 }: {
   course: { id: string; name: string; courseTypeName: string; status: string; staffRequired: number | null };
   audience: string;
@@ -33,6 +34,8 @@ export function CourseCard({
   assigned: CardAssigned[];
   instructors: CardInstructor[];
   roles: CardRole[];
+  /** Places whose instructor type teaches this course (the add-a-place list shows these first). */
+  relevant?: string[];
   ratioOn: boolean;
   ratio?: CardRatio;
   computedRequired?: number;
@@ -64,9 +67,12 @@ export function CourseCard({
   const [e, setE] = useState(single ? hhmm(single.endMs) : "");
 
   // The required places: the role lines, or what the ratio implies when there are none.
+  const rankOf = (id: string) => roles.find((r) => r.id === id)?.rank;
   const lines: SlotLine[] = staffing
-    ? (staffing.lines.length ? staffing.lines.map((l) => ({ roleTypeId: l.roleTypeId, roleName: l.roleName, count: l.count })) : staffing.suggested.map((l) => ({ roleTypeId: l.roleTypeId, roleName: staffing.roles.find((r) => r.id === l.roleTypeId)?.name ?? "Role", count: l.count })))
+    ? (staffing.lines.length ? staffing.lines.map((l) => ({ roleTypeId: l.roleTypeId, roleName: l.roleName, count: l.count, rank: rankOf(l.roleTypeId) })) : staffing.suggested.map((l) => ({ roleTypeId: l.roleTypeId, roleName: staffing.roles.find((r) => r.id === l.roleTypeId)?.name ?? "Role", count: l.count, rank: rankOf(l.roleTypeId) })))
     : (slotLines ?? []);
+  // The place each person holds here, so a problem beside their name is about that place.
+  const placeOfPerson = new Map(assigned.filter((a) => a.status !== "declined").map((a) => [a.instructorId, roles.find((r) => r.id === a.roleTypeId)]));
   const slots = buildRoleSlots(lines, assigned.map((a) => ({ assignmentId: a.id, instructorId: a.instructorId, name: a.instructorName, roleTypeId: a.roleTypeId, roleName: a.roleName, status: a.status, isOverride: a.isOverride, declineNote: a.declineNote })));
 
   const aud = AUD[audience] ?? AUD.all!;
@@ -173,8 +179,8 @@ export function CourseCard({
 
       {open ? (
         <div className="mt-2 space-y-2">
-          {staffing ? <StaffingPanel courseId={course.id} staffing={staffing} compact notes={Object.fromEntries(instructors.flatMap((c) => { const t = issuesOf(c).join(" "); return t ? [[c.id, t]] : []; }))} onSaved={onChanged} /> : null}
-          <CourseSlots courseId={course.id} slots={slots} candidates={instructors} roles={roles} onChanged={onChanged} />
+          {staffing ? <StaffingPanel courseId={course.id} staffing={staffing} compact notes={Object.fromEntries(instructors.flatMap((c) => { const t = issuesOf(c, placeOfPerson.get(c.id)).join(" "); return t ? [[c.id, t]] : []; }))} onSaved={onChanged} /> : null}
+          <CourseSlots courseId={course.id} slots={slots} candidates={instructors} roles={roles} relevant={relevant ?? staffing?.relevantRoleIds} onChanged={onChanged} />
         </div>
       ) : null}
     </div>

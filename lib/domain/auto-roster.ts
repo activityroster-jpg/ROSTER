@@ -1,4 +1,5 @@
 import type { EffectiveStatus } from "./availability";
+import { placeFitIssue, type PlaceFacts } from "./teaching";
 
 /**
  * Auto-roster: fill a week's open roles from the people who are free, spreading
@@ -30,6 +31,8 @@ export interface AutoInstructor {
   /** Course type ids they can teach; with nothing recorded nobody is ruled out. */
   teaches: string[];
   knownQualifications: boolean;
+  /** Place (role) ids they can fill: their instructor types, or a lower place on the same ladder. */
+  fills: string[];
   /** Effective availability per `${date}|${slot}`; a missing key counts as not asked. */
   availability: Record<string, EffectiveStatus>;
   /** Sessions already on their plate this week: the planner evens this out. */
@@ -48,7 +51,12 @@ export interface AutoPlan {
 /** Free first, then Maybe, then people nobody has asked yet; Busy never. */
 const AVAIL_RANK: Record<EffectiveStatus, number> = { available: 0, tentative: 1, unasked: 2, unavailable: 99 };
 
-export function planAutoRoster(sessions: readonly AutoSession[], instructors: readonly AutoInstructor[]): AutoPlan {
+/**
+ * `places` describes each role id (whether it teaches, which instructor type it
+ * is), so a pick suits the place as well as the course; without it only the
+ * course is checked.
+ */
+export function planAutoRoster(sessions: readonly AutoSession[], instructors: readonly AutoInstructor[], places?: ReadonlyMap<string, PlaceFacts>): AutoPlan {
   const load = new Map(instructors.map((i) => [i.id, i.load]));
   // Where each person is this week (already, or put there by this run), to stop clashes: same slot, or overlapping times that day.
   const taken = new Map<string, AutoSession[]>();
@@ -69,7 +77,7 @@ export function planAutoRoster(sessions: readonly AutoSession[], instructors: re
       while (missing > 0) {
         const candidates = instructors
           .filter((i) => i.fit && !onThis.has(i.id) && !busyFor(i.id, s))
-          .filter((i) => !i.knownQualifications || i.teaches.includes(s.courseTypeId))
+          .filter((i) => placeFitIssue(i, s.courseTypeId || null, places?.get(role.roleTypeId)) === null)
           .map((i) => ({ i, avail: AVAIL_RANK[i.availability[key] ?? "unasked"] }))
           .filter((c) => c.avail < AVAIL_RANK.unavailable)
           .sort((a, b) =>

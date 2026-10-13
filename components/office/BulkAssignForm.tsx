@@ -7,9 +7,10 @@ import { FreeTextHint } from "@/components/FreeTextHint";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { bulkAssignStaffAction } from "@/app/(app)/office/courses/actions";
+import { PlaceSelect, type PlaceOption } from "./PlaceSelect";
 
 interface CourseOpt { id: string; name: string; audience: string; covered: boolean }
-interface InstructorOpt { id: string; name: string; fit: boolean; reason?: string }
+interface InstructorOpt { id: string; name: string; fit: boolean; reason?: string; /** Places (role ids) they can fill. */ fills?: string[] }
 
 /** Roster one instructor onto several courses in one go. */
 export function BulkAssignForm({
@@ -19,7 +20,7 @@ export function BulkAssignForm({
 }: {
   courses: CourseOpt[];
   instructors: InstructorOpt[];
-  roles: { id: string; name: string }[];
+  roles: PlaceOption[];
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -52,7 +53,7 @@ export function BulkAssignForm({
 
   const submit = () => {
     setMsg(null);
-    if (!instructorId || !roleTypeId) { setMsg({ ok: false, text: "Pick an instructor and a role." }); return; }
+    if (!instructorId || !roleTypeId) { setMsg({ ok: false, text: "Pick an instructor and the place they fill." }); return; }
     if (picked.size === 0) { setMsg({ ok: false, text: "Tick at least one course." }); return; }
     start(async () => {
       const res = await bulkAssignStaffAction({ courseIds: [...picked], instructorId, roleTypeId, override, overrideNote: note });
@@ -85,10 +86,8 @@ export function BulkAssignForm({
           <div className="grid gap-2 sm:grid-cols-2">
             <PeoplePicker value={instructorId} onChange={setInstructorId} ariaLabel="Instructor to assign" placeholder="Instructor…"
               groups={groupCandidates(instructors, (i) => ({ fit: i.fit, qualified: null, available: true }), (i) => i.name).map((g) => ({ tier: g.tier, items: g.items.map((i) => ({ id: i.id, label: i.name, note: i.fit ? "cleared to roster" : i.reason || "not cleared" })) }))} />
-            <select aria-label="Role to assign them in" value={roleTypeId} onChange={(e) => setRoleTypeId(e.target.value)} className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal">
-              <option value="">Role…</option>
-              {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-            </select>
+            {/* The places this person can fill come first (their instructor types and the lower ones on each ladder). */}
+            <PlaceSelect value={roleTypeId} onChange={setRoleTypeId} places={roles} relevant={instructors.find((i) => i.id === instructorId)?.fills ?? null} relevantLabel="Places they can fill" ariaLabel="Place to assign them in" placeholder="Place (instructor type)…" className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-teal" />
           </div>
 
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">

@@ -21,6 +21,7 @@ export type ProblemKind =
   | "declined"
   | "not-fit"
   | "not-qualified"
+  | "no-supervisor"
   | "unstaffed"
   | "no-safety-cover"
   | "equipment-clash"
@@ -64,6 +65,8 @@ export interface ProblemAssignment {
   courseId: string;
   instructorId: string;
   status: string;
+  /** The place (role) they fill. */
+  roleTypeId?: string;
   /** A per-day add: only these sessions of the course. */
   onlySessionIds?: readonly string[];
   /** Per-day skips: these sessions of the course don't count. */
@@ -86,7 +89,8 @@ const KIND_LABEL: Record<ProblemKind, string> = {
   declined: "Declined, needs cover",
   "times-overlap": "Session times overlap",
   "not-fit": "Not cleared to roster",
-  "not-qualified": "Not an instructor for this course type",
+  "not-qualified": "Not qualified for this place",
+  "no-supervisor": "No Senior Instructor on duty",
   unstaffed: "Short of instructors",
   "no-safety-cover": "No safety cover",
   "equipment-clash": "Equipment on two courses at once",
@@ -193,8 +197,8 @@ export function perAssignmentProblems(
   assignments: readonly ProblemAssignment[],
   courses: ReadonlyMap<string, ProblemCourse>,
   instructors: ReadonlyMap<string, ProblemInstructor>,
-  /** detail for an (instructorId, courseId) pair, or null when there is no problem. */
-  detailFor: (instructorId: string, course: ProblemCourse) => string | null,
+  /** detail for an assignment (person, course, place), or null when there is no problem. */
+  detailFor: (instructorId: string, course: ProblemCourse, assignment: ProblemAssignment) => string | null,
 ): Problem[] {
   const out: Problem[] = [];
   for (const a of assignments) {
@@ -202,7 +206,7 @@ export function perAssignmentProblems(
     const course = courses.get(a.courseId);
     const first = firstSessionOf(a.courseId, sessions, a);
     if (!course || !first) continue;
-    const detail = detailFor(a.instructorId, course);
+    const detail = detailFor(a.instructorId, course, a);
     if (!detail) continue;
     out.push({ kind, severity, date: first.date, slot: first.slot, courseId: a.courseId, courseName: course.name, sessionId: first.id, instructorId: a.instructorId, instructorName: instructors.get(a.instructorId)?.name ?? "Instructor", detail });
   }

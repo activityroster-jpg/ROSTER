@@ -54,7 +54,7 @@ describe("office-managed staff in a centre", () => {
     ({ repos, ctx } = await seedFullOrg(db, { name: "Office", slug: "office", jurisdiction: "england" }));
     const st = (await repos.tenant.orgSettings.list(ctx))[0]!;
     await repos.tenant.orgSettings.update(ctx, st.id, { enforceAvailabilityChecks: true, staffManagedBy: "office" });
-    roleId = (await repos.tenant.roleType.list(ctx)).find((r) => r.countsTowardRatio)!.id;
+    roleId = (await repos.tenant.roleType.list(ctx)).find((r) => r.code === "DI" || (r.countsTowardRatio && !r.qualificationTypeId))!.id;
     courseTypeId = (await repos.tenant.courseType.list(ctx))[0]!.id;
   });
 

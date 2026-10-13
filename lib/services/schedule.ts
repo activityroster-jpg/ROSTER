@@ -301,7 +301,7 @@ export interface RotaSession {
   coverageOk: boolean;
   understaffed: boolean;
   missingSafetyCover: boolean;
-  staff: { name: string; role: string; status: "assigned" | "confirmed" | "declined"; /** On this day only (a per-day add). */ dayOnly?: boolean; instructorId: string; roleTypeId: string; /** The course_staff row for course-level people; null for a per-day add. */ assignmentId: string | null }[];
+  staff: { name: string; role: string; /** The place's instructor-type code ("PBI"), for the printed rota's short form; absent for a place with no type. */ roleCode?: string; status: "assigned" | "confirmed" | "declined"; /** On this day only (a per-day add). */ dayOnly?: boolean; instructorId: string; roleTypeId: string; /** The course_staff row for course-level people; null for a per-day add. */ assignmentId: string | null }[];
   locations: string[];
   /** Equipment on the course, e.g. "Safety RIB 1", "Pico ×2". */
   equipment: string[];
@@ -360,6 +360,8 @@ export async function getRotaDays(
   const courseById = new Map(courses.map((c) => [c.id, c]));
   const ctById = new Map(courseTypes.map((c) => [c.id, c]));
   const roleName = new Map(roleTypes.map((r) => [r.id, r.name]));
+  // A place that is an instructor type prints as its code (DI, PBI, SWI); others by their initials.
+  const roleCode = new Map(roleTypes.flatMap((r) => (r.qualificationTypeId && r.code ? [[r.id, r.code] as const] : [])));
   const instructorName = new Map(instructors.map((i) => [i.id, i.name]));
   const locationName = new Map(locations.map((l) => [l.id, l.name]));
 
@@ -412,7 +414,7 @@ export async function getRotaDays(
           coverageOk: cov?.ratio.ok ?? true,
           understaffed: cov?.ratio.understaffed ?? false,
           missingSafetyCover: cov?.ratio.missingSafetyCover ?? false,
-          staff: members.map((m) => ({ name: instructorName.get(m.instructorId) ?? "—", role: roleName.get(m.roleTypeId) ?? "Staff", status: m.status as "assigned" | "confirmed" | "declined", instructorId: m.instructorId, roleTypeId: m.roleTypeId, assignmentId: m.assignmentId, ...(m.source === "day" ? { dayOnly: true } : {}) })),
+          staff: members.map((m) => ({ name: instructorName.get(m.instructorId) ?? "—", role: roleName.get(m.roleTypeId) ?? "Staff", ...(roleCode.has(m.roleTypeId) ? { roleCode: roleCode.get(m.roleTypeId)! } : {}), status: m.status as "assigned" | "confirmed" | "declined", instructorId: m.instructorId, roleTypeId: m.roleTypeId, assignmentId: m.assignmentId, ...(m.source === "day" ? { dayOnly: true } : {}) })),
           locations: locsByCourse.get(s.courseId) ?? [],
           equipment: equipByCourse.get(s.courseId) ?? [],
           students: course?.capacity ?? 0,

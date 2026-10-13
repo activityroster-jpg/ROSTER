@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { clearDayStaffAction, setDayStaffAction } from "@/app/(app)/office/courses/actions";
+import { PlaceSelect, type PlaceOption } from "./PlaceSelect";
 
 export interface DayStaffMember { instructorId: string; name: string; role: string; roleTypeId: string; status: string; source: "course" | "day" }
 export interface DayStaffOption { id: string; name: string }
@@ -12,20 +13,24 @@ export interface DayStaffOption { id: string; name: string }
  * "skip this day" beside anyone on the whole course, "undo" beside a change,
  * and "+ add for this day" for one-day cover.
  */
-export function DayStaff({ sessionId, members, skipped, instructors, roles, disabled = false }: {
+export function DayStaff({ sessionId, members, skipped, instructors, roles, relevant, leadRoleId, disabled = false }: {
   sessionId: string;
   members: DayStaffMember[];
   /** Course-level people skipped on this day (so the undo is offered). */
   skipped: { instructorId: string; name: string }[];
   instructors: DayStaffOption[];
-  roles: DayStaffOption[];
+  roles: PlaceOption[];
+  /** Places whose instructor type teaches this course (listed first, the rest behind "Other…"). */
+  relevant?: readonly string[];
+  /** The course's lead place, the default for one-day cover. */
+  leadRoleId?: string | null;
   disabled?: boolean;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [adding, setAdding] = useState(false);
   const [who, setWho] = useState("");
-  const [role, setRole] = useState(roles[0]?.id ?? "");
+  const [role, setRole] = useState(leadRoleId ?? relevant?.[0] ?? roles[0]?.id ?? "");
   const [override, setOverride] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -65,9 +70,7 @@ export function DayStaff({ sessionId, members, skipped, instructors, roles, disa
               <option value="">Who…</option>
               {candidates.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
             </select>
-            <select value={role} onChange={(e) => setRole(e.target.value)} aria-label="Role" className="rounded border border-slate-300 px-1.5 py-0.5 text-[11px] outline-none focus:border-teal">
-              {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-            </select>
+            <PlaceSelect value={role} onChange={setRole} places={roles} relevant={relevant} ariaLabel="Place (instructor type)" className="rounded border border-slate-300 px-1.5 py-0.5 text-[11px] outline-none focus:border-teal" />
             <label className="flex items-center gap-1 text-[11px] text-slate-500" title="Push through a Busy or a clash"><input type="checkbox" checked={override} onChange={(e) => setOverride(e.target.checked)} /> override</label>
             <button type="button" disabled={pending || !who || !role} onClick={() => run(() => setDayStaffAction({ sessionId, instructorId: who, roleTypeId: role, mode: "add", override, note: override ? "Day cover override" : null }))} className="rounded bg-teal px-2 py-0.5 text-[11px] font-semibold text-white hover:bg-teal-700 disabled:opacity-50">Add</button>
             <button type="button" onClick={() => setAdding(false)} className="text-[11px] text-slate-400 hover:text-navy">✕</button>

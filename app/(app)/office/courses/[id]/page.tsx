@@ -17,7 +17,7 @@ import { CourseResources } from "@/components/office/CourseResources";
 import { equipmentContextForCourse, getCourseResources, staffingViewFrom } from "@/lib/services/course-resources";
 import { suggestedKit } from "@/lib/services/kit";
 import { hasFeature } from "@/lib/features";
-import { getTeachingMatrix } from "@/lib/services/teaching";
+import { fillsByInstructor, getTeachingContext, getTeachingMatrix, leadPlaceFor, pickerPlaces, relevantPlacesFor } from "@/lib/services/teaching";
 import { qualificationGap } from "@/lib/services/problems";
 import { staffBySession } from "@/lib/services/session-staff";
 
@@ -37,7 +37,8 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
   const course = await repos.tenant.course.findById(ctx, id);
   if (!course) notFound();
 
-  const [courseTypes, sessions, assignments, roles, instructors, staffFit, settings, requirements, locations, units, equipmentTypes, resources, teaching, quals] = await Promise.all([
+  const tc = await getTeachingContext(repos, ctx);
+  const [courseTypes, sessions, assignments, roles, instructors, staffFit, settings, requirements, locations, units, equipmentTypes, resources, teaching] = await Promise.all([
     repos.tenant.courseType.list(ctx),
     repos.tenant.courseSession.list(ctx, eq(courseSessionTable.courseId, id)),
     repos.tenant.courseStaff.list(ctx, eq(courseStaffTable.courseId, id)),
@@ -50,12 +51,11 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
     repos.tenant.equipment.list(ctx),
     repos.tenant.equipmentType.list(ctx),
     getCourseResources(repos, ctx, id),
-    getTeachingMatrix(repos, ctx),
-    repos.tenant.qualification.list(ctx),
+    getTeachingMatrix(repos, ctx, tc),
   ]);
 
   const ct = courseTypes.find((c) => c.id === course.courseTypeId);
-  const staffing = staffingViewFrom(course, ct, roles, requirements.filter((r) => r.courseId === id), assignments, new Map(instructors.map((i) => [i.id, i.name])));
+  const staffing = staffingViewFrom(course, ct, roles, requirements.filter((r) => r.courseId === id), assignments, new Map(instructors.map((i) => [i.id, i.name])), tc);
   const membersBySession = await staffBySession(repos, ctx, sessions, assignments);
   const roleNameOf = (rid: string) => roles.find((r) => r.id === rid)?.name ?? "Role";
   // Declared before the per-day loop below uses it: declaring it later threw
@@ -74,7 +74,8 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
   const [equipmentContext, kitSuggestion] = equipmentOn
     ? await Promise.all([equipmentContextForCourse(repos, ctx, course.id), suggestedKit(repos, ctx, course.courseTypeId, course.capacity)])
     : [{ unitBusy: {}, typeOthers: {} }, []];
-  const holdsAny = new Set(quals.map((q) => q.instructorId));
+  const holdsAny = new Set([...tc.held].filter(([, types]) => types.size > 0).map(([instructorId]) => instructorId));
+  const fills = fillsByInstructor(tc, instructors.map((i) => i.id));
   const slotStyle = (settings[0]?.slotStyle ?? "slots") as "slots" | "times";
   const roleName = new Map(roles.map((r) => [r.id, r.name]));
   const licenceOn = Boolean(settings[0]?.enforceLicenceChecks);
@@ -84,9 +85,13 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
   const instructorOptions = instructors.filter((i) => i.status === "active").map((i) => {
     const f = fitObjById.get(i.id);
     const gap = qualificationGap(teaching.get(i.id) ?? [], holdsAny.has(i.id), course.courseTypeId);
-    return { id: i.id, name: i.name, fit: licenceOn ? (f?.fit ?? true) : true, reason: licenceOn && f ? fitReason(f) : "", avail: availForCourse?.get(i.id) ?? "none" as const, qualified: gap.known ? gap.qualified : null, busyWith: elsewhere.get(i.id) };
+    return { id: i.id, name: i.name, fit: licenceOn ? (f?.fit ?? true) : true, reason: licenceOn && f ? fitReason(f) : "", avail: availForCourse?.get(i.id) ?? "none" as const, qualified: gap.known ? gap.qualified : null, fills: fills.get(i.id) ?? [], busyWith: elsewhere.get(i.id) };
   });
-  const activeRoles = roles.filter((r) => r.active).map((r) => ({ id: r.id, name: r.name }));
+  const places = pickerPlaces(roles, tc);
+  const placeById = new Map(places.map((p) => [p.id, p]));
+  const relevant = relevantPlacesFor(tc, course.courseTypeId);
+  // The place each person holds on this course, so a problem beside their name is about that place.
+  const placeOfPerson = new Map(assignments.filter((a) => a.status !== "declined").map((a) => [a.instructorId, placeById.get(a.roleTypeId)]));
   const aud = AUD[ct?.audience ?? "all"]!;
 
   const sessionRows: SessionRow[] = [...sessions]
@@ -110,12 +115,12 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
 
       <Card className="mb-6">
         <h2 className="mb-1 font-semibold text-navy">Staffing</h2>
-        <p className="mb-3 text-xs text-slate-500">Students booked, what the course type's ratio implies, and the roles you want filled. The number of staff needed follows from the roles.</p>
-        <StaffingPanel courseId={course.id} staffing={staffing} notes={Object.fromEntries(instructorOptions.flatMap((c) => { const t = issuesOf(c).join(" "); return t ? [[c.id, t]] : []; }))} />
+        <p className="mb-3 text-xs text-slate-500">Students booked, what the course type&apos;s ratio implies, and the places you want filled. Each place is an instructor type; the number of staff needed follows from the places. <a href="/learn?topic=places" target="_blank" rel="noreferrer" className="font-medium text-teal hover:underline">📖 Read the guide</a></p>
+        <StaffingPanel courseId={course.id} staffing={staffing} notes={Object.fromEntries(instructorOptions.flatMap((c) => { const t = issuesOf(c, placeOfPerson.get(c.id)).join(" "); return t ? [[c.id, t]] : []; }))} />
         <div className="mt-4">
           <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">Who&apos;s on it</p>
-          <CourseSlots courseId={course.id} candidates={instructorOptions} roles={activeRoles} slots={buildRoleSlots(
-            staffing.lines.length ? staffing.lines.map((l) => ({ roleTypeId: l.roleTypeId, roleName: l.roleName, count: l.count })) : staffing.suggested.map((l) => ({ roleTypeId: l.roleTypeId, roleName: roleName.get(l.roleTypeId) ?? "Role", count: l.count })),
+          <CourseSlots courseId={course.id} candidates={instructorOptions} roles={places} relevant={relevant} slots={buildRoleSlots(
+            staffing.lines.length ? staffing.lines.map((l) => ({ roleTypeId: l.roleTypeId, roleName: l.roleName, count: l.count, rank: placeById.get(l.roleTypeId)?.rank })) : staffing.suggested.map((l) => ({ roleTypeId: l.roleTypeId, roleName: roleName.get(l.roleTypeId) ?? "Role", count: l.count, rank: placeById.get(l.roleTypeId)?.rank })),
             assignments.map((a) => ({ assignmentId: a.id, instructorId: a.instructorId, name: nameById.get(a.instructorId) ?? "Instructor", roleTypeId: a.roleTypeId, roleName: roleName.get(a.roleTypeId) ?? "role", status: a.status, isOverride: Boolean(a.isOverride), declineNote: a.declineNote })),
           )} />
         </div>
@@ -140,7 +145,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
       <Card className="mb-6">
         <h2 className="mb-1 font-semibold text-navy">Sessions</h2>
         <p className="mb-3 text-xs text-slate-500">Add every date this course runs — a 5-day camp has five sessions, a weekly club has one per week.</p>
-        <SessionManager courseId={course.id} slotStyle={slotStyle} sessions={sessionRows} staffCount={staffCount} dayStaff={dayStaffBySession} instructorOptions={instructors.filter((i) => i.status === "active").map((i) => ({ id: i.id, name: i.name })).sort((a, b) => a.name.localeCompare(b.name))} roleOptions={activeRoles} />
+        <SessionManager courseId={course.id} slotStyle={slotStyle} sessions={sessionRows} staffCount={staffCount} dayStaff={dayStaffBySession} instructorOptions={instructors.filter((i) => i.status === "active").map((i) => ({ id: i.id, name: i.name })).sort((a, b) => a.name.localeCompare(b.name))} roleOptions={places} relevantRoleIds={relevant} leadRoleId={leadPlaceFor(tc, course.courseTypeId)} />
       </Card>
 
     </div>

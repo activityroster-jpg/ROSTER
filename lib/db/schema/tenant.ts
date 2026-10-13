@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { index, integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { index, integer, real, sqliteTable, text, uniqueIndex, type AnySQLiteColumn } from "drizzle-orm/sqlite-core";
 import { organisation } from "./control-plane";
 import { boolCol, createdAt, id, organisationId, updatedAt } from "./_shared";
 
@@ -131,6 +131,8 @@ export const orgSettings = sqliteTable("org_settings", {
   // When on (the default), rostering blocks an instructor who marked that slot
   // "Busy" in their availability (override allowed).
   enforceAvailabilityChecks: boolCol("enforce_availability_checks").default(true),
+  /** 1 once the centre has instructor-type places and the course map (seeded, or upgraded by lib/services/instructor-types-upgrade.ts). */
+  teachingMapVersion: integer("teaching_map_version").notNull().default(0),
   // When on (the default), the problems list flags a date/slot whose courses need
   // more of an equipment type than the centre owns (types with a quantity set).
   checkEquipmentQuantities: boolCol("check_equipment_quantities").default(true),
@@ -199,6 +201,8 @@ export const roleType = sqliteTable("role_type", {
   countsTowardRatio: boolCol("counts_toward_ratio").default(true),
   isSafetyCover: boolCol("is_safety_cover").default(false),
   isFirstAider: boolCol("is_first_aider").default(false),
+  /** The instructor type this place is (Dinghy Instructor, Powerboat Instructor…). Null for a place that isn't one (Volunteer, or an older generic place). */
+  qualificationTypeId: text("qualification_type_id").references((): AnySQLiteColumn => qualificationType.id, { onDelete: "restrict" }),
   active: boolCol("active").default(true),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
@@ -217,6 +221,10 @@ export const qualificationType = sqliteTable("qualification_type", {
   discipline: text("discipline"),
   expiryTracked: boolCol("expiry_tracked").default(false),
   defaultValidMonths: integer("default_valid_months"),
+  /** Teaches under a Senior Instructor's supervision (the roster warns when none is on duty in the slot). */
+  needsSupervision: boolCol("needs_supervision").default(false),
+  /** Can supervise this ladder (Senior Instructor and above). */
+  supervises: boolCol("supervises").default(false),
   active: boolCol("active").default(true),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
@@ -224,6 +232,36 @@ export const qualificationType = sqliteTable("qualification_type", {
   index("qualification_type_org_idx").on(t.organisationId),
   uniqueIndex("qualification_type_org_code_uq").on(t.organisationId, t.code),
 ]);
+
+/**
+ * Which courses an instructor type can teach: the centre's "who can teach
+ * what" (seeded from the activity pack, changed in Course setup). A course with
+ * rows here can be taught only by someone holding one of these types (and the
+ * also-required one, and the Principal's approval where marked). A course with
+ * none falls back to the activity.
+ */
+export const qualificationCourseType = sqliteTable("qualification_course_type", {
+  id: id(),
+  organisationId: orgFk(),
+  qualificationTypeId: text("qualification_type_id")
+    .notNull()
+    .references(() => qualificationType.id, { onDelete: "restrict" }),
+  courseTypeId: text("course_type_id")
+    .notNull()
+    .references(() => courseType.id, { onDelete: "restrict" }),
+  /** Must also hold this (Safety Boat certificate for a Powerboat Instructor teaching Safety Boat). */
+  alsoRequiresTypeId: text("also_requires_type_id").references(() => qualificationType.id, { onDelete: "restrict" }),
+  /** Only with the Principal's approval, recorded per person (instructor_course_type). */
+  needsApproval: boolCol("needs_approval").default(false),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, (t) => [
+  index("qualification_course_type_org_idx").on(t.organisationId),
+  index("qualification_course_type_course_idx").on(t.courseTypeId),
+  uniqueIndex("qualification_course_type_uq").on(t.organisationId, t.qualificationTypeId, t.courseTypeId),
+]);
+
+export type QualificationCourseType = typeof qualificationCourseType.$inferSelect;
 
 export const complianceType = sqliteTable("compliance_type", {
   id: id(),

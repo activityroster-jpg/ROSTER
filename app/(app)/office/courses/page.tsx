@@ -19,7 +19,7 @@ import { parseDefaultSchedule } from "@/lib/domain";
 import { BulkAssignForm } from "@/components/office/BulkAssignForm";
 import { CourseUpdatesCheck } from "@/components/office/CourseUpdatesCheck";
 import { providerName, providerColor } from "@/lib/integrations/catalogue";
-import { getTeachingMatrix } from "@/lib/services/teaching";
+import { fillsByInstructor, getTeachingContext, getTeachingMatrix, leadPlaceFor, pickerPlaces, relevantPlacesFor, staffingRolesOf } from "@/lib/services/teaching";
 import { qualificationGap } from "@/lib/services/problems";
 
 export const dynamic = "force-dynamic";
@@ -34,7 +34,8 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
   const monday = weekStart(new Date());
   // Only the courses in this view (upcoming, or the last 12 months of past), never the whole history.
   const scope = await coursePageScope(repos, ctx, { view, today: new Date().toISOString().slice(0, 10), pastMonths: sp.all === "1" ? null : 12 });
-  const [coverageByCourse, courseTypes, staff, roles, assignments, instructors, settings, events, locationRows, equipmentRows, teaching, quals] = await Promise.all([
+  const tc = await getTeachingContext(repos, ctx);
+  const [coverageByCourse, courseTypes, staff, roles, assignments, instructors, settings, events, locationRows, equipmentRows, teaching] = await Promise.all([
     coverageForCourses(repos, ctx, scope.ids),
     repos.tenant.courseType.list(ctx),
     listStaffWithFit(repos, ctx),
@@ -45,10 +46,9 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
     getSessionEvents(repos, ctx, addDays(monday, -28), addDays(monday, 7 * 26)),
     repos.tenant.location.list(ctx),
     repos.tenant.equipment.list(ctx),
-    getTeachingMatrix(repos, ctx),
-    repos.tenant.qualification.list(ctx),
+    getTeachingMatrix(repos, ctx, tc),
   ]);
-  const holdsAny = new Set(quals.map((q) => q.instructorId));
+  const holdsAny = new Set([...tc.held].filter(([, types]) => types.size > 0).map(([instructorId]) => instructorId));
   const plannerLocations = locationRows.filter((l) => l.active).map((l) => ({ id: l.id, name: l.name })).sort((a, b) => a.name.localeCompare(b.name));
   const plannerEquipment = equipmentRows.filter((e) => e.status === "available").map((e) => ({ id: e.id, name: e.identifier ? `${e.name} (${e.identifier})` : e.name })).sort((a, b) => a.name.localeCompare(b.name));
   const slotStyle = settings[0]?.slotStyle ?? "slots";
@@ -62,14 +62,17 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
   const staffReqByCourse = new Map(courseRows.map((c) => [c.id, c.staffRequired ?? null]));
   const typeByCourse = new Map(courseRows.map((c) => [c.id, c.courseTypeId]));
   const qualifiedFor = (instructorId: string, courseId: string): boolean | null => { const g = qualificationGap(teaching.get(instructorId) ?? [], holdsAny.has(instructorId), typeByCourse.get(courseId) ?? ""); return g.known ? g.qualified : null; };
-  const activeRoles = roles.filter((r) => r.active).map((r) => ({ id: r.id, name: r.name }));
+  const places = pickerPlaces(roles, tc);
+  const placeById = new Map(places.map((p) => [p.id, p]));
+  const staffingRoles = staffingRolesOf(roles, tc);
+  const fills = fillsByInstructor(tc, instructors.map((i) => i.id));
   const fitById = new Map(staff.map((s) => [s.instructor.id, s.fit]));
   const instructorOptions = instructors
     .filter((i) => i.status === "active")
     .map((i) => {
       const f = fitById.get(i.id);
       // Licence "fit" only annotates/gates the picker when the centre opted in.
-      return { id: i.id, name: i.name, fit: licenceOn ? (f?.fit ?? true) : true, reason: licenceOn && f ? fitReason(f) : "" };
+      return { id: i.id, name: i.name, fit: licenceOn ? (f?.fit ?? true) : true, reason: licenceOn && f ? fitReason(f) : "", fills: tc.held.get(i.id)?.size ? fills.get(i.id) : undefined };
     });
   const nameById = new Map(instructors.map((i) => [i.id, i.name]));
   const roleName = new Map(roles.map((r) => [r.id, r.name]));
@@ -90,11 +93,12 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
   const courseRowById = new Map(courseRows.map((c) => [c.id, c]));
   const slotLinesFor = (courseId: string): SlotLine[] => {
     const needs = roleNeeds.get(courseId);
-    if (needs?.length) return needs.map((n) => ({ roleTypeId: n.roleTypeId, roleName: n.roleName, count: n.count }));
+    if (needs?.length) return needs.map((n) => ({ roleTypeId: n.roleTypeId, roleName: n.roleName, count: n.count, rank: placeById.get(n.roleTypeId)?.rank }));
     const row = courseRowById.get(courseId);
     if (!row || row.staffRequired === 0) return [];
     const ct = courseTypes.find((t) => t.id === row.courseTypeId);
-    return suggestRoles({ students: row.capacity, ratio: row.ratio, requiresSafetyBoat: Boolean(ct?.requiresSafetyBoat), roles }).map((l) => ({ roleTypeId: l.roleTypeId, roleName: roleName.get(l.roleTypeId) ?? "Role", count: l.count }));
+    // The ratio's instructors go in the course's lead instructor type (Dinghy Instructor for Level 1…).
+    return suggestRoles({ students: row.capacity, ratio: row.ratio, requiresSafetyBoat: Boolean(ct?.requiresSafetyBoat), roles: staffingRoles, leadRoleId: leadPlaceFor(tc, row.courseTypeId) }).map((l) => ({ roleTypeId: l.roleTypeId, roleName: roleName.get(l.roleTypeId) ?? "Role", count: l.count, rank: placeById.get(l.roleTypeId)?.rank }));
   };
   const roleNeeds = roleNeedsByCourse(await repos.tenant.courseRoleRequirement.listIn(ctx, courseRoleRequirementTable.courseId, scope.ids), assignments, (id) => roleName.get(id) ?? "Role");
 
@@ -188,7 +192,8 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
         sessions={sessionsFullByCourse.get(c.courseId) ?? []}
         assigned={assigned}
         instructors={(() => { const busy = busyFor(c.courseId); return instructorOptions.map((o) => ({ ...o, avail: courseAvail.get(c.courseId)?.get(o.id) ?? "none", qualified: qualifiedFor(o.id, c.courseId), busyWith: busy.get(o.id) })); })()}
-        roles={activeRoles}
+        roles={places}
+        relevant={relevantPlacesFor(tc, typeByCourse.get(c.courseId) ?? "")}
         ratioOn={ratioOn}
         ratio={ratioOn ? { ok: c.ratio.ok, understaffed: c.ratio.understaffed, missingSafetyCover: c.ratio.missingSafetyCover } : undefined}
         computedRequired={c.ratio.requiredStaff}
@@ -236,7 +241,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
 
       {activeTypes.length === 0 ? <RestoreCourseTypes courseListName={packFor(organisation.activityType).wording.courseListName} /> : null}
 
-      <CoursePlanner courseTypes={activeTypes} events={events} slotStyle={slotStyle} roles={activeRoles} locations={plannerLocations} equipment={plannerEquipment} />
+      <CoursePlanner courseTypes={activeTypes} events={events} slotStyle={slotStyle} roles={places} relevantByType={Object.fromEntries(activeTypes.map((c) => [c.id, relevantPlacesFor(tc, c.id)]))} leadByType={Object.fromEntries(activeTypes.flatMap((c) => { const lead = leadPlaceFor(tc, c.id); return lead ? [[c.id, lead]] : []; }))} locations={plannerLocations} equipment={plannerEquipment} />
 
       <div className="mb-3 flex items-center gap-2">
         <h2 className="font-display text-lg font-semibold text-navy">Courses</h2>
@@ -255,7 +260,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
         <BulkAssignForm
           courses={upcomingCourses.map((c) => ({ id: c.courseId, name: c.courseName, audience: audienceByCourse.get(c.courseId) ?? "all", covered: ratioOn ? c.ratio.ok : true }))}
           instructors={instructorOptions}
-          roles={activeRoles}
+          roles={places}
         />
       ) : null}
 

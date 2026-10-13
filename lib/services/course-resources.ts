@@ -20,6 +20,7 @@ import { cleanRoleLines, derivedStaffRequired, staffingShortfallNote, suggestRol
 import { auditStatement } from "./audit";
 import { runAtomic } from "@/lib/db/batch";
 import { staleEditMessage } from "./concurrency";
+import { getTeachingContext, leadPlaceFor, relevantPlacesFor, staffingRolesOf, type TeachingContext } from "./teaching";
 
 /** `version` is the course's new last-changed time, for the next save's "changed since you opened it" check. */
 type Result = { ok: true; version?: number } | { ok: false; error: string };
@@ -116,6 +117,8 @@ export interface StaffingView {
   ratio: number;
   requiresSafetyBoat: boolean;
   roles: StaffingRole[];
+  /** Places whose instructor type teaches this course: the short list in the place drop-downs (the rest behind "Other…"). */
+  relevantRoleIds: string[];
   lines: { roleTypeId: string; roleName: string; count: number; filled: number; /** Who fills the places now (for choosing who comes off when places shrink). */ people: { instructorId: string; name: string }[] }[];
   /** Derived: the role lines' total, or what the ratio implies when there are none. */
   required: number;
@@ -128,16 +131,23 @@ export interface StaffingView {
   assigned: number;
 }
 
+/**
+ * `tc` (the centre's instructor types and course map) lets the suggestion use
+ * the course's lead instructor type and the drop-downs list the types that
+ * teach it; without it every place is listed and the first teaching place is
+ * suggested.
+ */
 export function staffingViewFrom(
-  course: Pick<Course, "capacity" | "ratio" | "staffRequired">,
+  course: Pick<Course, "capacity" | "ratio" | "staffRequired" | "courseTypeId">,
   courseType: Pick<CourseType, "requiresSafetyBoat"> | null | undefined,
   roles: readonly RoleType[],
   requirements: readonly Pick<CourseRoleRequirement, "roleTypeId" | "count">[],
   assignments: readonly Pick<CourseStaff, "roleTypeId" | "status" | "instructorId">[],
   names?: ReadonlyMap<string, string>,
+  tc?: TeachingContext,
 ): StaffingView {
-  const staffingRoles: StaffingRole[] = roles.map((r) => ({ id: r.id, name: r.name, countsTowardRatio: Boolean(r.countsTowardRatio), isSafetyCover: Boolean(r.isSafetyCover), active: Boolean(r.active) }));
-  const input = { students: course.capacity, ratio: course.ratio, requiresSafetyBoat: Boolean(courseType?.requiresSafetyBoat), roles: staffingRoles };
+  const staffingRoles: StaffingRole[] = tc ? staffingRolesOf(roles, tc) : roles.map((r) => ({ id: r.id, name: r.name, countsTowardRatio: Boolean(r.countsTowardRatio), isSafetyCover: Boolean(r.isSafetyCover), active: Boolean(r.active), qualificationTypeId: r.qualificationTypeId ?? null }));
+  const input = { students: course.capacity, ratio: course.ratio, requiresSafetyBoat: Boolean(courseType?.requiresSafetyBoat), roles: staffingRoles, leadRoleId: tc ? leadPlaceFor(tc, course.courseTypeId) : null };
   const lines = cleanRoleLines(requirements).map((l) => ({
     roleTypeId: l.roleTypeId,
     roleName: roles.find((r) => r.id === l.roleTypeId)?.name ?? "Role",
@@ -153,6 +163,7 @@ export function staffingViewFrom(
     ratio: course.ratio,
     requiresSafetyBoat: input.requiresSafetyBoat,
     roles: staffingRoles,
+    relevantRoleIds: tc ? relevantPlacesFor(tc, course.courseTypeId) : [],
     lines,
     required: fromLines ?? derivedStaffRequired(suggested) ?? 0,
     fromRoles: fromLines !== null,
@@ -166,13 +177,14 @@ export async function getCourseStaffing(repos: Repositories, ctx: AnyTenantConte
   const t = repos.tenant;
   const course = await t.course.findById(ctx, courseId);
   if (!course) return null;
-  const [ct, roles, reqs, staff] = await Promise.all([
+  const [ct, roles, reqs, staff, tc] = await Promise.all([
     t.courseType.findById(ctx, course.courseTypeId),
     t.roleType.list(ctx),
     t.courseRoleRequirement.list(ctx, eq(courseRoleRequirementTable.courseId, courseId)),
     t.courseStaff.list(ctx, eq(courseStaffTable.courseId, courseId)),
+    getTeachingContext(repos, ctx),
   ]);
-  return { ...staffingViewFrom(course, ct, roles, reqs, staff), version: course.updatedAt.getTime() };
+  return { ...staffingViewFrom(course, ct, roles, reqs, staff, undefined, tc), version: course.updatedAt.getTime() };
 }
 
 /**

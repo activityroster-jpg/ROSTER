@@ -380,7 +380,7 @@ export function AvailabilityMatrix({ days, rows, availableCounts, staffManagedBy
                     <span className="font-medium text-navy">{c.courseName}</span>
                     <span className="text-xs text-slate-500">{c.time}</span>
                     {c.needsCover ? <span className="rounded-full bg-amber/15 px-2 py-0.5 text-[10px] font-semibold text-amber">needs cover{c.required ? ` · ${c.assigned}/${c.required}` : ""}</span> : <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">covered</span>}
-                    <select value={roleFor[c.courseId] ?? ""} onChange={(e) => setRoleFor((m) => ({ ...m, [c.courseId]: e.target.value }))} aria-label={`Role on ${c.courseName}`} className="ml-auto rounded-lg border border-slate-300 px-2 py-1 text-xs outline-none focus:border-teal">
+                    <select value={roleFor[c.courseId] ?? ""} onChange={(e) => setRoleFor((m) => ({ ...m, [c.courseId]: e.target.value }))} aria-label={`Place on ${c.courseName}`} className="ml-auto rounded-lg border border-slate-300 px-2 py-1 text-xs outline-none focus:border-teal">
                       {c.roles.map((r) => <option key={r.id} value={r.id}>{r.name}{r.missing > 0 ? ` (${r.missing} open)` : " (filled)"}</option>)}
                     </select>
                     {current.length ? (

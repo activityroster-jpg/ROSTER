@@ -31,7 +31,7 @@ describe("course lifecycle, end to end", () => {
     const st = (await repos.tenant.orgSettings.list(ctx))[0]!;
     await repos.tenant.orgSettings.update(ctx, st.id, { enforceConflictChecks: true, enforceRatioChecks: false });
     const roles = await repos.tenant.roleType.list(ctx);
-    const roleId = roles.find((r) => r.countsTowardRatio)!.id;
+    const roleId = roles.find((r) => r.code === "DI" || (r.countsTowardRatio && !r.qualificationTypeId))!.id;
     const courseTypeId = (await repos.tenant.courseType.list(ctx))[0]!.id;
     const instructorId = (await repos.tenant.instructor.list(ctx))[0]!.id;
     const location = (await repos.tenant.location.list(ctx))[0]!;

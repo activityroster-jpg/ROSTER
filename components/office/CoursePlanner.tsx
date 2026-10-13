@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createCourseFlexibleAction, type FlexSession } from "@/app/(app)/office/courses/actions";
 import { CourseEditorModal } from "@/components/office/CourseEditorModal";
 import { describeDefaultSchedule, expandDefaultSchedule, type DefaultSession } from "@/lib/domain/schedule-defaults";
+import { PlaceSelect, type PlaceOption } from "./PlaceSelect";
 
 interface EventUi { id: string; courseId: string; date: string; slot: string; startAt: number; endAt: number; courseName: string; audience: string }
 interface CourseTypeUi { id: string; name: string; audience: "youth" | "adult" | "all"; schedule?: DefaultSession[] }
@@ -28,9 +29,15 @@ const fmtDay = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString(
 let seq = 0;
 const OTHER = "__other";
 
-export function CoursePlanner({ courseTypes, events, slotStyle, roles = [], locations = [], equipment = [] }: {
+export function CoursePlanner({ courseTypes, events, slotStyle, roles = [], relevantByType = {}, leadByType = {}, locations = [], equipment = [] }: {
   courseTypes: CourseTypeUi[]; events: EventUi[]; slotStyle: "slots" | "times";
-  roles?: Option[]; locations?: Option[]; equipment?: Option[];
+  /** The centre's places (each an instructor type, plus Volunteer). */
+  roles?: PlaceOption[];
+  /** Course type id → the places whose instructor type teaches it (listed first; the rest behind "Other…"). */
+  relevantByType?: Record<string, string[]>;
+  /** Course type id → its lead place (Dinghy Instructor for Level 1), the default for a new staff line. */
+  leadByType?: Record<string, string>;
+  locations?: Option[]; equipment?: Option[];
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -56,7 +63,15 @@ export function CoursePlanner({ courseTypes, events, slotStyle, roles = [], loca
   const [equipmentIds, setEquipmentIds] = useState<string[]>([]);
   const [showMore, setShowMore] = useState(false);
   const toggle = (set: (f: (v: string[]) => string[]) => void, id: string) => set((v) => (v.includes(id) ? v.filter((x) => x !== id) : [...v, id]));
-  const addNeed = () => setNeeds((n) => [...n, { key: `n${seq++}`, roleTypeId: roles.find((r) => !n.some((x) => x.roleTypeId === r.id))?.id ?? roles[0]?.id ?? "", count: 1 }]);
+  const relevant = relevantByType[courseTypeId] ?? [];
+  // A new line starts on the course's lead instructor type, then the next relevant place not yet listed.
+  const addNeed = () => setNeeds((n) => {
+    const lead = leadByType[courseTypeId];
+    const pick = (lead && !n.some((x) => x.roleTypeId === lead) ? lead : undefined)
+      ?? relevant.find((id) => !n.some((x) => x.roleTypeId === id))
+      ?? roles.find((r) => !n.some((x) => x.roleTypeId === r.id))?.id ?? roles[0]?.id ?? "";
+    return [...n, { key: `n${seq++}`, roleTypeId: pick, count: 1 }];
+  });
   const updateNeed = (key: string, patch: Partial<RoleNeed>) => setNeeds((n) => n.map((x) => (x.key === key ? { ...x, ...patch } : x)));
   const removeNeed = (key: string) => setNeeds((n) => n.filter((x) => x.key !== key));
   const staffTotal = needs.reduce((a, n) => a + (n.roleTypeId ? n.count : 0), 0);
@@ -243,20 +258,18 @@ export function CoursePlanner({ courseTypes, events, slotStyle, roles = [], loca
           <div>
             <div className="mb-1 flex items-center justify-between">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Staff needed{staffTotal ? ` (${staffTotal})` : ""}</p>
-              {roles.length ? <button type="button" onClick={addNeed} className="text-xs font-semibold text-teal hover:underline">＋ Add role</button> : null}
+              {roles.length ? <button type="button" onClick={addNeed} className="text-xs font-semibold text-teal hover:underline">＋ Add place</button> : null}
             </div>
             {needs.length === 0 ? (
-              <p className="rounded-lg border border-dashed border-slate-200 p-3 text-xs text-slate-400">{roles.length ? "Optional — e.g. 2× Instructor, 1× Safety Boat." : "Add roles in Settings first."}</p>
+              <p className="rounded-lg border border-dashed border-slate-200 p-3 text-xs text-slate-400">{roles.length ? "Optional — e.g. 2× Dinghy Instructor, 1× Assistant Instructor. Left empty, the course type's ratio decides." : "Add places in Settings first."}</p>
             ) : (
               <ul className="space-y-1.5">
                 {needs.map((n) => (
                   <li key={n.key} className="flex items-center gap-2">
                     <input type="number" min={1} max={50} value={n.count} onChange={(e) => updateNeed(n.key, { count: Math.max(1, Math.min(50, Number(e.target.value) || 1)) })} aria-label="How many" className="w-14 rounded border border-slate-300 px-2 py-1 text-sm" />
                     <span className="text-xs text-slate-400">×</span>
-                    <select value={n.roleTypeId} onChange={(e) => updateNeed(n.key, { roleTypeId: e.target.value })} aria-label="Role" className="min-w-0 flex-1 rounded border border-slate-300 px-2 py-1 text-sm">
-                      {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-                    </select>
-                    <button type="button" onClick={() => removeNeed(n.key)} className="text-xs text-slate-400 hover:text-port" aria-label="Remove role">✕</button>
+                    <PlaceSelect value={n.roleTypeId} onChange={(id) => updateNeed(n.key, { roleTypeId: id })} places={roles} relevant={relevant} ariaLabel="Instructor type" className="min-w-0 flex-1 rounded border border-slate-300 px-2 py-1 text-sm" />
+                    <button type="button" onClick={() => removeNeed(n.key)} className="text-xs text-slate-400 hover:text-port" aria-label="Remove place">✕</button>
                   </li>
                 ))}
               </ul>

@@ -18,6 +18,7 @@ import { firstIssue, idSchema, studentsSchema } from "@/lib/validation/actions";
 import { eq } from "drizzle-orm";
 import { courseRoleRequirement as courseRoleRequirementTable, courseSession as courseSessionTable, courseStaff as courseStaffTable } from "@/lib/db/schema";
 import { cleanRoleLines, suggestRoles } from "@/lib/domain/staffing";
+import { getTeachingContext, leadPlaceFor, staffingRolesOf } from "@/lib/services/teaching";
 import { problemsForCourse, problemsSuffix } from "@/lib/services/problems";
 import { setCourseEquipment, setCourseLocations, setCourseStaffing } from "@/lib/services/course-resources";
 import { clearDayStaff, setDayStaff } from "@/lib/services/session-staff";
@@ -485,8 +486,8 @@ export async function bulkAssignStaffAction(input: {
 }
 
 /**
- * "Add another role" on a course's staffing rows: one more required place for
- * that role. With no role lines yet, the ratio's suggested lines are written
+ * "Add another place" on a course's staffing rows: one more required place for
+ * that instructor type (or Volunteer). With no role lines yet, the ratio's suggested lines are written
  * first so nothing already shown is lost. The place then appears as an empty
  * row to fill.
  */
@@ -494,12 +495,12 @@ export async function addRolePlaceAction(courseId: string, roleTypeId: string): 
   const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   if (!idSchema.safeParse(courseId).success || !idSchema.safeParse(roleTypeId).success) return { ok: false, error: "Invalid request" };
   const t = repos.tenant;
-  const [course, role, roles, requirements] = await Promise.all([t.course.findById(ctx, courseId), t.roleType.findById(ctx, roleTypeId), t.roleType.list(ctx), t.courseRoleRequirement.list(ctx, eq(courseRoleRequirementTable.courseId, courseId))]);
-  if (!course || !role) return { ok: false, error: "Course or role not found" };
+  const [course, role, roles, requirements, tc] = await Promise.all([t.course.findById(ctx, courseId), t.roleType.findById(ctx, roleTypeId), t.roleType.list(ctx), t.courseRoleRequirement.list(ctx, eq(courseRoleRequirementTable.courseId, courseId)), getTeachingContext(repos, ctx)]);
+  if (!course || !role) return { ok: false, error: "Course or place not found" };
   const ct = await t.courseType.findById(ctx, course.courseTypeId);
   const current = cleanRoleLines(requirements);
-  // A course set to "no staff needed" (0) starts from nothing; one never set starts from what the ratio implies.
-  const base = current.length ? current : course.staffRequired === 0 ? [] : suggestRoles({ students: course.capacity, ratio: course.ratio, requiresSafetyBoat: Boolean(ct?.requiresSafetyBoat), roles });
+  // A course set to "no staff needed" (0) starts from nothing; one never set starts from what the ratio implies, in its lead instructor type.
+  const base = current.length ? current : course.staffRequired === 0 ? [] : suggestRoles({ students: course.capacity, ratio: course.ratio, requiresSafetyBoat: Boolean(ct?.requiresSafetyBoat), roles: staffingRolesOf(roles, tc), leadRoleId: leadPlaceFor(tc, course.courseTypeId) });
   const line = base.find((l) => l.roleTypeId === roleTypeId);
   const next = line ? base.map((l) => (l.roleTypeId === roleTypeId ? { ...l, count: Math.min(50, l.count + 1) } : l)) : [...base, { roleTypeId, count: 1 }];
   const r = await setCourseStaffing(repos, ctx, courseId, { students: course.capacity, roles: next, expectedVersion: course.updatedAt.getTime() });

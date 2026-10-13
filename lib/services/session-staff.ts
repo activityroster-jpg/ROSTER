@@ -12,6 +12,7 @@ import { planHoursForCourse } from "./hours";
 import { notifyInstructor } from "./notifications";
 import { isWeekPublished } from "./roster";
 import { liveSessions } from "@/lib/domain/sessions";
+import { fitIssue, placeQualificationIssue } from "./place-check";
 
 export type { EffectiveStaffMember } from "@/lib/domain/session-staff";
 
@@ -92,6 +93,17 @@ export async function setDayStaff(repos: Repositories, ctx: AnyTenantContext, in
   if (input.mode === "add") {
     const settings = (await t.orgSettings.list(ctx))[0];
     const reasons: string[] = [];
+    // The same checks as a whole-course assignment: cleared to roster (when the
+    // centre checks licences) and qualified for this place on this course.
+    const [fit, place] = await Promise.all([
+      fitIssue(repos, ctx, input.instructorId),
+      placeQualificationIssue(repos, ctx, {
+        instructorId: input.instructorId, instructorName: instructor.name, courseTypeId: course.courseTypeId,
+        role: { id: role.id, name: role.name, countsTowardRatio: Boolean(role.countsTowardRatio), qualificationTypeId: role.qualificationTypeId ?? null },
+      }),
+    ]);
+    if (fit) reasons.push(fit);
+    if (place) reasons.push(place);
     if (settings?.enforceAvailabilityChecks ?? true) {
       const { index } = await loadInstructorAvailability(repos, ctx, input.instructorId);
       const e = effectiveAvailability(index, availabilityHorizon(settings), session.date, session.slot);

@@ -4,7 +4,7 @@ import { planAutoRoster, type AutoInstructor, type AutoSession } from "@/lib/dom
 const sess = (id: string, date: string, slot: string, missing = 1, extra: Partial<AutoSession> = {}): AutoSession =>
   ({ sessionId: id, courseId: `c-${id}`, courseTypeId: "dinghy", date, slot, open: [{ roleTypeId: "instr", missing }], onSession: [], ...extra });
 const person = (id: string, availability: Record<string, "available" | "tentative" | "unavailable" | "unasked">, extra: Partial<AutoInstructor> = {}): AutoInstructor =>
-  ({ id, name: id, fit: true, teaches: [], knownQualifications: false, availability, load: 0, ...extra });
+  ({ id, name: id, fit: true, teaches: [], knownQualifications: false, fills: [], availability, load: 0, ...extra });
 
 describe("planAutoRoster", () => {
   it("spreads sessions evenly across the people who are free", () => {
@@ -44,6 +44,17 @@ describe("planAutoRoster", () => {
       person("ok", { "2026-10-12|AM": "available" }, { teaches: ["dinghy"], knownQualifications: true }),
     ]);
     expect(plan.picks.map((p) => p.instructorId)).toEqual(["ok"]);
+  });
+
+  it("puts people only in places their instructor type (or a higher one on its ladder) can fill", () => {
+    const sessions = [sess("s1", "2026-10-12", "AM", 1, { open: [{ roleTypeId: "di", missing: 1 }] })];
+    const places = new Map([["di", { id: "di", name: "Dinghy Instructor", countsTowardRatio: true, qualificationTypeId: "DI" }]]);
+    const free = { "2026-10-12|AM": "available" } as const;
+    const plan = planAutoRoster(sessions, [
+      person("assistant", free, { teaches: ["dinghy"], knownQualifications: true, fills: [] }),
+      person("senior", free, { teaches: ["dinghy"], knownQualifications: true, fills: ["di"], load: 1 }),
+    ], places);
+    expect(plan.picks.map((p) => p.instructorId)).toEqual(["senior"]);
   });
 
   it("does not put one person on two sessions in the same slot", () => {

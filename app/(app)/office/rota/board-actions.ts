@@ -141,11 +141,11 @@ export async function autoRosterAction(input: { monday: string; mode?: "open" | 
     }
   }
   const people: AutoInstructor[] = board.instructors.map((i) => ({
-    id: i.id, name: i.name, fit: i.fit, teaches: i.teaches, knownQualifications: i.knownQualifications,
+    id: i.id, name: i.name, fit: i.fit, teaches: i.teaches, knownQualifications: i.knownQualifications, fills: i.fills,
     availability: Object.fromEntries(Object.entries(i.availability).map(([k, v]) => [k, v.status])),
     load: load.get(i.id) ?? 0,
   }));
-  const plan = planAutoRoster(sessions, people);
+  const plan = planAutoRoster(sessions, people, new Map(board.roles.map((r) => [r.id, r])));
   const anyOpen = sessions.some((s) => s.open.length > 0);
   if (plan.picks.length === 0) {
     return !anyOpen

@@ -24,7 +24,7 @@ describe("pay rates from Settings", () => {
 
   beforeEach(async () => {
     ({ repos, ctx } = await seedFullOrg(createTestDb().db, { name: "Pay", slug: "pay", jurisdiction: "england" }));
-    roleId = (await repos.tenant.roleType.list(ctx)).find((r) => r.countsTowardRatio)!.id;
+    roleId = (await repos.tenant.roleType.list(ctx)).find((r) => r.code === "DI" || (r.countsTowardRatio && !r.qualificationTypeId))!.id;
     const types = await repos.tenant.courseType.list(ctx);
     typeA = types[0]!.id;
     typeB = types[1]!.id;

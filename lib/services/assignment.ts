@@ -21,10 +21,8 @@ import { notifyInstructor } from "./notifications";
 import { publishedWeeks, weekOf } from "./roster";
 import { liveSessions } from "@/lib/domain/sessions";
 import { fmtWallTime } from "@/lib/domain/time";
-import { getTeachingMatrix } from "./teaching";
-import { qualificationGap } from "./problems";
+import { placeQualificationIssue } from "./place-check";
 import { sessionsForInstructor } from "./session-staff";
-import { qualification as qualificationTable } from "@/lib/db/schema";
 
 export interface AssignInput {
   courseId: string;
@@ -132,15 +130,16 @@ export async function assignStaff(
     };
   }
 
-  // --- 1a. Qualification match: the course type must be one they can teach ----
-  // Only judged when the centre has recorded something for them (a qualification
-  // or an approval); with nothing on file nobody is blocked. Override allowed.
-  const [teaching, heldQuals] = await Promise.all([getTeachingMatrix(repos, ctx), t.qualification.list(ctx, eq(qualificationTable.instructorId, input.instructorId))]);
-  const gap = qualificationGap(teaching.get(input.instructorId) ?? [], heldQuals.length > 0, course.courseTypeId);
-  const notQualified = gap.known && !gap.qualified;
+  // --- 1a. Qualification for the place: they can teach the course (teaching
+  // places only) and hold the place's instructor type or a higher one on its
+  // ladder (lib/services/place-check). Override allowed.
+  const placeIssue = await placeQualificationIssue(repos, ctx, {
+    instructorId: input.instructorId, instructorName: instructorRow.name, courseTypeId: course.courseTypeId,
+    role: { id: roleRow.id, name: roleRow.name, countsTowardRatio: Boolean(roleRow.countsTowardRatio), qualificationTypeId: roleRow.qualificationTypeId ?? null },
+  });
+  const notQualified = placeIssue !== null;
   if (notQualified && !input.override) {
-    const ctName = (await t.courseType.findById(ctx, course.courseTypeId))?.name ?? "this course type";
-    return { ok: false, reason: "not-qualified", detail: `${instructorRow.name}'s qualifications don't cover ${ctName}` };
+    return { ok: false, reason: "not-qualified", detail: placeIssue };
   }
 
   // --- 2. Conflict check ---------------------------------------------------

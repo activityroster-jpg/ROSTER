@@ -1,5 +1,6 @@
 import type { Jurisdiction } from "@/lib/db/schema";
 import type { ComplianceSeed, CourseTypeSeed, EquipmentTypeSeed, GradeSeed, RoleSeed, SlotSeed } from "@/lib/seed/catalogue";
+import type { TeachingSeed } from "./rya-teaching";
 
 /**
  * An activity pack: everything that makes one kind of centre (RYA sailing
@@ -46,4 +47,8 @@ export interface ActivityPack {
   equipment: EquipmentTypeSeed[];
   locationTypes: string[];
   courseTypes: CourseTypeSeed[];
+  /** Which courses each instructor type teaches (seeded as qualification_course_type). Without it, who can teach falls back to the activity. */
+  teaching?: TeachingSeed[];
+  /** One place per teaching instructor type (Dinghy Instructor, Powerboat Instructor…) instead of generic Instructor/Senior/Assistant places. */
+  placesFromTypes?: boolean;
 }

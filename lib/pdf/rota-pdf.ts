@@ -124,7 +124,7 @@ function cell(key: Col["key"], s: RotaSession, t: RotaTemplateSettings, names: M
     case "staff": {
       const on = s.staff.filter((x) => x.status !== "declined");
       const sorted = [...on].sort((a, b) => (seniority?.get(b.instructorId) ?? 0) - (seniority?.get(a.instructorId) ?? 0) || a.name.localeCompare(b.name));
-      const who = sorted.map((x) => (t.fields.roles ? `${names.get(x.name) ?? x.name} (${roleAbbrev(x.role)})` : names.get(x.name) ?? x.name));
+      const who = sorted.map((x) => (t.fields.roles ? `${names.get(x.name) ?? x.name} (${roleAbbrev(x.role, x.roleCode)})` : names.get(x.name) ?? x.name));
       return who.length ? [who.join(", ")] : ["Unassigned"];
     }
     case "students": return [s.students > 0 ? String(s.students) : "—"];

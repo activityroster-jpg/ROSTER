@@ -23,7 +23,7 @@ describe("hours rostered this week", () => {
 
   it("adds up their sessions that week; declined ones don't count", async () => {
     const monday = addDays(weekStart(new Date()), 7);
-    const roleTypeId = (await repos.tenant.roleType.list(ctx)).find((r) => r.countsTowardRatio)!.id;
+    const roleTypeId = (await repos.tenant.roleType.list(ctx)).find((r) => r.code === "DI" || (r.countsTowardRatio && !r.qualificationTypeId))!.id;
     const courseTypeId = (await repos.tenant.courseType.list(ctx))[0]!.id;
     const amy = await repos.tenant.instructor.insert(ctx, { name: "Amy", email: null, employmentType: "freelance", status: "active", managedBy: "office" });
     const { courseId } = await createCourseWithSessions(repos, ctx, { courseTypeId, sessions: [

@@ -36,7 +36,7 @@ export async function createCourseTypeResolver(repos: Repositories, ctx: AnyTena
       audience,
       defaultCapacity: 8,
       studentsPerInstructor: 4,
-      requiresSafetyBoat: audience === "youth",
+      requiresSafetyBoat: false,
       active: true,
       listed,
     });

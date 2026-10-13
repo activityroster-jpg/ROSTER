@@ -51,10 +51,10 @@ export async function seedFullOrg(
   ]);
 
   const courseType = courseTypes[0]!;
-  const grade = grades[0]!;
+  const grade = grades.find((g) => g.code === "DI") ?? grades[0]!;
   const complianceType = complianceTypes[0]!;
   const equipmentType = equipmentTypes[0]!;
-  const role = roles.find((r) => r.countsTowardRatio) ?? roles[0]!;
+  const role = roles.find((r) => r.code === "DI" || (r.countsTowardRatio && !r.qualificationTypeId)) ?? roles[0]!;
   const locationType = locationTypes[0]!;
 
   // Course type detail rows

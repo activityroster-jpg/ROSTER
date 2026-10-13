@@ -76,7 +76,7 @@ describe("a large centre: every page loads within Cloudflare's limits", () => {
     repos = seeded.repos; ctx = seeded.ctx;
     const t = repos.tenant;
     const [roles, courseTypes, grades, complianceTypes] = await Promise.all([t.roleType.list(ctx), t.courseType.list(ctx), t.qualificationType.list(ctx), t.complianceType.list(ctx)]);
-    roleId = roles.find((r) => r.countsTowardRatio)!.id;
+    roleId = roles.find((r) => r.code === "DI" || (r.countsTowardRatio && !r.qualificationTypeId))!.id;
     const settings = (await t.orgSettings.list(ctx))[0]!;
     await t.orgSettings.update(ctx, settings.id, { enforceConflictChecks: true, enforceAvailabilityChecks: true, enforceRatioChecks: true, enforceLicenceChecks: true });
 

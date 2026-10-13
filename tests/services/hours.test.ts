@@ -26,7 +26,7 @@ describe("hours from the roster", () => {
     const seeded = await seedFullOrg(db, { name: "Hours", slug: "hours", jurisdiction: "england" });
     repos = seeded.repos;
     ctx = seeded.ctx;
-    roleId = (await repos.tenant.roleType.list(ctx)).find((r) => r.countsTowardRatio)!.id;
+    roleId = (await repos.tenant.roleType.list(ctx)).find((r) => r.code === "DI" || (r.countsTowardRatio && !r.qualificationTypeId))!.id;
     courseTypeId = (await repos.tenant.courseType.list(ctx))[0]!.id;
     newcomerId = (await repos.tenant.instructor.insert(ctx, { name: "New Hand", email: null, employmentType: "freelance", status: "active" })).id;
   });

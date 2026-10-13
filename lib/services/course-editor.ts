@@ -7,7 +7,7 @@ import { evaluateRatio, type AssignedRole } from "@/lib/domain";
 import { fitReason, listStaffWithFit } from "@/lib/services/staff";
 import { getCourseAvailabilityStates } from "@/lib/services/availability";
 import { liveSessions } from "@/lib/domain/sessions";
-import { getTeachingMatrix } from "@/lib/services/teaching";
+import { fillsByInstructor, getTeachingContext, getTeachingMatrix, pickerPlaces, relevantPlacesFor, type PickerPlace } from "@/lib/services/teaching";
 import { qualificationGap } from "@/lib/services/problems";
 import { staffingViewFrom, type StaffingView } from "@/lib/services/course-resources";
 
@@ -17,8 +17,11 @@ export interface CourseEditorData {
   audience: string;
   sessions: { id: string; date: string; startMs: number; endMs: number }[];
   assigned: { id: string; instructorId: string; instructorName: string; roleTypeId: string; roleName: string; isOverride: boolean; status: "assigned" | "confirmed" | "declined"; declineNote?: string | null }[];
-  instructors: { id: string; name: string; fit: boolean; reason?: string; avail?: string; /** false = their qualifications don't cover this course type; null = nothing recorded for them. */ qualified?: boolean | null; /** On another course at the same time: "Youth Stage 3 (Mon AM)". */ busyWith?: string }[];
-  roles: { id: string; name: string }[];
+  instructors: { id: string; name: string; fit: boolean; reason?: string; avail?: string; /** false = their instructor types don't cover this course type; null = nothing recorded for them. */ qualified?: boolean | null; /** The places (role ids) they can fill. */ fills?: string[]; /** On another course at the same time: "Youth Stage 3 (Mon AM)". */ busyWith?: string }[];
+  /** The centre's active places, each with its instructor type and rank. */
+  roles: PickerPlace[];
+  /** Places whose instructor type teaches this course: the add-a-place list shows these first. */
+  relevant: string[];
   ratioOn: boolean;
   ratio?: { ok: boolean; understaffed: boolean; missingSafetyCover: boolean };
   computedRequired?: number;
@@ -59,7 +62,8 @@ export async function getCourseEditorData(
   const course = await t.course.findById(ctx, courseId);
   if (!course) return null;
 
-  const [courseTypes, sessions, assignments, instructors, roles, settingsRows, staff, availStates, requirements, teaching, quals, elsewhere] = await Promise.all([
+  const tc = await getTeachingContext(repos, ctx);
+  const [courseTypes, sessions, assignments, instructors, roles, settingsRows, staff, availStates, requirements, teaching, elsewhere] = await Promise.all([
     t.courseType.list(ctx),
     t.courseSession.list(ctx, eq(courseSessionTable.courseId, courseId)).then(liveSessions),
     t.courseStaff.list(ctx, eq(courseStaffTable.courseId, courseId)),
@@ -69,11 +73,11 @@ export async function getCourseEditorData(
     listStaffWithFit(repos, ctx),
     t.courseSession.list(ctx, eq(courseSessionTable.courseId, courseId)).then((own) => getCourseAvailabilityStates(repos, ctx, own)),
     t.courseRoleRequirement.list(ctx, eq(courseRoleRequirementTable.courseId, courseId)),
-    getTeachingMatrix(repos, ctx),
-    t.qualification.list(ctx),
+    getTeachingMatrix(repos, ctx, tc),
     busyElsewhereFor(repos, ctx, courseId),
   ]);
-  const holdsAny = new Set(quals.map((q) => q.instructorId));
+  const holdsAny = new Set([...tc.held].filter(([, types]) => types.size > 0).map(([instructorId]) => instructorId));
+  const fills = fillsByInstructor(tc, instructors.map((i) => i.id));
   const qualifiedFor = (instructorId: string): boolean | null => { const g = qualificationGap(teaching.get(instructorId) ?? [], holdsAny.has(instructorId), course.courseTypeId); return g.known ? g.qualified : null; };
 
   const ct = courseTypes.find((c) => c.id === course.courseTypeId);
@@ -131,13 +135,15 @@ export async function getCourseEditorData(
           reason: licenceOn && f ? fitReason(f) : "",
           avail: avail?.get(i.id) ?? "none",
           qualified: qualifiedFor(i.id),
+          fills: fills.get(i.id) ?? [],
           busyWith: elsewhere.get(i.id),
         };
       }),
-    roles: roles.filter((r) => r.active).map((r) => ({ id: r.id, name: r.name })),
+    roles: pickerPlaces(roles, tc),
+    relevant: relevantPlacesFor(tc, course.courseTypeId),
     ratioOn,
     ratio: ratioOn ? { ok: ratio.ok, understaffed: ratio.understaffed, missingSafetyCover: ratio.missingSafetyCover } : undefined,
-    staffing: staffingViewFrom(course, ct, roles, requirements.filter((r) => r.courseId === course.id), mine, nameById),
+    staffing: staffingViewFrom(course, ct, roles, requirements.filter((r) => r.courseId === course.id), mine, nameById, tc),
     computedRequired: ratio.requiredStaff,
     roleNeeds: roleNeedsByCourse(
       requirements.filter((r) => r.courseId === course.id),

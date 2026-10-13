@@ -25,6 +25,7 @@ import { hasFeature } from "@/lib/features";
 import { FeatureNotice } from "@/components/office/FeatureNotice";
 import { listAllPayRates } from "@/lib/services/pay-rates";
 import { PayRatesSettings } from "@/components/office/PayRatesEditor";
+import { bySeniority } from "@/lib/domain/role-rank";
 import { instructor as instructorTable } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import type { Repositories } from "@/lib/db/repositories";
@@ -33,13 +34,18 @@ import type { AnyTenantContext } from "@/lib/tenant/context";
 /** Settings → Pay rates: the centre's standard rates by role and everyone's own rates, in one place. */
 async function PayRatesPanel({ repos, ctx, currency, featureOn }: { repos: Repositories; ctx: AnyTenantContext; currency: string; featureOn: boolean }) {
   const t = repos.tenant;
-  const [roles, courseTypes, people, rates] = await Promise.all([
+  const [roles, courseTypes, people, rates, quals, qualTypes] = await Promise.all([
     t.roleType.list(ctx),
     t.courseType.list(ctx),
     t.instructor.list(ctx, eq(instructorTable.status, "active")),
     listAllPayRates(repos, ctx),
+    t.qualification.list(ctx),
+    t.qualificationType.list(ctx),
   ]);
   const usedRole = new Set(rates.map((r) => r.roleTypeId).filter(Boolean));
+  // Instructor types someone on the team holds: their places are listed; the rest sit behind "Add a rate for another instructor type".
+  const heldTypes = new Set(quals.map((q) => q.qualificationTypeId));
+  const rankOf = new Map(qualTypes.map((q) => [q.id, q.rank]));
   const usedCourse = new Set(rates.map((r) => r.courseTypeId).filter(Boolean));
   const symbol = currency === "EUR" ? "€" : currency === "USD" ? "$" : "£";
   return (
@@ -48,13 +54,13 @@ async function PayRatesPanel({ repos, ctx, currency, featureOn }: { repos: Repos
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3 rounded-card border border-teal/30 bg-teal/5 p-4 text-sm text-slate-700">
         <div className="max-w-3xl">
           <p className="font-semibold text-navy">How pay is worked out</p>
-          <p className="mt-1">Set the <strong>standard rate for each role</strong> once, per hour, per session or per day. Anyone paid differently gets <strong>their own rate</strong> below, and a rate for one course beats a general one. In order: their rate for that course → their own rate → the role&rsquo;s rate on that course → the role&rsquo;s rate → everyone else.</p>
+          <p className="mt-1">Set the <strong>standard rate for each place</strong> (instructor type) once, per hour, per session or per day. Anyone paid differently gets <strong>their own rate</strong> below, and a rate for one course beats a general one. In order: their rate for that course → their own rate → the place&rsquo;s rate on that course → the place&rsquo;s rate → everyone else.</p>
         </div>
         <a href="/learn?topic=pay-rates" target="_blank" rel="noreferrer" className="flex-none text-xs font-medium text-teal hover:underline">📖 Read the guide</a>
       </div>
       <PayRatesSettings
         currency={symbol}
-        roles={roles.filter((r) => r.active || usedRole.has(r.id)).map((r) => ({ id: r.id, name: r.active ? r.name : `${r.name} (retired)` }))}
+        roles={bySeniority(roles.filter((r) => r.active || usedRole.has(r.id)).map((r) => ({ id: r.id, name: r.active ? r.name : `${r.name} (retired)`, rank: r.qualificationTypeId ? rankOf.get(r.qualificationTypeId) ?? 0 : 0, inUse: !r.qualificationTypeId || usedRole.has(r.id) || heldTypes.has(r.qualificationTypeId) }))).map(({ rank: _rank, ...r }) => r)}
         courses={courseTypes.filter((c) => (c.active && c.listed) || usedCourse.has(c.id)).map((c) => ({ id: c.id, name: c.active ? c.name : `${c.name} (retired)` })).sort((a, b) => a.name.localeCompare(b.name))}
         people={people.map((p) => ({ id: p.id, name: p.name, employment: p.employmentType })).sort((a, b) => a.name.localeCompare(b.name))}
         rates={rates.map((r) => ({ instructorId: r.instructorId, roleTypeId: r.roleTypeId, courseTypeId: r.courseTypeId, unit: r.unit, rate: r.rate }))}

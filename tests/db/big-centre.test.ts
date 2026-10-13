@@ -53,7 +53,7 @@ describe("a big centre: pages read a slice, not the whole history", () => {
     const seeded = await seedFullOrg(db, { name: "Big", slug: "big", jurisdiction: "england" });
     repos = seeded.repos; ctx = seeded.ctx;
     const t = repos.tenant;
-    roleId = (await t.roleType.list(ctx)).find((r) => r.countsTowardRatio)!.id;
+    roleId = (await t.roleType.list(ctx)).find((r) => r.code === "DI" || (r.countsTowardRatio && !r.qualificationTypeId))!.id;
     courseTypeId = (await t.courseType.list(ctx))[0]!.id;
     instructorId = (await t.instructor.list(ctx))[0]!.id;
     const st = (await t.orgSettings.list(ctx))[0]!;

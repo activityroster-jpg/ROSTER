@@ -121,13 +121,22 @@ function useSave(changes: ReturnType<typeof useDraft>["changes"]) {
  * different rates on particular courses where needed), then everyone listed
  * with their own rate and their course rates. The most specific rate wins.
  */
-export function PayRatesSettings({ currency, roles, courses, people, rates }: { currency: string; roles: NamedItem[]; courses: NamedItem[]; people: PersonItem[]; rates: RateRow[] }) {
+export function PayRatesSettings({ currency, roles, courses, people, rates }: {
+  currency: string;
+  /** Places, higher levels first. `inUse` ones are listed (a rate set, someone holds the type, or a place with no type); the rest sit behind "Add a rate for another instructor type". */
+  roles: (NamedItem & { inUse?: boolean })[];
+  courses: NamedItem[]; people: PersonItem[]; rates: RateRow[];
+}) {
   const d = useDraft(rates);
   const { pending, msg, save } = useSave(d.changes);
   const [q, setQ] = useState("");
+  // Places opened for a rate in this visit, so they stay on screen while being filled in.
+  const [added, setAdded] = useState<string[]>([]);
+  const listed = roles.filter((r) => r.inUse !== false || added.includes(r.id));
+  const hidden = roles.filter((r) => r.inUse === false && !added.includes(r.id));
   const [openPerson, setOpenPerson] = useState<string | null>(null);
   const courseName = (id: string | null) => courses.find((c) => c.id === id)?.name ?? "a retired course";
-  const roleName = (id: string | null) => roles.find((r) => r.id === id)?.name ?? "a retired role";
+  const roleName = (id: string | null) => roles.find((r) => r.id === id)?.name ?? "a retired place";
   const keysWhere = (pred: (k: { instructorId: string | null; roleTypeId: string | null; courseTypeId: string | null }) => boolean) => [...d.draft.keys()].filter((k) => pred(parseKey(k)));
   const shown = people.filter((p) => p.name.toLowerCase().includes(q.trim().toLowerCase()));
 
@@ -135,10 +144,10 @@ export function PayRatesSettings({ currency, roles, courses, people, rates }: { 
     <div>
       {/* 1. Standard rates */}
       <section className="rounded-card border border-slate-200 bg-white p-4">
-        <h3 className="font-semibold text-navy">1 · Standard rates by role</h3>
-        <p className="mt-1 text-xs text-slate-500">What someone in each role is paid, unless they have their own rate below. Add a different rate for a course where it pays differently (say, camps per day). Leave a role blank to fall back to &ldquo;Everyone else&rdquo;.</p>
+        <h3 className="font-semibold text-navy">1 · Standard rates by place</h3>
+        <p className="mt-1 text-xs text-slate-500">What someone working in each place (instructor type) is paid, unless they have their own rate below. Add a different rate for a course where it pays differently (say, camps per day). Leave a place blank to fall back to &ldquo;Everyone else&rdquo;. The list shows the instructor types your team holds; add any other below.</p>
         <div className="mt-3 divide-y divide-slate-100">
-          {[...roles.map((r) => ({ id: r.id as string | null, name: r.name })), { id: null, name: "Everyone else (any other role)" }].map((r) => {
+          {[...listed.map((r) => ({ id: r.id as string | null, name: r.name })), { id: null, name: "Everyone else (any other place)" }].map((r) => {
             const k = keyOf({ instructorId: null, roleTypeId: r.id, courseTypeId: null });
             const courseKeys = r.id ? keysWhere((x) => !x.instructorId && x.roleTypeId === r.id && Boolean(x.courseTypeId)) : [];
             return (
@@ -163,6 +172,12 @@ export function PayRatesSettings({ currency, roles, courses, people, rates }: { 
             );
           })}
         </div>
+        {hidden.length ? (
+          <select value="" onChange={(e) => { const id = e.target.value; if (id) setAdded((a) => [...a, id]); }} aria-label="Add a rate for another instructor type" className={`${field} mt-2`}>
+            <option value="">+ Add a rate for another instructor type…</option>
+            {hidden.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+          </select>
+        ) : null}
       </section>
 
       {/* 2. Each person */}

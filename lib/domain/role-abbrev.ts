@@ -1,9 +1,11 @@
 /**
- * Short form of a role name for tight spaces (the printed rota): the initials
- * of its words. "Assistant Instructor" → "AI", "Senior Instructor" → "SI",
- * "Instructor" → "I", "Safety Boat Driver" → "SBD". Pure.
+ * Short form of a role name for tight spaces (the printed rota). A place that
+ * is an instructor type uses the type's code ("PBI", "SWI", "KBI"); any other
+ * place the initials of its words: "Assistant Instructor" → "AI", "Senior
+ * Instructor" → "SI", "Instructor" → "I", "Volunteer" → "V". Pure.
  */
-export function roleAbbrev(name: string): string {
+export function roleAbbrev(name: string, code?: string | null): string {
+  if (code && code.trim()) return code.trim().toUpperCase();
   const words = name.replace(/\(.*?\)/g, " ").split(/[\s/&-]+/).filter((w) => /[A-Za-z0-9]/.test(w));
   if (words.length === 0) return name.trim().slice(0, 3).toUpperCase();
   const initials = words.map((w) => w[0]!.toUpperCase()).join("");

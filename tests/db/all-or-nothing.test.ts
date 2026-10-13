@@ -65,7 +65,7 @@ describe("saves are all or nothing", () => {
     const seeded = await seedFullOrg(t.db, { name: "Batch", slug: "batch", jurisdiction: "england" });
     repos = seeded.repos; ctx = seeded.ctx;
     batch = withBatch(t.db, raw);
-    roleId = (await repos.tenant.roleType.list(ctx)).find((r) => r.countsTowardRatio)!.id;
+    roleId = (await repos.tenant.roleType.list(ctx)).find((r) => r.code === "DI" || (r.countsTowardRatio && !r.qualificationTypeId))!.id;
     const courseTypeId = (await repos.tenant.courseType.list(ctx))[0]!.id;
     const st = (await repos.tenant.orgSettings.list(ctx))[0]!;
     samId = (await repos.tenant.instructor.list(ctx))[0]!.id;

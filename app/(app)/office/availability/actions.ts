@@ -5,7 +5,8 @@ import { revalidatePath } from "next/cache";
 import { requireTenant } from "@/lib/tenant/require";
 import { weekStart } from "@/lib/services/schedule";
 import { getBoard } from "@/lib/services/board";
-import { getTeachingMatrix } from "@/lib/services/teaching";
+import { placeFitIssue } from "@/lib/domain/teaching";
+import { bySeniority } from "@/lib/domain/role-rank";
 import { assignStaff, assignBlockMessage } from "@/lib/services/assignment";
 import { courseSession as courseSessionTable, courseStaff as courseStaffTable } from "@/lib/db/schema";
 import { clearDayStaff, setDayStaff } from "@/lib/services/session-staff";
@@ -23,7 +24,7 @@ export interface CellCandidate {
   needsCover: boolean;
   assigned: number;
   required: number;
-  /** The roles this course needs (its role lines, or what the ratio implies) and how many places are still open in each. */
+  /** The places on this course this person can fill (its place lines, or what the ratio implies) and how many are still open in each. */
   roles: { id: string; name: string; missing: number }[];
 }
 /** A session in this slot the person is already on. */
@@ -37,8 +38,10 @@ const fmtT = (v: Date | number) =>
 
 /**
  * For a clicked availability cell (instructor × date × slot), list the sessions
- * that day/slot the instructor is eligible to teach and isn't already on — so an
- * admin can fill an open shift straight from the availability grid.
+ * that day/slot the instructor can teach and isn't already on, each with the
+ * places on it they can fill (their instructor type, or a lower one on the same
+ * ladder) — so an admin can fill an open shift straight from the availability
+ * grid. Nobody is judged until something is on file for them.
  */
 export async function assignableForCellAction(date: string, slot: string, instructorId: string): Promise<CellResult> {
   const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
@@ -47,13 +50,10 @@ export async function assignableForCellAction(date: string, slot: string, instru
   // One source of truth: the same week data the roster board shows (who is on each
   // session that day, day adds included, and which places are still open), so the
   // availability sheet can never disagree with the rota.
-  const [board, roles, teaching] = await Promise.all([
-    getBoard(repos, ctx, weekStart(new Date(`${date}T00:00:00Z`))),
-    repos.tenant.roleType.list(ctx),
-    getTeachingMatrix(repos, ctx),
-  ]);
-  const activeRoles = roles.filter((r) => r.active).map((r) => ({ id: r.id, name: r.name }));
-  const teachable = new Set((teaching.get(instructorId) ?? []).map((c) => c.courseTypeId));
+  const board = await getBoard(repos, ctx, weekStart(new Date(`${date}T00:00:00Z`)));
+  const activeRoles = board.roles.map((r) => ({ id: r.id, name: r.name }));
+  const roleById = new Map(board.roles.map((r) => [r.id, r]));
+  const me = board.instructors.find((i) => i.id === instructorId);
   const day = board.days.find((d) => d.date === date);
   const inSlot = (day?.sessions ?? []).filter((s) => s.slot === slot && s.status !== "cancelled");
   const onIt = (s: (typeof inSlot)[number]) => s.staff.some((m) => m.instructorId === instructorId && m.status !== "declined");
@@ -65,16 +65,25 @@ export async function assignableForCellAction(date: string, slot: string, instru
   });
 
   const candidates: CellCandidate[] = [];
+  const suits = (courseTypeId: string, roleId: string) => !me || placeFitIssue(me, courseTypeId, roleById.get(roleId)) === null;
   for (const s of inSlot) {
     const meta = board.sessionMeta[s.sessionId];
-    if (!meta || onIt(s) || !teachable.has(meta.courseTypeId)) continue;
+    if (!meta || onIt(s)) continue;
+    // Their instructor types must cover the course (nothing on file: not judged).
+    if (me?.knownQualifications && !me.teaches.includes(meta.courseTypeId)) continue;
     const open = board.openRoles[s.sessionId] ?? [];
     const assigned = s.staff.filter((m) => m.status !== "declined").length;
     const required = meta.needs.reduce((n, x) => n + x.count, 0);
-    // Only the roles this session needs, open places first; a course with no roles set offers every active role.
-    const rolesOut = meta.needs.length
-      ? meta.needs.map((n) => ({ id: n.roleTypeId, name: n.roleName, missing: open.find((o) => o.roleTypeId === n.roleTypeId)?.missing ?? 0 })).sort((a, b) => Number(b.missing > 0) - Number(a.missing > 0))
-      : activeRoles.map((r) => ({ ...r, missing: 0 }));
+    // The places this session lists (open first). A course worked out from the ratio, or with no places set,
+    // also offers the places for its instructor types and Volunteer. Only places this person can fill.
+    const ids = meta.explicitRoles && meta.needs.length
+      ? meta.needs.map((n) => n.roleTypeId)
+      : [...new Set([...meta.needs.map((n) => n.roleTypeId), ...bySeniority(board.roles.filter((r) => meta.relevantRoleIds.includes(r.id) || !r.qualificationTypeId)).map((r) => r.id)])];
+    const rolesOut = ids
+      .filter((id) => roleById.has(id) && suits(meta.courseTypeId, id))
+      .map((id) => ({ id, name: roleById.get(id)!.name, missing: open.find((o) => o.roleTypeId === id)?.missing ?? 0 }))
+      .sort((a, b) => Number(b.missing > 0) - Number(a.missing > 0));
+    if (rolesOut.length === 0) continue;
     candidates.push({ courseId: s.courseId, courseName: s.courseName, time: `${fmtT(s.startAt)}–${fmtT(s.endAt)}`, needsCover: open.length > 0, assigned, required, roles: rolesOut });
   }
   // De-dupe by course (a course may have several sessions in the slot) and put gaps first.

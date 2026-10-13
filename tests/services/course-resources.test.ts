@@ -28,11 +28,11 @@ describe("staffing: one panel, staff required derived from the role lines", () =
   });
 
   it("builds the view with filled counts and falls back to the ratio when there are no lines", () => {
-    const view = staffingViewFrom({ capacity: 10, ratio: 4, staffRequired: null }, { requiresSafetyBoat: false }, roles.map((r) => ({ ...r, code: r.id, organisationId: "o", createdAt: new Date(), updatedAt: new Date(), isFirstAider: false, sortOrder: 0 })) as never, [], [{ roleTypeId: "in", status: "assigned", instructorId: "p-in-assigned" }]);
+    const view = staffingViewFrom({ capacity: 10, ratio: 4, staffRequired: null, courseTypeId: "ct" }, { requiresSafetyBoat: false }, roles.map((r) => ({ ...r, code: r.id, organisationId: "o", createdAt: new Date(), updatedAt: new Date(), isFirstAider: false, sortOrder: 0 })) as never, [], [{ roleTypeId: "in", status: "assigned", instructorId: "p-in-assigned" }]);
     expect(view.required).toBe(3);
     expect(view.fromRoles).toBe(false);
     expect(view.assigned).toBe(1);
-    const withLines = staffingViewFrom({ capacity: 10, ratio: 4, staffRequired: 2 }, { requiresSafetyBoat: false }, roles.map((r) => ({ ...r, code: r.id, organisationId: "o", createdAt: new Date(), updatedAt: new Date(), isFirstAider: false, sortOrder: 0 })) as never, [{ roleTypeId: "in", count: 2 }], [{ roleTypeId: "in", status: "confirmed", instructorId: "p-in-confirmed" }, { roleTypeId: "in", status: "declined", instructorId: "p-in-declined" }]);
+    const withLines = staffingViewFrom({ capacity: 10, ratio: 4, staffRequired: 2, courseTypeId: "ct" }, { requiresSafetyBoat: false }, roles.map((r) => ({ ...r, code: r.id, organisationId: "o", createdAt: new Date(), updatedAt: new Date(), isFirstAider: false, sortOrder: 0 })) as never, [{ roleTypeId: "in", count: 2 }], [{ roleTypeId: "in", status: "confirmed", instructorId: "p-in-confirmed" }, { roleTypeId: "in", status: "declined", instructorId: "p-in-declined" }]);
     expect(withLines.lines).toEqual([{ roleTypeId: "in", roleName: "Instructor", count: 2, filled: 1, people: [{ instructorId: "p-in-confirmed", name: "Someone" }] }]);
     expect(withLines.required).toBe(2);
     expect(withLines.fromRoles).toBe(true);
@@ -78,7 +78,7 @@ describe("course resources and staffing against the database", () => {
 
   it("the staffing panel saves students and role lines and derives staff required", async () => {
     const roles = await repos.tenant.roleType.list(ctx);
-    const counting = roles.find((r) => r.countsTowardRatio) ?? roles[0]!;
+    const counting = roles.find((r) => r.code === "DI" || (r.countsTowardRatio && !r.qualificationTypeId)) ?? roles[0]!;
     const view = await getCourseStaffing(repos, ctx, courseId);
     expect(view).not.toBeNull();
     const r = await setCourseStaffing(repos, ctx, courseId, { students: 9, roles: [{ roleTypeId: counting.id, count: 2 }, { roleTypeId: "nope", count: 3 }] });

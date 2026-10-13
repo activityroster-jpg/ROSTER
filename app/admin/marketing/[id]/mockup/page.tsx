@@ -7,7 +7,8 @@ import { Logo } from "@/components/Logo";
 import { LETTER_SENDER } from "@/lib/marketing";
 import { apexDomain } from "@/lib/config";
 import { JURISDICTIONS, type Jurisdiction } from "@/lib/db/schema";
-import { DEFAULT_COURSE_TYPES, DEFAULT_EQUIPMENT_TYPES, DEFAULT_LOCATION_TYPES, DEFAULT_ROLES, defaultComplianceTypes } from "@/lib/seed/catalogue";
+import { DEFAULT_COURSE_TYPES, DEFAULT_EQUIPMENT_TYPES, DEFAULT_GRADES, DEFAULT_LOCATION_TYPES, defaultComplianceTypes } from "@/lib/seed/catalogue";
+import { groupByLadder } from "@/lib/domain/ladders";
 import { TIERS, SMALL_CLUB_CAP } from "@/lib/tiers";
 import { DEFAULT_PRICING, ON_SITE_DAY_PRICE, fmtMoney } from "@/lib/pricing";
 import {
@@ -132,7 +133,7 @@ export default async function ProspectMockupPage({ params }: { params: Promise<{
 
         {/* 2 · Setup summary */}
         <Sheet n={2} title="What we'd set up for you">
-          <p className="mb-4 text-[10pt] text-slate-600">Every centre starts with the RYA defaults below, then we tailor them to {p.name}. Nothing here is fixed — grades, roles, checks, course types, boats and locations are all yours to edit.</p>
+          <p className="mb-4 text-[10pt] text-slate-600">Every centre starts with the RYA defaults below, then we tailor them to {p.name}. Nothing here is fixed — instructor types, checks, course types, boats and locations are all yours to edit.</p>
           <div className="grid grid-cols-2 gap-5">
             <div>
               <h3 className="mb-1 font-semibold text-navy">Your centre</h3>
@@ -141,8 +142,11 @@ export default async function ProspectMockupPage({ params }: { params: Promise<{
                   <tr key={k} className="border-b border-slate-100"><td className="py-1 pr-3 text-slate-500">{k}</td><td className="py-1 font-medium text-navy">{v}</td></tr>
                 ))}
               </tbody></table>
-              <h3 className="mb-1 mt-5 font-semibold text-navy">Roles</h3>
-              <p className="text-[9pt] text-slate-700">{DEFAULT_ROLES.map((r) => r.name).join(" · ")}</p>
+              <h3 className="mb-1 mt-5 font-semibold text-navy">Instructor types</h3>
+              <p className="text-[8.5pt] text-slate-500">Each one is a place on a course, linked to the courses it can teach. A higher type fills a lower place on the same ladder.</p>
+              {groupByLadder(DEFAULT_GRADES.filter((g) => g.discipline).map((g) => ({ ...g, discipline: g.discipline ?? null }))).map((g) => (
+                <p key={g.key} className="text-[9pt] text-slate-700"><span className="font-semibold">{g.label}:</span> {g.types.map((t) => t.code).join(" · ")}</p>
+              ))}
               <h3 className="mb-1 mt-5 font-semibold text-navy">Compliance checks ({jurisdiction.replace("_", " ")})</h3>
               <ul className="text-[9pt] text-slate-700">{checks.map((c) => <li key={c.code}>• {c.name}{c.mandatory ? <span className="ml-1 rounded bg-port/10 px-1 text-[7pt] font-semibold text-port">mandatory</span> : null}</li>)}</ul>
               <h3 className="mb-1 mt-5 font-semibold text-navy">Equipment & locations</h3>

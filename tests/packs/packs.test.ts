@@ -25,9 +25,10 @@ describe("activity packs", () => {
     describe(pack.label, () => {
       it("has every list the seeder needs", () => {
         expect(pack.slots.map((s) => s.code)).toEqual(["AM", "PM", "EV"]);
-        expect(pack.roles.length).toBeGreaterThan(2);
-        expect(pack.roles.some((r) => r.countsTowardRatio)).toBe(true);
-        expect(pack.roles.some((r) => r.isSafetyCover)).toBe(true);
+        // Places: generic ones, plus one per teaching instructor type where the pack makes them.
+        const typePlaces = pack.placesFromTypes ? pack.grades.filter((g) => g.discipline) : [];
+        expect(pack.roles.length + typePlaces.length).toBeGreaterThan(2);
+        expect(typePlaces.length > 0 || pack.roles.some((r) => r.countsTowardRatio)).toBe(true);
         expect(pack.grades.length).toBeGreaterThan(3);
         expect(pack.equipment.length).toBeGreaterThan(2);
         expect(pack.locationTypes.length).toBeGreaterThan(2);
@@ -64,10 +65,40 @@ describe("activity packs", () => {
 
   it("the PADI pack is diving, not sailing", () => {
     const padi = PACKS.padi_centre;
-    expect(padi.grades.every((g) => ["diving", "freediving", "first_aid", "powerboat"].includes(g.discipline))).toBe(true);
+    expect(padi.grades.every((g) => ["diving", "freediving", "first_aid", "powerboat", "none"].includes(g.discipline ?? "none"))).toBe(true);
     expect(padi.courseTypes.every((c) => c.scheme.startsWith("PADI"))).toBe(true);
     expect(padi.compliance("england").map((c) => c.code)).toContain("PADI_RENEWAL");
     expect(padi.compliance("england").map((c) => c.code)).toContain("DIVE_MEDICAL");
     expect(padi.roles.find((r) => r.isSafetyCover)?.name).toBe("Boat Skipper");
+  });
+
+  it("the RYA course map names real instructor types and courses, and covers every starting course", () => {
+    const pack = PACKS.rya_centre;
+    const codes = new Set(pack.grades.map((g) => g.code));
+    const courses = new Set(pack.courseTypes.map((c) => c.name));
+    for (const r of pack.teaching ?? []) {
+      expect(codes.has(r.type), r.type).toBe(true);
+      expect(courses.has(r.course), r.course).toBe(true);
+      if (r.alsoRequires) expect(codes.has(r.alsoRequires), r.alsoRequires).toBe(true);
+    }
+    const mapped = new Set((pack.teaching ?? []).map((r) => r.course));
+    expect(pack.courseTypes.filter((c) => !mapped.has(c.name)).map((c) => c.name)).toEqual([]);
+    // No separate safety boat driver: the instructor drives the safety boat.
+    expect(pack.roles.some((r) => r.isSafetyCover)).toBe(false);
+    expect(pack.courseTypes.some((c) => c.requiresSafetyBoat)).toBe(false);
+  });
+
+  it("uses Conor's ratios for the RYA starting courses", () => {
+    const ratio = (name: string) => PACKS.rya_centre.courseTypes.find((c) => c.name === name)!.studentsPerInstructor;
+    expect(ratio("Start Sailing (Level 1)")).toBe(6);
+    expect(ratio("Summer Camp (5-day)")).toBe(6);
+    expect(ratio("Youth Stage 1")).toBe(6);
+    expect(ratio("Start Windsurfing")).toBe(6);
+    expect(ratio("Powerboat Level 1")).toBe(3);
+    expect(ratio("Safety Boat Course")).toBe(6);
+    expect(ratio("Start Keelboating")).toBe(4);
+    expect(ratio("Competent Crew")).toBe(5);
+    expect(ratio("Day Skipper (Practical)")).toBe(5);
+    expect(ratio("Coastal Skipper (Practical)")).toBe(4);
   });
 });

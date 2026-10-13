@@ -12,6 +12,20 @@ describe("role seniority", () => {
     expect(roleRank("Something else")).toBe(40);
   });
 
+  it("orders instructor-type places by their ladder rank, alongside named places", () => {
+    const places = [
+      { name: "Volunteer" },
+      { name: "Keelboat Endorsement", rank: 20 },
+      { name: "Assistant Instructor", rank: 10 },
+      { name: "Coach/Assessor", rank: 50 },
+      { name: "Senior Instructor", rank: 40 },
+      { name: "Dinghy Instructor", rank: 20 },
+    ];
+    expect(bySeniority(places).map((r) => r.name)).toEqual([
+      "Coach/Assessor", "Senior Instructor", "Keelboat Endorsement", "Dinghy Instructor", "Assistant Instructor", "Volunteer",
+    ]);
+  });
+
   it("orders staffing rows by seniority", () => {
     const slots = buildRoleSlots([
       { roleTypeId: "sb", roleName: "Safety Boat Driver", count: 1 },

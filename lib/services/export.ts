@@ -64,7 +64,7 @@ export async function eraseOrganisationData(
     // 1. rows that reference courses / people / config
     t.sessionStaffOverride, t.courseStaff, t.courseEquipment, t.courseLocation, t.courseRoleRequirement, t.courseSession,
     t.hoursRecord, t.availability, t.availabilityNote, t.payRate, t.rosterWeek,
-    t.courseTypeStaffing, t.courseTypeEquipment,
+    t.courseTypeStaffing, t.qualificationCourseType, t.courseTypeEquipment,
     t.qualification, t.complianceItem,
     // 2. courses (reference courseType)
     t.course,

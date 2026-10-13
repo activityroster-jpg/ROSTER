@@ -1,5 +1,6 @@
 import { DEFAULT_COURSE_TYPES, DEFAULT_EQUIPMENT_TYPES, DEFAULT_GRADES, DEFAULT_LOCATION_TYPES, DEFAULT_ROLES, DEFAULT_SLOTS, defaultComplianceTypes } from "@/lib/seed/catalogue";
 import type { ActivityPack } from "./types";
+import { RYA_TEACHING } from "./rya-teaching";
 
 /** RYA centre / school (training centres, sailing schools and clubs): the original pack, built from the lists every centre has had so far. */
 export const RYA_CENTRE_PACK: ActivityPack = {
@@ -25,4 +26,6 @@ export const RYA_CENTRE_PACK: ActivityPack = {
   equipment: DEFAULT_EQUIPMENT_TYPES,
   locationTypes: DEFAULT_LOCATION_TYPES,
   courseTypes: DEFAULT_COURSE_TYPES,
+  teaching: RYA_TEACHING,
+  placesFromTypes: true,
 };

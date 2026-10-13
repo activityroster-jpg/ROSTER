@@ -55,7 +55,7 @@ describe("per-day staffing against the database", () => {
     const { db } = createTestDb();
     const seeded = await seedFullOrg(db, { name: "Days", slug: "days", jurisdiction: "england" });
     repos = seeded.repos; ctx = seeded.ctx;
-    roleId = (await repos.tenant.roleType.list(ctx)).find((r) => r.countsTowardRatio)!.id;
+    roleId = (await repos.tenant.roleType.list(ctx)).find((r) => r.code === "DI" || (r.countsTowardRatio && !r.qualificationTypeId))!.id;
     courseTypeId = (await repos.tenant.courseType.list(ctx))[0]!.id;
     const st = (await repos.tenant.orgSettings.list(ctx))[0]!;
     await repos.tenant.orgSettings.update(ctx, st.id, { enforceConflictChecks: true });

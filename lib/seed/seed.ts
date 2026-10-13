@@ -28,20 +28,33 @@ export async function seedOrganisationDefaults(
     timezone: jurisdiction === "ireland" ? "Europe/Dublin" : "Europe/London",
     // Warn when an instructor is double-booked / unavailable — on by default.
     enforceConflictChecks: true,
+    // Places are instructor types and the course map is seeded (below), so nothing to upgrade.
+    teachingMapVersion: pack.teaching ? TEACHING_MAP_VERSION : 0,
   });
 
   for (const s of pack.slots) {
     await repos.sessionSlot.insert(ctx, { ...s, active: true });
   }
-  for (const r of pack.roles) {
-    await repos.roleType.insert(ctx, { ...r, active: true });
-  }
+  const typeIdByCode = new Map<string, string>();
   for (const g of pack.grades) {
-    await repos.qualificationType.insert(ctx, {
+    const row = await repos.qualificationType.insert(ctx, {
       ...g,
+      needsSupervision: Boolean(g.needsSupervision),
+      supervises: Boolean(g.supervises),
       defaultValidMonths: g.defaultValidMonths ?? null,
       active: true,
     });
+    typeIdByCode.set(g.code, row.id);
+  }
+  for (const r of pack.roles) {
+    await repos.roleType.insert(ctx, { ...r, active: true });
+  }
+  // One place per teaching instructor type: a course's places are "2 × Dinghy Instructor", not "2 × Instructor".
+  if (pack.placesFromTypes) {
+    for (const g of pack.grades) {
+      if (!g.discipline) continue;
+      await repos.roleType.insert(ctx, { name: g.name, code: g.code, countsTowardRatio: true, isSafetyCover: false, isFirstAider: false, qualificationTypeId: typeIdByCode.get(g.code)!, active: true });
+    }
   }
   for (const c of pack.compliance(jurisdiction)) {
     await repos.complianceType.insert(ctx, { ...c, isVetting: Boolean(c.isVetting), active: true });
@@ -52,7 +65,24 @@ export async function seedOrganisationDefaults(
   for (const name of pack.locationTypes) {
     await repos.locationType.insert(ctx, { name, active: true });
   }
+  const courseIdByName = new Map<string, string>();
   for (const ct of pack.courseTypes) {
-    await repos.courseType.insert(ctx, { ...ct, active: true });
+    const row = await repos.courseType.insert(ctx, { ...ct, active: true });
+    courseIdByName.set(ct.name, row.id);
+  }
+  // Who can teach what (lib/packs/rya-teaching.ts): the centre can change it in Course setup.
+  for (const rule of pack.teaching ?? []) {
+    const qualificationTypeId = typeIdByCode.get(rule.type);
+    const courseTypeId = courseIdByName.get(rule.course);
+    if (!qualificationTypeId || !courseTypeId) throw new Error(`Teaching map: unknown ${qualificationTypeId ? "course" : "instructor type"} in ${rule.type} → ${rule.course}`);
+    await repos.qualificationCourseType.insert(ctx, {
+      qualificationTypeId,
+      courseTypeId,
+      alsoRequiresTypeId: rule.alsoRequires ? typeIdByCode.get(rule.alsoRequires) ?? null : null,
+      needsApproval: Boolean(rule.needsApproval),
+    });
   }
 }
+
+/** Bumped when the course map or the instructor-type places change in a way existing centres must be brought up to (lib/services/instructor-types-upgrade.ts). */
+export const TEACHING_MAP_VERSION = 1;
