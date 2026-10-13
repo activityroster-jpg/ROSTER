@@ -16,6 +16,7 @@ import { dobSchema, protectedContactsSchema, instructorSchema, complianceItemSch
 import { writeAudit } from "@/lib/services/audit";
 import { idSchema, instructorTypesSchema, managedBySchema } from "@/lib/validation/actions";
 import { setInstructorTypes } from "@/lib/services/instructor-types";
+import { removeFromUpcoming, upcomingSessionsFor, type UpcomingSession } from "@/lib/services/leavers";
 import { hasFreshStepUp } from "@/lib/auth/step-up-server";
 import { deleteInstructorIfUnreferenced } from "@/lib/services/retire";
 import { linkInstructorUser } from "@/lib/services/invite";
@@ -323,13 +324,24 @@ export async function setInstructorStatusAction(instructorId: string, status: "a
   if (status === "active" && inst.status !== "active" && (await instructorCapState(repos, ctx, organisation)).full) {
     return { ok: false, error: capUpgradeMessage(organisation) };
   }
+  // A leaver comes off everything from today on (the office saw the list before confirming); past days stay.
+  const removed = status === "inactive" ? await removeFromUpcoming(repos, ctx, instructorId) : { sessions: 0, courses: 0 };
   await repos.tenant.instructor.update(ctx, instructorId, { status, leftAt: status === "inactive" ? new Date() : null });
   if (inst.userId) await repos.control.setMembershipStatus(inst.userId, ctx.organisationId, status === "active" ? "active" : "suspended");
   await writeAudit(repos, ctx, { action: status === "inactive" ? "instructor_left" : "instructor_returned", entity: "instructor", entityId: instructorId });
   revalidatePath("/office/staff");
   revalidatePath(`/office/staff/${instructorId}`);
   revalidatePath("/office/courses");
-  return { ok: true, message: status === "inactive" ? `${inst.name} marked as left` : `${inst.name} is back on the team` };
+  revalidatePath("/office/rota");
+  return { ok: true, message: status === "inactive" ? `${inst.name} marked as left${removed.sessions ? `, and taken off ${removed.sessions} upcoming session${removed.sessions === 1 ? "" : "s"}` : ""}` : `${inst.name} is back on the team` };
+}
+
+/** The sessions from today on someone is on, for the "mark as left" confirmation. */
+export async function upcomingForLeaverAction(instructorId: string): Promise<{ ok: true; sessions: UpcomingSession[] } | { ok: false; error: string }> {
+  const { ctx, repos } = await requireTenant({ permission: "staff.edit" });
+  if (!idSchema.safeParse(instructorId).success) return { ok: false, error: "Instructor not found" };
+  if (!(await repos.tenant.instructor.findById(ctx, instructorId))) return { ok: false, error: "Instructor not found" };
+  return { ok: true, sessions: await upcomingSessionsFor(repos, ctx, instructorId) };
 }
 
 

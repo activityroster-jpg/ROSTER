@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isRealIsoDate } from "@/lib/domain/time";
 import {
   AVAILABILITY_STATUSES,
   COURSE_STATUSES,
@@ -16,7 +17,7 @@ import {
  * TenantContext).
  */
 
-const dateStr = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected YYYY-MM-DD");
+const dateStr = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected YYYY-MM-DD").refine(isRealIsoDate, "That date doesn't exist");
 const timeStr = z.string().regex(/^\d{2}:\d{2}$/, "Expected HH:MM");
 
 export const orgSettingsSchema = z.object({
@@ -77,7 +78,7 @@ export const complianceTypeSchema = z.object({
   active: z.boolean().default(true),
 });
 
-export const dobSchema = z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, "Enter the date of birth as YYYY-MM-DD");
+export const dobSchema = z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, "Enter the date of birth as YYYY-MM-DD").refine(isRealIsoDate, "That date doesn't exist");
 
 export const protectedContactsSchema = z.object({
   guardianName: z.string().trim().max(120).optional().or(z.literal("")),

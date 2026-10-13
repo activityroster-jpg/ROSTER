@@ -83,3 +83,11 @@ export function isKnownTimeZone(tz: unknown): tz is string {
   if (typeof tz !== "string" || tz.length > 64) return false;
   try { new Intl.DateTimeFormat("en-GB", { timeZone: tz }); return true; } catch { return false; }
 }
+
+/** A YYYY-MM-DD string that is a real calendar date (no 31 February). */
+export function isRealIsoDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [y, m, d] = value.split("-").map(Number) as [number, number, number];
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d;
+}

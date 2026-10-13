@@ -1,5 +1,6 @@
 "use client";
 
+import { askConfirm } from "@/lib/ui/ask-confirm";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { renameCourseAction, updateSessionTimesAction } from "@/app/(app)/office/courses/actions";
@@ -92,7 +93,16 @@ export function CourseCard({
   const saveWhen = () => {
     if (!single) { setEditingWhen(false); return; }
     setEditingWhen(false);
-    run(() => updateSessionTimesAction(course.id, single.id, { date: d, startTime: s, endTime: e }));
+    setErr(null);
+    start(async () => {
+      let res = await updateSessionTimesAction(course.id, single.id, { date: d, startTime: s, endTime: e });
+      // Someone on it would clash at the new time: say who, and save only if the office says so.
+      if (!res.ok && res.clashes?.length && await askConfirm(`${res.clashes.join(". ")}. Move it anyway?`)) {
+        res = await updateSessionTimesAction(course.id, single.id, { date: d, startTime: s, endTime: e, confirmed: true });
+      }
+      if (!res.ok) setErr(res.clashes?.length ? "Not moved." : res.error ?? "Something went wrong");
+      else { router.refresh(); onChanged?.(); }
+    });
   };
   const inputCls = "rounded border border-slate-300 px-1.5 py-1 text-sm outline-none focus:border-teal";
 

@@ -254,6 +254,8 @@ export const SECTIONS: Section[] = [
         "“Everyone who hasn't set availability” and “Everyone who needs a licence update”, above the list, remind them all at once after you confirm.",
         "Each person gets at most one reminder of each kind a day, however often it's pressed. People who haven't signed up need an invite before an availability reminder can reach them; people whose availability the office keeps are never asked.",
       ] },
+      { kind: "sub", text: "When someone leaves" },
+      { kind: "p", text: "Press “Mark as left” on their staff page. Before anything changes it lists the upcoming sessions they're on. Confirm, and they come off all of them, from today on; those places open up on the roster. Days they've already worked, their hours and pay lines stay as they are. Their app access is suspended, and “Bring back” restores it later (put them back on sessions by hand)." },
     ],
   },
   {

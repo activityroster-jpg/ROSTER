@@ -1,6 +1,7 @@
 import { z } from "zod";
+import { isRealIsoDate } from "@/lib/domain/time";
 
-const iso = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const iso = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(isRealIsoDate, "That date doesn't exist");
 
 /** Payroll filter from the query string. Bad values are dropped, never trusted. */
 export const payrollQuerySchema = z.object({

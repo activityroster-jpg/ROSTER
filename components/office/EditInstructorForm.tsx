@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { deleteInstructorAction, setInstructorStatusAction, updateInstructorAction } from "@/app/(app)/office/staff/actions";
+import { deleteInstructorAction, setInstructorStatusAction, updateInstructorAction, upcomingForLeaverAction } from "@/app/(app)/office/staff/actions";
+import type { UpcomingSession } from "@/lib/services/leavers";
 import { ConfirmDialog } from "./ConfirmDialog";
 
 /** Edit an instructor's basics, and mark them as having left (or bring them back). */
@@ -17,6 +18,7 @@ export function EditInstructorForm({ instructor, canDelete = false }: { instruct
   const [dob, setDob] = useState(instructor.dateOfBirth ?? "");
   const [msg, setMsg] = useState<string | null>(null);
   const [ask, setAsk] = useState<"left" | "delete" | null>(null);
+  const [upcoming, setUpcoming] = useState<UpcomingSession[] | null>(null);
   const left = instructor.status === "inactive";
 
   const save = () => start(async () => {
@@ -25,7 +27,11 @@ export function EditInstructorForm({ instructor, canDelete = false }: { instruct
     if (r.ok) { setOpen(false); router.refresh(); }
   });
   const setStatus = (status: "active" | "inactive") => {
-    if (status === "inactive") { setAsk("left"); return; }
+    if (status === "inactive") {
+      // Show what they'd come off before asking.
+      start(async () => { const r = await upcomingForLeaverAction(instructor.id); setUpcoming(r.ok ? r.sessions : []); setAsk("left"); });
+      return;
+    }
     start(async () => { const r = await setInstructorStatusAction(instructor.id, status); setMsg(r.ok ? r.message ?? "Done" : r.error ?? "Could not update"); router.refresh(); });
   };
   const confirmLeft = () => start(async () => { const r = await setInstructorStatusAction(instructor.id, "inactive"); setMsg(r.ok ? r.message ?? "Done" : r.error ?? "Could not update"); setAsk(null); router.refresh(); });
@@ -67,7 +73,11 @@ export function EditInstructorForm({ instructor, canDelete = false }: { instruct
         </>
       )}
       <ConfirmDialog open={ask === "left"} title={`Mark ${instructor.name} as left?`} confirmLabel="Mark as left" busy={pending} onCancel={() => setAsk(null)} onConfirm={confirmLeft}
-        consequences={["They disappear from the staff pickers and the availability sheet.", "Their app access is suspended; they can be brought back later.", "Their history, hours and pay lines stay exactly as they are.", "Data retention counts from today for their record."]} />
+        consequences={[
+          upcoming && upcoming.length
+            ? `They come off ${upcoming.length} upcoming session${upcoming.length === 1 ? "" : "s"}: ${upcoming.slice(0, 8).map((u) => `${u.courseName} ${new Date(`${u.date}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })} ${u.slot}`).join("; ")}${upcoming.length > 8 ? `; and ${upcoming.length - 8} more` : ""}. Those places open up on the roster.`
+            : "They aren't on any upcoming sessions.",
+          "They disappear from the staff pickers and the availability sheet.", "Their app access is suspended; they can be brought back later.", "Days already worked, their hours and pay lines stay exactly as they are.", "Data retention counts from today for their record."]} />
       <ConfirmDialog open={ask === "delete"} title={`Delete ${instructor.name}?`} confirmLabel="Delete for good" busy={pending} onCancel={() => setAsk(null)} onConfirm={del}
         consequences={["Nothing has ever referenced them (no roster, pay, clock or leave), so the record can go.", "Their profile, certs, uploaded documents, availability and app login are removed.", "This can't be undone."]} />
     </div>

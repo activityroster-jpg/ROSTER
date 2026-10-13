@@ -1,7 +1,7 @@
 import { and, eq, gte, isNull } from "drizzle-orm";
 import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
-import { course as courseTable, courseStaff as courseStaffTable, courseSession as courseSessionTable, hoursRecord as hoursRecordTable, type HoursRecord } from "@/lib/db/schema";
+import { course as courseTable, courseStaff as courseStaffTable, courseSession as courseSessionTable, hoursRecord as hoursRecordTable, type CourseSession, type HoursRecord } from "@/lib/db/schema";
 import { durationMinutes } from "@/lib/domain";
 import { loadPayRules, rateFor } from "./pay-rates";
 import { writeAudit } from "./audit";
@@ -42,16 +42,18 @@ export async function planHoursForCourse(
   repos: Repositories,
   ctx: AnyTenantContext,
   courseId: string,
-  opts: { staffOverride?: readonly CourseAssignmentLike[]; adjustOverrides?: (rows: SessionOverrideLike[]) => SessionOverrideLike[] } = {},
+  opts: { staffOverride?: readonly CourseAssignmentLike[]; adjustOverrides?: (rows: SessionOverrideLike[]) => SessionOverrideLike[]; adjustSessions?: (rows: CourseSession[]) => CourseSession[] } = {},
 ): Promise<{ statements: PromiseLike<unknown>[]; result: SyncResult }> {
   const t = repos.tenant;
-  const [allSessions, dbStaff, settingsRows, rules, courseRow] = await Promise.all([
+  const [storedSessions, dbStaff, settingsRows, rules, courseRow] = await Promise.all([
     t.courseSession.list(ctx, eq(courseSessionTable.courseId, courseId)),
     opts.staffOverride ? Promise.resolve(null) : t.courseStaff.list(ctx, eq(courseStaffTable.courseId, courseId)),
     t.orgSettings.list(ctx),
     loadPayRules(repos, ctx),
     t.course.findById(ctx, courseId),
   ]);
+  // A caller saving a session change in the same batch plans against the new times.
+  const allSessions = opts.adjustSessions ? opts.adjustSessions(storedSessions) : storedSessions;
   // Rates can differ by kind of course (Settings → Pay rates).
   const courseTypeId = courseRow?.courseTypeId ?? null;
   const staff: readonly CourseAssignmentLike[] = opts.staffOverride ?? dbStaff ?? [];

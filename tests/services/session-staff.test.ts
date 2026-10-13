@@ -133,6 +133,18 @@ describe("per-day staffing against the database", () => {
     if (!busy.ok) expect(busy.error).toMatch(/busy/i);
   });
 
+  it("a day add runs the licence check a whole-course add runs: a lapsed mandatory check refuses, an override goes through", async () => {
+    const st = (await repos.tenant.orgSettings.list(ctx))[0]!;
+    await repos.tenant.orgSettings.update(ctx, st.id, { enforceLicenceChecks: true });
+    const fa = await repos.tenant.complianceType.insert(ctx, { name: "First Aid", code: "FA_TEST", mandatory: true, expiryTracked: true, active: true });
+    await repos.tenant.complianceItem.insert(ctx, { instructorId: kimId, complianceTypeId: fa.id, expiryDate: "2020-01-01" });
+    const refused = await setDayStaff(repos, ctx, { sessionId: monId, instructorId: kimId, roleTypeId: roleId, mode: "add" });
+    expect(refused.ok).toBe(false);
+    if (!refused.ok) expect(refused.error).toMatch(/First Aid expired/);
+    const forced = await setDayStaff(repos, ctx, { sessionId: monId, instructorId: kimId, roleTypeId: roleId, mode: "add", override: true, note: "renewal booked" });
+    expect(forced.ok && forced.overridden).toBe(true);
+  });
+
   it("an open shift is filled for that day only, not the whole course", async () => {
     const shift = await createOpenShift(repos, ctx, wedId, roleId, "Need a second pair of hands");
     expect(await claimOpenShift(repos, ctx, shift.id, kimId)).not.toBeNull();

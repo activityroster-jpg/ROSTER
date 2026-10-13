@@ -13,6 +13,8 @@ import { normaliseTime, timeToSlot } from "@/lib/import/parse";
 import { getCourseEditorData, type CourseEditorData } from "@/lib/services/course-editor";
 import { createCourseTypeResolver, TYPE_NEW, TYPE_ONEOFF } from "@/lib/services/course-type-resolve";
 import { syncHoursForCourse } from "@/lib/services/hours";
+import { moveSession } from "@/lib/services/session-move";
+import { isRealIsoDate } from "@/lib/domain/time";
 import { assignBlockMessage, notifyRosterChange } from "@/lib/services/assignment";
 import { courseTeachersSchema, firstIssue, idSchema, studentsSchema } from "@/lib/validation/actions";
 import { eq } from "drizzle-orm";
@@ -338,15 +340,15 @@ export async function setCourseEquipmentAction(input: { courseId: string; unitId
   return { ok: true, message: kitProblems.length ? `Saved. ⚠ ${[...new Set(kitProblems.map((p) => p.detail))].slice(0, 3).join("; ")}` : "Saved", version: r.version };
 }
 
-/** Edit a single session's date and time inline from the course card. */
+/** Edit a single session's date and time inline from the course card. Asks first when it would make someone clash. */
 export async function updateSessionTimesAction(
   courseId: string,
   sessionId: string,
-  input: { date: string; startTime?: string; endTime?: string },
-): Promise<ActionState> {
+  input: { date: string; startTime?: string; endTime?: string; confirmed?: boolean },
+): Promise<ActionState & { clashes?: string[] }> {
   const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   const date = String(input.date ?? "");
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return { ok: false, error: "Pick a valid date" };
+  if (!isRealIsoDate(date)) return { ok: false, error: "Pick a valid date" };
   const start = normaliseTime(input.startTime ?? "");
   const end = normaliseTime(input.endTime ?? "");
   if (start && end && end <= start) return { ok: false, error: "End must be after start" };
@@ -358,21 +360,16 @@ export async function updateSessionTimesAction(
   const endTime = end || cfg?.endTime || "12:00";
   const at = (time: string) => new Date(Date.parse(`${date}T${time}:00.000Z`));
 
-  const before = await repos.tenant.courseSession.findById(ctx, sessionId);
-  const updated = await repos.tenant.courseSession.update(ctx, sessionId, {
-    date, slot, startAt: at(startTime), endAt: at(endTime),
-  });
-  if (!updated) return { ok: false, error: "Session not found" };
-  await writeAudit(repos, ctx, { action: "update_session", entity: "course", entityId: courseId, after: { sessionId, date, startTime, endTime } });
-  await syncHoursForCourse(repos, ctx, courseId);
+  const r = await moveSession(repos, ctx, { courseId, sessionId, date, slot, startAt: at(startTime), endAt: at(endTime) }, Boolean(input.confirmed));
+  if (!r.ok) return "clashes" in r ? { ok: false, clashes: r.clashes, error: `Moving it makes a clash: ${r.clashes.join("; ")}.` } : { ok: false, error: r.error };
   // Everyone on the course hears when a published session moves.
   const course = await repos.tenant.course.findById(ctx, courseId);
   const assigned = await repos.tenant.courseStaff.list(ctx, eq(courseStaffTable.courseId, courseId));
-  for (const a of assigned) await notifyRosterChange(repos, ctx, a.instructorId, course?.name ?? "a course", [date, ...(before?.date ? [before.date] : [])], "moved");
+  for (const a of assigned) await notifyRosterChange(repos, ctx, a.instructorId, course?.name ?? "a course", [date, ...(r.before.date !== date ? [r.before.date] : [])], "moved");
   revalidatePath("/office/courses");
   revalidatePath(`/office/courses/${courseId}`);
   revalidatePath("/office");
-  // Re-check everyone on the course against the new time: clashes, Busy, leave, hours.
+  // Re-check everyone on the course against the new time: clashes, Busy, leave.
   const problems = await problemsForCourse(repos, ctx, courseId).catch(() => []);
   return { ok: true, message: `Session updated.${problemsSuffix(problems)}` };
 }
