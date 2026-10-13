@@ -23,7 +23,10 @@ const AUD: Record<string, { label: string; cls: string }> = {
 };
 
 const hhmm = (ms: number) => new Date(ms).toISOString().slice(11, 16);
-const fmtDate = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+// Spelled out by hand: Node and browsers punctuate toLocaleDateString differently ("Wed, 14 Oct" vs "Wed 14 Oct"), which breaks hydration.
+const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MO = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const fmtDate = (iso: string) => { const d = new Date(`${iso}T00:00:00Z`); return `${WD[d.getUTCDay()]} ${d.getUTCDate()} ${MO[d.getUTCMonth()]}`; };
 const fmtTime = (ms: number) => new Date(ms).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
 
 export function CourseCard({

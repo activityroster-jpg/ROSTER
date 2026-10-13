@@ -66,6 +66,12 @@ test("assign, confirm the day, see it confirmed in the app, undo", async ({ brow
   await office.getByRole("button", { name: /^Assign/ }).first().click();
   await expect(office.getByText("Every place filled").first()).toBeVisible();
 
+  // The course's own page opens and shows who is on it (it once crashed on the server).
+  await office.getByRole("link", { name: /Open the course/ }).first().click();
+  await expect(office.getByRole("heading", { name: E2E.course })).toBeVisible();
+  await expect(office.getByText("Kim Instructor").first()).toBeVisible();
+  await expect(office.getByText("Something went wrong")).toHaveCount(0);
+
   // The instructor sees it straight away, as Pending.
   const app = await signIn(browser, E2E.instructor);
   await app.goto(`${E2E.base}/portal`);
