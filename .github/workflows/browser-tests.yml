@@ -1,0 +1,69 @@
+name: Browser tests
+
+# Drives the roster in a real browser on every push: sign in, assign someone,
+# confirm the day, see it in the instructor's app, undo. It runs against a
+# local copy of the app on GitHub's machine with a made-up centre
+# (e2e/seed.test.ts), never staging or production, and needs no secrets.
+
+on:
+  push:
+    branches: ["claude/new-session-2wxbwe"]
+  workflow_dispatch:
+
+concurrency:
+  group: browser-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+      APP_APEX_DOMAIN: localhost:8787
+      NEXT_PUBLIC_APEX_DOMAIN: localhost:8787
+      E2E_BASE: http://e2e.localhost:8788
+      E2E_DEV_LOG: e2e-dev.log
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci || npm install
+      - name: Install the test browser
+        run: npx playwright install --with-deps chromium
+      - name: Local settings (a throwaway secret, made fresh each run)
+        run: |
+          {
+            echo "BETTER_AUTH_SECRET=$(openssl rand -base64 32)"
+            echo "BETTER_AUTH_URL=http://localhost:8787"
+            echo "APP_APEX_DOMAIN=localhost:8787"
+            echo "APP_ENV=development"
+          } > .dev.vars
+      - name: Local database and the made-up centre
+        run: |
+          npx wrangler d1 migrations apply DB --local
+          SEED_DB="$(ls .wrangler/state/v3/d1/miniflare-D1DatabaseObject/*.sqlite | grep -v metadata)" npm run e2e:seed
+      - name: Start the app
+        run: |
+          nohup npx next dev -p 8787 > e2e-dev.log 2>&1 &
+          nohup node e2e/proxy.mjs > e2e-proxy.log 2>&1 &
+          for i in $(seq 1 150); do
+            code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 120 http://e2e.localhost:8788/sign-in || true)"
+            [ "$code" = "200" ] && echo "app is up" && exit 0
+            sleep 2
+          done
+          echo "::error::The app didn't start"; tail -50 e2e-dev.log; exit 1
+      - name: Run the browser tests
+        run: npm run e2e
+      - name: Keep the report and server log when something fails
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-test-report
+          path: |
+            e2e-report
+            test-results
+            e2e-dev.log
+          retention-days: 7

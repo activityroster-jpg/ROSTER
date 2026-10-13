@@ -141,9 +141,10 @@ function SlotRowView({ slot, candidates, everyone, place, personPlace, pending, 
         {p && !editing ? (
           <>
             <span className={`text-sm ${p.status === "declined" ? "text-port line-through" : "text-navy"}`}>{p.name}</span>
-            {p.status === "confirmed" ? <span className="rounded bg-starboard/15 px-1.5 py-0.5 text-[10px] font-semibold text-starboard">confirmed</span>
+            {/* "Accepted" only means something when the centre asks staff to accept shifts; otherwise their status stays as assigned. */}
+            {p.status === "confirmed" ? <span className="rounded bg-starboard/15 px-1.5 py-0.5 text-[10px] font-semibold text-starboard">accepted</span>
               : p.status === "declined" ? <span className="rounded bg-port/10 px-1.5 py-0.5 text-[10px] font-semibold text-port" title={p.declineNote ?? undefined}>can&apos;t make it</span>
-              : <span className="text-[10px] text-slate-400">unconfirmed</span>}
+              : null}
             {p.isOverride ? <span className="text-[10px] font-semibold text-amber" title="Assigned with an override">override</span> : null}
             {personIssues.length ? <span className="basis-full text-xs text-amber">{personIssues.map((t) => `⚠ ${t}`).join(" ")}</span> : null}
             <span className="ml-auto flex items-center gap-2 text-xs">

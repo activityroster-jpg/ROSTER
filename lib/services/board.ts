@@ -31,6 +31,8 @@ export interface BoardInstructor {
   fills: string[];
   /** Instructor types (with a ladder) that have expired by the end of the week: a warning only. */
   expiredTypes: string[];
+  /** Whether Busy stops an assignment (the centre's availability check); off, Busy is shown but never asks for "Assign anyway". */
+  busyBlocks: boolean;
   /** Effective availability per `${date}|${slot}` for the week. */
   availability: Record<string, { status: EffectiveStatus; source: AvailabilitySource }>;
 }
@@ -55,6 +57,8 @@ export interface BoardData {
   problems: Record<string, string[]>;
   /** How many problems this week and how many block. */
   problemCounts: { total: number; blocks: number };
+  /** The centre asks staff to accept or decline their shifts (Settings → Checks). */
+  staffAccept: boolean;
 }
 
 /**
@@ -147,6 +151,7 @@ export async function getBoard(repos: Repositories, ctx: AnyTenantContext, monda
         fills: held.size > 0 ? fillablePlaces(held, tc.places, tc.types) : tc.places.map((p) => p.id),
         expiredTypes: [...(tc.expiry.get(x.instructor.id) ?? new Map<string, string | null>())].filter(([id, until]) => until && until < weekEnd && tc.types.get(id)?.discipline).map(([id]) => tc.types.get(id)!.name),
         availability,
+        busyBlocks: settingsRows[0]?.enforceAvailabilityChecks ?? true,
       };
     })
     .sort((a, b) => a.name.localeCompare(b.name));
@@ -163,6 +168,7 @@ export async function getBoard(repos: Repositories, ctx: AnyTenantContext, monda
     instructors,
     problems: flags,
     problemCounts: { total: problems.problems.length, blocks: problems.blocks },
+    staffAccept: Boolean(settingsRows[0]?.staffAcceptShifts),
   };
 }
 

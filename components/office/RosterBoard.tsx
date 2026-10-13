@@ -250,6 +250,8 @@ interface SlotRowProps {
   place: PlaceFacts | undefined;
   /** The place the person in the row actually holds (on a ratio-worked row it can be another teaching place). */
   memberPlace: PlaceFacts | undefined;
+  /** Staff accept or decline their shifts, so show whether they have. */
+  staffAccept?: boolean;
   /** The person picked for this row (the panel holds every row's pick, so one person can't be picked twice). */
   pick: string; onPick: (instructorId: string) => void;
   onAssign: (instructorId: string, roleTypeId: string, override: boolean, note: string | null, replacing?: Member, moveFrom?: Elsewhere) => void; onRemove: (m: Member, scope: "course" | "day") => void; onAskRemove: (m: Member) => void;
@@ -268,7 +270,7 @@ function issuesFor(i: BoardInstructor | undefined, slotKey: string, dayWord: str
   if (!i) return [];
   const a = i.availability[slotKey];
   const out: string[] = [];
-  if (a?.status === "unavailable") out.push(`Busy ${dayWord} ${slot} in their availability.`);
+  if (a?.status === "unavailable" && i.busyBlocks !== false) out.push(`Busy ${dayWord} ${slot} in their availability.`);
   const on = elsewhere.get(i.id)?.name;
   if (on) out.push(`Already on ${on} in this slot.`);
   if (!i.fit) out.push(`Not cleared to roster: ${i.fitReason}`);
@@ -316,7 +318,7 @@ function elsewhereInSlot(days: RotaDay[], date: string, slot: string, sessionId:
 }
 
 /** One role slot: filled (name, Change, Remove) or empty (pick someone, Assign). */
-function SlotRow({ roleTypeId, roleName, member, extra, candidates, byId, slotKey, dayWord, slot, courseTypeId, courseId, canEdit, multiDay, pending, elsewhere, place, memberPlace, pick, onPick, onAssign, onRemove, onAskRemove }: SlotRowProps) {
+function SlotRow({ roleTypeId, roleName, member, extra, candidates, byId, slotKey, dayWord, slot, courseTypeId, courseId, canEdit, multiDay, pending, elsewhere, place, memberPlace, pick, onPick, onAssign, onRemove, onAskRemove, staffAccept }: SlotRowProps) {
   const [changing, setChanging] = useState(false);
   const setPick = onPick;
   const chosen = pick ? byId.get(pick) : undefined;
@@ -337,7 +339,7 @@ function SlotRow({ roleTypeId, roleName, member, extra, candidates, byId, slotKe
         {member && !changing ? (
           <>
             <span className={`font-medium ${member.status === "declined" ? "text-port line-through" : "text-navy"}`}>{member.name}</span>
-            {member.status === "confirmed" ? <span className="text-[10px] font-semibold text-starboard">confirmed</span> : member.status === "declined" ? <span className="rounded bg-port/10 px-1 text-[10px] font-semibold text-port">can&apos;t make it</span> : <span className="text-[10px] text-slate-400">unconfirmed</span>}
+            {member.status === "declined" ? <span className="rounded bg-port/10 px-1 text-[10px] font-semibold text-port">can&apos;t make it</span> : !staffAccept ? null : member.status === "confirmed" ? <span className="text-[10px] font-semibold text-starboard">accepted</span> : <span className="text-[10px] text-slate-400">not accepted yet</span>}
             {member.dayOnly ? <span className="rounded bg-teal/15 px-1 text-[9px] font-semibold uppercase text-teal">this day only</span> : null}
             {canEdit ? (
               <span className="ml-auto flex items-center gap-2 text-xs">
@@ -555,7 +557,7 @@ function SessionPanel({ data, selected, canEdit, preselect, instructors, byId, o
         {slots.length === 0 ? <p className="mb-3 text-xs text-slate-400">This course doesn&apos;t list any places yet. Use &ldquo;Edit students &amp; places&rdquo; to add them.</p> : (
           <ul className="mb-3 space-y-1.5">
             {slots.map((sl, i) => (
-              <SlotRow key={`${sl.roleTypeId}-${sl.member?.instructorId ?? "open"}-${i}`} {...sl} byId={byId} slotKey={key} dayWord={dayWord} slot={s.slot} elsewhere={elsewhere} place={roleFlags.get(sl.roleTypeId)} memberPlace={sl.member ? roleFlags.get(sl.member.roleTypeId) : undefined}
+              <SlotRow key={`${sl.roleTypeId}-${sl.member?.instructorId ?? "open"}-${i}`} {...sl} byId={byId} slotKey={key} dayWord={dayWord} slot={s.slot} elsewhere={elsewhere} place={roleFlags.get(sl.roleTypeId)} memberPlace={sl.member ? roleFlags.get(sl.member.roleTypeId) : undefined} staffAccept={data.staffAccept}
                 candidates={candidates.filter((c) => { const mine = pickFor(i); return c.id === mine || !slots.some((_, j) => j !== i && pickFor(j) === c.id); })}
                 courseTypeId={meta?.courseTypeId ?? null} courseId={meta?.courseId ?? null} canEdit={canEdit} multiDay={Boolean(meta?.multiDay)} pending={pending}
                 pick={pickFor(i)} onPick={(id) => setPickAt(i, id)}

@@ -7,7 +7,10 @@ import { confirmDaysAction, undoDayAction } from "@/app/(app)/office/rota/action
 
 export interface DayState { date: string; confirmed: boolean; sessions: number; people: number; short: number }
 
-const fmt = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+// Spelled out by hand: Node and browsers punctuate toLocaleDateString differently, which breaks hydration.
+const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MO = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const fmt = (iso: string) => { const d = new Date(`${iso}T00:00:00Z`); return `${WD[d.getUTCDay()]} ${d.getUTCDate()} ${MO[d.getUTCMonth()]}`; };
 
 /**
  * Confirm the roster one day at a time. Staff see their shifts as pending
