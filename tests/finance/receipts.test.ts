@@ -78,6 +78,13 @@ describe("what an emailed message is", () => {
     expect(mailboxOf(GMAIL_FWD)).toBe("owner@gmail.com");
     expect(mailboxOf("O.w.n.e.r@GoogleMail.com")).toBe("owner@gmail.com");
   });
+  it("accepts any of several forwarding addresses", async () => {
+    const two = { receiptInboxToken: TOKEN, receiptForwardFrom: "activityroster@gmail.com, owner@gmail.com" };
+    const raw = eml({ from: "Cloudflare <noreply@notify.cloudflare.com>", subject: "Invoice", id: "m1", pdf: true });
+    expect((await decideInbound(raw, { from: "activityroster+caf_=x=activityroster.com@gmail.com", to: TO }, two, [])).kind).toBe("receipt");
+    expect((await decideInbound(raw, { from: GMAIL_FWD, to: TO }, two, [])).kind).toBe("receipt");
+    expect((await decideInbound(raw, { from: "someone@gmail.com", to: TO }, two, [])).kind).toBe("held");
+  });
   it("refuses any address but the books' private one", async () => {
     const d = await decideInbound(eml({ from: "a@b.com", subject: "x", id: "1" }), { from: GMAIL_FWD, to: "receipts-guess@activityroster.com" }, settings, admins);
     expect(d.kind).toBe("unknown_address");

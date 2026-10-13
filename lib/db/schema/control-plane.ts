@@ -635,7 +635,7 @@ export const financeSettings = sqliteTable("finance_settings", {
   openingCashDate: text("opening_cash_date"),
   /** The random part of the private receipt-forwarding address (receipts-<token>@<apex>). */
   receiptInboxToken: text("receipt_inbox_token"),
-  /** The Gmail address allowed to forward receipts in (blank = the platform admins' addresses). */
+  /** The addresses allowed to forward receipts in, comma-separated (blank = the platform admins' addresses). */
   receiptForwardFrom: text("receipt_forward_from"),
   updatedAt: updatedAt(),
 });

@@ -6,7 +6,7 @@ import { requirePlatformAdmin } from "@/lib/platform/admin";
 import { getDb, getEnv } from "@/lib/cf/bindings";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { idSchema } from "@/lib/validation/actions";
-import { attachInboxToLine, readAndMatch } from "@/lib/finance/receipt-inbox";
+import { attachInboxToLine, forwardList, readAndMatch } from "@/lib/finance/receipt-inbox";
 import { deleteReceipt } from "@/lib/finance/receipts";
 import type { FinanceResult } from "./actions";
 
@@ -57,13 +57,15 @@ export async function deleteInboxAction(inboxId: string): Promise<FinanceResult>
   return done({ ok: true, message: "Deleted" });
 }
 
-const forwardSchema = z.object({ forwardFrom: z.union([z.literal(""), z.string().trim().toLowerCase().email().max(200)]) });
+const forwardSchema = z.array(z.string().email().max(200)).max(10);
 
-/** Which Gmail address may forward receipts in (blank = the platform admins' addresses). */
+/** Which addresses may forward receipts in, comma-separated, up to ten (blank = the platform admins' addresses). */
 export async function saveForwardingAction(_prev: FinanceResult, fd: FormData): Promise<FinanceResult> {
   const p = await platform();
-  const parsed = forwardSchema.safeParse({ forwardFrom: fd.get("forwardFrom") ?? "" });
-  if (!parsed.success) return { ok: false, error: "Enter an email address, or leave it blank" };
-  await p.upsertFinanceSettings({ receiptForwardFrom: parsed.data.forwardFrom || null });
+  const raw = fd.get("forwardFrom");
+  const parsed = forwardSchema.safeParse(forwardList(typeof raw === "string" ? raw : ""));
+  if (!parsed.success) return { ok: false, error: "Enter up to ten email addresses, separated by commas, or leave it blank" };
+  const list = [...new Set(parsed.data)];
+  await p.upsertFinanceSettings({ receiptForwardFrom: list.length ? list.join(", ") : null });
   return done({ ok: true, message: "Saved" });
 }

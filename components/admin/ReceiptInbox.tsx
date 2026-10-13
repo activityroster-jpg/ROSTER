@@ -76,8 +76,8 @@ export function ReceiptInbox(p: Props) {
 
       {held.length ? (
         <section>
-          <h2 className="mb-1 font-semibold text-navy">Held: not from your Gmail</h2>
-          <p className="mb-2 text-xs text-slate-500">These reached the address but weren&apos;t forwarded by your Gmail account, so nothing in them was kept or read. If one was yours, add that address under &quot;Who can forward&quot; and forward it again.</p>
+          <h2 className="mb-1 font-semibold text-navy">Held: not from a forwarding address</h2>
+          <p className="mb-2 text-xs text-slate-500">These reached the address but weren&apos;t forwarded by one of your addresses under &quot;Who can forward&quot;, so nothing in them was kept or read. If one was yours, add that address under &quot;Who can forward&quot; and forward it again.</p>
           <ItemList items={held} onMessage={setMsg} />
         </section>
       ) : null}
@@ -116,7 +116,7 @@ function Setup({ address, forwardFrom, defaultForwarders, gmailCode, readingOn, 
       <details className="mt-3" open={!everArrived}>
         <summary className="cursor-pointer text-sm font-semibold text-teal">How to set it up (about 5 minutes, once)</summary>
         <ol className="mt-2 list-decimal space-y-2 pl-5 text-sm text-slate-700">
-          <li><b>Cloudflare:</b> open the <b>activityroster.com</b> zone → <b>Email</b> → <b>Email Routing</b> → <b>Routing rules</b> → <b>Custom addresses</b> → <b>Create address</b>. Paste the part before the @ (<code className="text-xs">{address.split("@")[0]}</code>), set <b>Action</b> to <b>Send to a Worker</b>, pick <b>roster-mail-in</b>, and <b>Save</b>. Your other addresses and catch-all are untouched.</li>
+          <li><b>Cloudflare:</b> open the <b>activityroster.com</b> zone → <b>Email Routing</b> → <b>Routing rules</b> → <b>Create routing rule</b>. Enter the part before the @ (<code className="text-xs">{address.split("@")[0]}</code>), set <b>Action</b> to <b>Send to a Worker</b>, choose <b>roster-mail-in</b>, and <b>Save</b>. Your other addresses and catch-all are untouched.</li>
           <li><b>Gmail:</b> <b>Settings</b> (cog) → <b>See all settings</b> → <b>Forwarding and POP/IMAP</b> → <b>Add a forwarding address</b> → paste the address above → <b>Next</b> → <b>Proceed</b>.</li>
           <li>Google sends a confirmation code to the address. Refresh this page: the code appears above within a minute. Type it into Gmail and press <b>Verify</b>. Leave &quot;Disable forwarding&quot; selected there: you only want the filter to forward, not all your mail.</li>
           <li><b>Your receipts filter:</b> Gmail → <b>Settings</b> → <b>Filters and Blocked Addresses</b> → <b>edit</b> your receipts filter → <b>Continue</b> → tick <b>Forward it to</b> and pick the address → <b>Update filter</b>.</li>
@@ -126,10 +126,10 @@ function Setup({ address, forwardFrom, defaultForwarders, gmailCode, readingOn, 
 
       <form action={action} className="mt-3 flex flex-wrap items-end gap-2">
         <label className="text-xs font-medium text-slate-500">Who can forward
-          <input name="forwardFrom" type="email" defaultValue={forwardFrom} placeholder={defaultForwarders.join(", ") || "you@gmail.com"} maxLength={200} className="mt-1 block w-72 rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none focus:border-teal" />
+          <input name="forwardFrom" type="text" inputMode="email" defaultValue={forwardFrom} placeholder={defaultForwarders.join(", ") || "you@gmail.com"} maxLength={1000} className="mt-1 block w-[28rem] max-w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none focus:border-teal" />
         </label>
         <button disabled={pending} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-navy hover:bg-slate-50 disabled:opacity-50">Save</button>
-        <span className="text-xs text-slate-400">{state.message ?? state.error ?? (forwardFrom ? "" : "Blank: your Dev Center login addresses.")}</span>
+        <span className="text-xs text-slate-400">{state.message ?? state.error ?? (forwardFrom ? "Separate several with commas." : "Several? Separate them with commas. Blank: your Dev Center login addresses.")}</span>
       </form>
     </div>
   );

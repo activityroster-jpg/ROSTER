@@ -50,8 +50,14 @@ export function mailboxOf(address: string | null | undefined): string {
   return `${gmail ? bare.replace(/\./g, "") : bare}@${gmail ? "gmail.com" : domain}`;
 }
 
+/** The addresses saved under "Who can forward" (comma-separated). */
+export function forwardList(value: string | null | undefined): string[] {
+  return (value ?? "").split(/[\s,;]+/).map((x) => x.trim().toLowerCase()).filter(Boolean);
+}
+
 export function allowedForwarders(settings: Pick<FinanceSettings, "receiptForwardFrom">, admins: Iterable<string>): string[] {
-  const list = settings.receiptForwardFrom?.trim() ? [settings.receiptForwardFrom] : [...admins];
+  const saved = forwardList(settings.receiptForwardFrom);
+  const list = saved.length ? saved : [...admins];
   return list.map(mailboxOf);
 }
 
@@ -138,7 +144,7 @@ export async function decideInbound(raw: ArrayBuffer, envelope: { from: string; 
 
   const forwarders = allowedForwarders(settings, admins);
   if (!forwarders.includes(mailboxOf(envelope.from)) || spfFailed(email)) {
-    return { kind: "held", messageId, fromAddress, fromName, subject, reason: `Sent from ${envelope.from}, not your forwarding Gmail address` };
+    return { kind: "held", messageId, fromAddress, fromName, subject, reason: `Sent from ${envelope.from}, not one of your forwarding addresses` };
   }
 
   // Forwarded by hand: the supplier is the original sender, not the owner.
