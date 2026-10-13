@@ -103,15 +103,17 @@ jobs:
           retention-days: 30
       - name: Summary
         if: always()
+        shell: bash
         run: |
+          shopt -s nullglob
           {
             echo "## How-to videos"
             echo
             echo "Download them from **Artifacts → activityroster-videos** at the bottom of this page."
             echo
-            for f in videos/out/*/*.mp4; do [ -f "$f" ] && echo "- $(basename "$f") · $(du -h "$f" | cut -f1)"; done
-            for f in videos/out/*/*-youtube.txt; do [ -f "$f" ] && echo "- $(basename "$f"): $(grep '^VOICE:' "$f")"; done
-            for f in videos/out/*/*-warnings.txt; do [ -f "$f" ] && { echo; echo "⚠ $(basename "$f"):"; sed 's/^/    /' "$f"; }; done
+            for f in videos/out/*/*.mp4; do echo "- $(basename "$f") · $(du -h "$f" | cut -f1)"; done
+            for f in videos/out/*/*-youtube.txt; do echo "- $(basename "$f"): $(grep '^VOICE:' "$f" || true)"; done
+            for f in videos/out/*/*-warnings.txt; do echo; echo "⚠ $(basename "$f"):"; sed 's/^/    /' "$f"; done
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Keep the server log when something fails
         if: failure()
