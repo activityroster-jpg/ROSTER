@@ -47,7 +47,7 @@ export const SCREENS = {
   locations: desktop("locations", "Locations", "Operating areas, slipways, classrooms and meeting points, grouped the way your centre works.", "locations"),
   settings: desktop("settings", "Settings", "The company code for the instructor app, the checks applied when rostering and every default, in tabs.", "settings"),
   billing: desktop("billing", "Billing", "Your plan, the optional done-for-you setup and VAT invoices in one place.", "billing"),
-  emergency: desktop("emergency", "Emergency sheet", "Today's sessions with who is on and their emergency contacts, ready to print if the internet goes.", "if-the-platform-is-down"),
+  emergency: desktop("emergency", "Emergency sheet", "Everyone on duty today with their emergency contacts, ready to print for the duty officer or the safety boat.", "printing"),
   security: desktop("security", "Security", "Recovery email, the second step at sign-in and every device that is signed in.", "admin-security"),
   help: desktop("help", "The Help button", "Ask a question in your own words; the answer comes from the guides, with a link to the full page.", "help-assistant"),
   appHome: phone("app-home", "My schedule", "An instructor's week in the app, with each session to confirm and who they are working with.", "app"),
@@ -85,7 +85,7 @@ export const GUIDE_SCREENS: Partial<Record<string, ScreenId[]>> = {
   billing: ["billing"],
   "admin-security": ["security"],
   "help-assistant": ["help"],
-  "if-the-platform-is-down": ["emergency"],
+  printing: ["emergency"],
 };
 
 /** The demo tour, in the order a new centre gets going: set up, courses, the roster, the season; then the instructor app. */

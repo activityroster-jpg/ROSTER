@@ -167,7 +167,7 @@ In this video:
 - The emergency sheet for the duty officer or the safety boat
 - What to do if the platform is ever down
 
-Guide: https://activityroster.com/learn?topic=if-the-platform-is-down
+Guide: https://activityroster.com/learn?topic=printing
 Start your free month: https://activityroster.com
 
 Tags: roster PDF, print staff rota, emergency contact sheet, sailing centre safety, duty officer

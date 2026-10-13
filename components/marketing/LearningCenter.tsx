@@ -94,8 +94,12 @@ function GuideScreens({ sectionId }: { sectionId: string }) {
   );
 }
 
+/** Old topic names still in links (videos, emails, bookmarks) → the section they became. */
+const TOPIC_ALIASES: Record<string, string> = { "if-the-platform-is-down": "printing" };
+
 export function LearningCenter({ initialTopic }: { initialTopic?: string }) {
-  const startId = initialTopic && SECTIONS.some((s) => s.id === initialTopic) ? initialTopic : SECTIONS[0]!.id;
+  const topic = initialTopic ? TOPIC_ALIASES[initialTopic] ?? initialTopic : undefined;
+  const startId = topic && SECTIONS.some((s) => s.id === topic) ? topic : SECTIONS[0]!.id;
   const [active, setActive] = useState(startId);
   const section = SECTIONS.find((s) => s.id === active) ?? SECTIONS[0]!;
 

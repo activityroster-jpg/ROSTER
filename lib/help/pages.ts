@@ -12,7 +12,7 @@ const PAGE_TOPICS: { prefix: string; topics: string[] }[] = [
   { prefix: "/office/course-setup", topics: ["instructor-types", "courses", "places", "equipment", "settings"] },
   { prefix: "/office/import", topics: ["import"] },
   { prefix: "/office/integrations", topics: ["integrations"] },
-  { prefix: "/office/rota", topics: ["rota", "board", "places", "problems", "rostering", "if-the-platform-is-down"] },
+  { prefix: "/office/rota", topics: ["rota", "board", "places", "problems", "rostering", "printing"] },
   { prefix: "/office/availability", topics: ["availability"] },
   { prefix: "/office/timeclock", topics: ["time"] },
   { prefix: "/office/leave", topics: ["leave"] },

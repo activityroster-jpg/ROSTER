@@ -31,7 +31,7 @@ export default async function EmergencySheetPage({ searchParams }: { searchParam
           <Link href={`/office/rota/emergency?date=${addDays(date, -1)}`} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-navy hover:bg-slate-50">← Prev day</Link>
           <Link href={`/office/rota/emergency?date=${addDays(date, 1)}`} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-navy hover:bg-slate-50">Next day →</Link>
           <a href={`/api/office/emergency-sheet?date=${date}`} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-navy hover:bg-slate-50">Download CSV</a>
-          <a href="/learn?topic=if-the-platform-is-down" target="_blank" rel="noreferrer" className="text-sm font-medium text-teal hover:underline">📖 Guide</a>
+          <a href="/learn?topic=printing" target="_blank" rel="noreferrer" className="text-sm font-medium text-teal hover:underline">📖 Guide</a>
           <PrintButton downloadName={`${organisation.name} emergency sheet ${date}`} />
         </div>
       </div>
