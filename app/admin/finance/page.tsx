@@ -1,11 +1,15 @@
 import Link from "next/link";
 import { requirePlatformAdmin } from "@/lib/platform/admin";
-import { getDb } from "@/lib/cf/bindings";
+import { getDb, getEnv } from "@/lib/cf/bindings";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { Card } from "@/components/ui";
 import { CATEGORY_BY_KEY } from "@/lib/finance/categories";
 import { buildPnl, capitalSummary, capitalWarnings, cashBalance, expenseBreakdown, fmtMinor, fyOf, fyRange, monthlySeries } from "@/lib/finance/pnl";
 import { AddTransactionForm, FinanceSettingsForm, StripeSyncButton, TransactionTable } from "@/components/admin/FinanceForms";
+import { ReceiptInbox, type InboxItem, type LineOption } from "@/components/admin/ReceiptInbox";
+import { ensureInboxToken, inboxAddress } from "@/lib/finance/receipt-inbox";
+import { matchReceipt } from "@/lib/finance/receipt-match";
+import { platformAdminEmails } from "@/lib/platform/admin";
 import { BreakdownChart, CumulativeChart, MonthlyChart } from "@/components/admin/FinanceCharts";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +23,7 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
   const today = new Date().toISOString().slice(0, 10);
   const currentFy = fyOf(today, settings.fyStartMonth);
   const fy = /^\d{4}$/.test(sp.fy ?? "") ? Number(sp.fy) : currentFy;
-  const view = sp.view === "pnl" ? "pnl" : sp.view === "settings" ? "settings" : "log";
+  const view = sp.view === "pnl" ? "pnl" : sp.view === "settings" ? "settings" : sp.view === "inbox" ? "inbox" : "log";
   const cur = settings.reportingCurrency;
   const range = fyRange(fy, settings.fyStartMonth);
   const pnl = buildPnl(all, settings, fy);
@@ -36,6 +40,9 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
     description: t.description, counterparty: t.counterparty, amountMinor: t.amountMinor, vatMinor: t.vatMinor, currency: t.currency, source: t.source, receiptRef: t.receiptRef, notes: t.notes,
     receiptName: t.receiptKey ? t.receiptName ?? "receipt" : null, receiptType: t.receiptKey ? t.receiptType : null,
   }));
+  const inboxRows = await platform.listReceiptInbox();
+  const waiting = inboxRows.filter((r) => r.status === "pending").length;
+  const inbox = view === "inbox" ? await buildInbox(platform, inboxRows, all) : null;
   const tab = (v: string, label: string) => <Link href={`/admin/finance?fy=${fy}&view=${v}`} className={`rounded-md px-3 py-1 text-sm font-medium ${view === v ? "bg-navy text-white" : "text-slate-500 hover:text-navy"}`}>{label}</Link>;
   const money = (m: number) => fmtMinor(m, cur);
   const tone = (m: number) => (m > 0 ? "text-starboard" : m < 0 ? "text-port" : "text-navy");
@@ -73,7 +80,7 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
       ) : null}
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex rounded-lg border border-slate-200 bg-white p-0.5">{tab("log", "Transactions")}{tab("pnl", "Profit & loss")}{tab("settings", "Settings")}</div>
+        <div className="flex rounded-lg border border-slate-200 bg-white p-0.5">{tab("log", "Transactions")}{tab("inbox", waiting ? `Receipt inbox (${waiting})` : "Receipt inbox")}{tab("pnl", "Profit & loss")}{tab("settings", "Settings")}</div>
         <div className="flex items-center gap-3 text-sm">
           <a href={`/api/admin/finance/csv?fy=${fy}&kind=transactions`} className="font-medium text-teal hover:underline">Download transactions (CSV)</a>
           <a href={`/api/admin/finance/csv?fy=${fy}&kind=pnl`} className="font-medium text-teal hover:underline">Download P&amp;L (CSV)</a>
@@ -93,6 +100,8 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
           </div>
           <TransactionTable rows={rows} />
         </>
+      ) : view === "inbox" && inbox ? (
+        <ReceiptInbox {...inbox} />
       ) : view === "pnl" ? (
         <>
           <div className="mb-5 grid gap-5 lg:grid-cols-3">
@@ -149,6 +158,44 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
       )}
     </div>
   );
+}
+
+type Tx = Awaited<ReturnType<PlatformRepository["listFinanceTransactions"]>>[number];
+type InboxRow = Awaited<ReturnType<PlatformRepository["listReceiptInbox"]>>[number];
+
+/** Everything the Receipt inbox tab shows: the address, waiting receipts with likely lines, and the lines that still need a receipt. */
+async function buildInbox(platform: PlatformRepository, rows: InboxRow[], all: Tx[]) {
+  const settings = await platform.getFinanceSettings();
+  const token = await ensureInboxToken(platform);
+  const option = (t: Tx): LineOption => ({ id: t.id, date: t.date, description: t.description, counterparty: t.counterparty, amountMinor: t.amountMinor, currency: t.currency });
+  const byId = new Map(all.map((t) => [t.id, t]));
+  const facts = all.map((t) => ({ id: t.id, date: t.date, amountMinor: t.amountMinor, currency: t.currency, counterparty: t.counterparty, description: t.description, hasReceipt: Boolean(t.receiptKey) }));
+  const items: InboxItem[] = rows.filter((r) => r.status !== "gmail").map((r) => {
+    const date = r.receiptDate ?? r.createdAt.toISOString().slice(0, 10);
+    const suggestions = r.status === "pending" && r.totalMinor != null && r.currency
+      ? matchReceipt({ totalMinor: r.totalMinor, currency: r.currency, date, supplier: r.supplier, fromAddress: r.fromAddress }, facts).suggestions.slice(0, 3).map((id) => option(byId.get(id)!))
+      : [];
+    const line = r.transactionId ? byId.get(r.transactionId) : undefined;
+    return {
+      id: r.id, receivedAt: r.createdAt.toISOString(), status: r.status, fromAddress: r.fromAddress, fromName: r.fromName, subject: r.subject,
+      fileName: r.fileName, fileType: r.fileType, hasFile: Boolean(r.fileKey), readStatus: r.readStatus, supplier: r.supplier, receiptDate: r.receiptDate,
+      totalMinor: r.totalMinor, vatMinor: r.vatMinor, currency: r.currency, summary: r.summary, suggestedCategory: r.suggestedCategory, note: r.note,
+      suggestions, line: line ? option(line) : null,
+    };
+  });
+  const since = new Date(Date.now() - 180 * 86_400_000).toISOString().slice(0, 10);
+  const lines = all.filter((t) => !t.receiptKey && t.date >= since && CATEGORY_BY_KEY[t.category]?.effect === "cost").map(option);
+  const code = rows.find((r) => r.status === "gmail");
+  return {
+    address: inboxAddress(token),
+    forwardFrom: settings.receiptForwardFrom ?? "",
+    defaultForwarders: [...platformAdminEmails()],
+    gmailCode: code ? { id: code.id, code: code.note, at: code.createdAt.toISOString(), hasFile: Boolean(code.fileKey) } : null,
+    readingOn: Boolean(getEnv().ANTHROPIC_API_KEY),
+    everArrived: rows.some((r) => r.status !== "gmail"),
+    items,
+    lines,
+  };
 }
 
 function GroupRows({ label, lines, total }: { label: string; lines: { label: string; value: string; zero: boolean }[]; total?: string }) {

@@ -71,6 +71,17 @@ jobs:
           if [ -n "$OUTREACH_CRON_SECRET" ]; then
             printf '%s' "$OUTREACH_CRON_SECRET" | npx wrangler secret put CRON_SECRET -c workers/tick/wrangler.toml --env staging
           fi
+      - name: Deploy the receipts-by-email worker (staging)
+        if: env.provisioned == 'true'
+        # A new side worker must never fail (or roll back) the app's own deploy.
+        continue-on-error: true
+        env:
+          OUTREACH_CRON_SECRET: ${{ secrets.OUTREACH_CRON_SECRET }}
+        run: |
+          npx wrangler deploy -c workers/mail-in/wrangler.toml --env staging
+          if [ -n "$OUTREACH_CRON_SECRET" ]; then
+            printf '%s' "$OUTREACH_CRON_SECRET" | npx wrangler secret put CRON_SECRET -c workers/mail-in/wrangler.toml --env staging
+          fi
       - name: Smoke test
         if: env.provisioned == 'true'
         run: |

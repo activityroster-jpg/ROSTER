@@ -5,7 +5,7 @@ import { requirePlatformAdmin } from "@/lib/platform/admin";
 import { getDb, getEnv, getRepositories } from "@/lib/cf/bindings";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { CATEGORY_BY_KEY } from "@/lib/finance/categories";
-import { deleteReceipt } from "@/lib/finance/receipts";
+import { attachInboxToLine, matchWaitingReceipts, releaseReceipt } from "@/lib/finance/receipt-inbox";
 import { backfillStripeRevenue } from "@/lib/billing/finance-sync";
 import { financeSettingsSchema, financeTransactionSchema, firstIssue, idSchema, isoDateSchema } from "@/lib/validation/actions";
 
@@ -45,12 +45,20 @@ export async function addTransactionAction(_prev: FinanceResult, fd: FormData): 
     amountMinor: toMinor(d.amount), vatMinor: d.vat ? toMinor(d.vat) : null, currency: d.currency,
     source: "manual" as const, externalId: null, receiptRef: d.receiptRef, notes: d.notes,
   };
-  await p.insertFinanceTransactions(paidPersonally ? [line, {
+  const inserted = await p.insertFinanceTransactions(paidPersonally ? [line, {
     ...line, category: "directors_loan_in", description: `Paid personally: ${d.description}`.slice(0, 200), counterparty: null, vatMinor: null,
     notes: `Added with the ${cat.label.toLowerCase()} line of the same date and amount, paid from the director's own money.`,
   }] : [line]);
+  // Added from the Receipt inbox: the receipt goes on the new line. Otherwise,
+  // any receipt already waiting that clearly matches the new line is attached.
+  const inboxId = idSchema.safeParse(fd.get("inboxId"));
+  let receiptNote = "";
+  if (inboxId.success && inserted[0]) {
+    const row = await p.findReceiptInbox(inboxId.data);
+    if (row?.status === "pending" && await attachInboxToLine(p, row, inserted[0].id)) receiptNote = ", receipt attached";
+  } else if (await matchWaitingReceipts(p, inserted.map((r) => r.id)) > 0) receiptNote = ", and a waiting receipt was attached";
   revalidatePath("/admin/finance");
-  return { ok: true, message: paidPersonally ? "Added, with the director's loan line" : "Added" };
+  return { ok: true, message: `${paidPersonally ? "Added, with the director's loan line" : "Added"}${receiptNote}` };
 }
 
 export async function updateTransactionAction(id: string, fd: FormData): Promise<FinanceResult> {
@@ -74,7 +82,8 @@ export async function deleteTransactionAction(id: string): Promise<FinanceResult
   if (!idSchema.safeParse(id).success) return { ok: false, error: "Not found" };
   const row = await p.findFinanceTransaction(id);
   const ok = await p.deleteFinanceTransaction(id);
-  if (ok) await deleteReceipt(row?.receiptKey);
+  // A receipt that came by email goes back to the inbox; one uploaded by hand is deleted.
+  if (ok) await releaseReceipt(p, row?.receiptKey);
   revalidatePath("/admin/finance");
   return ok ? { ok: true, message: "Deleted" } : { ok: false, error: "Not found" };
 }

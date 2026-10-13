@@ -4,7 +4,8 @@ import { getDb } from "@/lib/cf/bindings";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { sniffDocumentType } from "@/lib/security/file-type";
 import { idSchema } from "@/lib/validation/actions";
-import { RECEIPT_MAX_BYTES, deleteReceipt, getReceipt, putReceipt, receiptResponse, safeReceiptName } from "@/lib/finance/receipts";
+import { releaseReceipt } from "@/lib/finance/receipt-inbox";
+import { RECEIPT_MAX_BYTES, getReceipt, putReceipt, receiptResponse, safeReceiptName } from "@/lib/finance/receipts";
 
 export const dynamic = "force-dynamic";
 
@@ -47,17 +48,17 @@ export async function POST(req: Request) {
   const name = safeReceiptName(file.name);
   const key = await putReceipt(row.id, name, contentType, body);
   await repo.updateFinanceTransaction(row.id, { receiptKey: key, receiptName: name, receiptType: contentType });
-  if (row.receiptKey && row.receiptKey !== key) await deleteReceipt(row.receiptKey);
+  if (row.receiptKey && row.receiptKey !== key) await releaseReceipt(repo, row.receiptKey);
   return NextResponse.json({ ok: true, receipt: { name, type: contentType } });
 }
 
-/** Remove a line's receipt. */
+/** Take a line's receipt off (one that came by email goes back to the inbox). */
 export async function DELETE(req: Request) {
   await requirePlatformAdmin();
   const found = await load(new URL(req.url).searchParams.get("id"));
   if (!found) return notFound();
   const { repo, row } = found;
   await repo.updateFinanceTransaction(row.id, { receiptKey: null, receiptName: null, receiptType: null });
-  await deleteReceipt(row.receiptKey);
+  await releaseReceipt(repo, row.receiptKey);
   return NextResponse.json({ ok: true });
 }

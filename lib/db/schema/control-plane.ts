@@ -633,9 +633,59 @@ export const financeSettings = sqliteTable("finance_settings", {
   /** Bank balance at the start of the records, minor units in the reporting currency. */
   openingCashMinor: integer("opening_cash_minor").notNull().default(0),
   openingCashDate: text("opening_cash_date"),
+  /** The random part of the private receipt-forwarding address (receipts-<token>@<apex>). */
+  receiptInboxToken: text("receipt_inbox_token"),
+  /** The Gmail address allowed to forward receipts in (blank = the platform admins' addresses). */
+  receiptForwardFrom: text("receipt_forward_from"),
   updatedAt: updatedAt(),
 });
 export type FinanceSettings = typeof financeSettings.$inferSelect;
+
+/**
+ * Receipts emailed in (forwarded from the owner's Gmail to the private address,
+ * via Cloudflare Email Routing and workers/mail-in). Each is read for supplier,
+ * date and total, then attached to the matching line in the books, or waits
+ * here for the owner to match it or add it as a new line.
+ *   pending   waiting for the owner
+ *   matched   attached to a line (transactionId)
+ *   dismissed not a receipt, or not wanted
+ *   held      not from the allowed Gmail address: kept aside, never read
+ *   gmail     Gmail's forwarding confirmation (the code is in note)
+ */
+export const RECEIPT_INBOX_STATUSES = ["pending", "matched", "dismissed", "held", "gmail"] as const;
+export type ReceiptInboxStatus = (typeof RECEIPT_INBOX_STATUSES)[number];
+export const RECEIPT_READ_STATUSES = ["unread", "read", "failed"] as const;
+
+export const financeReceiptInbox = sqliteTable("finance_receipt_inbox", {
+  id: id(),
+  /** The email's Message-ID, so a message delivered twice is kept once. */
+  messageId: text("message_id").notNull(),
+  status: text("status", { enum: RECEIPT_INBOX_STATUSES }).notNull().default("pending"),
+  fromAddress: text("from_address"),
+  fromName: text("from_name"),
+  subject: text("subject"),
+  fileKey: text("file_key"),
+  fileName: text("file_name"),
+  fileType: text("file_type"),
+  readStatus: text("read_status", { enum: RECEIPT_READ_STATUSES }).notNull().default("unread"),
+  supplier: text("supplier"),
+  receiptDate: text("receipt_date"), // YYYY-MM-DD
+  totalMinor: integer("total_minor"),
+  vatMinor: integer("vat_minor"),
+  currency: text("currency"),
+  summary: text("summary"),
+  suggestedCategory: text("suggested_category"),
+  note: text("note"),
+  transactionId: text("transaction_id").references(() => financeTransaction.id, { onDelete: "set null" }),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, (t) => [
+  uniqueIndex("finance_inbox_message_uq").on(t.messageId),
+  index("finance_inbox_status_idx").on(t.status),
+  index("finance_inbox_tx_idx").on(t.transactionId),
+]);
+export type FinanceReceiptInbox = typeof financeReceiptInbox.$inferSelect;
+export type NewFinanceReceiptInbox = typeof financeReceiptInbox.$inferInsert;
 
 // --- Outreach agent (platform owner's own prospecting) ----------------------
 

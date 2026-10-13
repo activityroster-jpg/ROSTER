@@ -1,0 +1,17 @@
+# Receipts by email (see index.ts). Cloudflare Email Routing sends the books'
+# private address to this worker. Secret: CRON_SECRET, the same value as the
+# app's OUTREACH_CRON_SECRET, set by the deploy workflows.
+name = "roster-mail-in"
+main = "index.ts"
+compatibility_date = "2025-01-01"
+workers_dev = false
+
+[vars]
+INBOUND_URL = "https://activityroster.com/api/finance/inbound"
+
+[env.staging]
+name = "roster-mail-in-staging"
+workers_dev = false
+
+[env.staging.vars]
+INBOUND_URL = "https://staging.activityroster.com/api/finance/inbound"

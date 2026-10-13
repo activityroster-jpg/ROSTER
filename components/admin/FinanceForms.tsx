@@ -28,9 +28,9 @@ function CategorySelect({ name, defaultValue, onPick }: { name: string; defaultV
   );
 }
 
-type TxDefaults = Partial<Record<"date" | "category" | "description" | "counterparty" | "amount" | "vat" | "currency" | "receiptRef" | "notes", string>>;
+export type TxDefaults = Partial<Record<"date" | "category" | "description" | "counterparty" | "amount" | "vat" | "currency" | "receiptRef" | "notes", string>>;
 
-function TxFields({ defaults, onCategory }: { defaults?: TxDefaults; onCategory?: (key: string) => void }) {
+export function TxFields({ defaults, onCategory }: { defaults?: TxDefaults; onCategory?: (key: string) => void }) {
   const today = new Date().toISOString().slice(0, 10);
   return (
     <div className="grid gap-3 sm:grid-cols-6">

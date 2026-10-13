@@ -7,6 +7,8 @@ import { getEnv } from "@/lib/cf/bindings";
  * Keys are built here from the transaction id, never taken from a request.
  */
 export const RECEIPT_PREFIX = "platform/finance-receipts/";
+/** Receipts that arrived by email, kept under the inbox row's id until matched. */
+export const INBOX_PREFIX = `${RECEIPT_PREFIX}inbox/`;
 export const RECEIPT_MAX_BYTES = 10 * 1024 * 1024;
 
 const INLINE_TYPES = new Set(["application/pdf", "image/png", "image/jpeg", "image/webp"]);
@@ -19,6 +21,13 @@ export function isReceiptKey(key: string): boolean {
 
 export async function putReceipt(txId: string, filename: string, contentType: string, body: ArrayBuffer): Promise<string> {
   const key = `${RECEIPT_PREFIX}${txId}/${Date.now()}-${safeReceiptName(filename)}`;
+  await getEnv().DOCS.put(key, body, { httpMetadata: { contentType } });
+  return key;
+}
+
+/** Store an emailed receipt under its inbox row (the email itself is kept as HTML when it has no attachment). */
+export async function putInboxFile(inboxId: string, filename: string, contentType: string, body: ArrayBuffer): Promise<string> {
+  const key = `${INBOX_PREFIX}${inboxId}/${safeReceiptName(filename)}`;
   await getEnv().DOCS.put(key, body, { httpMetadata: { contentType } });
   return key;
 }
@@ -38,14 +47,17 @@ export async function deleteReceipt(key: string | null | undefined): Promise<voi
 export function receiptResponse(object: R2ObjectBody | null, name: string): Response {
   if (!object) return new Response(JSON.stringify({ error: "Not found" }), { status: 404, headers: { "content-type": "application/json" } });
   const type = object.httpMetadata?.contentType ?? "";
-  const inline = INLINE_TYPES.has(type);
   const filename = safeReceiptName(name).replace(/"/g, "");
+  const base = { "X-Content-Type-Options": "nosniff", "Cache-Control": "private, no-store" };
+  // An emailed receipt with no attachment is the email itself. It is shown in a
+  // sandbox: no scripts, no forms, no outside images (tracking pixels), its own origin.
+  if (type === "text/html") {
+    return new Response(object.body, {
+      headers: { ...base, "Content-Type": "text/html; charset=utf-8", "Content-Disposition": `inline; filename="${filename}"`, "Content-Security-Policy": "sandbox; default-src 'none'; img-src data:; style-src 'unsafe-inline'" },
+    });
+  }
+  const inline = INLINE_TYPES.has(type);
   return new Response(object.body, {
-    headers: {
-      "Content-Type": inline ? type : "application/octet-stream",
-      "Content-Disposition": `${inline ? "inline" : "attachment"}; filename="${filename}"`,
-      "X-Content-Type-Options": "nosniff",
-      "Cache-Control": "private, no-store",
-    },
+    headers: { ...base, "Content-Type": inline ? type : "application/octet-stream", "Content-Disposition": `${inline ? "inline" : "attachment"}; filename="${filename}"` },
   });
 }

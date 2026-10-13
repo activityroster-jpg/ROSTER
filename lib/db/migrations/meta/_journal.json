@@ -610,6 +610,13 @@
       "when": 1791912064971,
       "tag": "0086_loose_hex",
       "breakpoints": true
+    },
+    {
+      "idx": 87,
+      "version": "6",
+      "when": 1791913110725,
+      "tag": "0087_soft_giant_girl",
+      "breakpoints": true
     }
   ]
 }

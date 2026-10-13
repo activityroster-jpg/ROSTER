@@ -123,6 +123,18 @@ jobs:
             echo "::warning::OUTREACH_CRON_SECRET is not set; the tick worker cannot authenticate until it is."
           fi
 
+      - name: Deploy the receipts-by-email worker
+        # A new side worker must never fail (or roll back) the app's own deploy.
+        continue-on-error: true
+        env:
+          OUTREACH_CRON_SECRET: ${{ secrets.OUTREACH_CRON_SECRET }}
+        run: |
+          npx wrangler deploy -c workers/mail-in/wrangler.toml
+          if [ -n "$OUTREACH_CRON_SECRET" ]; then
+            printf '%s' "$OUTREACH_CRON_SECRET" | npx wrangler secret put CRON_SECRET -c workers/mail-in/wrangler.toml
+          else
+            echo "::warning::OUTREACH_CRON_SECRET is not set; receipts emailed in cannot reach the app until it is."
+          fi
       - name: Smoke test
         id: smoke
         run: |

@@ -18,6 +18,7 @@ import {
   platformTask,
   financeTransaction,
   financeSettings,
+  financeReceiptInbox,
   outreachCampaign,
   outreachLead,
   outreachMessage,
@@ -47,6 +48,8 @@ import {
   type NewPlatformTask,
   type FinanceTransaction,
   type NewFinanceTransaction,
+  type FinanceReceiptInbox,
+  type NewFinanceReceiptInbox,
   type FinanceSettings,
   type OutreachCampaign,
   type NewOutreachCampaign,
@@ -528,9 +531,51 @@ export class PlatformRepository {
     return rows.length > 0;
   }
 
+  /** Lines with this receipt file attached (a receipt from the inbox is attached to at most one). */
+  async findFinanceTransactionByReceipt(key: string): Promise<FinanceTransaction | null> {
+    const rows = await this.db.select().from(financeTransaction).where(eq(financeTransaction.receiptKey, key)).limit(1);
+    return rows[0] ?? null;
+  }
+
+  // --- Receipt inbox (receipts emailed in) -----------------------------------
+
+  /** Keep an emailed receipt. A message already kept (same Message-ID) returns null. */
+  async insertReceiptInbox(values: Omit<NewFinanceReceiptInbox, "createdAt" | "updatedAt">): Promise<FinanceReceiptInbox | null> {
+    const rows = await this.db.insert(financeReceiptInbox).values(values).onConflictDoNothing({ target: financeReceiptInbox.messageId }).returning();
+    return rows[0] ?? null;
+  }
+
+  async findReceiptInbox(id: string): Promise<FinanceReceiptInbox | null> {
+    const rows = await this.db.select().from(financeReceiptInbox).where(eq(financeReceiptInbox.id, id)).limit(1);
+    return rows[0] ?? null;
+  }
+
+  async findReceiptInboxByFile(key: string): Promise<FinanceReceiptInbox | null> {
+    const rows = await this.db.select().from(financeReceiptInbox).where(eq(financeReceiptInbox.fileKey, key)).limit(1);
+    return rows[0] ?? null;
+  }
+
+  /** The inbox, newest first (bounded: the owner gets well under a hundred a month). */
+  async listReceiptInbox(limit = 200): Promise<FinanceReceiptInbox[]> {
+    return this.db.select().from(financeReceiptInbox).orderBy(desc(financeReceiptInbox.createdAt)).limit(limit);
+  }
+
+  async listReceiptInboxByStatus(status: FinanceReceiptInbox["status"], limit = 200): Promise<FinanceReceiptInbox[]> {
+    return this.db.select().from(financeReceiptInbox).where(eq(financeReceiptInbox.status, status)).orderBy(desc(financeReceiptInbox.createdAt)).limit(limit);
+  }
+
+  async updateReceiptInbox(id: string, patch: Partial<Omit<NewFinanceReceiptInbox, "id" | "createdAt">>): Promise<FinanceReceiptInbox | null> {
+    const rows = await this.db.update(financeReceiptInbox).set({ ...patch, updatedAt: new Date() }).where(eq(financeReceiptInbox.id, id)).returning();
+    return rows[0] ?? null;
+  }
+
+  async deleteReceiptInbox(id: string): Promise<void> {
+    await this.db.delete(financeReceiptInbox).where(eq(financeReceiptInbox.id, id));
+  }
+
   async getFinanceSettings(): Promise<FinanceSettings> {
     const rows = await this.db.select().from(financeSettings).where(eq(financeSettings.id, "default")).limit(1);
-    return rows[0] ?? { id: "default", fyStartMonth: 1, reportingCurrency: "GBP", eurToGbp: 0.86, openingCashMinor: 0, openingCashDate: null, updatedAt: new Date() };
+    return rows[0] ?? { id: "default", fyStartMonth: 1, reportingCurrency: "GBP", eurToGbp: 0.86, openingCashMinor: 0, openingCashDate: null, receiptInboxToken: null, receiptForwardFrom: null, updatedAt: new Date() };
   }
 
   async upsertFinanceSettings(patch: Partial<Omit<FinanceSettings, "id" | "updatedAt">>): Promise<void> {
