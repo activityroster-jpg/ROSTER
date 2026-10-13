@@ -37,7 +37,7 @@ export const SECTIONS: Section[] = [
         "Invite your team, and send them the ready-made message on your team chat so they know the invite is real.",
         "Put your courses on the calendar: connect your booking system, import a spreadsheet, or add them by hand. Add the whole season.",
         "Build the first roster: check availability, press Auto-roster, and fill any gaps.",
-        "Check that tickets have expiry dates, then confirm each day. Everyone on it gets a message.",
+        "Check that licences have expiry dates, then confirm each day. Everyone on it gets a message.",
         "Later: pay rates (before your first pay run), the optional extras, other office admins, and a plan before the trial ends.",
       ] },
       { kind: "p", text: "Your dashboard shows these steps as a Getting started checklist, ticks them off as your data goes in, and marks the next one. If three days pass with no day confirmed, a reminder points you to the roster. The office menu on the left follows the same order: Set up (Course setup, Instructors, Courses), then Roster, then Pay & extras, then Account." },
@@ -499,7 +499,7 @@ export const SECTIONS: Section[] = [
       { kind: "sub", text: "Expiry alerts" },
       { kind: "p", text: "Anything expiring within your lead time is flagged on the dashboard and the staff list. Instructors are reminded in the app and by email, and every Monday admins get one email listing what has expired or is about to. Expired mandatory checks stop an instructor being rostered until they're renewed." },
       { kind: "tip", text: "“Not cleared to roster” always shows the actual reason (e.g. “DBS missing”, “First Aid expired”) rather than a vague label." },
-      { kind: "p", text: "An alert needs a date. Before you confirm a roster day, the Roster page lists anyone on it with no expiry date on any of their tickets, and asks you to add the dates before confirming. Most dates arrive when staff upload their own tickets after their invite." },
+      { kind: "p", text: "An alert needs a date. Before you confirm a roster day, the Roster page lists anyone on it with no expiry date on any of their licences, and asks you to add the dates before confirming. Most dates arrive when staff upload their own tickets after their invite." },
     ],
   },
   {
@@ -945,7 +945,7 @@ export const SECTIONS: Section[] = [
  * The order a centre meets the guides in, following the quickest route to a
  * first roster: sign up and set up (courses, then team with their instructor
  * types), invite the team, put the courses on the calendar, build the roster,
- * check tickets and confirm; then running the season, the later extras, the
+ * check licences and confirm; then running the season, the later extras, the
  * account and data topics, with help and troubleshooting last. SECTIONS is kept
  * in the same order; the Learning Centre shows these as headings.
  */
@@ -954,7 +954,7 @@ export const GUIDE_STAGES: { label: string; ids: string[] }[] = [
   { label: "Invite your team", ids: ["app", "office-managed"] },
   { label: "Put your courses on the calendar", ids: ["courses", "import", "integrations"] },
   { label: "Build the roster", ids: ["availability", "board", "rostering", "bulk", "problems"] },
-  { label: "Check tickets and confirm", ids: ["licences", "rota"] },
+  { label: "Check licences and confirm", ids: ["licences", "rota"] },
   { label: "Run the season", ids: ["dashboard", "leave", "time", "notifications"] },
   { label: "Later: pay, kit and settings", ids: ["pay-rates", "locations", "equipment", "settings", "roles"] },
   { label: "Account, billing & data", ids: ["plans", "billing", "trial-survey", "admin-security", "data", "retention"] },

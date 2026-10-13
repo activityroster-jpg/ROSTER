@@ -48,7 +48,7 @@ export function teamChatMessage(centreName: string, joinCode: string | null, fin
   return [
     `Hi all, ${centreName} now uses ActivityRoster for the roster.`,
     "You should have an email from ActivityRoster inviting you to set up your account. If you can't see it, check your spam or junk folder.",
-    `Please set your password, add your instructor tickets and fill in your availability by ${finishBy}.`,
+    `Please set your password, add your instructor licences and fill in your availability by ${finishBy}.`,
     joinCode ? `No email? Go to activityroster.com/app (or the ActivityRoster app), create an account with the email we have for you, and enter our centre code ${joinCode}.` : "No email? Let the office know and we'll send it again.",
   ].join("\n\n");
 }
@@ -324,7 +324,7 @@ export function OnboardingWizard({
 
           <div className="rounded-card border border-slate-200 bg-white p-6">
             <h2 className="font-display text-lg font-semibold text-navy">Do your staff need to sign up?</h2>
-            <p className="mt-1 text-sm text-slate-500">Choose who keeps availability up to date. We recommend the app: staff fill in their own availability and tickets while you set up the rest. Contractors can be switched to office-run on their own page, and you can change this in Settings.</p>
+            <p className="mt-1 text-sm text-slate-500">Choose who keeps availability up to date. We recommend the app: staff fill in their own availability and licences while you set up the rest. Contractors can be switched to office-run on their own page, and you can change this in Settings.</p>
             <div className="mt-4 grid gap-2 sm:grid-cols-2">
               {([
                 { v: "staff", title: "Yes, they use the app", hint: "Each instructor marks when they're free and confirms their sessions. A slot counts as busy until they answer." },

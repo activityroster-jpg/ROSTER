@@ -5,7 +5,7 @@ import { useState, useTransition } from "react";
 import { askConfirm } from "@/lib/ui/ask-confirm";
 import { confirmDaysAction, undoDayAction } from "@/app/(app)/office/rota/actions";
 
-export interface DayState { date: string; confirmed: boolean; sessions: number; people: number; short: number; /** People on the day with no expiry date on any of their tickets. */ noExpiry?: string[] }
+export interface DayState { date: string; confirmed: boolean; sessions: number; people: number; short: number; /** People on the day with no expiry date on any of their licences. */ noExpiry?: string[] }
 
 // Spelled out by hand: Node and browsers punctuate toLocaleDateString differently, which breaks hydration.
 const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -31,7 +31,7 @@ export function RosterDays({ days, staffAccept }: { days: DayState[]; staffAccep
     const undated = [...new Set(list.flatMap((d) => d.noExpiry ?? []))];
     const warnings = [
       ...short.map((d) => `${fmt(d.date)}: ${d.short} session${d.short === 1 ? "" : "s"} still short of staff`),
-      ...(undated.length ? [`No expiry date recorded on any ticket for ${undated.join(", ")}, so the app can't warn you if their qualification has lapsed. Add the dates on Instructors`] : []),
+      ...(undated.length ? [`No expiry date recorded on any licence for ${undated.join(", ")}, so the app can't warn you if their qualification has lapsed. Add the dates on Instructors`] : []),
     ];
     if (warnings.length && !(await askConfirm(`${warnings.join(". ")}. Confirm anyway?`))) return;
     const r = await confirmDaysAction(list.map((d) => d.date));
@@ -66,7 +66,7 @@ export function RosterDays({ days, staffAccept }: { days: DayState[]; staffAccep
             {d.sessions === 0 ? <p>No sessions</p> : (
               <>
                 <p className="text-slate-600">{d.sessions} session{d.sessions === 1 ? "" : "s"} · {d.people} {d.people === 1 ? "person" : "people"}{d.short ? <span className="font-semibold text-port"> · {d.short} short</span> : null}</p>
-                {d.noExpiry?.length ? <p className="text-amber" title={`No expiry date recorded: ${d.noExpiry.join(", ")}`}>⚠ {d.noExpiry.length} ticket{d.noExpiry.length === 1 ? "" : "s"} undated</p> : null}
+                {d.noExpiry?.length ? <p className="text-amber" title={`No expiry date recorded: ${d.noExpiry.join(", ")}`}>⚠ {d.noExpiry.length} licence{d.noExpiry.length === 1 ? "" : "s"} undated</p> : null}
                 {d.confirmed ? (
                   <p className="mt-1 flex items-center justify-between gap-1"><span className="font-semibold text-starboard">✓ Confirmed</span><button type="button" disabled={pending} onClick={() => undo(d)} className="text-slate-500 hover:text-port disabled:opacity-50">Undo</button></p>
                 ) : (

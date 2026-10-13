@@ -33,7 +33,7 @@ export interface SetupStatus {
  * The getting-started checklist, in the order a centre gets rostering quickly:
  * sign up, set up courses and team (each person with their instructor types),
  * invite the team, put the courses on the calendar, build the first roster,
- * check tickets and confirm the first day; then, later, pay rates and a plan.
+ * check licences and confirm the first day; then, later, pay rates and a plan.
  * Derived from the centre's real data (no extra table). Tenant scoped.
  */
 export async function getSetupStatus(repos: Repositories, ctx: AnyTenantContext, organisation?: Pick<Organisation, "stripeSubscriptionId"> | null): Promise<SetupStatus> {
@@ -65,7 +65,7 @@ export async function getSetupStatus(repos: Repositories, ctx: AnyTenantContext,
     ...(officeRuns ? [] : [{ key: "invite" as const, label: "Invite your team to the app", href: "/office/staff", done: linked > 0, stage: "essential" as const }]),
     { key: "courses", label: "Put your courses on the calendar", href: "/office/courses", done: courses > 0, stage: "essential" },
     { key: "roster", label: "Build your first roster (Auto-roster)", href: "/office/rota", done: assignments + dayAdds > 0, stage: "essential" },
-    { key: "confirm", label: "Check tickets, then confirm your first day", href: "/office/rota", done: firstDayConfirmed, stage: "essential" },
+    { key: "confirm", label: "Check licences, then confirm your first day", href: "/office/rota", done: firstDayConfirmed, stage: "essential" },
     { key: "pay", label: "Set pay rates, before your first pay run", href: "/office/settings?tab=pay#pay-rates", done: payRates > 0, stage: "later" },
     ...(organisation !== undefined ? [{ key: "plan" as const, label: "Choose a plan before your trial ends", href: "/office/billing", done: Boolean(organisation?.stripeSubscriptionId), stage: "later" as const }] : []),
   ];

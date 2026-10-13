@@ -220,6 +220,8 @@ export default function MarketingHome() {
         </div>
       </section>
 
+      <DisciplineGallery />
+
       {/* Full platform grid */}
       <section id="features" className="border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-6xl px-4 py-12 md:py-16">
@@ -241,8 +243,6 @@ export default function MarketingHome() {
           </p>
         </div>
       </section>
-
-      <DisciplineGallery />
 
       <PhotoBand src={PHOTOS.deck} alt="A yacht on the water" caption="On the water, every session" />
 
@@ -309,7 +309,7 @@ export default function MarketingHome() {
       <section className="border-y border-slate-200 bg-white">
         <div className="mx-auto max-w-3xl px-4 py-12 text-center md:py-16">
           <p className="font-display text-2xl font-semibold leading-snug text-navy" style={{ textWrap: "balance" }}>
-            No more Saturday-morning scramble to check who&apos;s ticketed and who&apos;s on safety boat.
+            No more Saturday-morning scramble to check who&apos;s qualified and who&apos;s on safety boat.
           </p>
           <p className="mx-auto mt-3 max-w-xl text-slate-600">The checks happen when you build the roster, so the morning is about the water, not the paperwork.</p>
         </div>
