@@ -2,7 +2,7 @@ import { requirePlatformAdmin } from "@/lib/platform/admin";
 import { getDb } from "@/lib/cf/bindings";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { CATEGORY_BY_KEY, GROUP_LABEL } from "@/lib/finance/categories";
-import { buildPnl, fyRange, toReporting } from "@/lib/finance/pnl";
+import { buildPnl, capitalSummary, fyRange, toReporting } from "@/lib/finance/pnl";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +30,13 @@ export async function GET(req: Request) {
     }
     for (const [k, v] of [["Gross profit", p.grossProfitMinor], ["Operating profit", p.operatingProfitMinor], ["Interest income/(expense)", p.interestMinor], ["R&D tax credit", p.rdCreditMinor], ["Profit before tax", p.profitBeforeTaxMinor], ["Corporation tax", p.corporationTaxMinor], ["Retained profit", p.retainedProfitMinor]] as const) {
       lines.push(["Bottom line", k, major(v)].map(cell).join(","));
+    }
+    // Not profit or loss, but the accountant needs it for the balance sheet.
+    const c = capitalSummary(all, settings, fy);
+    const capital = `${GROUP_LABEL.capital} (not in the P&L)`;
+    for (const l of c.lines) lines.push([capital, l.label, major(l.amountMinor)].map(cell).join(","));
+    for (const [k, v] of [["Dividends paid", c.dividendsMinor], ["Kept in the company after dividends", c.keptAfterDividendsMinor], ["Director's loan at the start of the year (+ owed to the director, − owed by the director)", c.directorsLoan.openingMinor], ["Director's loan at the year end (+ owed to the director, − owed by the director)", c.directorsLoan.closingMinor], ["Business loans owed at the year end", c.businessLoansMinor], ["Share capital paid in to the year end", c.shareCapitalMinor]] as const) {
+      lines.push([capital, k, major(v)].map(cell).join(","));
     }
   } else {
     lines = [["Date", "Section", "Category", "Description", "Supplier/customer", "Amount", "VAT", "Currency", `Amount (${cur})`, "Source", "Reference", "Notes"].map(cell).join(",")];

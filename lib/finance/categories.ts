@@ -3,7 +3,10 @@
  * grouping drive the form, the P&L and the exports. Add a category here and
  * it appears everywhere. Never rename a key once used.
  */
-export type FinanceGroup = "revenue" | "cost_of_sales" | "operating" | "below_the_line";
+export type FinanceGroup = "revenue" | "cost_of_sales" | "operating" | "below_the_line" | "capital";
+
+/** The groups that make up the profit and loss, in order. "capital" (loans, dividends, shares) is money in and out that isn't profit or loss. */
+export const PNL_GROUPS: FinanceGroup[] = ["revenue", "cost_of_sales", "operating", "below_the_line"];
 
 export interface FinanceCategory {
   key: string;
@@ -11,8 +14,11 @@ export interface FinanceCategory {
   group: FinanceGroup;
   /** Shown as a hint in the form. */
   hint?: string;
-  /** Sign convention for P&L: revenue and credits add, costs subtract. */
-  effect: "income" | "cost";
+  /**
+   * P&L lines: income adds to profit, cost takes away (and the cash moves the
+   * same way). Capital lines aren't profit or loss: only the bank moves, in or out.
+   */
+  effect: "income" | "cost" | "cash_in" | "cash_out";
 }
 
 export const GROUP_LABEL: Record<FinanceGroup, string> = {
@@ -20,6 +26,7 @@ export const GROUP_LABEL: Record<FinanceGroup, string> = {
   cost_of_sales: "Cost of sales",
   operating: "Operating expenses",
   below_the_line: "Below operating profit",
+  capital: "Loans, dividends & capital",
 };
 
 export const FINANCE_CATEGORIES: FinanceCategory[] = [
@@ -53,7 +60,8 @@ export const FINANCE_CATEGORIES: FinanceCategory[] = [
   { key: "insurance_cyber", label: "Insurance — cyber liability", group: "operating", effect: "cost" },
   { key: "insurance_pl", label: "Insurance — public liability", group: "operating", effect: "cost" },
   { key: "contractors", label: "Contractors & freelancers", group: "operating", effect: "cost", hint: "Design, copywriting, ad hoc dev outside direct costs." },
-  { key: "payroll", label: "Payroll", group: "operating", effect: "cost" },
+  { key: "directors_salary", label: "Salary — directors", group: "operating", effect: "cost", hint: "Gross pay, before tax and NI are taken off. The tax paid over to HMRC / Revenue is part of this, so don't enter it again." },
+  { key: "payroll", label: "Payroll — staff", group: "operating", effect: "cost", hint: "Staff wages, gross. Directors' pay has its own line." },
   { key: "employer_prsi_ni", label: "Employer PRSI / NI", group: "operating", effect: "cost" },
   { key: "pension", label: "Pension contributions", group: "operating", effect: "cost" },
   { key: "recruitment", label: "Recruitment", group: "operating", effect: "cost" },
@@ -70,8 +78,19 @@ export const FINANCE_CATEGORIES: FinanceCategory[] = [
   { key: "interest_expense", label: "Interest expense", group: "below_the_line", effect: "cost" },
   { key: "rd_tax_credit", label: "R&D tax credit", group: "below_the_line", effect: "income", hint: "Software development can qualify in Ireland and the UK." },
   { key: "corporation_tax", label: "Corporation tax", group: "below_the_line", effect: "cost" },
+
+  // Loans, dividends & capital: in and out of the bank, never in the P&L
+  { key: "directors_loan_in", label: "Director's loan — director puts money in", group: "capital", effect: "cash_in", hint: "Money the director lends the company from their own pocket. The company owes it back." },
+  { key: "directors_loan_repaid", label: "Director's loan — repaid to the director", group: "capital", effect: "cash_out", hint: "The company paying back money the director lent it. Not a cost, not taxed." },
+  { key: "directors_loan_out", label: "Director's loan — director takes money out", group: "capital", effect: "cash_out", hint: "Money the director takes that isn't salary, a dividend or a repayment (personal spending on the company card too). The director owes it back." },
+  { key: "dividend_paid", label: "Dividend paid", group: "capital", effect: "cash_out", hint: "Paid to shareholders out of profit after tax. Not a cost in the P&L. Keep the board minute and a dividend voucher for each one." },
+  { key: "share_capital", label: "Share capital paid in", group: "capital", effect: "cash_in", hint: "Money paid to the company for new shares." },
+  { key: "loan_received", label: "Business loan — money received", group: "capital", effect: "cash_in", hint: "From a bank or other lender. The interest goes under Interest expense." },
+  { key: "loan_repayment", label: "Business loan — capital repaid", group: "capital", effect: "cash_out", hint: "The capital part of a repayment; the interest part goes under Interest expense." },
 ];
 
 export const CATEGORY_BY_KEY: Record<string, FinanceCategory> = Object.fromEntries(FINANCE_CATEGORIES.map((c) => [c.key, c]));
 export const CATEGORY_KEYS = FINANCE_CATEGORIES.map((c) => c.key) as [string, ...string[]];
 export const categoriesIn = (group: FinanceGroup) => FINANCE_CATEGORIES.filter((c) => c.group === group);
+/** Money coming into the bank (income, or capital in). */
+export const isInflow = (c: FinanceCategory | undefined) => c?.effect === "income" || c?.effect === "cash_in";

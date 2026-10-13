@@ -499,6 +499,12 @@ export class PlatformRepository {
     return rows[0]!;
   }
 
+  /** Insert several lines in one statement: all of them or none. */
+  async insertFinanceTransactions(values: Omit<NewFinanceTransaction, "id" | "createdAt" | "updatedAt">[]): Promise<FinanceTransaction[]> {
+    if (values.length === 0) return [];
+    return this.db.insert(financeTransaction).values(values).returning();
+  }
+
   /** Insert unless a row with this external id exists (Stripe idempotency). Returns the row and whether it was new. */
   async upsertFinanceByExternalId(values: Omit<NewFinanceTransaction, "id" | "createdAt" | "updatedAt"> & { externalId: string }): Promise<{ row: FinanceTransaction; created: boolean }> {
     const existing = await this.db.select().from(financeTransaction).where(eq(financeTransaction.externalId, values.externalId)).limit(1);

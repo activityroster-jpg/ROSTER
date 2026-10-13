@@ -1,21 +1,21 @@
 "use client";
 
 import { askConfirm } from "@/lib/ui/ask-confirm";
-import { useActionState, useState, useTransition } from "react";
+import { useActionState, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { addTransactionAction, deleteTransactionAction, syncStripeAction, updateFinanceSettingsAction, updateTransactionAction, type FinanceResult } from "@/app/admin/finance/actions";
-import { FINANCE_CATEGORIES, GROUP_LABEL, type FinanceGroup } from "@/lib/finance/categories";
+import { CATEGORY_BY_KEY, FINANCE_CATEGORIES, GROUP_LABEL, isInflow, type FinanceGroup } from "@/lib/finance/categories";
 
 const initial: FinanceResult = { ok: false };
 const field = "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal";
-const GROUPS: FinanceGroup[] = ["cost_of_sales", "operating", "revenue", "below_the_line"];
+const GROUPS: FinanceGroup[] = ["cost_of_sales", "operating", "revenue", "below_the_line", "capital"];
 
-function CategorySelect({ name, defaultValue }: { name: string; defaultValue?: string }) {
+function CategorySelect({ name, defaultValue, onPick }: { name: string; defaultValue?: string; onPick?: (key: string) => void }) {
   const [val, setVal] = useState(defaultValue ?? "");
   const hint = FINANCE_CATEGORIES.find((c) => c.key === val)?.hint;
   return (
     <div>
-      <select name={name} value={val} onChange={(e) => setVal(e.target.value)} required className={field}>
+      <select name={name} value={val} onChange={(e) => { setVal(e.target.value); onPick?.(e.target.value); }} required className={field}>
         <option value="">Category…</option>
         {GROUPS.map((g) => (
           <optgroup key={g} label={GROUP_LABEL[g]}>
@@ -28,12 +28,14 @@ function CategorySelect({ name, defaultValue }: { name: string; defaultValue?: s
   );
 }
 
-function TxFields({ defaults }: { defaults?: Partial<Record<"date" | "category" | "description" | "counterparty" | "amount" | "vat" | "currency" | "receiptRef" | "notes", string>> }) {
+type TxDefaults = Partial<Record<"date" | "category" | "description" | "counterparty" | "amount" | "vat" | "currency" | "receiptRef" | "notes", string>>;
+
+function TxFields({ defaults, onCategory }: { defaults?: TxDefaults; onCategory?: (key: string) => void }) {
   const today = new Date().toISOString().slice(0, 10);
   return (
     <div className="grid gap-3 sm:grid-cols-6">
       <label className="text-xs font-medium text-slate-500 sm:col-span-2">Date<input type="date" name="date" defaultValue={defaults?.date ?? today} required className={`mt-1 ${field}`} /></label>
-      <div className="sm:col-span-4"><span className="text-xs font-medium text-slate-500">Category</span><div className="mt-1"><CategorySelect name="category" defaultValue={defaults?.category} /></div></div>
+      <div className="sm:col-span-4"><span className="text-xs font-medium text-slate-500">Category</span><div className="mt-1"><CategorySelect name="category" defaultValue={defaults?.category} onPick={onCategory} /></div></div>
       <label className="text-xs font-medium text-slate-500 sm:col-span-4">What for<input name="description" defaultValue={defaults?.description} required maxLength={200} placeholder="e.g. Cloudflare Workers, September" className={`mt-1 ${field}`} /></label>
       <label className="text-xs font-medium text-slate-500 sm:col-span-2">Supplier / customer<input name="counterparty" defaultValue={defaults?.counterparty} maxLength={120} className={`mt-1 ${field}`} /></label>
       <label className="text-xs font-medium text-slate-500 sm:col-span-2">Amount (incl. VAT)<input name="amount" defaultValue={defaults?.amount} required inputMode="decimal" placeholder="12.50" className={`mt-1 ${field}`} /></label>
@@ -45,18 +47,51 @@ function TxFields({ defaults }: { defaults?: Partial<Record<"date" | "category" 
   );
 }
 
-/** Add a transaction by hand. */
+interface Preset { label: string; category: string; description: string; paidPersonally?: boolean }
+const thisMonth = () => new Date().toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+const PRESETS: (() => Preset)[] = [
+  () => ({ label: "Pay salary", category: "directors_salary", description: `Director's salary — ${thisMonth()}` }),
+  () => ({ label: "Pay a dividend", category: "dividend_paid", description: "Dividend" }),
+  () => ({ label: "Director lends money", category: "directors_loan_in", description: "Director's loan to the company" }),
+  () => ({ label: "Repay the director", category: "directors_loan_repaid", description: "Repayment of director's loan" }),
+  () => ({ label: "Director takes money out", category: "directors_loan_out", description: "Money taken by the director" }),
+  () => ({ label: "Expense paid personally", category: "", description: "", paidPersonally: true }),
+];
+
+/** Add a transaction by hand, with one-click starts for the director's money. */
 export function AddTransactionForm() {
   const [state, action, pending] = useActionState(addTransactionAction, initial);
+  const [preset, setPreset] = useState<Preset | null>(null);
+  const [category, setCategory] = useState("");
+  const [round, setRound] = useState(0);
+  const pick = (p: Preset | null) => { setPreset(p); setCategory(p?.category ?? ""); setRound((n) => n + 1); };
+  // A fresh, empty form after each line is added.
+  useEffect(() => { if (state.ok) pick(null); }, [state]);
+  const cat = CATEGORY_BY_KEY[category];
+  // A cost (or one not picked yet) can be paid from the director's own pocket.
+  const canPayPersonally = !cat || cat.effect === "cost";
   return (
-    <form action={action} key={state.ok ? String(Date.now()) : "form"} className="space-y-3">
-      <TxFields />
+    <form action={action} key={`form-${round}`} className="space-y-3">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="text-xs font-medium text-slate-500">Quick start:</span>
+        {PRESETS.map((make) => { const p = make(); return (
+          <button key={p.label} type="button" onClick={() => pick(p)} className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${preset?.label === p.label ? "border-teal bg-teal/10 text-teal" : "border-slate-300 text-navy hover:bg-slate-50"}`}>{p.label}</button>
+        ); })}
+        {preset ? <button type="button" onClick={() => pick(null)} className="text-xs text-slate-400 hover:text-navy">Clear</button> : null}
+      </div>
+      <TxFields defaults={preset ? { category: preset.category, description: preset.description } : undefined} onCategory={setCategory} />
+      {canPayPersonally ? (
+        <label className="flex items-start gap-2 text-xs text-slate-600">
+          <input type="checkbox" name="paidPersonally" defaultChecked={Boolean(preset?.paidPersonally)} className="mt-0.5" />
+          <span>The director paid this from their own money. Adds a matching director&apos;s loan line, so the company owes it back and the bank balance doesn&apos;t move.</span>
+        </label>
+      ) : null}
       <div className="flex items-center gap-3">
         <button disabled={pending} className="rounded-lg bg-teal px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{pending ? "Adding…" : "Add to the books"}</button>
         {state.error ? <span className="text-sm text-port">{state.error}</span> : null}
         {state.ok ? <span className="text-sm text-starboard">{state.message}</span> : null}
       </div>
-      <p className="text-[11px] text-slate-400">Costs are entered as positive amounts. A refund or a gain is a negative amount in the same category.</p>
+      <p className="text-[11px] text-slate-400">Enter every amount as a positive number; the category decides whether money comes in or goes out. A refund or a gain is a negative amount in the same category. Salary is a cost in the profit and loss; dividends and the director&apos;s loan aren&apos;t, they only move the bank.</p>
     </form>
   );
 }
@@ -118,7 +153,7 @@ export function TransactionTable({ rows }: { rows: TxRow[] }) {
                   <td className="px-3 py-2 text-slate-700">{r.categoryLabel}</td>
                   <td className="px-3 py-2 text-navy">{r.description}{r.source === "stripe" ? <span className="ml-1 rounded bg-slate-100 px-1 text-[10px] text-slate-500">Stripe</span> : null}</td>
                   <td className="px-3 py-2 text-slate-500">{r.counterparty ?? "—"}</td>
-                  <td className={`whitespace-nowrap px-3 py-2 text-right font-medium ${r.group === "revenue" ? "text-starboard" : "text-navy"}`}>{fmt(r.amountMinor, r.currency)}</td>
+                  <td className={`whitespace-nowrap px-3 py-2 text-right font-medium ${isInflow(CATEGORY_BY_KEY[r.category]) ? "text-starboard" : "text-navy"}`}>{r.group === "capital" ? <span className="mr-1 text-[10px] font-normal text-slate-400">{isInflow(CATEGORY_BY_KEY[r.category]) ? "in" : "out"}</span> : null}{fmt(r.amountMinor, r.currency)}</td>
                   <td className="whitespace-nowrap px-3 py-2 text-right text-slate-500">{r.vatMinor != null ? fmt(r.vatMinor, r.currency) : "—"}</td>
                   <td className="max-w-[10rem] truncate px-3 py-2 text-xs text-slate-500">{r.receiptRef?.startsWith("http") ? <a href={r.receiptRef} target="_blank" rel="noreferrer" className="text-teal hover:underline">link</a> : r.receiptRef ?? "—"}</td>
                   <td className="whitespace-nowrap px-3 py-2 text-right text-xs">

@@ -24,20 +24,32 @@ async function platform() {
   return new PlatformRepository(await getDb());
 }
 
-/** Add a line to the books by hand (expenses, and any revenue that didn't come through Stripe). */
+/**
+ * Add a line to the books by hand (expenses, salary, dividends, the director's
+ * loan, and any revenue that didn't come through Stripe). A cost the director
+ * paid from their own money also adds the matching "director puts money in"
+ * line, so the bank doesn't move and the company owes the director.
+ */
 export async function addTransactionAction(_prev: FinanceResult, fd: FormData): Promise<FinanceResult> {
   const p = await platform();
   const parsed = fromForm(fd);
   if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
   const d = parsed.data;
-  if (!CATEGORY_BY_KEY[d.category]) return { ok: false, error: "Pick a category" };
-  await p.insertFinanceTransaction({
+  const cat = CATEGORY_BY_KEY[d.category];
+  if (!cat) return { ok: false, error: "Pick a category" };
+  const paidPersonally = fd.get("paidPersonally") === "on";
+  if (paidPersonally && cat.effect !== "cost") return { ok: false, error: "Only a cost can be paid personally: untick it, or pick a cost category" };
+  const line = {
     date: d.date, category: d.category, description: d.description, counterparty: d.counterparty,
     amountMinor: toMinor(d.amount), vatMinor: d.vat ? toMinor(d.vat) : null, currency: d.currency,
-    source: "manual", externalId: null, receiptRef: d.receiptRef, notes: d.notes,
-  });
+    source: "manual" as const, externalId: null, receiptRef: d.receiptRef, notes: d.notes,
+  };
+  await p.insertFinanceTransactions(paidPersonally ? [line, {
+    ...line, category: "directors_loan_in", description: `Paid personally: ${d.description}`.slice(0, 200), counterparty: null, vatMinor: null,
+    notes: `Added with the ${cat.label.toLowerCase()} line of the same date and amount, paid from the director's own money.`,
+  }] : [line]);
   revalidatePath("/admin/finance");
-  return { ok: true, message: "Added" };
+  return { ok: true, message: paidPersonally ? "Added, with the director's loan line" : "Added" };
 }
 
 export async function updateTransactionAction(id: string, fd: FormData): Promise<FinanceResult> {

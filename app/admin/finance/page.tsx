@@ -4,7 +4,7 @@ import { getDb } from "@/lib/cf/bindings";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { Card } from "@/components/ui";
 import { CATEGORY_BY_KEY } from "@/lib/finance/categories";
-import { buildPnl, cashBalance, expenseBreakdown, fmtMinor, fyOf, fyRange, monthlySeries } from "@/lib/finance/pnl";
+import { buildPnl, capitalSummary, capitalWarnings, cashBalance, expenseBreakdown, fmtMinor, fyOf, fyRange, monthlySeries } from "@/lib/finance/pnl";
 import { AddTransactionForm, FinanceSettingsForm, StripeSyncButton, TransactionTable } from "@/components/admin/FinanceForms";
 import { BreakdownChart, CumulativeChart, MonthlyChart } from "@/components/admin/FinanceCharts";
 
@@ -26,6 +26,9 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
   const months = monthlySeries(all, settings, fy);
   const breakdown = expenseBreakdown(all, settings, fy);
   const cash = cashBalance(all, settings);
+  const capital = capitalSummary(all, settings, fy);
+  const warnings = capitalWarnings(capital, cur);
+  const dla = capital.directorsLoan;
   const years = [...new Set([currentFy, ...all.map((t) => fyOf(t.date, settings.fyStartMonth))])].sort((a, b) => b - a);
   const inYear = all.filter((t) => t.date >= range.from && t.date < range.to);
   const rows = inYear.map((t) => ({
@@ -35,6 +38,7 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
   const tab = (v: string, label: string) => <Link href={`/admin/finance?fy=${fy}&view=${v}`} className={`rounded-md px-3 py-1 text-sm font-medium ${view === v ? "bg-navy text-white" : "text-slate-500 hover:text-navy"}`}>{label}</Link>;
   const money = (m: number) => fmtMinor(m, cur);
   const tone = (m: number) => (m > 0 ? "text-starboard" : m < 0 ? "text-port" : "text-navy");
+  const owed = (m: number) => (m > 0 ? "the company owes the director" : m < 0 ? "the director owes the company" : "nothing owed either way");
 
   return (
     <div>
@@ -56,6 +60,16 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
         <Card><p className="text-xs font-semibold text-navy">Retained profit</p><p className={`mt-1 text-2xl font-semibold ${tone(pnl.retainedProfitMinor)}`}>{money(pnl.retainedProfitMinor)}</p><p className="text-xs text-slate-400">after interest, R&amp;D credit, tax</p></Card>
         <Card><p className="text-xs font-semibold text-navy">Cash balance</p><p className={`mt-1 text-2xl font-semibold ${tone(cash)}`}>{money(cash)}</p><p className="text-xs text-slate-400">opening balance + all records</p></Card>
       </div>
+      <div className="mb-6 grid gap-3 sm:grid-cols-3">
+        <Card><p className="text-xs font-semibold text-navy">Director&apos;s loan</p><p className={`mt-1 text-xl font-semibold ${dla.closingMinor < 0 ? "text-port" : "text-navy"}`}>{money(Math.abs(dla.closingMinor))}</p><p className="text-xs text-slate-400">{owed(dla.closingMinor)}, at the end of {range.label}</p></Card>
+        <Card><p className="text-xs font-semibold text-navy">Dividends paid</p><p className="mt-1 text-xl font-semibold text-navy">{money(capital.dividendsMinor)}</p><p className="text-xs text-slate-400">kept in the company after them: {money(capital.keptAfterDividendsMinor)}</p></Card>
+        <Card><p className="text-xs font-semibold text-navy">Left for dividends</p><p className={`mt-1 text-xl font-semibold ${tone(capital.availableForDividendsMinor)}`}>{money(capital.availableForDividendsMinor)}</p><p className="text-xs text-slate-400">profit after tax recorded here, less dividends paid (a guide; your accountant confirms)</p></Card>
+      </div>
+      {warnings.length ? (
+        <div className="mb-6 space-y-2" role="status">
+          {warnings.map((w) => <p key={w} className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">{w}</p>)}
+        </div>
+      ) : null}
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <div className="flex rounded-lg border border-slate-200 bg-white p-0.5">{tab("log", "Transactions")}{tab("pnl", "Profit & loss")}{tab("settings", "Settings")}</div>
@@ -68,8 +82,8 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
       {view === "log" ? (
         <>
           <Card className="mb-5">
-            <h2 className="mb-1 font-semibold text-navy">Add an expense (or other line)</h2>
-            <p className="mb-3 text-xs text-slate-500">Subscription payments and Stripe fees arrive on their own when an invoice is paid. Use this for everything else.</p>
+            <h2 className="mb-1 font-semibold text-navy">Add a line</h2>
+            <p className="mb-3 text-xs text-slate-500">Subscription payments and Stripe fees arrive on their own when an invoice is paid. Use this for everything else: expenses, salary, dividends and the director&apos;s loan.</p>
             <AddTransactionForm />
           </Card>
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
@@ -104,7 +118,26 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
               </tfoot>
             </table>
           </Card>
-          <p className="mt-2 text-xs text-slate-400">EUR lines are converted at the rate in Settings. Depreciation is included in the P&amp;L but not in cash. This is a management view; your accountant prepares the statutory accounts from the CSV.</p>
+          <Card className="mt-5 p-0">
+            <h2 className="px-4 pt-3 font-semibold text-navy">Loans, dividends &amp; capital</h2>
+            <p className="px-4 pb-1 text-xs text-slate-500">Money in and out of the bank that isn&apos;t profit or loss.</p>
+            <table className="w-full text-left text-sm">
+              <tbody>
+                <GroupRows label={`Movements in ${range.label}`} lines={capital.lines.map((l) => ({ label: l.label, value: money(l.amountMinor), zero: l.amountMinor === 0 }))} />
+              </tbody>
+              <tfoot className="border-t-2 border-slate-200 text-sm">
+                <Total label="Profit after tax" value={money(pnl.retainedProfitMinor)} tone={tone(pnl.retainedProfitMinor)} light />
+                <Total label="Dividends paid" value={money(capital.dividendsMinor)} tone="text-navy" light />
+                <Total label="Kept in the company" value={money(capital.keptAfterDividendsMinor)} tone={tone(capital.keptAfterDividendsMinor)} />
+                <Total label={`Director's loan at the start of ${range.label}`} value={`${money(Math.abs(dla.openingMinor))} · ${owed(dla.openingMinor)}`} tone="text-navy" light />
+                <Total label={`Director's loan at the end of ${range.label}`} value={`${money(Math.abs(dla.closingMinor))} · ${owed(dla.closingMinor)}`} tone={dla.closingMinor < 0 ? "text-port" : "text-navy"} />
+                <Total label="Business loans owed" value={money(capital.businessLoansMinor)} tone="text-navy" light />
+                <Total label="Share capital paid in" value={money(capital.shareCapitalMinor)} tone="text-navy" light />
+                <Total label="Left for dividends (a guide)" value={money(capital.availableForDividendsMinor)} tone={tone(capital.availableForDividendsMinor)} light />
+              </tfoot>
+            </table>
+          </Card>
+          <p className="mt-2 text-xs text-slate-400">EUR lines are converted at the rate in Settings. Depreciation is included in the P&amp;L but not in cash. Dividends and the director&apos;s loan move cash but not profit. &quot;Left for dividends&quot; only counts the years recorded here. This is a management view; your accountant prepares the statutory accounts from the CSV.</p>
         </>
       ) : (
         <Card>
@@ -117,12 +150,12 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
   );
 }
 
-function GroupRows({ label, lines, total }: { label: string; lines: { label: string; value: string; zero: boolean }[]; total: string }) {
+function GroupRows({ label, lines, total }: { label: string; lines: { label: string; value: string; zero: boolean }[]; total?: string }) {
   return (
     <>
       <tr className="bg-slate-50"><td className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500" colSpan={2}>{label}</td></tr>
       {lines.map((l) => <tr key={l.label} className={l.zero ? "text-slate-400" : "text-slate-700"}><td className="px-6 py-1.5">{l.label}</td><td className="px-4 py-1.5 text-right tabular-nums">{l.value}</td></tr>)}
-      <tr className="font-semibold text-navy"><td className="px-4 py-2">Total {label.toLowerCase()}</td><td className="px-4 py-2 text-right tabular-nums">{total}</td></tr>
+      {total !== undefined ? <tr className="font-semibold text-navy"><td className="px-4 py-2">Total {label.toLowerCase()}</td><td className="px-4 py-2 text-right tabular-nums">{total}</td></tr> : null}
     </>
   );
 }

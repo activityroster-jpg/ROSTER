@@ -1,4 +1,4 @@
-import { CATEGORY_BY_KEY, FINANCE_CATEGORIES, type FinanceGroup } from "./categories";
+import { CATEGORY_BY_KEY, FINANCE_CATEGORIES, GROUP_LABEL, PNL_GROUPS, isInflow, type FinanceGroup } from "./categories";
 
 /** The fields the P&L needs; the DB row satisfies it. */
 export interface TxLike {
@@ -56,10 +56,7 @@ export interface Pnl {
   retainedProfitMinor: number;
 }
 
-const GROUP_ORDER: FinanceGroup[] = ["revenue", "cost_of_sales", "operating", "below_the_line"];
-const GROUP_LABEL: Record<FinanceGroup, string> = { revenue: "Revenue", cost_of_sales: "Cost of sales", operating: "Operating expenses", below_the_line: "Below operating profit" };
-
-/** Sum a financial year's transactions into the standard statement, in the reporting currency. */
+/** Sum a financial year's transactions into the standard statement, in the reporting currency. Loans, dividends and capital stay out. */
 export function buildPnl(txs: TxLike[], s: ReportingSettings, fy: number): Pnl {
   const { from, to } = fyRange(fy, s.fyStartMonth);
   const sums = new Map<string, number>();
@@ -68,7 +65,7 @@ export function buildPnl(txs: TxLike[], s: ReportingSettings, fy: number): Pnl {
     if (!CATEGORY_BY_KEY[t.category]) continue;
     sums.set(t.category, (sums.get(t.category) ?? 0) + toReporting(t.amountMinor, t.currency, s));
   }
-  const groups: PnlGroup[] = GROUP_ORDER.map((g) => {
+  const groups: PnlGroup[] = PNL_GROUPS.map((g) => {
     const lines = FINANCE_CATEGORIES.filter((c) => c.group === g).map((c) => ({ key: c.key, label: c.label, amountMinor: sums.get(c.key) ?? 0 }));
     return { group: g, label: GROUP_LABEL[g], lines, totalMinor: lines.reduce((a, l) => a + l.amountMinor, 0) };
   });
@@ -86,12 +83,12 @@ export function buildPnl(txs: TxLike[], s: ReportingSettings, fy: number): Pnl {
   return { fy, from, to, groups, revenueMinor, costOfSalesMinor, grossProfitMinor, operatingExpensesMinor, operatingProfitMinor, interestMinor, rdCreditMinor, profitBeforeTaxMinor, corporationTaxMinor, retainedProfitMinor };
 }
 
-/** Net cash effect of one transaction in the reporting currency (income +, cost −). */
+/** Net cash effect of one transaction in the reporting currency (income and money in +, costs and money out −). */
 export function cashEffect(t: TxLike, s: ReportingSettings): number {
   const cat = CATEGORY_BY_KEY[t.category];
   if (!cat) return 0;
   const v = toReporting(t.amountMinor, t.currency, s);
-  return cat.effect === "cost" ? -v : v;
+  return isInflow(cat) ? v : -v;
 }
 
 /** Opening balance plus everything recorded so far (depreciation is non-cash and excluded). */
@@ -141,6 +138,91 @@ export function expenseBreakdown(txs: TxLike[], s: ReportingSettings, fy: number
     .flatMap((g) => g.lines)
     .filter((l) => l.amountMinor !== 0)
     .sort((a, b) => b.amountMinor - a.amountMinor);
+}
+
+/** Profit after tax from every P&L line dated before `beforeIso` (all years recorded). */
+export function profitBefore(txs: TxLike[], s: ReportingSettings, beforeIso: string): number {
+  let total = 0;
+  for (const t of txs) {
+    const cat = CATEGORY_BY_KEY[t.category];
+    if (!cat || cat.group === "capital" || t.date >= beforeIso) continue;
+    const v = toReporting(t.amountMinor, t.currency, s);
+    total += cat.effect === "income" ? v : -v;
+  }
+  return total;
+}
+
+export interface DirectorsLoan {
+  /** Balances: + the company owes the director, − the director owes the company. */
+  openingMinor: number;
+  closingMinor: number;
+  /** The year's movements, each as entered (positive). */
+  putInMinor: number;
+  repaidMinor: number;
+  takenOutMinor: number;
+}
+export interface CapitalSummary {
+  /** The year's loans, dividends and capital, one line per category (amounts as entered). */
+  lines: PnlLine[];
+  dividendsMinor: number;
+  /** The year's profit after tax, less the dividends paid in it. */
+  keptAfterDividendsMinor: number;
+  directorsLoan: DirectorsLoan;
+  /** Owed to lenders at the year end. */
+  businessLoansMinor: number;
+  /** Paid in for shares, all years to the year end. */
+  shareCapitalMinor: number;
+  /** Profit after tax recorded to the year end, less every dividend paid to then: roughly what is left to pay dividends from. */
+  availableForDividendsMinor: number;
+}
+
+/**
+ * Loans, dividends and capital for a financial year: none of it is profit or
+ * loss, but it moves the bank and what the company owes. Balances run from
+ * the first record to the year end.
+ */
+export function capitalSummary(txs: TxLike[], s: ReportingSettings, fy: number): CapitalSummary {
+  const { from, to } = fyRange(fy, s.fyStartMonth);
+  const year = new Map<string, number>();
+  const before = new Map<string, number>();
+  for (const t of txs) {
+    const cat = CATEGORY_BY_KEY[t.category];
+    if (!cat || cat.group !== "capital" || t.date >= to) continue;
+    const bucket = t.date < from ? before : year;
+    bucket.set(t.category, (bucket.get(t.category) ?? 0) + toReporting(t.amountMinor, t.currency, s));
+  }
+  const y = (k: string) => year.get(k) ?? 0;
+  const all = (k: string) => (before.get(k) ?? 0) + y(k);
+  const dla = (m: (k: string) => number) => m("directors_loan_in") - m("directors_loan_repaid") - m("directors_loan_out");
+  const lines = FINANCE_CATEGORIES.filter((c) => c.group === "capital").map((c) => ({ key: c.key, label: c.label, amountMinor: y(c.key) }));
+  const dividendsMinor = y("dividend_paid");
+  return {
+    lines,
+    dividendsMinor,
+    keptAfterDividendsMinor: buildPnl(txs, s, fy).retainedProfitMinor - dividendsMinor,
+    directorsLoan: {
+      openingMinor: dla((k) => before.get(k) ?? 0),
+      closingMinor: dla(all),
+      putInMinor: y("directors_loan_in"),
+      repaidMinor: y("directors_loan_repaid"),
+      takenOutMinor: y("directors_loan_out"),
+    },
+    businessLoansMinor: all("loan_received") - all("loan_repayment"),
+    shareCapitalMinor: all("share_capital"),
+    availableForDividendsMinor: profitBefore(txs, s, to) - all("dividend_paid"),
+  };
+}
+
+/** Plain-English warnings about the director's loan and dividends, for the top of the page. */
+export function capitalWarnings(c: CapitalSummary, currency: "GBP" | "EUR"): string[] {
+  const out: string[] = [];
+  if (c.directorsLoan.closingMinor < 0) {
+    out.push(`The director owes the company ${fmtMinor(-c.directorsLoan.closingMinor, currency)} on the director's loan. Pay it back, or clear it with salary or a dividend, before the year end: an overdrawn director's loan can mean extra tax for the company and the director. Check with your accountant.`);
+  }
+  if (c.dividendsMinor > 0 && c.availableForDividendsMinor < 0) {
+    out.push(`Dividends are ${fmtMinor(-c.availableForDividendsMinor, currency)} more than the profit after tax recorded here. A dividend paid without enough profit to cover it is unlawful and may have to be paid back: check with your accountant before paying more.`);
+  }
+  return out;
 }
 
 export const fmtMinor = (minor: number, currency: "GBP" | "EUR") =>
