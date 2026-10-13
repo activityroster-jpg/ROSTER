@@ -16,9 +16,9 @@
  *
  * Every finished video is checked (lib/qa.mjs): no step that missed, no
  * stretch with nothing said, narration that ends before the end card, and a
- * file that plays to the end. A video that fails is made once more from a
- * fresh demo centre; if it fails again the run fails, so a faulty set is
- * never published.
+ * file that plays to the end. A video that fails is made again from a fresh
+ * demo centre (up to three tries); if it still fails the run fails, so a
+ * faulty set is never published.
  */
 import { readFileSync, readdirSync, mkdirSync, writeFileSync, rmSync, existsSync, copyFileSync } from "node:fs";
 import { join } from "node:path";
@@ -157,8 +157,13 @@ async function makeVideo(browser, meta, script) {
   // 2. Record (a script can use another made-up centre: host "newcentre" → newcentre.localhost)
   const base = script.host ? BASE.replace("//demo.", `//${script.host}.`) : BASE;
   const page = await signIn(browser, script.who ?? "sam@demo.example", base);
-  for (const path of script.warm ?? []) { await page.goto(`${base}${path}`); await page.waitForLoadState("networkidle").catch(() => {}); }
-  await page.goto(`${base}${script.start}`); await page.waitForLoadState("networkidle").catch(() => {});
+  // Open each page once before recording (so none is slow on camera). A page that doesn't open
+  // properly means the local app isn't right: stop now, and the video is made again after a restart.
+  for (const path of [...(script.warm ?? []), script.start]) {
+    const res = await page.goto(`${base}${path}`);
+    await page.waitForLoadState("networkidle").catch(() => {});
+    if (res && res.status() >= 400) { await page.context().close().catch(() => {}); throw new Error(`${path} answered ${res.status()} before recording started`); }
+  }
   if (script.prepare) await script.prepare(page);
   await sleep(800);
   const thumbAt = Math.max(0, steps.findIndex((s) => s.thumb));
@@ -292,7 +297,7 @@ for (const file of scripts) {
   if (!meta) throw new Error(`${file}: no video ${n} in series.mjs`);
   const script = (await import(pathToFileURL(join(ROOT, "videos", "scripts", file)).href)).default;
   let result;
-  for (let attempt = 1; attempt <= 2; attempt++) {
+  for (let attempt = 1; attempt <= 3; attempt++) {
     if (attempt > 1) console.log(`  ↻ making video ${n} again from a fresh demo centre`);
     try {
       resetDemo();

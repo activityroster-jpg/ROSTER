@@ -103,7 +103,8 @@ jobs:
       - name: Make the videos
         # Each video: a fresh demo centre, record, edit out dead air, then check
         # the finished file (lib/qa.mjs). A video that fails its checks is made
-        # again; if it still fails, this step fails, so the set isn't published.
+        # again (up to three tries); if it still fails, this step fails, so the
+        # set isn't published.
         env:
           VIDEO_RESET: bash videos/reset-demo.sh
         run: node videos/make.mjs ${{ inputs.only != '' && format('--only {0}', inputs.only) || '' }}
