@@ -22,7 +22,7 @@ export default {
     { chapter: "Availability", say: "Available is where Kim says when she can work. Every slot counts as busy until she marks it free, so the office never rosters someone who hasn't said.",
       do: async (h) => { await h.click(h.page.getByRole("link", { name: "Available" })); await h.page.waitForURL(/availability/); await h.wait(1000); await h.point(h.page.getByRole("heading", { name: "My availability" })); } },
     { say: "Tap a slot to change it: free, maybe, or busy. Add a note to a day if there's something the office should know.",
-      do: async (h) => { await h.click(h.page.getByRole("button", { name: /^Mon AM:/ })); await h.wait(900); await h.point(h.page.getByRole("button", { name: "+ note" })); } },
+      do: async (h) => { await h.click(h.page.getByRole("button", { name: /^Mon AM:/ })); await h.wait(900); await h.point(h.page.getByRole("button", { name: /^Add note for/ })); } },
     { say: "The quickest way is My usual week: set it once, and only change the exceptions. Same as last week, and All free, fill a whole week in one tap.",
       do: async (h) => { await h.highlight(h.page.getByRole("button", { name: "My usual week" })); await h.wait(900); await h.highlight(h.page.getByRole("button", { name: "All free" })); } },
     { say: "Use the arrows to set the weeks ahead, as far as your centre allows.",
