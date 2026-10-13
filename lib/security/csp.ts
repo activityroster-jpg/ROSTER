@@ -125,3 +125,51 @@ export function describeViolation(v: CspViolation): string {
   const where = v.sourceFile ? ` from ${v.sourceFile}${v.line != null ? `:${v.line}` : ""}` : "";
   return `CSP (report-only): ${v.violatedDirective ?? "unknown directive"} blocked ${v.blockedUri ?? "inline"}${where}${v.sample ? ` — “${v.sample}”` : ""}`;
 }
+
+export type CspVerdict = "ours" | "extension" | "dev" | "third-party";
+export interface CspGroup { key: string; directive: string; blocked: string; verdict: CspVerdict; count: number; pages: string[]; last: Date }
+
+export const CSP_VERDICT_TEXT: Record<CspVerdict, string> = {
+  ours: "Our own code. Must be fixed before the policy is switched on, or this would break.",
+  extension: "A browser extension on the visitor's computer (password manager, translator, ad blocker). Switching on would only stop the extension touching our pages: safe.",
+  dev: "Developer tools or a local test run. Never happens on the live site for ordinary users: safe.",
+  "third-party": "Something outside ActivityRoster tried to load (often injected by an extension or a network). Safe unless it's a service we added on purpose.",
+};
+
+/**
+ * Sort a stored CSP report (its message, as describeViolation wrote it) into
+ * whose it is. Pure: the Dev Center groups the open reports by this.
+ */
+export function classifyCspMessage(message: string, ownHosts: readonly string[] = ["activityroster.com"]): { directive: string; blocked: string; verdict: CspVerdict } {
+  const m = /^CSP \(report-only\): (\S+) blocked (\S+)(?: from (\S+?))?(?::\d+)?(?: — .*)?$/.exec(message.trim());
+  const directive = m?.[1] ?? "unknown";
+  const blockedRaw = m?.[2] ?? "unknown";
+  const source = m?.[3] ?? "";
+  const isOwn = (u: string) => { try { const h = new URL(u).hostname; return ownHosts.some((o) => h === o || h.endsWith(`.${o}`)); } catch { return false; } };
+  const extension = /^(chrome|moz|safari|safari-web|ms-browser)-extension:/i;
+  let blocked = blockedRaw;
+  try { if (/^https?:/i.test(blockedRaw)) blocked = new URL(blockedRaw).origin; } catch { /* keep as written */ }
+  let verdict: CspVerdict;
+  if (extension.test(blockedRaw) || extension.test(source)) verdict = "extension";
+  else if (blockedRaw === "eval" || /localhost|127\.0\.0\.1|webpack|turbopack/i.test(`${blockedRaw} ${source}`)) verdict = "dev";
+  else if (/^https?:/i.test(blockedRaw)) verdict = isOwn(blockedRaw) ? "ours" : "third-party";
+  else if (blockedRaw === "inline" || blockedRaw === "data" || blockedRaw === "blob") verdict = source && !isOwn(source) ? "third-party" : "ours";
+  else verdict = "third-party";
+  return { directive, blocked, verdict };
+}
+
+/** Group open CSP reports: one row per directive + blocked source, with counts and pages, our own code first. */
+export function groupCspReports(reports: readonly { message: string; path: string | null; createdAt: Date }[], ownHosts?: readonly string[]): CspGroup[] {
+  const by = new Map<string, CspGroup>();
+  for (const r of reports) {
+    const c = classifyCspMessage(r.message, ownHosts);
+    const key = `${c.directive}|${c.blocked}|${c.verdict}`;
+    const g = by.get(key) ?? { key, directive: c.directive, blocked: c.blocked, verdict: c.verdict, count: 0, pages: [], last: r.createdAt };
+    g.count++;
+    if (r.path && !g.pages.includes(r.path) && g.pages.length < 5) g.pages.push(r.path);
+    if (r.createdAt > g.last) g.last = r.createdAt;
+    by.set(key, g);
+  }
+  const order: CspVerdict[] = ["ours", "third-party", "extension", "dev"];
+  return [...by.values()].sort((a, b) => order.indexOf(a.verdict) - order.indexOf(b.verdict) || b.count - a.count);
+}

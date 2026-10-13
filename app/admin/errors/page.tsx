@@ -5,6 +5,8 @@ import Link from "next/link";
 import { ErrorStatus } from "@/components/admin/ErrorStatus";
 import { ResolveCspReports } from "@/components/admin/ResolveCspReports";
 import { GhostButton } from "@/components/admin/GhostButton";
+import { CspSummary } from "@/components/admin/CspSummary";
+import { groupCspReports } from "@/lib/security/csp";
 import type { ErrorReport } from "@/lib/db/schema";
 
 export const dynamic = "force-dynamic";
@@ -28,6 +30,7 @@ export default async function AdminErrorsPage() {
   const groups = [...buckets.values()];
   const openCount = reports.filter((r) => r.status !== "resolved").length;
   const cspOpen = reports.filter((r) => r.digest === "csp-report-only" && r.status !== "resolved").length;
+  const cspGroups = groupCspReports(reports.filter((r) => r.digest === "csp-report-only" && r.status !== "resolved"));
 
   return (
     <div>
@@ -36,6 +39,8 @@ export default async function AdminErrorsPage() {
         Issues users have reported, bucketed by centre. {openCount} open · {reports.length} total. You&apos;re also emailed each one.
         {cspOpen ? <> {cspOpen} {cspOpen === 1 ? "is an open" : "are open"} browser CSP report{cspOpen === 1 ? "" : "s"} (report-only policy — nothing was blocked). <ResolveCspReports count={cspOpen} /></> : null}
       </p>
+
+      <CspSummary groups={cspGroups} />
 
       {groups.length === 0 ? (
         <Card><p className="text-sm text-slate-400">No errors reported. 🎉</p></Card>
