@@ -29,6 +29,8 @@ export interface BoardInstructor {
   knownQualifications: boolean;
   /** The places (role ids) they can fill: their instructor types, or a lower place on the same ladder. */
   fills: string[];
+  /** Instructor types (with a ladder) that have expired by the end of the week: a warning only. */
+  expiredTypes: string[];
   /** Effective availability per `${date}|${slot}` for the week. */
   availability: Record<string, { status: EffectiveStatus; source: AvailabilitySource }>;
 }
@@ -123,6 +125,7 @@ export async function getBoard(repos: Repositories, ctx: AnyTenantContext, monda
   }
 
   const availByInstructor = new Map(matrix.rows.map((r) => [r.instructorId, r]));
+  const weekEnd = addDays(mondayIso, 7);
   const instructors: BoardInstructor[] = staff
     .filter((x) => x.instructor.status === "active" && !x.instructor.anonymisedAt && !x.instructor.restrictedAt)
     .map((x) => {
@@ -142,6 +145,7 @@ export async function getBoard(repos: Repositories, ctx: AnyTenantContext, monda
         knownQualifications: held.size > 0 || teaches.length > 0,
         // With nothing on file nobody is judged: they can fill any place.
         fills: held.size > 0 ? fillablePlaces(held, tc.places, tc.types) : tc.places.map((p) => p.id),
+        expiredTypes: [...(tc.expiry.get(x.instructor.id) ?? new Map<string, string | null>())].filter(([id, until]) => until && until < weekEnd && tc.types.get(id)?.discipline).map(([id]) => tc.types.get(id)!.name),
         availability,
       };
     })

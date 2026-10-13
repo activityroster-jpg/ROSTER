@@ -24,7 +24,7 @@ import {
 import { availabilityHorizon } from "./availability";
 import { fitReason } from "./staff";
 import { getTeachingContext, getTeachingMatrix, type TeachingContext } from "./teaching";
-import { canFillPlace, unsupervised, type SlotPerson } from "@/lib/domain/teaching";
+import { canFillPlace, expiredTypesFor, unsupervised, type SlotPerson } from "@/lib/domain/teaching";
 import { addDays } from "./schedule";
 import { todayIso } from "@/lib/domain/time";
 
@@ -173,6 +173,8 @@ export async function findProblems(repos: Repositories, ctx: AnyTenantContext, o
   // Instructor…) is on, and nobody who supervises their ladder is on duty in that
   // slot anywhere at the centre. Only once the centre has recorded a supervisor.
   if (!opts.instructorId) problems.push(...supervisionProblems(sessions, assignments, courses, roleRow, teachingCtx));
+  // An expired instructor type behind someone's place: a warning, never a block.
+  problems.push(...expiredTypeProblems(sessions, assignments, courses, roleRow, teachingCtx));
 
   // Ratio and safety cover: when the centre flags them.
   if (settings?.enforceRatioChecks ?? false) {
@@ -251,6 +253,33 @@ export function problemsSuffix(problems: Problem[]): string {
   if (problems.length === 0) return "";
   const shown = problems.slice(0, 3).map((p) => `${p.instructorName ? `${p.instructorName} ` : ""}${p.kind === "double-booked" ? "double-booked" : p.kind === "busy" ? "is Busy" : p.kind === "on-leave" ? "is on leave" : p.kind === "not-answered" ? "hasn't answered availability" : p.kind.replace(/-/g, " ")} (${p.date}${p.slot ? ` ${p.slot}` : ""})`);
   return ` ⚠ ${problems.length} problem${problems.length === 1 ? "" : "s"}: ${shown.join("; ")}${problems.length > 3 ? "; …" : ""}`;
+}
+
+/** One warning per person per session whose instructor type for that place has expired by the day. */
+function expiredTypeProblems(
+  sessions: readonly ProblemSession[],
+  assignments: readonly ProblemAssignment[],
+  courses: ReadonlyMap<string, ProblemCourse>,
+  roles: ReadonlyMap<string, { name: string; qualificationTypeId: string | null }>,
+  tc: TeachingContext,
+): Problem[] {
+  const byCourse = new Map<string, ProblemSession[]>();
+  for (const s of sessions) byCourse.set(s.courseId, [...(byCourse.get(s.courseId) ?? []), s]);
+  const out: Problem[] = [];
+  for (const a of assignments) {
+    if (a.status === "declined") continue;
+    const expiry = tc.expiry.get(a.instructorId);
+    if (!expiry) continue;
+    const course = courses.get(a.courseId);
+    const placeTypeId = a.roleTypeId ? roles.get(a.roleTypeId)?.qualificationTypeId ?? null : null;
+    for (const s of sessionsOf(a, byCourse.get(a.courseId) ?? [])) {
+      const gone = expiredTypesFor(expiry, s.date, placeTypeId, course?.courseTypeId ?? null, tc.rulesByCourse, tc.types);
+      if (!gone.length) continue;
+      const until = new Date(`${expiry.get(gone[0]!.id)!}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+      out.push({ kind: "type-expired", severity: "warn", date: s.date, slot: s.slot, courseId: s.courseId, courseName: course?.name ?? "Course", sessionId: s.id, instructorId: a.instructorId, instructorName: null, detail: `${gone.map((t) => t.name).join(", ")} expired on ${until}` });
+    }
+  }
+  return out;
 }
 
 /** One warning per person per slot who teaches under supervision with no supervisor for their ladder on duty in that slot. */

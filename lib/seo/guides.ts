@@ -185,7 +185,7 @@ export const GUIDES: Guide[] = [
       ] },
       { kind: "tip", text: "If the same pattern repeats every week of the summer, build it once and copy it forward, then adjust for leave and bookings." },
     ],
-    product: "ActivityRoster's roster board shows the week by course or by person, with availability alongside. Every assignment is checked for the right instructor type, who can teach the course, availability and ratio, the problems list catches clashes and gaps, and publishing tells everyone in the app. The printable roster and emergency sheet are one click away.",
+    product: "ActivityRoster's roster board shows the week by course or by person, with availability alongside. Every assignment is checked for the right instructor type, who can teach the course and availability, with ratio and licence checks you can switch on; the problems list catches clashes and gaps, and publishing tells everyone in the app. The printable roster and emergency sheet are one click away.",
     landing: "sailing-school-rostering-software",
     learn: "board",
     related: ["sailing-school-staff-scheduling-spreadsheet-template", "how-many-instructors-do-i-need-for-an-rya-course", "how-should-a-sailing-school-manage-instructor-availability"],

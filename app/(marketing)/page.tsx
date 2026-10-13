@@ -17,7 +17,7 @@ export const metadata = {
 // The full platform, one line each, in the order a centre manager cares about.
 // Keep this in step with what is built (and with INCLUDED on the pricing page).
 const PLATFORM = [
-  { icon: CalendarCheck, title: "Roster builder", body: "Build the week; every assignment is checked for licences, ratios and clashes, and each session shows green, orange or red at a glance." },
+  { icon: CalendarCheck, title: "Roster builder", body: "Build the week; every assignment is checked for the right instructor type and availability, with licence, ratio and clash checks you can switch on. Each session shows green, orange or red at a glance." },
   { icon: Sparkles, title: "Auto-roster", body: "One click fills every open role from who's free, shared out evenly. Not enough people? It fills what it can and shows you the gaps." },
   { icon: Smartphone, title: "Instructor app", body: "Shifts, availability, open shifts, hours and documents on their phone, with notifications." },
   { icon: FileCheck, title: "Certs & vetting", body: "Every RYA licence, first aid and DBS/PVG/AccessNI/Garda check, with expiry reminders." },
@@ -32,7 +32,7 @@ const PLATFORM = [
 ];
 
 const SAFETY = [
-  { icon: ShieldCheck, title: "Won't roster the under-qualified", body: "Lapsed first aid or vetting? They can't be assigned without a recorded override." },
+  { icon: ShieldCheck, title: "Make the key checks mandatory", body: "Mark first aid, safeguarding or vetting as mandatory and anyone lapsed can't be assigned without a recorded override." },
   { icon: Users, title: "Ratio-aware", body: "Flags a course the moment it's short of instructors." },
   { icon: LifeBuoy, title: "The right instructor in every place", body: "Each place is an instructor type: an AI never fills a DI place, and a session with no Senior Instructor on duty is flagged. Overrides are recorded." },
   { icon: AlertTriangle, title: "Nothing lapses quietly", body: "Expiry alerts on every licence and check." },

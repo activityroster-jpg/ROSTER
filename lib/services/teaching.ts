@@ -33,6 +33,8 @@ export interface TeachingContext {
   rulesByCourse: Map<string, TeachRule[]>;
   /** instructorId → instructor type ids held. */
   held: Map<string, Set<string>>;
+  /** instructorId → instructor type id → expiry date (null when it doesn't expire or none is recorded). */
+  expiry: Map<string, Map<string, string | null>>;
   /** instructorId → course type ids approved (the Principal's approval, or a legacy "can teach" tick). */
   approved: Map<string, Set<string>>;
   /** role (place) id → its instructor type id, or null. */
@@ -56,6 +58,8 @@ export async function getTeachingContext(repos: Repositories, ctx: AnyTenantCont
   const rules: TeachRule[] = rows.map((r) => ({ qualificationTypeId: r.qualificationTypeId, courseTypeId: r.courseTypeId, alsoRequiresTypeId: r.alsoRequiresTypeId ?? null, needsApproval: Boolean(r.needsApproval) }));
   const held = new Map<string, Set<string>>();
   for (const q of quals) held.set(q.instructorId, (held.get(q.instructorId) ?? new Set<string>()).add(q.qualificationTypeId));
+  const expiry = new Map<string, Map<string, string | null>>();
+  for (const q of quals) expiry.set(q.instructorId, (expiry.get(q.instructorId) ?? new Map<string, string | null>()).set(q.qualificationTypeId, q.expiryDate ?? null));
   const approved = new Map<string, Set<string>>();
   for (const a of approvals) approved.set(a.instructorId, (approved.get(a.instructorId) ?? new Set<string>()).add(a.courseTypeId));
   return {
@@ -63,6 +67,7 @@ export async function getTeachingContext(repos: Repositories, ctx: AnyTenantCont
     rules,
     rulesByCourse: rulesByCourse(rules),
     held,
+    expiry,
     approved,
     placeType: new Map(roles.map((r) => [r.id, r.qualificationTypeId ?? null])),
     places: roles.map((r) => ({ id: r.id, name: r.name, qualificationTypeId: r.qualificationTypeId ?? null, countsTowardRatio: Boolean(r.countsTowardRatio), active: Boolean(r.active) })),

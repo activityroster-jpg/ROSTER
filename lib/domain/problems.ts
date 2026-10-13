@@ -22,6 +22,7 @@ export type ProblemKind =
   | "not-fit"
   | "not-qualified"
   | "no-supervisor"
+  | "type-expired"
   | "unstaffed"
   | "no-safety-cover"
   | "equipment-clash"
@@ -91,6 +92,7 @@ const KIND_LABEL: Record<ProblemKind, string> = {
   "not-fit": "Not cleared to roster",
   "not-qualified": "Not qualified for this place",
   "no-supervisor": "No Senior Instructor on duty",
+  "type-expired": "Instructor type expired",
   unstaffed: "Short of instructors",
   "no-safety-cover": "No safety cover",
   "equipment-clash": "Equipment on two courses at once",

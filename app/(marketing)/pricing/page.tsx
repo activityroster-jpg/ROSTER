@@ -15,7 +15,7 @@ export const metadata = {
 };
 
 const INCLUDED = [
-  "Roster builder with instructor-type, RYA ratio, supervision and licence checks on every assignment",
+  "Roster builder with instructor-type and supervision checks, plus RYA ratio and licence checks you can make mandatory",
   "Auto-roster: one click fills the week's open places evenly from who's available and qualified",
   "Instructor app: shifts, availability, open shifts, leave, hours and documents",
   "Certificate and vetting tracking (DBS, PVG, AccessNI, Garda) with expiry reminders",

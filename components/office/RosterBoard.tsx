@@ -292,6 +292,7 @@ function candidateNote(i: BoardInstructor, slotKey: string, courseTypeId: string
   if (!i.fit) bits.push(i.fitReason);
   if (kind === "course") bits.push("not qualified for this course");
   else if (kind === "place") bits.push(`not a ${place?.name ?? "holder of this type"}`);
+  if (i.expiredTypes?.length) bits.push(`${i.expiredTypes.join(", ")} expired`);
   const on = elsewhere?.get(i.id)?.name;
   if (on) bits.push(`on another course: ${on}`);
   else bits.push(`${av.word}${a?.source === "default" ? " (not answered)" : a?.source === "pattern" ? " (usual week)" : ""}`);

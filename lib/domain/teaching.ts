@@ -223,3 +223,30 @@ export function placeFitIssue(person: PersonFit, courseTypeId: string | null, pl
   if (place?.qualificationTypeId && !person.fills.includes(place.id)) return "place";
   return null;
 }
+
+/**
+ * The instructor types behind this person's place that have expired by the
+ * session date: the place's own ladder at or above the place (when it is an
+ * instructor type), else the types that teach the course. Only a warning: an
+ * expired type never stops anyone being rostered.
+ */
+export function expiredTypesFor(
+  expiry: ReadonlyMap<string, string | null>,
+  onDate: string,
+  placeTypeId: string | null,
+  courseTypeId: string | null,
+  rulesFor: ReadonlyMap<string, readonly TeachRule[]>,
+  types: ReadonlyMap<string, TypeInfo>,
+): TypeInfo[] {
+  const placeType = placeTypeId ? types.get(placeTypeId) : undefined;
+  const teachingTypes = new Set((courseTypeId ? rulesFor.get(courseTypeId) ?? [] : []).map((r) => r.qualificationTypeId));
+  const out: TypeInfo[] = [];
+  for (const [typeId, until] of expiry) {
+    if (!until || until >= onDate) continue;
+    const t = types.get(typeId);
+    if (!t?.discipline) continue;
+    const relevant = placeType?.discipline ? t.discipline === placeType.discipline && t.rank >= placeType.rank : teachingTypes.has(typeId);
+    if (relevant) out.push(t);
+  }
+  return out.sort((a, b) => b.rank - a.rank);
+}

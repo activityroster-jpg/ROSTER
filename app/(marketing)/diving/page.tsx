@@ -33,7 +33,7 @@ const SECTIONS = [
     heading: "PADI standards built in, not bolted on",
     body: [
       "Your centre starts with the PADI course list (Discover Scuba to Divemaster, the specialties, Bubblemaker to Junior Open Water), the professional ratings from Divemaster to Course Director, dive kit and the checks that lapse: annual membership renewal, liability insurance, diving medical, EFR, oxygen provider. Every list is yours to change.",
-      "Each course type carries a student-to-instructor ratio you set, and every assignment is checked as you make it: the person must hold a rating that covers the course, be free, and not be on another dive at the same time. Nothing is silently blocked or silently allowed: when there's a problem the button says “Assign anyway”, and the override is recorded with the reason.",
+      "Each course type carries a student-to-instructor ratio you set, and every assignment is checked as you make it: the person must hold a rating that covers the course and be free. Switch on the ratio, licence and double-booking checks in Settings, and mark the certificates that must be in date. Nothing is silently blocked or silently allowed: when there's a problem the button says “Assign anyway”, and the override is recorded with who decided and when.",
     ],
   },
   {

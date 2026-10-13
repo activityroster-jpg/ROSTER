@@ -68,7 +68,7 @@ export const LANDINGS: Landing[] = [
       {
         heading: "RYA rules built in, not bolted on",
         body: [
-          "Your centre starts with RYA course types, instructor grades, roles and checks already set up. Each course type carries the student-to-instructor ratio and safety-boat requirement your operating procedures set, and you can change any of them. From then on, every assignment is checked as you make it.",
+          "Your centre starts with RYA course types, instructor grades, roles and checks already set up. Each course type carries the student-to-instructor ratio and safety-boat requirement your operating procedures set, and you can change any of them. From then on, assignments are checked as you make them, and you choose which checks are mandatory.",
           "If someone isn't qualified for a course, is marked busy, would push a session over its ratio, or the session has no Senior Instructor on duty, you see it at once. Nothing is silently blocked or silently allowed: an override is one deliberate press, recorded with what it overrode and who pressed it.",
         ],
       },
@@ -106,8 +106,8 @@ export const LANDINGS: Landing[] = [
         body: ["The roster board shows each day's sessions as cards, with who is on them and the roles still open. Click a session and the people list shows everyone's availability for that slot. Drag someone across, or switch to People × days to see a row per instructor with free slots in green."],
       },
       {
-        heading: "Four checks on every assignment",
-        body: ["The moment you put someone on a session, ActivityRoster checks it:"],
+        heading: "Checks as you assign",
+        body: ["The moment you put someone on a session, ActivityRoster checks it. Qualification, availability and supervision are always checked; switch on the ratio and licence checks in Settings and mark which certificates are mandatory:"],
         bullets: [
           "Qualification: do they hold an in-date licence that covers this course?",
           "Availability: have they marked this slot free, maybe or busy?",
@@ -117,7 +117,7 @@ export const LANDINGS: Landing[] = [
       },
       {
         heading: "Problems found after the fact, too",
-        body: ["Rosters change after they're built. Someone marks themselves busy, a session moves, leave is approved, a boat goes into maintenance. The problems list looks at the roster as it stands now and tells you what no longer adds up, from double-bookings to under-18s over their legal hours."],
+        body: ["Rosters change after they're built. Someone marks themselves busy, a session moves, leave is approved, a boat goes into maintenance. The problems list looks at the roster as it stands now and tells you what no longer adds up, from double-bookings to someone rostered while on approved leave."],
       },
       {
         heading: "Publish, confirm, done",
@@ -298,7 +298,7 @@ export const LANDINGS: Landing[] = [
     sections: [
       {
         heading: "What it checks",
-        body: ["Every assignment and every rostered session is checked against your centre's rules:"],
+        body: ["Assignments and rostered sessions are checked against your centre's rules. Instructor types, availability and Senior Instructor cover are always on; you switch on the rest and choose which certificates are mandatory:"],
         bullets: [
           "In-date instructor qualifications that cover the course",
           "First aid, safeguarding and vetting checks you mark as mandatory",

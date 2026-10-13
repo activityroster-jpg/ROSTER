@@ -564,6 +564,7 @@ export const SECTIONS: Section[] = [
         "Someone who said they can't make it and still needs replacing.",
         "Not cleared to roster (an expired mandatory check); someone whose instructor types don't cover the course, or who isn't the place's instructor type (or higher on its ladder).",
         "No Senior Instructor on duty: an Assistant or Dinghy Instructor (or another type that teaches under supervision) on a session with no Senior Instructor for that ladder on in the same slot. It starts once you've recorded at least one Senior Instructor.",
+        "Instructor type expired: someone is on a session after the expiry date recorded for the instructor type that puts them in that place. It's a warning only and never stops you rostering them: update the date on their profile once they've renewed.",
         "Short of instructors for the ratio (when you flag ratios), and equipment clashes or units in maintenance.",
       ] },
       { kind: "sub", text: "Where you see it" },

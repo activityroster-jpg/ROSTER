@@ -68,6 +68,28 @@ describe("cancelling sessions and courses", () => {
     expect(lines.find((l) => l.recordId === line.id)?.pay).toBe(0);
   });
 
+  it("'don't pay' removes pay the office edited, and pay on an approved line (taking it off approval)", async () => {
+    const line0 = (await repos.tenant.hoursRecord.list(ctx, eq(hoursRecordTable.courseSessionId, sessionId)))[0]!;
+    await repos.tenant.hoursRecord.update(ctx, line0.id, { overridePay: 75, overridePayPence: 7500, approved: true, approvedAt: new Date() });
+    await cancelSessions(repos, ctx, { courseId, reason: "Gale", pay: { rule: "none" } });
+    const line = (await repos.tenant.hoursRecord.findById(ctx, line0.id))!;
+    expect(line.overridePayPence).toBe(0);
+    expect(line.approved).toBe(false);
+    expect(line.note).toMatch(/pay removed/);
+    const { lines } = await getPayrollLines(repos, ctx);
+    expect(lines.find((l) => l.recordId === line.id)?.pay).toBe(0);
+  });
+
+  it("restore clears an edited cancellation amount in both pay columns", async () => {
+    const line0 = (await repos.tenant.hoursRecord.list(ctx, eq(hoursRecordTable.courseSessionId, sessionId)))[0]!;
+    await repos.tenant.hoursRecord.update(ctx, line0.id, { overridePay: 75, overridePayPence: 7500 });
+    await cancelSessions(repos, ctx, { courseId, reason: "", pay: { rule: "fee", fee: 20 } });
+    expect((await repos.tenant.hoursRecord.findById(ctx, line0.id))!.overridePayPence).toBe(2000);
+    await restoreSessions(repos, ctx, courseId, [sessionId]);
+    const line = (await repos.tenant.hoursRecord.findById(ctx, line0.id))!;
+    expect(line.overridePayPence).toBeNull();
+  });
+
   it("a cancellation fee pays the fee instead of the hours", async () => {
     await cancelSessions(repos, ctx, { courseId, reason: "No bookings", pay: { rule: "fee", fee: 30 } });
     const { lines } = await getPayrollLines(repos, ctx);

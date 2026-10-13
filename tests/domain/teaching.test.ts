@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { approvalCourses, canFillPlace, canTeachByRules, coursesTaught, defaultPlaceType, placeFitIssue, rulesByCourse, unsupervised, type TeachRule, type TypeInfo } from "@/lib/domain/teaching";
+import { approvalCourses, canFillPlace, expiredTypesFor, canTeachByRules, coursesTaught, defaultPlaceType, placeFitIssue, rulesByCourse, unsupervised, type TeachRule, type TypeInfo } from "@/lib/domain/teaching";
 
 const type = (id: string, discipline: string | null, rank: number, extra: Partial<TypeInfo> = {}): TypeInfo => ({ id, name: id, discipline, rank, needsSupervision: false, supervises: false, ...extra });
 const TYPES = new Map<string, TypeInfo>([
@@ -100,5 +100,21 @@ describe("who can teach what", () => {
     expect(approvalCourses(byCourse, held("DI"))).toEqual(["DaySailing"]);
     expect(approvalCourses(byCourse, held("DI", "SI"))).toEqual([]); // an SI teaches it outright
     expect(approvalCourses(byCourse, held("AI"))).toEqual([]);
+  });
+});
+
+describe("expiredTypesFor: an expired instructor type only warns", () => {
+  const ty = (id: string, discipline: string | null, rank: number) => ({ id, name: id, discipline, rank, needsSupervision: false, supervises: false });
+  const types = new Map([["DI", ty("DI", "dinghy", 20)], ["SI", ty("SI", "dinghy", 40)], ["PBI", ty("PBI", "powerboat", 20)], ["FA", ty("FA", null, 0)]]);
+  const rules = new Map([["stage1", [{ qualificationTypeId: "DI", courseTypeId: "stage1", alsoRequiresTypeId: null, needsApproval: false }]]]);
+
+  it("flags the place's ladder at or above the place, once past the session date", () => {
+    const expiry = new Map<string, string | null>([["SI", "2026-05-01"], ["PBI", "2026-01-01"], ["FA", "2026-01-01"]]);
+    expect(expiredTypesFor(expiry, "2026-06-01", "DI", "stage1", rules, types).map((t) => t.id)).toEqual(["SI"]);
+    expect(expiredTypesFor(expiry, "2026-04-30", "DI", "stage1", rules, types)).toEqual([]);
+  });
+  it("without a typed place, looks at the types that teach the course", () => {
+    expect(expiredTypesFor(new Map([["DI", "2026-01-01"]]), "2026-06-01", null, "stage1", rules, types).map((t) => t.id)).toEqual(["DI"]);
+    expect(expiredTypesFor(new Map([["DI", null]]), "2026-06-01", null, "stage1", rules, types)).toEqual([]);
   });
 });
