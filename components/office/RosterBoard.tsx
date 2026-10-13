@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import type { BoardData, BoardInstructor, OpenRole } from "@/lib/services/board";
 import type { RotaDay, RotaSession } from "@/lib/services/schedule";
-import { autoRosterAction, boardAssignAction, boardAssignManyAction, boardRemoveAction } from "@/app/(app)/office/rota/board-actions";
+import { autoRosterAction, undoAutoRosterAction, boardAssignAction, boardAssignManyAction, boardRemoveAction } from "@/app/(app)/office/rota/board-actions";
 import { setCourseStaffingAction } from "@/app/(app)/office/courses/actions";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { groupCandidates } from "@/lib/domain/assign-order";
@@ -46,12 +46,17 @@ export function RosterBoard({ data, canEdit }: { data: BoardData; canEdit: boole
   const [pendingDrop, setPendingDrop] = useState<{ session: RotaSession; day: RotaDay; instructorId: string } | null>(null);
   const [autoOpen, setAutoOpen] = useState(false);
   const [autoBusy, startAuto] = useTransition();
-  const [autoMsg, setAutoMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [autoMsg, setAutoMsg] = useState<{ ok: boolean; text: string; undoId?: string } | null>(null);
   const [autoMode, setAutoMode] = useState<"open" | "redo">("open");
+  const undoAuto = (id: string) => startAuto(async () => {
+    const r = await undoAutoRosterAction(id);
+    setAutoMsg({ ok: r.ok, text: r.ok ? r.message ?? "Undone" : r.error ?? "Couldn't undo" });
+    if (r.ok) router.refresh();
+  });
   const runAuto = () => startAuto(async () => {
     const r = await autoRosterAction({ monday: data.monday, mode: autoMode });
     setAutoOpen(false);
-    setAutoMsg({ ok: r.ok, text: r.ok ? r.message ?? "Done" : r.error ?? "Couldn't auto-roster" });
+    setAutoMsg({ ok: r.ok, text: r.ok ? r.message ?? "Done" : r.error ?? "Couldn't auto-roster", undoId: r.ok ? r.undoId : undefined });
     if (r.ok) router.refresh();
   });
 
@@ -94,7 +99,7 @@ export function RosterBoard({ data, canEdit }: { data: BoardData; canEdit: boole
           </div>
         ) : null}
       </div>
-      {autoMsg ? <p role="status" className={`mb-3 rounded-lg border px-3 py-2 text-sm ${autoMsg.ok ? "border-starboard/40 bg-starboard/10 text-navy" : "border-port/40 bg-port/10 text-port"}`}>{autoMsg.text}</p> : null}
+      {autoMsg ? <p role="status" className={`mb-3 rounded-lg border px-3 py-2 text-sm ${autoMsg.ok ? "border-starboard/40 bg-starboard/10 text-navy" : "border-port/40 bg-port/10 text-port"}`}>{autoMsg.text}{autoMsg.undoId ? <> <button type="button" disabled={autoBusy} onClick={() => undoAuto(autoMsg.undoId!)} className="ml-1 font-semibold text-teal hover:underline disabled:opacity-50">Undo</button></> : null}</p> : null}
       <ConfirmDialog open={autoOpen} title="Auto-roster this week" tone="teal" confirmLabel={autoMode === "redo" ? "Redo the whole week" : `Fill the ${totalOpen} open place${totalOpen === 1 ? "" : "s"}`} busy={autoBusy} confirmDisabled={autoMode === "open" && totalOpen === 0} onConfirm={runAuto} onCancel={() => setAutoOpen(false)}
         consequences={["Each place goes to someone who is Free (then Maybe) for that session, cleared to roster, able to teach the course type and holding the place's instructor type (or a higher one on its ladder); sessions are shared out as evenly as possible, and nobody is put on two sessions that clash.", "The usual checks run; nothing is overridden, and places nobody suitable is free for stay open.", "You can change any of it afterwards by hand."]}>
         <div className="space-y-2 text-sm text-navy">
@@ -104,7 +109,7 @@ export function RosterBoard({ data, canEdit }: { data: BoardData; canEdit: boole
           </label>
           <label className="flex items-start gap-2">
             <input type="radio" name="auto-mode" checked={autoMode === "redo"} onChange={() => setAutoMode("redo")} className="mt-1" />
-            <span><span className="font-semibold">Redo the whole week.</span> Everyone comes off this week&rsquo;s sessions first (confirmed people too; a day of a multi-day course is skipped for that day only) and is told, then every place is filled afresh.</span>
+            <span><span className="font-semibold">Redo the whole week.</span> Every place is worked out afresh, then saved in one go. People who keep their sessions aren&rsquo;t touched; on confirmed days only the people whose shifts change are told. You can undo it straight after.</span>
           </label>
         </div>
       </ConfirmDialog>

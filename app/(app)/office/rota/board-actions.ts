@@ -12,6 +12,7 @@ import { idSchema } from "@/lib/validation/actions";
 import { getBoard } from "@/lib/services/board";
 import { weekStart } from "@/lib/services/schedule";
 import { planAutoRoster, type AutoInstructor, type AutoSession } from "@/lib/domain/auto-roster";
+import { redoWeek, undoRedo } from "@/lib/services/week-redo";
 
 type Result = { ok: boolean; error?: string; message?: string };
 
@@ -99,33 +100,23 @@ export async function boardRemoveAction(input: { sessionId: string; courseId: st
  * are counted back. One-day courses get the person on the course; a day of a
  * multi-day course gets them for that day only.
  */
-export async function autoRosterAction(input: { monday: string; mode?: "open" | "redo" }): Promise<Result & { filled?: number; open?: number; cleared?: number }> {
+export async function autoRosterAction(input: { monday: string; mode?: "open" | "redo" }): Promise<Result & { filled?: number; open?: number; cleared?: number; undoId?: string }> {
   const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   if (typeof input?.monday !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(input.monday)) return { ok: false, error: "Invalid week" };
   const redo = input.mode === "redo";
   const monday = weekStart(new Date(`${input.monday}T00:00:00Z`));
-  let board = await getBoard(repos, ctx, monday);
+  const board = await getBoard(repos, ctx, monday);
 
-  // "Redo the whole week": everyone comes off this week's sessions first (a day of a
-  // multi-day course is skipped for that day only), then every role is open.
-  let cleared = 0;
+  // "Redo the whole week": the new week is worked out first, then saved in one
+  // go (people who stay where they are aren't touched or told), with an undo.
   if (redo) {
-    for (const d of board.days) {
-      for (const s of d.sessions) {
-        if (s.status === "cancelled") continue;
-        const multiDay = board.sessionMeta[s.sessionId]?.multiDay ?? true;
-        for (const m of s.staff) {
-          if (m.status === "declined") continue;
-          const r = m.assignmentId && !m.dayOnly && !multiDay
-            ? await removeFromCourse(repos, ctx, s.courseId, m.assignmentId)
-            : m.assignmentId
-              ? await setDayStaff(repos, ctx, { sessionId: s.sessionId, instructorId: m.instructorId, roleTypeId: m.roleTypeId, mode: "skip", note: "Auto-roster: week redone" })
-              : await clearDayStaff(repos, ctx, s.sessionId, m.instructorId);
-          if (r.ok) cleared++;
-        }
-      }
-    }
-    board = await getBoard(repos, ctx, monday);
+    const r = await redoWeek(repos, ctx, monday);
+    refresh();
+    const changed = r.added + r.removed;
+    const msg = changed === 0
+      ? "Week redone: nothing needed to change."
+      : `Week redone: ${r.removed} taken off, ${r.added} put on${r.open ? `; ${r.open} place${r.open === 1 ? "" : "s"} still open (not enough suitable people free)` : "; every place covered"}.${r.notified ? ` ${r.notified} ${r.notified === 1 ? "person" : "people"} on confirmed days told.` : ""}`;
+    return { ok: true, message: msg, filled: r.added, open: r.open, cleared: r.removed, ...(r.auditId && changed ? { undoId: r.auditId } : {}) };
   }
 
   const load = new Map<string, number>();
@@ -165,23 +156,20 @@ export async function autoRosterAction(input: { monday: string; mode?: "open" | 
     else refused.push("error" in r ? r.error : assignBlockMessage(r.reason, r.detail));
   }
   const stillOpen = plan.unfilled.reduce((n, u) => n + u.missing, 0) + (plan.picks.length - filled);
-  await writeAudit(repos, ctx, { action: "auto_roster", entity: "roster", entityId: monday, after: { week: monday, mode: redo ? "redo" : "open", cleared, filled, stillOpen, refused: refused.slice(0, 20) } });
+  await writeAudit(repos, ctx, { action: "auto_roster", entity: "roster", entityId: monday, after: { week: monday, mode: "open", filled, stillOpen, refused: refused.slice(0, 20) } });
   refresh();
-  const lead = redo ? `Week redone: ${cleared} taken off, then ` : "";
   const msg = stillOpen === 0
-    ? `${lead}${redo ? "f" : "F"}illed ${filled} role${filled === 1 ? "" : "s"}. Every role is now covered.`
-    : `${lead}${redo ? "f" : "F"}illed ${filled} role${filled === 1 ? "" : "s"}; ${stillOpen} still open — not enough suitable people free. Those stay marked open on the board.`;
-  return { ok: true, message: msg, filled, open: stillOpen, cleared };
+    ? `Filled ${filled} role${filled === 1 ? "" : "s"}. Every role is now covered.`
+    : `Filled ${filled} role${filled === 1 ? "" : "s"}; ${stillOpen} still open — not enough suitable people free. Those stay marked open on the board.`;
+  return { ok: true, message: msg, filled, open: stillOpen };
 }
 
-/** Take someone off a one-day course during a week redo: the same steps as Remove on the board. */
-async function removeFromCourse(repos: Parameters<typeof getBoard>[0], ctx: Parameters<typeof getBoard>[1], courseId: string, assignmentId: string): Promise<{ ok: boolean }> {
-  const assignment = await repos.tenant.courseStaff.findById(ctx, assignmentId);
-  if (!assignment || assignment.courseId !== courseId) return { ok: false };
-  await repos.tenant.courseStaff.delete(ctx, assignmentId);
-  await writeAudit(repos, ctx, { action: "remove_staff", entity: "course", entityId: courseId, after: { assignmentId, from: "auto-roster redo" } });
-  await syncHoursForCourse(repos, ctx, courseId);
-  const [course, sessions] = await Promise.all([repos.tenant.course.findById(ctx, courseId), repos.tenant.courseSession.list(ctx, eq(courseSessionTable.courseId, courseId))]);
-  await notifyRosterChange(repos, ctx, assignment.instructorId, course?.name ?? "a course", sessions.map((s) => s.date), "removed");
-  return { ok: true };
+/** Put the week back as it was before a "Redo the whole week" run. */
+export async function undoAutoRosterAction(auditId: string): Promise<Result> {
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
+  if (!idSchema.safeParse(auditId).success) return { ok: false, error: "That run can't be undone" };
+  const r = await undoRedo(repos, ctx, auditId);
+  if (!r.ok) return { ok: false, error: r.error };
+  refresh();
+  return { ok: true, message: `Undone: the week is back as it was (${r.removed} taken off, ${r.added} put back).` };
 }

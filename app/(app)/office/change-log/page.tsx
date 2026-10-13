@@ -2,6 +2,7 @@ import { requireTenant } from "@/lib/tenant/require";
 import { Card } from "@/components/ui";
 import { GuideLink } from "@/components/GuideLink";
 import { describeAudit } from "@/lib/services/changelog";
+import { UndoRedoButton } from "@/components/office/UndoRedoButton";
 
 export const dynamic = "force-dynamic";
 
@@ -18,8 +19,8 @@ export default async function ChangeLogPage() {
   };
   const security = await repos.control.listSecurityEventsForOrg(ctx.organisationId, 200).catch(() => []);
   const entries = [
-    ...(await repos.tenant.auditLog.list(ctx)).map((e) => ({ id: e.id, actorUserId: e.actorUserId, text: describeAudit(e.action, e.entity, e.after), createdAt: e.createdAt, kind: "change" as const })),
-    ...security.map((e) => ({ id: `sec-${e.id}`, actorUserId: e.kind.startsWith("ghost") ? null : e.userId, text: `${SECURITY[e.kind] ?? e.kind.replace(/_/g, " ")}${e.country ? ` (${e.country})` : ""}`, createdAt: e.createdAt, kind: "security" as const })),
+    ...(await repos.tenant.auditLog.list(ctx)).map((e) => ({ id: e.id, actorUserId: e.actorUserId, text: describeAudit(e.action, e.entity, e.after), createdAt: e.createdAt, kind: "change" as const, undo: e.action === "auto_roster_redo" && Date.now() - new Date(e.createdAt).getTime() < 14 * 86_400_000 })),
+    ...security.map((e) => ({ id: `sec-${e.id}`, actorUserId: e.kind.startsWith("ghost") ? null : e.userId, text: `${SECURITY[e.kind] ?? e.kind.replace(/_/g, " ")}${e.country ? ` (${e.country})` : ""}`, createdAt: e.createdAt, kind: "security" as const, undo: false })),
   ]
     .sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0))
     .slice(0, 400);
@@ -59,7 +60,7 @@ export default async function ChangeLogPage() {
                   <span className="font-medium text-navy">{e.actorUserId ? names.get(e.actorUserId) ?? "Someone" : "ActivityRoster"}</span>{" "}
                   <span className="text-slate-600">{e.text}</span>{e.kind === "security" ? <span className="ml-2 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">sign-in</span> : null}
                 </div>
-                <time className="text-xs text-slate-400">{e.createdAt ? fmt(new Date(e.createdAt)) : ""}</time>
+                <span className="flex items-baseline gap-3">{e.undo ? <UndoRedoButton id={e.id} /> : null}<time className="text-xs text-slate-400">{e.createdAt ? fmt(new Date(e.createdAt)) : ""}</time></span>
               </li>
             ))
           )}
