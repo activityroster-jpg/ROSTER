@@ -8,7 +8,8 @@ name: Make videos
 # The narration voice comes from whichever key is set (Settings → Secrets and
 # variables → Actions): ELEVENLABS_API_KEY (recommended), GOOGLE_TTS_API_KEY,
 # or AZURE_SPEECH_KEY. With none, a free preview voice is used, good enough to
-# check the timing. Only the script text is sent to the voice service.
+# check the timing. Only the script text is sent to the voice service. With
+# the ElevenLabs key, a logo sting and a music bed are made once and reused.
 
 on:
   workflow_dispatch:
@@ -68,9 +69,9 @@ jobs:
       - name: Reuse narration already made (so unchanged lines aren't paid for twice)
         uses: actions/cache@v4
         with:
-          path: videos/.cache/voice
-          key: voice-${{ hashFiles('videos/scripts/**') }}
-          restore-keys: voice-
+          path: videos/.cache
+          key: videocache-${{ hashFiles('videos/scripts/**', 'videos/lib/brand-audio.mjs') }}
+          restore-keys: videocache-
       - name: Local settings (a throwaway secret, made fresh each run)
         run: |
           {

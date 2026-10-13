@@ -18,6 +18,7 @@ import { pathToFileURL } from "node:url";
 import { createRequire } from "node:module";
 import { SERIES, byNumber } from "./series.mjs";
 import { voiceLines } from "./lib/tts.mjs";
+import { brandAudio } from "./lib/brand-audio.mjs";
 import { renderCard, renderThumb, FPS } from "./lib/cards.mjs";
 import { OVERLAY, VIEWPORT, SCALE, recordSteps } from "./lib/record.mjs";
 import { ffmpeg, durationOf } from "./lib/ffmpeg.mjs";
@@ -152,18 +153,30 @@ async function makeVideo(browser, meta, script) {
   await ffmpeg(["-i", intro, "-i", main, "-i", outro, "-filter_complex", "[0:v][1:v][2:v]concat=n=3:v=1:a=0,format=yuv420p[v]", "-map", "[v]", "-c:v", "libx264", "-preset", "medium", "-crf", "18", "-r", String(FPS), picture]);
   const total = await durationOf(picture);
 
-  // 6. Narration placed at each line's moment, levelled for YouTube
+  // 6. Sound: narration at each line's moment, the logo sting on the intro and
+  //    the music bed under the title card and outro, levelled for YouTube.
   const starts = rec.marks.map((m) => introLen + m);
   const final = join(out, `${name}.mp4`);
   const voiced = voice.lines.map((l, i) => ({ ...l, at: starts[i] })).filter((l) => l.file);
-  if (voiced.length) {
-    const inputs = voiced.flatMap((l) => ["-i", l.file]);
-    const delays = voiced.map((l, i) => `[${i + 1}:a]adelay=${Math.round(l.at * 1000)}:all=1[a${i}]`).join(";");
-    const mix = `${voiced.map((_, i) => `[a${i}]`).join("")}amix=inputs=${voiced.length}:normalize=0:dropout_transition=0,apad,atrim=0:${total.toFixed(3)},loudnorm=I=-16:TP=-1.5:LRA=11[aout]`;
-    await ffmpeg(["-i", picture, ...inputs, "-filter_complex", `${delays};${mix}`, "-map", "0:v", "-map", "[aout]", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-movflags", "+faststart", final]);
+  const brand = await brandAudio();
+  const outroStart = introLen + mainLen, outroLen = total - outroStart;
+  const fmt = "aformat=sample_rates=48000:channel_layouts=stereo";
+  const inputs = [];
+  const chains = [];
+  const add = (file, chain) => { inputs.push("-i", file); const idx = inputs.length / 2; chains.push(`[${idx}:a]${fmt},${chain}[s${chains.length}]`); };
+  for (const l of voiced) add(l.file, `adelay=${Math.round(l.at * 1000)}:all=1`);
+  if (brand.sting) add(brand.sting, "volume=0.75,adelay=120:all=1");
+  if (brand.music) {
+    add(brand.music, `atrim=0:${introLen.toFixed(3)},asetpts=PTS-STARTPTS,volume=0.30,afade=t=in:st=0:d=0.6,afade=t=out:st=${Math.max(0, introLen - 1.4).toFixed(3)}:d=1.4`);
+    add(brand.music, `atrim=0:${outroLen.toFixed(3)},asetpts=PTS-STARTPTS,volume=0.30,afade=t=in:st=0:d=0.8,afade=t=out:st=${Math.max(0, outroLen - 1.6).toFixed(3)}:d=1.6,adelay=${Math.round(outroStart * 1000)}:all=1`);
+  }
+  if (chains.length) {
+    const mix = `${chains.map((_, i) => `[s${i}]`).join("")}amix=inputs=${chains.length}:normalize=0:dropout_transition=0,apad,atrim=0:${total.toFixed(3)},loudnorm=I=-16:TP=-1.5:LRA=11[aout]`;
+    await ffmpeg(["-i", picture, ...inputs, "-filter_complex", `${chains.join(";")};${mix}`, "-map", "0:v", "-map", "[aout]", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-movflags", "+faststart", final]);
   } else {
     await ffmpeg(["-i", picture, "-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo", "-map", "0:v", "-map", "1:a", "-c:v", "copy", "-c:a", "aac", "-shortest", "-movflags", "+faststart", final]);
   }
+  if (brand.sting || brand.music) console.log(`  sound: ${[brand.sting && "logo sting", brand.music && "music bed"].filter(Boolean).join(" + ")}`);
 
   // 7. Captions, thumbnail, chapters and description
   writeFileSync(join(out, `${name}.en.srt`), captions(steps.map((s) => s.say), starts, voice.lines.map((l) => l.seconds)));
@@ -183,7 +196,7 @@ async function makeVideo(browser, meta, script) {
     `TAGS`, (script.tags ?? []).concat(["ActivityRoster", "sailing centre rostering", "RYA instructor scheduling", "watersports staff rota"]).join(", "), ``,
     `CAPTIONS: upload ${name}.en.srt as English subtitles.`,
     `THUMBNAIL: ${name}-thumbnail.png`,
-    `VOICE: ${voice.provider.label}`,
+    `VOICE: ${voice.provider.label}${brand.music || brand.sting ? " · music and sting: ElevenLabs" : ""}`,
   ].join("\n");
   writeFileSync(join(out, `${name}-youtube.txt`), yt + "\n");
   if (warnings.length) writeFileSync(join(out, `${name}-warnings.txt`), warnings.join("\n") + "\n");

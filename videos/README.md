@@ -14,7 +14,9 @@ the platform means re-running the workflow, not re-filming.
   `ELEVENLABS_API_KEY` (recommended; optional variable `ELEVENLABS_VOICE_ID`),
   or `GOOGLE_TTS_API_KEY`, or `AZURE_SPEECH_KEY`. With none, a free preview voice
   is used to check timing. Only the script text is sent. Narration is cached, so
-  re-runs only pay for lines that changed.
+  re-runs only pay for lines that changed. With the ElevenLabs key, a logo sting
+  and a music bed (title card and outro only, never under the narration) are
+  made once and reused by every video.
 - **Scripts:** `videos/scripts/NN-slug.mjs`. Each step is a line to say and what
   happens on screen while it's said. The series list is `videos/series.mjs`.
 - **Data:** a made-up centre from `videos/seed.test.ts`, on a throwaway local
