@@ -193,6 +193,9 @@ export async function stepUpWithPinAction(pin: string | null): Promise<PinResult
     const mins = Math.ceil((sec.pinLockedUntil.getTime() - Date.now()) / 60000);
     return { ok: false, error: `Too many attempts. Try again in ${mins} minute${mins === 1 ? "" : "s"}.` };
   }
+  // The attempt is counted before the PIN is checked, in one statement, so parallel guesses can't beat the limit.
+  const attempt = await control.claimPinAttempt(info.userId, PIN_MAX_FAILS);
+  if (attempt === null) return { ok: false, error: "Too many attempts. Try again in 15 minutes." };
   if (await verifyPin(pin, sec.pinHash)) {
     await control.resetPinFailures(info.userId);
     const env = getEnv();
@@ -200,9 +203,8 @@ export async function stepUpWithPinAction(pin: string | null): Promise<PinResult
     await recordSecurityEvent("step_up", { userId: info.userId });
     return { ok: true };
   }
-  const attempt = (sec.pinFailedCount ?? 0) + 1;
   const willLock = attempt >= PIN_MAX_FAILS;
-  await control.recordPinFailure(info.userId, willLock ? new Date(Date.now() + PIN_LOCK_MS) : null);
+  if (willLock) await control.lockPin(info.userId, new Date(Date.now() + PIN_LOCK_MS));
   await recordSecurityEvent(willLock ? "pin_locked" : "pin_failed", { userId: info.userId, meta: { attempt, stepUp: true } });
   const left = PIN_MAX_FAILS - attempt;
   return { ok: false, needsPin: true, error: willLock ? "Too many attempts — locked for 15 minutes." : `Incorrect PIN. ${left} attempt${left === 1 ? "" : "s"} left.` };
@@ -222,15 +224,16 @@ export async function verifyPinAction(pin: string, next: string): Promise<PinRes
     return { ok: false, error: `Too many attempts. Try again in ${mins} minute${mins === 1 ? "" : "s"}.` };
   }
 
+  const attempt = await control.claimPinAttempt(info.userId, PIN_MAX_FAILS);
+  if (attempt === null) return { ok: false, error: "Too many attempts. Try again in 15 minutes." };
   if (await verifyPin(pin, sec.pinHash)) {
     await control.resetPinFailures(info.userId);
     if (info.sessionId) await setVerifiedCookie(info.sessionId);
     return { ok: true, next: safeNext(next) };
   }
 
-  const attempt = (sec.pinFailedCount ?? 0) + 1;
   const willLock = attempt >= PIN_MAX_FAILS;
-  await control.recordPinFailure(info.userId, willLock ? new Date(Date.now() + PIN_LOCK_MS) : null);
+  if (willLock) await control.lockPin(info.userId, new Date(Date.now() + PIN_LOCK_MS));
   await recordSecurityEvent(willLock ? "pin_locked" : "pin_failed", { userId: info.userId, meta: { attempt } });
   if (willLock) {
     await notifySecurityChange(info.userId, "Your ActivityRoster PIN was locked after repeated wrong attempts", "<p>Someone entered the wrong login PIN on your account 5 times, so it's locked for 15 minutes.</p>");

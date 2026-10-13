@@ -501,6 +501,31 @@ export class ControlPlaneRepository {
     await this.db.update(user).set({ pinHash: null, pinFailedCount: 0, pinLockedUntil: null }).where(eq(user.id, userId));
   }
 
+  /**
+   * Take one PIN attempt, atomically, before the PIN is checked: the count goes
+   * up in the same statement that checks the lock, so guesses sent in parallel
+   * can't all read the same count and slip past the limit. Returns the attempt
+   * number, or null when the PIN is locked (or the limit is used up). A lock
+   * that has run out starts the count again.
+   */
+  async claimPinAttempt(userId: string, max: number, now: Date = new Date()): Promise<number | null> {
+    const t = now.getTime();
+    const rows = await this.db
+      .update(user)
+      .set({
+        pinFailedCount: sql`CASE WHEN ${user.pinLockedUntil} IS NOT NULL AND ${user.pinLockedUntil} <= ${t} THEN 1 ELSE ${user.pinFailedCount} + 1 END`,
+        pinLockedUntil: sql`CASE WHEN ${user.pinLockedUntil} IS NOT NULL AND ${user.pinLockedUntil} <= ${t} THEN NULL ELSE ${user.pinLockedUntil} END`,
+      })
+      .where(and(eq(user.id, userId), sql`(${user.pinLockedUntil} IS NULL OR ${user.pinLockedUntil} <= ${t})`, sql`(${user.pinFailedCount} < ${max} OR ${user.pinLockedUntil} IS NOT NULL)`))
+      .returning({ count: user.pinFailedCount });
+    return rows[0]?.count ?? null;
+  }
+
+  /** Lock the PIN until this time (the attempt that reached the limit failed). */
+  async lockPin(userId: string, until: Date): Promise<void> {
+    await this.db.update(user).set({ pinLockedUntil: until }).where(eq(user.id, userId));
+  }
+
   async recordPinFailure(userId: string, lockUntil: Date | null): Promise<void> {
     const current = await this.getUserSecurity(userId);
     const count = (current?.pinFailedCount ?? 0) + 1;

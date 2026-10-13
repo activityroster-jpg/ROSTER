@@ -10,11 +10,12 @@ function same(a: string, b: string): boolean {
 /**
  * Shared secret for machine callers (the hourly outreach tick, the nightly
  * backup report). Sent as the x-cron-secret header (x-outreach-secret is the
- * older name and still accepted). Constant-time compare; no secret → refuse.
+ * older name and still accepted); never in the address, where it would end up
+ * in logs. Constant-time compare; no secret → refuse.
  */
 export function checkCronSecret(req: Request): boolean {
   const secret = getEnv().OUTREACH_CRON_SECRET;
   if (!secret) return false;
-  const given = req.headers.get("x-cron-secret") ?? req.headers.get("x-outreach-secret") ?? new URL(req.url).searchParams.get("secret") ?? "";
+  const given = req.headers.get("x-cron-secret") ?? req.headers.get("x-outreach-secret") ?? "";
   return same(given, secret);
 }

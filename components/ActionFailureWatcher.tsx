@@ -14,7 +14,9 @@ const VERSION_CHECK_MIN_MS = 60_000;
  * never answers would otherwise freeze every button after it (12 Oct: the
  * centre admin "frozen after heavy use" while a fresh window was fine).
  */
-const ACTION_STALL_MS = 25_000;
+const ACTION_STALL_MS = 90_000;
+/** A save running longer than this shows the "still working" indicator, so a big publish or Auto-roster never looks frozen. */
+const SHOW_PROGRESS_MS = 2_500;
 const PAGE_STALL_MS = 40_000;
 /** Saves slower than this are reported (no banner) so the Dev Center shows where time goes. */
 const SLOW_MS = 8_000;
@@ -34,6 +36,14 @@ export function ActionFailureWatcher() {
   // A save answered with a Cloudflare security check (an HTML page instead of
   // the action's result): the page looks frozen until it is reloaded.
   const [challenged, setChallenged] = useState(false);
+  // Saves in flight (count) and when the oldest started, for the progress indicator.
+  const [inFlight, setInFlight] = useState<{ count: number; since: number }>({ count: 0, since: 0 });
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!inFlight.count) return;
+    const t = window.setInterval(() => setNow(Date.now()), 1_000);
+    return () => window.clearInterval(t);
+  }, [inFlight.count]);
   // A new build went live while this page was open: say so before a save fails.
   useEffect(() => {
     if (BUILD_ID === "dev" || !REPORTED_AREAS.test(window.location.pathname)) return;
@@ -76,13 +86,17 @@ export function ActionFailureWatcher() {
       const started = Date.now();
       let stalled = false;
       const timer = window.setTimeout(() => { stalled = true; ac.abort(); }, isAction ? ACTION_STALL_MS : PAGE_STALL_MS);
+      if (isAction) setInFlight((f) => ({ count: f.count + 1, since: f.count ? f.since : started }));
       return original(input, { ...init, signal: ac.signal }).then(
         (res) => { const took = Date.now() - started; if (isAction && took > SLOW_MS) report(`[slow] save took ${Math.round(took / 1000)}s`); return res; },
         (err: unknown) => {
           if (stalled) { setChallenged(true); report(`[stalled] ${isAction ? "save" : "page"} got no answer in ${Math.round((Date.now() - started) / 1000)}s; cancelled`); }
           throw err;
         },
-      ).finally(() => window.clearTimeout(timer));
+      ).finally(() => {
+        window.clearTimeout(timer);
+        if (isAction) setInFlight((f) => ({ count: Math.max(0, f.count - 1), since: f.count > 1 ? f.since : 0 }));
+      });
     };
     // Never unpatched: the guard lives as long as the page.
   }, []);
@@ -111,9 +125,18 @@ export function ActionFailureWatcher() {
   if (!stale && challenged) {
     return (
       <div role="alert" className="fixed inset-x-0 top-0 z-[100] flex flex-wrap items-center justify-center gap-3 bg-navy px-4 py-3 text-sm text-white shadow-lg print:hidden">
-        <span>That didn&rsquo;t go through: the connection stalled or was interrupted. Reload the page and try again; anything saved before this is safe.</span>
+        <span>That&rsquo;s taking longer than it should. It may still be finishing: wait a minute, then reload to check before trying again. Anything saved before this is safe.</span>
         <button type="button" onClick={() => window.location.reload()} className="rounded-lg bg-white px-3 py-1 text-sm font-semibold text-navy">Reload</button>
         <button type="button" onClick={() => setChallenged(false)} className="text-white/70 hover:text-white">Dismiss</button>
+      </div>
+    );
+  }
+  const waited = inFlight.count ? now - inFlight.since : 0;
+  if (!stale && waited >= SHOW_PROGRESS_MS) {
+    return (
+      <div role="status" aria-live="polite" className="fixed bottom-4 left-1/2 z-[100] flex -translate-x-1/2 items-center gap-3 rounded-full bg-navy px-4 py-2 text-sm text-white shadow-lg print:hidden">
+        <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" aria-hidden="true" />
+        <span>Working on it… {Math.round(waited / 1000)}s{waited > 15_000 ? " · big changes can take up to a minute, keep this page open" : ""}</span>
       </div>
     );
   }

@@ -4,6 +4,7 @@ import { drainEmailQueue } from "@/lib/mail/queue";
 import { drainPushQueue } from "@/lib/push/queue";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/security/rate-limit";
 import { checkCronSecret } from "@/lib/security/cron-secret";
+import { checkTickHealth } from "@/lib/ops/tick-watch";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +22,9 @@ async function drain(req: Request) {
   const db = await getDb();
   const mail = await drainEmailQueue(db, env, new Date(), 150, undefined, { concurrency: 5, purge: false }).catch((e: Error) => ({ due: 0, sent: 0, failed: 0, purged: 0, error: e.message }));
   const push = await drainPushQueue(db, env, 200).catch((e: Error) => ({ due: 0, sent: 0, dead: 0, error: e.message }));
-  return NextResponse.json({ ok: true, mail, push });
+  // Watchdog: email the owner once if the hourly job hasn't run for two hours.
+  const tick = await checkTickHealth();
+  return NextResponse.json({ ok: true, mail, push, tick });
 }
 
 export async function POST(req: Request) { return drain(req); }

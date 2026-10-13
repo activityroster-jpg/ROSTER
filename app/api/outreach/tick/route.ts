@@ -14,6 +14,7 @@ import { sweepQueuedInvites } from "@/lib/auth/invite-link";
 import { createRepositories } from "@/lib/db/repositories";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/security/rate-limit";
 import { checkCronSecret } from "@/lib/security/cron-secret";
+import { recordTick } from "@/lib/ops/tick-watch";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +53,7 @@ async function tick(req: Request) {
   // Data retention: one sweep per centre per day, with the 14-day notice first.
   const rateLimitsPurged = await new ControlPlaneRepository(db).purgeRateLimits().catch(() => 0);
   const retention = await sweepRetention(db, env).catch((e: Error) => ({ centres: 0, ran: 0, reminded: 0, platform: {}, error: e.message }));
+  await recordTick();
   return NextResponse.json({ ok: true, campaigns: running.length, research, sends, digests, leaving, trialSurvey, inviteReminders, queuedInvites, mail, push, pushPurged, retention, rateLimitsPurged });
 }
 
