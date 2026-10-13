@@ -5,9 +5,10 @@ const TONE: Record<CspGroup["verdict"], string> = {
   ours: "bg-port/10 text-port",
   "third-party": "bg-amber-100 text-amber-800",
   extension: "bg-slate-100 text-slate-600",
+  cloudflare: "bg-slate-100 text-slate-600",
   dev: "bg-slate-100 text-slate-600",
 };
-const LABEL: Record<CspGroup["verdict"], string> = { ours: "Ours: fix first", "third-party": "Outside service", extension: "Browser extension", dev: "Dev / test" };
+const LABEL: Record<CspGroup["verdict"], string> = { ours: "Ours: fix first", "third-party": "Outside service", extension: "Browser extension", cloudflare: "Cloudflare", dev: "Dev / test" };
 
 /** The open CSP reports grouped, with a plain answer on whether the stricter policy can be switched on. */
 export function CspSummary({ groups }: { groups: CspGroup[] }) {

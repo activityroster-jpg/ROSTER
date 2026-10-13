@@ -61,6 +61,7 @@ describe("CSP reports: whose are they?", () => {
     expect(classifyCspMessage("CSP (report-only): script-src-elem blocked inline from https://loughshore.activityroster.com/office:12 — “self.__next_f”").verdict).toBe("ours");
     expect(classifyCspMessage("CSP (report-only): script-src blocked inline from chrome-extension://abc/content.js:3").verdict).toBe("extension");
     expect(classifyCspMessage("CSP (report-only): script-src blocked eval").verdict).toBe("dev");
+    expect(classifyCspMessage("CSP (report-only): script-src-elem blocked https://harbour-point.activityroster.com/cdn-cgi/challenge-platform/scripts/jsd/main.js").verdict).toBe("cloudflare");
     expect(classifyCspMessage("CSP (report-only): script-src-elem blocked https://www.googletagmanager.com/gtm.js").verdict).toBe("third-party");
     const g = groupCspReports([
       { message: "CSP (report-only): script-src blocked eval", path: "/office", createdAt: new Date(1) },

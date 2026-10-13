@@ -126,11 +126,12 @@ export function describeViolation(v: CspViolation): string {
   return `CSP (report-only): ${v.violatedDirective ?? "unknown directive"} blocked ${v.blockedUri ?? "inline"}${where}${v.sample ? ` — “${v.sample}”` : ""}`;
 }
 
-export type CspVerdict = "ours" | "extension" | "dev" | "third-party";
+export type CspVerdict = "ours" | "cloudflare" | "extension" | "dev" | "third-party";
 export interface CspGroup { key: string; directive: string; blocked: string; verdict: CspVerdict; count: number; pages: string[]; last: Date }
 
 export const CSP_VERDICT_TEXT: Record<CspVerdict, string> = {
   ours: "Our own code. Must be fixed before the policy is switched on, or this would break.",
+  cloudflare: "Cloudflare's own bot-detection script, which Cloudflare adds to our pages (/cdn-cgi/). Not our code and pages work without it: safe. Switched on, it just stops running on signed-in pages.",
   extension: "A browser extension on the visitor's computer (password manager, translator, ad blocker). Switching on would only stop the extension touching our pages: safe.",
   dev: "Developer tools or a local test run. Never happens on the live site for ordinary users: safe.",
   "third-party": "Something outside ActivityRoster tried to load (often injected by an extension or a network). Safe unless it's a service we added on purpose.",
@@ -150,7 +151,8 @@ export function classifyCspMessage(message: string, ownHosts: readonly string[] 
   let blocked = blockedRaw;
   try { if (/^https?:/i.test(blockedRaw)) blocked = new URL(blockedRaw).origin; } catch { /* keep as written */ }
   let verdict: CspVerdict;
-  if (extension.test(blockedRaw) || extension.test(source)) verdict = "extension";
+  if (/\/cdn-cgi\//.test(blockedRaw)) { verdict = "cloudflare"; blocked = "Cloudflare /cdn-cgi/ script"; }
+  else if (extension.test(blockedRaw) || extension.test(source)) verdict = "extension";
   else if (blockedRaw === "eval" || /localhost|127\.0\.0\.1|webpack|turbopack/i.test(`${blockedRaw} ${source}`)) verdict = "dev";
   else if (/^https?:/i.test(blockedRaw)) verdict = isOwn(blockedRaw) ? "ours" : "third-party";
   else if (blockedRaw === "inline" || blockedRaw === "data" || blockedRaw === "blob") verdict = source && !isOwn(source) ? "third-party" : "ours";
@@ -170,6 +172,6 @@ export function groupCspReports(reports: readonly { message: string; path: strin
     if (r.createdAt > g.last) g.last = r.createdAt;
     by.set(key, g);
   }
-  const order: CspVerdict[] = ["ours", "third-party", "extension", "dev"];
+  const order: CspVerdict[] = ["ours", "third-party", "cloudflare", "extension", "dev"];
   return [...by.values()].sort((a, b) => order.indexOf(a.verdict) - order.indexOf(b.verdict) || b.count - a.count);
 }
