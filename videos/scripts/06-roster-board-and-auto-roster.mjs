@@ -30,7 +30,7 @@ export default {
       do: async (h) => { await h.unhighlight(); await h.click(h.page.getByRole("dialog").getByRole("button", { name: /^Who for / }).first()); await h.wait(700); await h.highlight(h.page.getByRole("listbox").first()); } },
     { say: "Sinead holds the right instructor type and she's free, so pick her, and press Assign.",
       do: async (h) => { await h.unhighlight(); await h.click(h.page.getByRole("option", { name: /Sinead Barr/ }).first()); await h.wait(400); await h.click(h.page.getByRole("dialog").getByRole("button", { name: "Assign", exact: true }).first()); } },
-    { say: "She's on. If someone doesn't fit, the button turns amber and says Assign anyway, and the reason is kept in the change log.", thumb: true,
+    { say: "She's on. If someone doesn't fit, the button turns amber and says Assign anyway, and the reason is kept in the change log.",
       do: async (h) => { await h.wait(900); await h.highlight(h.page.getByRole("dialog").getByText(/Sinead Barr/).first()); } },
 
     { chapter: "Auto-roster", say: "Filling a whole week by hand takes time. Auto-roster does it in one go.",
@@ -45,8 +45,8 @@ export default {
       do: async (h) => { await h.unhighlight(); await h.point(h.page.getByText(/Each place goes to someone/).first()); } },
     { say: "Let's fill the open places.",
       do: async (h) => { await h.click(h.page.getByText(/Fill the open places only/).first()); await h.click(h.page.getByRole("button", { name: /^Fill the \d+ open places?/ }).first()); } },
-    { say: "Done. Every place it could fill is filled, and anything left stays orange for you to sort out by hand.", pause: 1.0,
-      do: async (h) => { await h.wait(2500); await h.point(card(h, "Start Windsurfing")); } },
+    { say: "Done. Every place it could fill is filled, and anything left stays orange for you to sort out by hand.", pause: 1.0, thumb: true,
+      do: async (h) => { await h.wait(2500); await h.point(card(h, "Start Windsurfing")); await h.page.mouse.move(1380, 790); await h.wait(300); } },
 
     { chapter: "People × days", say: "Switch to People by days to see the week the other way round: a row for each instructor, with their free slots in green.",
       do: async (h) => { await h.click(h.page.getByRole("tab", { name: /People/ }).or(h.page.getByRole("button", { name: /People × days/ })).first()); await h.wait(900); } },
