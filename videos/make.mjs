@@ -122,17 +122,22 @@ async function makeVideo(browser, meta, script) {
   const voice = await voiceLines(steps.map((s) => s.say));
   console.log(`  voice: ${voice.provider.label}; narration ${voice.lines.reduce((n, l) => n + l.seconds, 0).toFixed(1)}s`);
 
-  // 2. Record
-  const page = await signIn(browser, script.who ?? "sam@demo.example", BASE);
-  for (const path of script.warm ?? []) { await page.goto(`${BASE}${path}`); await page.waitForLoadState("networkidle").catch(() => {}); }
-  await page.goto(`${BASE}${script.start}`); await page.waitForLoadState("networkidle").catch(() => {});
+  // 2. Record (a script can use another made-up centre: host "newcentre" → newcentre.localhost)
+  const base = script.host ? BASE.replace("//demo.", `//${script.host}.`) : BASE;
+  const page = await signIn(browser, script.who ?? "sam@demo.example", base);
+  for (const path of script.warm ?? []) { await page.goto(`${base}${path}`); await page.waitForLoadState("networkidle").catch(() => {}); }
+  await page.goto(`${base}${script.start}`); await page.waitForLoadState("networkidle").catch(() => {});
   if (script.prepare) await script.prepare(page);
   await sleep(800);
   const thumbAt = Math.max(0, steps.findIndex((s) => s.thumb));
   const warnings = [];
   const guarded = steps.map((s, i) => ({ ...s, do: s.do ? async (h) => { try { await s.do(h); } catch (e) { warnings.push(`line ${i + 1}: ${String(e).split("\n")[0]}`); console.log(`  ⚠ line ${i + 1}: ${String(e).split("\n")[0]}`); } } : undefined }));
-  const rec = await recordSteps(page, guarded, voice.lines.map((l) => l.seconds), { base: BASE, workDir: work, thumbAt });
+  // VIDEO_DRY=1: play the steps quickly and report what didn't work, without making the video.
+  const dry = Boolean(process.env.VIDEO_DRY);
+  const rec = await recordSteps(page, guarded, voice.lines.map((l) => (dry ? 0.2 : l.seconds)), { base, workDir: work, thumbAt });
+  if (dry) { await page.screenshot({ path: join(work, "end.png") }).catch(() => {}); }
   await page.context().close();
+  if (dry) { console.log(warnings.length ? `  ${warnings.length} warning(s)` : "  all steps ran"); return { name, warnings }; }
   console.log(`  recorded ${rec.frames.length} frames, ${rec.end.toFixed(1)}s`);
 
   // 3. Main segment from the timed frames

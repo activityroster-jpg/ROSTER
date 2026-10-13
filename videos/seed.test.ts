@@ -1,5 +1,5 @@
 /**
- * Videos and screenshots: a made-up busy centre ("Lough Shore Sailing
+ * Videos and screenshots: a made-up busy centre ("Lakeside Sailing
  * Centre", slug demo) and a brand-new one ("Harbour Watersports", slug
  * newcentre), written into the local D1 file given by SEED_DB. Dates follow
  * the current week, so the demo always shows this week and next. Every
@@ -50,7 +50,7 @@ test("seed the video centres", async () => {
   await login(fresh.id, "Jo Harbour", "jo@newcentre.example", "owner");
 
   // ── The busy centre ──
-  const org = await repos.control.createOrganisation({ name: "Lough Shore Sailing Centre", slug: "demo", jurisdiction: "northern_ireland", plan: "rostering", status: "active", subscriptionStatus: "trialing", tier: "standard" } as never);
+  const org = await repos.control.createOrganisation({ name: "Lakeside Sailing Centre", slug: "demo", jurisdiction: "northern_ireland", plan: "rostering", status: "active", subscriptionStatus: "trialing", tier: "standard" } as never);
   await db.update(organisation).set({ createdAt: new Date(`${addDays(THIS_MON, -10)}T09:00:00Z`) } as never).where(eq(organisation.id, org.id));
   const ctx: SystemTenantContext = { organisationId: org.id, slug: org.slug, system: true, reason: "manual seed" };
   await seedOrganisationDefaults(t, ctx, "northern_ireland");
@@ -64,18 +64,18 @@ test("seed the video centres", async () => {
   const roleFor = (code: string) => roles.find((r) => r.qualificationTypeId === q(code).id) ?? roles.find((r) => r.active)!;
 
   const people: { name: string; codes: string[]; email?: string; app?: boolean; dob?: string; employment?: string; expiry?: string | null }[] = [
-    { name: "Kim Doherty", codes: ["SI", "DI", "PBI", "SBC"], email: "kim@demo.example", app: true, expiry: addDays(THIS_MON, 180) },
-    { name: "Aoife McCann", codes: ["DI", "SBC"], email: "aoife@demo.example", app: true, expiry: addDays(THIS_MON, 227) },
-    { name: "Ciaran Boyle", codes: ["DI", "PB2"], email: "ciaran@demo.example", app: true, expiry: null },
-    { name: "Niamh Quinn", codes: ["SI", "DI", "SBC"], email: "niamh@demo.example", app: true, expiry: addDays(THIS_MON, 21) },
-    { name: "Ruairi Kelly", codes: ["PBI", "SBC", "PB2"], email: "ruairi@demo.example", app: true, expiry: addDays(THIS_MON, 274) },
+    { name: "Kim Taylor", codes: ["SI", "DI", "PBI", "SBC"], email: "kim@demo.example", app: true, expiry: addDays(THIS_MON, 180) },
+    { name: "Anna Moore", codes: ["DI", "SBC"], email: "anna@demo.example", app: true, expiry: addDays(THIS_MON, 227) },
+    { name: "Jack Brown", codes: ["DI", "PB2"], email: "jack@demo.example", app: true, expiry: null },
+    { name: "Emma Hall", codes: ["SI", "DI", "SBC"], email: "emma@demo.example", app: true, expiry: addDays(THIS_MON, 21) },
+    { name: "Ryan Clarke", codes: ["PBI", "SBC", "PB2"], email: "ryan@demo.example", app: true, expiry: addDays(THIS_MON, 274) },
     { name: "Grace Wilson", codes: ["DI", "WI"], email: "grace@demo.example", app: true, expiry: addDays(THIS_MON, 321) },
     { name: "Tom Hughes", codes: ["AI"], email: "tom@demo.example", app: true, dob: addDays(THIS_MON, -16 * 365 - 40), expiry: null },
-    { name: "Erin Maguire", codes: ["AI", "SBC"], email: "erin@demo.example", app: true, dob: addDays(THIS_MON, -16 * 365 + 90), expiry: null },
-    { name: "Declan Ward", codes: ["DI", "SBC"], email: "declan@demo.example", app: false, employment: "freelance", expiry: addDays(THIS_MON, 368) },
-    { name: "Sinead Barr", codes: ["WI", "SUPI"], email: "sinead@demo.example", app: true, employment: "freelance", expiry: addDays(THIS_MON, 415) },
+    { name: "Lucy Green", codes: ["AI", "SBC"], email: "lucy@demo.example", app: true, dob: addDays(THIS_MON, -16 * 365 + 90), expiry: null },
+    { name: "Dan Ward", codes: ["DI", "SBC"], email: "dan@demo.example", app: false, employment: "freelance", expiry: addDays(THIS_MON, 368) },
+    { name: "Sophie Barr", codes: ["WI", "SUPI"], email: "sophie@demo.example", app: true, employment: "freelance", expiry: addDays(THIS_MON, 415) },
     { name: "Mark Patterson", codes: ["APBI", "PBI", "SBC"], email: "mark@demo.example", app: false, employment: "freelance", expiry: addDays(THIS_MON, 462) },
-    { name: "Orla Devlin", codes: ["DI"], email: "orla@demo.example", app: true, expiry: addDays(THIS_MON, 509) },
+    { name: "Olivia Dean", codes: ["DI"], email: "olivia@demo.example", app: true, expiry: addDays(THIS_MON, 509) },
   ];
   const ins: Record<string, string> = {};
   for (const p of people) {
@@ -87,7 +87,7 @@ test("seed the video centres", async () => {
     }
   }
   // One join request waiting, one person added with no account (office-run)
-  const padraig = await t.instructor.insert(ctx, { name: "Padraig Lynch", email: null, employmentType: "volunteer", status: "active", managedBy: "office" } as never);
+  const padraig = await t.instructor.insert(ctx, { name: "Peter Lynch", email: null, employmentType: "volunteer", status: "active", managedBy: "office" } as never);
   await t.qualification.insert(ctx, { instructorId: padraig.id, qualificationTypeId: q("AI").id, certNo: null, issueDate: null, expiryDate: null, verified: false });
 
   // Locations and kit
@@ -125,40 +125,40 @@ test("seed the video centres", async () => {
   };
 
   // This week: fully staffed, Monday to Wednesday confirmed
-  await course("Powerboat Level 2", /Powerboat Level 2/, [{ date: THIS_MON, slots: ["AM", "PM"] }, { date: addDays(THIS_MON, 1), slots: ["AM", "PM"] }], [["Ruairi Kelly", "PBI"]]);
-  await course("Wednesday Club Night", /Club|Improving|Stage 3/, [{ date: addDays(THIS_MON, 2), slots: ["EV"] }], [["Niamh Quinn", "SI"], ["Aoife McCann", "DI"], ["Erin Maguire", "AI"]]);
-  await course("After-school Stage 1", /Stage 1/, [{ date: addDays(THIS_MON, 3), slots: ["PM"] }], [["Orla Devlin", "DI"], ["Tom Hughes", "AI"]]);
-  await course("Adult Start Sailing (weekend)", /Start Sailing/, [{ date: addDays(THIS_MON, 5), slots: ["AM", "PM"] }, { date: addDays(THIS_MON, 6), slots: ["AM", "PM"] }], [["Kim Doherty", "SI"], ["Ciaran Boyle", "DI"]]);
+  await course("Powerboat Level 2", /Powerboat Level 2/, [{ date: THIS_MON, slots: ["AM", "PM"] }, { date: addDays(THIS_MON, 1), slots: ["AM", "PM"] }], [["Ryan Clarke", "PBI"]]);
+  await course("Wednesday Club Night", /Club|Improving|Stage 3/, [{ date: addDays(THIS_MON, 2), slots: ["EV"] }], [["Emma Hall", "SI"], ["Anna Moore", "DI"], ["Lucy Green", "AI"]]);
+  await course("After-school Stage 1", /Stage 1/, [{ date: addDays(THIS_MON, 3), slots: ["PM"] }], [["Olivia Dean", "DI"], ["Tom Hughes", "AI"]]);
+  await course("Adult Start Sailing (weekend)", /Start Sailing/, [{ date: addDays(THIS_MON, 5), slots: ["AM", "PM"] }, { date: addDays(THIS_MON, 6), slots: ["AM", "PM"] }], [["Kim Taylor", "SI"], ["Jack Brown", "DI"]]);
   for (let i = 0; i < 3; i++) await t.rosterDay.insert(ctx, { date: addDays(THIS_MON, i), confirmedAt: new Date(), confirmedByUserId: null, snapshot: null } as never);
 
   // Next week: half-term camps, partly staffed (gaps for Auto-roster)
   const week = [0, 1, 2, 3, 4].map((i) => ({ date: addDays(NEXT_MON, i), slots: ["AM", "PM"] }));
-  await course("Half-term Camp: Stage 1", /Stage 1/, week, [["Kim Doherty", "SI"], ["Grace Wilson", "DI"]]);
-  await course("Half-term Camp: Stage 2", /Stage 2/, week.map((d) => ({ ...d, slots: ["AM"] })), [["Aoife McCann", "DI"]]);
+  await course("Half-term Camp: Stage 1", /Stage 1/, week, [["Kim Taylor", "SI"], ["Grace Wilson", "DI"]]);
+  await course("Half-term Camp: Stage 2", /Stage 2/, week.map((d) => ({ ...d, slots: ["AM"] })), [["Anna Moore", "DI"]]);
   await course("Start Windsurfing", /Windsurf/, [{ date: addDays(NEXT_MON, 3), slots: ["PM"] }], []);
-  await course("Wednesday Club Night", /Club|Improving|Stage 3/, [{ date: addDays(NEXT_MON, 2), slots: ["EV"] }], [["Niamh Quinn", "SI"]]);
+  await course("Wednesday Club Night", /Club|Improving|Stage 3/, [{ date: addDays(NEXT_MON, 2), slots: ["EV"] }], [["Emma Hall", "SI"]]);
   await course("Powerboat Level 2", /Powerboat Level 2/, [{ date: addDays(NEXT_MON, 5), slots: ["AM", "PM"] }, { date: addDays(NEXT_MON, 6), slots: ["AM", "PM"] }], []);
 
   // Availability: a usual week for app users, with exceptions
   for (const p of people.filter((x) => x.app)) {
     for (let wd = 0; wd <= 6; wd++) for (const slot of ["AM", "PM", "EV"]) {
-      await t.availability.insert(ctx, { instructorId: ins[p.name]!, weekday: wd, date: null, slot: slot as never, status: (wd === 0 || wd === 6) && p.name === "Orla Devlin" ? "busy" : "available", setBy: "self" } as never);
+      await t.availability.insert(ctx, { instructorId: ins[p.name]!, weekday: wd, date: null, slot: slot as never, status: (wd === 0 || wd === 6) && p.name === "Olivia Dean" ? "busy" : "available", setBy: "self" } as never);
     }
   }
   for (const slot of ["AM", "PM"]) await t.availability.insert(ctx, { instructorId: ins["Grace Wilson"]!, date: addDays(NEXT_MON, 4), weekday: null, slot: slot as never, status: "busy", setBy: "self" } as never);
 
   // Leave and cover
-  await t.leaveRequest.insert(ctx, { instructorId: ins["Ciaran Boyle"]!, type: "annual", startDate: addDays(NEXT_MON, 7), endDate: addDays(NEXT_MON, 9), days: 3, reason: "Family wedding", status: "pending" } as never);
-  await t.leaveRequest.insert(ctx, { instructorId: ins["Orla Devlin"]!, type: "other", startDate: addDays(NEXT_MON, 4), endDate: addDays(NEXT_MON, 4), days: 1, reason: "Exam", status: "approved" } as never);
+  await t.leaveRequest.insert(ctx, { instructorId: ins["Jack Brown"]!, type: "annual", startDate: addDays(NEXT_MON, 7), endDate: addDays(NEXT_MON, 9), days: 3, reason: "Family wedding", status: "pending" } as never);
+  await t.leaveRequest.insert(ctx, { instructorId: ins["Olivia Dean"]!, type: "other", startDate: addDays(NEXT_MON, 4), endDate: addDays(NEXT_MON, 4), days: 1, reason: "Exam", status: "approved" } as never);
 
   // Hours on the clock this week
   const sess = await t.courseSession.list(ctx);
   const monAm = sess.find((s) => s.date === THIS_MON && s.slot === "AM")!;
-  await t.timeEntry.insert(ctx, { instructorId: ins["Ruairi Kelly"]!, courseSessionId: monAm.id, clockInAt: new Date(`${THIS_MON}T08:52:00Z`), clockOutAt: new Date(`${THIS_MON}T12:41:00Z`), source: "clock" } as never);
+  await t.timeEntry.insert(ctx, { instructorId: ins["Ryan Clarke"]!, courseSessionId: monAm.id, clockInAt: new Date(`${THIS_MON}T08:52:00Z`), clockOutAt: new Date(`${THIS_MON}T12:41:00Z`), source: "clock" } as never);
 
   // Notifications for Kim's app
-  const kimUser = (await t.instructor.findById(ctx, ins["Kim Doherty"]!))!.userId;
-  await t.notification.insert(ctx, { userId: kimUser, instructorId: ins["Kim Doherty"]!, title: "Roster confirmed: this Monday", body: "Your shifts are confirmed.", channel: "in_app" } as never);
-  await t.notification.insert(ctx, { userId: kimUser, instructorId: ins["Kim Doherty"]!, title: "Roster change: new shifts", body: "You're now on 10 shifts.", channel: "in_app" } as never);
+  const kimUser = (await t.instructor.findById(ctx, ins["Kim Taylor"]!))!.userId;
+  await t.notification.insert(ctx, { userId: kimUser, instructorId: ins["Kim Taylor"]!, title: "Roster confirmed: this Monday", body: "Your shifts are confirmed.", channel: "in_app" } as never);
+  await t.notification.insert(ctx, { userId: kimUser, instructorId: ins["Kim Taylor"]!, title: "Roster change: new shifts", body: "You're now on 10 shifts.", channel: "in_app" } as never);
   console.log("seeded", org.slug, fresh.slug);
 });

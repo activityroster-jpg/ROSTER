@@ -29,7 +29,8 @@ concurrency:
 jobs:
   videos:
     runs-on: ubuntu-24.04
-    timeout-minutes: 75
+    # All 12 videos are recorded in real time, then encoded: allow for the whole set.
+    timeout-minutes: 180
     env:
       NEXT_TELEMETRY_DISABLED: "1"
       APP_APEX_DOMAIN: localhost:8787

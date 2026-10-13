@@ -72,6 +72,10 @@ export function helpers(page, base) {
     goto: async (path) => { await page.goto(`${base}${path}`, { waitUntil: "load" }); await page.waitForLoadState("networkidle").catch(() => {}); await sleep(400); },
     point: async (target, ms) => { const c = await center(target); await glide(c.x, c.y, ms); return c.loc; },
     click: async (target, ms) => { const c = await center(target); await glide(c.x, c.y, ms); await sleep(120); await page.mouse.down(); await sleep(70); await page.mouse.up(); await sleep(250); return c.loc; },
+    /** Click into a field and type, key by key, so the viewer sees it written. */
+    type: async (target, text, delay = 55) => { const c = await center(target); await glide(c.x, c.y); await sleep(100); await page.mouse.down(); await sleep(60); await page.mouse.up(); await c.loc.fill(""); await page.keyboard.type(text, { delay }); await sleep(250); return c.loc; },
+    /** Choose an option in a <select> (pointing at it first). */
+    select: async (target, value) => { const c = await center(target); await glide(c.x, c.y); await sleep(150); await c.loc.selectOption(value); await sleep(300); return c.loc; },
     highlight: async (target) => { const c = await center(target); await page.evaluate((r) => window.__highlight(r), c.box); },
     unhighlight: async () => { await page.evaluate(() => window.__highlight(null)); },
     scrollTo: async (target) => { const loc = typeof target === "string" ? page.locator(target).first() : target; await loc.evaluate((el) => el.scrollIntoView({ behavior: "smooth", block: "center" })); await sleep(700); },

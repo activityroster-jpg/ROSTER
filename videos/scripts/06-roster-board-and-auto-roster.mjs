@@ -13,7 +13,7 @@ export default {
   description: `How to build the week on the ActivityRoster roster board: what the session colours mean, how to put someone on a session by hand, how Auto-roster fills every open place with someone who is free and qualified, and how to see the week person by person.`,
   tags: ["roster board", "auto roster", "staff rota", "sailing instructor roster", "half term camp staffing"],
   steps: [
-    { chapter: "The roster board", say: "This is the roster board, where you build each week. Here's half-term week at Lough Shore Sailing Centre.",
+    { chapter: "The roster board", say: "This is the roster board, where you build each week. Here's half-term week at Lakeside Sailing Centre.",
       do: async (h) => { await h.point("h1"); } },
     { say: "Each card is one session. Orange means there are still places to fill, and the badge says how many.",
       do: async (h) => { await h.highlight(h.page.getByText(/^needs \d+$/).first()); } },
@@ -28,10 +28,10 @@ export default {
       do: async (h) => { await h.wait(500); await h.highlight(h.page.getByRole("dialog").getByRole("button", { name: /^Who for / }).first()); } },
     { say: "Open the picker. People are in three groups: qualified and free at the top, then qualified but busy, then anyone who isn't qualified, with the reason.",
       do: async (h) => { await h.unhighlight(); await h.click(h.page.getByRole("dialog").getByRole("button", { name: /^Who for / }).first()); await h.wait(700); await h.highlight(h.page.getByRole("listbox").first()); } },
-    { say: "Sinead holds the right instructor type and she's free, so pick her, and press Assign.",
-      do: async (h) => { await h.unhighlight(); await h.click(h.page.getByRole("option", { name: /Sinead Barr/ }).first()); await h.wait(400); await h.click(h.page.getByRole("dialog").getByRole("button", { name: "Assign", exact: true }).first()); } },
+    { say: "Sophie holds the right instructor type and she's free, so pick her, and press Assign.",
+      do: async (h) => { await h.unhighlight(); await h.click(h.page.getByRole("option", { name: /Sophie Barr/ }).first()); await h.wait(400); await h.click(h.page.getByRole("dialog").getByRole("button", { name: "Assign", exact: true }).first()); } },
     { say: "She's on. If someone doesn't fit, the button turns amber and says Assign anyway, and the reason is kept in the change log.",
-      do: async (h) => { await h.wait(900); await h.highlight(h.page.getByRole("dialog").getByText(/Sinead Barr/).first()); } },
+      do: async (h) => { await h.wait(900); await h.highlight(h.page.getByRole("dialog").getByText(/Sophie Barr/).first()); } },
 
     { chapter: "Auto-roster", say: "Filling a whole week by hand takes time. Auto-roster does it in one go.",
       do: async (h) => { await h.unhighlight(); await h.click(h.page.getByRole("dialog").getByRole("button", { name: "Close" })); await h.wait(400); await h.point(h.page.getByRole("button", { name: /Auto-roster/ }).first()); } },
@@ -54,7 +54,7 @@ export default {
       do: async (h) => { await h.highlight(h.page.getByText(/^\d+(\.\d+)? h$/).first()); } },
     { chapter: "Problems", say: "If anything stops adding up later, say someone marks themselves busy, the session turns red, and the problem is listed on the dashboard.",
       do: async (h) => { await h.unhighlight(); await h.click(h.page.getByRole("tab", { name: /Courses by day/ }).or(h.page.getByRole("button", { name: /Courses by day/ })).first()); } },
-    { say: "That's the roster board. Next, we'll check tickets and confirm the days, so your team gets their shifts.", pause: 0.8,
+    { say: "That's the roster board. Next, we'll check licences and confirm the days, so your team gets their shifts.", pause: 0.8,
       do: async (h) => { await h.scrollTop(); } },
   ],
 };
