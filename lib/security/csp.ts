@@ -28,6 +28,8 @@ export const ENFORCE_NONCE_POLICY = true;
 /** The Android app's package id, sent by its WebView as X-Requested-With on every request. */
 export const NATIVE_APP_ID = "com.activityroster.app";
 export const isNativeAppRequest = (headers: Headers): boolean => headers.get("x-requested-with") === NATIVE_APP_ID;
+/** React and Turbopack need eval() in `next dev` only; production never gets it. */
+const DEV_EVAL = process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : "";
 export const STATIC_POLICY = [
   "default-src 'self'",
   "base-uri 'self'",
@@ -38,7 +40,7 @@ export const STATIC_POLICY = [
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   // Inline scripts are still allowed here because the marketing pages are
   // prerendered; the signed-in app also receives the nonce policy above.
-  "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com",
+  `script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com${DEV_EVAL}`,
   // Only the hosts the browser actually talks to: our own origin, Stripe.js (if
   // ever embedded) and Sentry's EU/US ingest. Everything else is server-side.
   "connect-src 'self' https://api.stripe.com https://*.ingest.sentry.io https://*.ingest.de.sentry.io https://challenges.cloudflare.com",
@@ -61,8 +63,6 @@ export function makeNonce(): string {
   return btoa(String.fromCharCode(...bytes));
 }
 
-/** React and Turbopack need eval() in `next dev` only; production never gets it. */
-const DEV_EVAL = process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : "";
 
 export function noncePolicy(nonce: string): string {
   return [
