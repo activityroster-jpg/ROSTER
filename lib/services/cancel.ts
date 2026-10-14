@@ -76,12 +76,14 @@ export async function cancelSessions(repos: Repositories, ctx: AnyTenantContext,
   // Payroll follows the rule. Both pay columns are written (payroll reads the
   // pence one first), so an amount the office edited never survives "pay nothing".
   for (const r of records) {
+    // The office's own edits are kept aside while cancelled, so restoring the session puts them back.
+    const keep = { minutesBeforeCancel: r.overrideMinutes ?? null, payPenceBeforeCancel: r.overridePayPence ?? (r.overridePay != null ? Math.round(r.overridePay * 100) : null) };
     if (input.pay.rule === "none") {
       // Cancelled means not paid, even on a line already approved: it comes off
       // approval with a note so the office sees the change before paying.
       if (!r.approved && r.actualMinutes == null && r.overrideMinutes == null && r.overridePay == null && r.overridePayPence == null) ops.push(t.hoursRecord.deleteStatement(ctx, r.id));
       else ops.push(t.hoursRecord.updateStatement(ctx, r.id, {
-        overridePay: 0, overridePayPence: 0,
+        ...keep, overridePay: 0, overridePayPence: 0,
         ...(r.approved ? { approved: false, approvedAt: null } : {}),
         note: [r.note, r.approved ? "Session cancelled after this line was approved: pay removed" : "Session cancelled: not paid"].filter(Boolean).join(" · "),
       }));
@@ -92,9 +94,9 @@ export async function cancelSessions(repos: Repositories, ctx: AnyTenantContext,
       continue;
     }
     if (input.pay.rule === "rostered") {
-      ops.push(t.hoursRecord.updateStatement(ctx, r.id, { overrideMinutes: r.overrideMinutes ?? r.scheduledMinutes, note: [r.note, "Session cancelled: paid as rostered"].filter(Boolean).join(" · ") }));
+      ops.push(t.hoursRecord.updateStatement(ctx, r.id, { ...keep, overrideMinutes: r.overrideMinutes ?? r.scheduledMinutes, note: [r.note, "Session cancelled: paid as rostered"].filter(Boolean).join(" · ") }));
     } else {
-      ops.push(t.hoursRecord.updateStatement(ctx, r.id, { overridePay: fee ?? 0, overridePayPence: Math.round((fee ?? 0) * 100), note: [r.note, `Session cancelled: cancellation fee`].filter(Boolean).join(" · ") }));
+      ops.push(t.hoursRecord.updateStatement(ctx, r.id, { ...keep, overridePay: fee ?? 0, overridePayPence: Math.round((fee ?? 0) * 100), note: [r.note, `Session cancelled: cancellation fee`].filter(Boolean).join(" · ") }));
     }
   }
 
@@ -139,7 +141,14 @@ export async function restoreSessions(repos: Repositories, ctx: AnyTenantContext
   const records = await t.hoursRecord.listIn(ctx, hoursRecordTable.courseSessionId, targets.map((s) => s.id));
   for (const r of records) {
     if (r.approved) continue;
-    if (r.note?.includes("Session cancelled")) ops.push(t.hoursRecord.updateStatement(ctx, r.id, { overrideMinutes: null, overridePay: null, overridePayPence: null, note: r.note.split(" · ").filter((n) => !n.startsWith("Session cancelled")).join(" · ") || null }));
+    // Put back what the office had set before the cancellation (nothing, for most lines).
+    if (r.note?.includes("Session cancelled")) ops.push(t.hoursRecord.updateStatement(ctx, r.id, {
+      overrideMinutes: r.minutesBeforeCancel ?? null,
+      overridePay: r.payPenceBeforeCancel != null ? r.payPenceBeforeCancel / 100 : null,
+      overridePayPence: r.payPenceBeforeCancel ?? null,
+      minutesBeforeCancel: null, payPenceBeforeCancel: null,
+      note: r.note.split(" · ").filter((n) => !n.startsWith("Session cancelled")).join(" · ") || null,
+    }));
   }
   if (course.cancelledAt || course.status === "cancelled") ops.push(t.course.updateStatement(ctx, courseId, { status: "scheduled", cancelledAt: null, cancelReason: null }));
   const courseName = course.name ?? "a course";

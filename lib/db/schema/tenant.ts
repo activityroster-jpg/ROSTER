@@ -775,6 +775,9 @@ export const hoursRecord = sqliteTable("hours_record", {
   approvedDate: text("approved_date"),
   /** Set when the session moved, changed length or lost this person after approval. Cleared on re-approval. */
   rosterChangedAt: integer("roster_changed_at", { mode: "timestamp_ms" }),
+  /** The office's own edits, kept while the session is cancelled so restoring it puts them back. */
+  minutesBeforeCancel: integer("minutes_before_cancel"),
+  payPenceBeforeCancel: integer("pay_pence_before_cancel"),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 }, (t) => [

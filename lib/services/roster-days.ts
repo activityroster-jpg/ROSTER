@@ -149,7 +149,8 @@ export async function confirmDays(repos: Repositories, ctx: AnyTenantContext, da
 }
 
 /**
- * Put a confirmed day back to pending: nobody is told. Who is on it now is
+ * Put a confirmed day back to pending. The people on it get an in-app notice
+ * (no email or phone message) that it may still change. Who is on it now is
  * kept, so confirming it again tells only the people whose shifts change in
  * the meantime. Audited.
  */
@@ -162,6 +163,14 @@ export async function undoDayConfirmation(repos: Repositories, ctx: AnyTenantCon
   if (row) await t.rosterDay.update(ctx, row.id, { confirmedAt: null, snapshot });
   else await t.rosterDay.insert(ctx, { date, confirmedAt: null, confirmedByUserId: null, snapshot });
   await writeAudit(repos, ctx, { action: "undo_roster_day", entity: "roster_day", entityId: date, after: { date } });
+  // Staff saw this day as confirmed: tell them, quietly, that it's back to pending.
+  const day = fmtDay(date);
+  await notifyInstructors(repos, ctx, Object.keys(byDay.get(date) ?? {}).map((instructorId) => ({ instructorId, input: {
+    title: `Roster: ${day} is back to pending`,
+    body: `Your centre has put ${day} back to pending while it makes changes. Your shift may still change; you'll get a message when the day is confirmed again.`,
+    email: false,
+    push: false,
+  } })));
   return { ok: true };
 }
 

@@ -15,6 +15,8 @@ export interface NotifyInput {
   email?: boolean;
   /** Extra lines listed in the email only (their sessions that week), for people without the app. */
   detailLines?: string[];
+  /** false: in the app only, no phone notification (for low-key notices). */
+  push?: boolean;
 }
 
 /**
@@ -44,7 +46,7 @@ export async function notifyInstructor(
   });
 
   // Push to the instructor's phones (the app registers tokens per device). Best effort.
-  if (instructor.userId) {
+  if (instructor.userId && input.push !== false) {
     try {
       const tokens = await repos.control.pushTokensForUser(instructor.userId);
       if (tokens.length) {
@@ -95,7 +97,7 @@ export async function notifyInstructors(
   const now = new Date();
   await repos.tenant.notification.insertMany(ctx, live.map(({ p, input }) => ({ userId: p.userId ?? null, instructorId: p.id, channel: "in_app" as const, title: input.title, body: input.body ?? null, readAt: null, sentAt: now })));
 
-  const pushes = live.flatMap(({ p, input }) => (p.userId ? [{ userId: p.userId, title: input.title, body: stripMarkers(input.body), url: "/portal/notifications" }] : []));
+  const pushes = live.flatMap(({ p, input }) => (p.userId && input.push !== false ? [{ userId: p.userId, title: input.title, body: stripMarkers(input.body), url: "/portal/notifications" }] : []));
   try {
     if (pushes.length) await new PlatformRepository(repos.db).enqueuePushes(pushes);
   } catch (err) {

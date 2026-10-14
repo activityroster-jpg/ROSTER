@@ -2,6 +2,7 @@ import { codeEmailHtml } from "@/lib/mail/code-email";
 import { readInviteNote } from "./invite-note";
 import { inviteEmail } from "@/lib/mail/invite-email";
 import { betterAuth } from "better-auth";
+import { eq } from "drizzle-orm";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { emailOTP, magicLink, twoFactor } from "better-auth/plugins";
 import type { Database } from "@/lib/db/client";
@@ -104,7 +105,9 @@ export function createAuth(db: Database, env: CloudflareEnv) {
         // address with the very link we sent: that is the sign-in proof, so
         // they go straight on to choosing a PIN with no second code and no
         // "stay signed in?" stop (they stay signed in, 12 idle hours as usual).
-        if (ctx.path === "/verify-email") {
+        // Only for an account with no PIN yet: the link stays valid for an hour,
+        // so for anyone already set up it counts like a sign-in link instead.
+        if (ctx.path === "/verify-email" && !(await hasPin(db, created.user.id))) {
           ctx.setCookie(LV_COOKIE, await lvCookieValue(secret, created.session.id, "p"), { ...opts, maxAge: LV_IDLE_MAX_AGE_S });
           ctx.setCookie(LV_DEVICE_COOKIE, await lvDeviceValue(secret, created.user.id), { ...opts, maxAge: LV_IDLE_MAX_AGE_S });
           return;
@@ -176,6 +179,16 @@ export function createAuth(db: Database, env: CloudflareEnv) {
 }
 
 /** Endpoints whose success proves the person holds the email address. */
+/** Has this person chosen a PIN yet? (A brand-new centre owner hasn't.) */
+async function hasPin(db: Database, userId: string): Promise<boolean> {
+  try {
+    const rows = await db.select({ pinHash: user.pinHash }).from(user).where(eq(user.id, userId)).limit(1);
+    return Boolean(rows[0]?.pinHash);
+  } catch {
+    return true; // when unsure, take the cautious path (a second step)
+  }
+}
+
 const EMAIL_PROOF_PATHS = new Set(["/magic-link/verify", "/verify-email", "/sign-in/email-otp", "/email-otp/verify-email"]);
 
 export type Auth = ReturnType<typeof createAuth>;

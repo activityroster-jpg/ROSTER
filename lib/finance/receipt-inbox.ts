@@ -135,6 +135,27 @@ function spfFailed(email: Email): boolean {
 }
 
 /**
+ * Did the message really come from the forwarding account's domain? Cloudflare
+ * records its checks in an (ARC-)Authentication-Results header: it passes when
+ * SPF passed for the delivery address, or a DKIM signature from that domain
+ * checked out. Messages with no such header are judged on SPF alone (above).
+ */
+export function senderAuthenticated(email: { headers: readonly { key: string; value: string }[] }, envelopeFrom: string): boolean {
+  const domain = (envelopeFrom.split("@")[1] ?? "").trim().toLowerCase();
+  const results = email.headers
+    .filter((h) => h.key === "arc-authentication-results" || h.key === "authentication-results")
+    .map((h) => h.value.toLowerCase())
+    .find((v) => v.includes("cloudflare"));
+  if (!results || !domain) return true;
+  if (/\bspf=pass\b/.test(results)) return true;
+  for (const m of results.matchAll(/\bdkim=pass\b[^;]*?header\.(?:d|i)=@?([a-z0-9.-]+)/g)) {
+    const d = m[1]!;
+    if (d === domain || d.endsWith(`.${domain}`) || domain.endsWith(`.${d}`)) return true;
+  }
+  return false;
+}
+
+/**
  * Decide what an inbound message is, without storing anything. `envelope.from`
  * is the address the message was delivered from: for a Gmail auto-forward it is
  * the forwarding account itself (with a +caf_ tag), which is what we check.
@@ -156,7 +177,7 @@ export async function decideInbound(raw: ArrayBuffer, envelope: { from: string; 
   }
 
   const forwarders = allowedForwarders(settings, admins);
-  if (!forwarders.includes(mailboxOf(envelope.from)) || spfFailed(email)) {
+  if (!forwarders.includes(mailboxOf(envelope.from)) || spfFailed(email) || !senderAuthenticated(email, envelope.from)) {
     return { kind: "held", messageId, fromAddress, fromName, subject, reason: `Sent from ${envelope.from}, not one of your forwarding addresses` };
   }
 

@@ -80,14 +80,32 @@ describe("cancelling sessions and courses", () => {
     expect(lines.find((l) => l.recordId === line.id)?.pay).toBe(0);
   });
 
-  it("restore clears an edited cancellation amount in both pay columns", async () => {
+  it("restore puts back the amount the office had edited before the cancellation, in both pay columns", async () => {
     const line0 = (await repos.tenant.hoursRecord.list(ctx, eq(hoursRecordTable.courseSessionId, sessionId)))[0]!;
     await repos.tenant.hoursRecord.update(ctx, line0.id, { overridePay: 75, overridePayPence: 7500 });
     await cancelSessions(repos, ctx, { courseId, reason: "", pay: { rule: "fee", fee: 20 } });
     expect((await repos.tenant.hoursRecord.findById(ctx, line0.id))!.overridePayPence).toBe(2000);
     await restoreSessions(repos, ctx, courseId, [sessionId]);
     const line = (await repos.tenant.hoursRecord.findById(ctx, line0.id))!;
+    expect(line.overridePayPence).toBe(7500);
+    expect(line.overridePay).toBe(75);
+    expect(line.payPenceBeforeCancel).toBeNull();
+  });
+
+  it("restore after 'pay nothing' with no edits leaves the line to the roster again", async () => {
+    await cancelSessions(repos, ctx, { courseId, reason: "", pay: { rule: "rostered" } });
+    await restoreSessions(repos, ctx, courseId, [sessionId]);
+    const line = (await repos.tenant.hoursRecord.list(ctx, eq(hoursRecordTable.courseSessionId, sessionId)))[0]!;
+    expect(line.overrideMinutes).toBeNull();
     expect(line.overridePayPence).toBeNull();
+  });
+
+  it("restore puts back edited minutes after 'pay nothing'", async () => {
+    const line0 = (await repos.tenant.hoursRecord.list(ctx, eq(hoursRecordTable.courseSessionId, sessionId)))[0]!;
+    await repos.tenant.hoursRecord.update(ctx, line0.id, { overrideMinutes: 200 });
+    await cancelSessions(repos, ctx, { courseId, reason: "", pay: { rule: "none" } });
+    await restoreSessions(repos, ctx, courseId, [sessionId]);
+    expect((await repos.tenant.hoursRecord.findById(ctx, line0.id))!.overrideMinutes).toBe(200);
   });
 
   it("a cancellation fee pays the fee instead of the hours", async () => {

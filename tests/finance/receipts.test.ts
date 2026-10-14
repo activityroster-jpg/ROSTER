@@ -21,7 +21,7 @@ vi.mock("@/lib/finance/receipt-reader", () => ({ readReceipt: (...a: unknown[]) 
 
 import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { addTransactionAction, deleteTransactionAction } from "@/app/admin/finance/actions";
-import { decideInbound, gmailCode, ingestInbound, mailboxOf } from "@/lib/finance/receipt-inbox";
+import { decideInbound, gmailCode, ingestInbound, mailboxOf, senderAuthenticated } from "@/lib/finance/receipt-inbox";
 import { domainWords, matchReceipt, namesSupplier, type LineFacts } from "@/lib/finance/receipt-match";
 
 // --- matching (pure) ---------------------------------------------------------
@@ -181,5 +181,23 @@ describe("receipts arriving in the books", () => {
     expect(await ingestInbound(repo, eml({ from: "x@evil.test", subject: "Invoice", id: "ev-1", pdf: true }), { from: "x@evil.test", to: TO }, "key")).toBe("held");
     expect(files.size).toBe(0);
     expect(reading).not.toHaveBeenCalled();
+  });
+});
+
+describe("sender authentication on emailed receipts", () => {
+  const h = (value: string) => ({ headers: [{ key: "arc-authentication-results", value }] });
+  const from = "activityroster+caf_=x@gmail.com";
+  it("passes on SPF or a DKIM signature from the forwarding domain", () => {
+    expect(senderAuthenticated(h("i=1; mx.cloudflare.net; dkim=pass header.d=gmail.com header.s=20230601; spf=pass smtp.mailfrom=gmail.com"), from)).toBe(true);
+    expect(senderAuthenticated(h("i=1; mx.cloudflare.net; dkim=pass header.d=gmail.com; spf=softfail smtp.mailfrom=gmail.com"), from)).toBe(true);
+    expect(senderAuthenticated(h("i=1; mx.cloudflare.net; dkim=none; spf=pass smtp.mailfrom=gmail.com"), from)).toBe(true);
+  });
+  it("fails when neither checks out for that domain (someone else's server pretending)", () => {
+    expect(senderAuthenticated(h("i=1; mx.cloudflare.net; dkim=pass header.d=evil.example; spf=softfail smtp.mailfrom=gmail.com"), from)).toBe(false);
+    expect(senderAuthenticated(h("i=1; mx.cloudflare.net; dkim=fail header.d=gmail.com; spf=fail smtp.mailfrom=gmail.com"), from)).toBe(false);
+  });
+  it("judges on SPF alone when Cloudflare recorded nothing", () => {
+    expect(senderAuthenticated({ headers: [] }, from)).toBe(true);
+    expect(senderAuthenticated(h("i=1; mx.google.com; spf=fail"), from)).toBe(true);
   });
 });

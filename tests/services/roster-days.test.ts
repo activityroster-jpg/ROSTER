@@ -60,12 +60,14 @@ describe("confirming roster days", () => {
     expect(await isDayConfirmed(repos, ctx, DAY)).toBe(true);
   });
 
-  it("undo is silent; confirming again tells only the people whose shifts changed", async () => {
+  it("undo tells the people on the day in the app; confirming again tells only the people whose shifts changed", async () => {
     expect((await assignStaff(repos, ctx, { courseId, instructorId: kim, roleTypeId: roleId, override: true })).ok).toBe(true);
     await confirmDays(repos, ctx, [DAY]);
     const kimBefore = (await titles(kim)).length;
     expect((await undoDayConfirmation(repos, ctx, DAY)).ok).toBe(true);
     expect(await isDayConfirmed(repos, ctx, DAY)).toBe(false);
+    // Kim was on the confirmed day: one in-app notice that it's back to pending.
+    expect((await titles(kim)).filter((t) => /back to pending/.test(t))).toHaveLength(1);
     // While pending: Jo is added for the day; nobody is told yet.
     const session = (await repos.tenant.courseSession.list(ctx)).find((s) => s.courseId === courseId)!;
     expect((await setDayStaff(repos, ctx, { sessionId: session.id, instructorId: jo, roleTypeId: roleId, mode: "add", override: true })).ok).toBe(true);
@@ -73,7 +75,7 @@ describe("confirming roster days", () => {
     const r = await confirmDays(repos, ctx, [DAY]);
     expect(r.notified).toBe(1);
     expect((await titles(jo)).some((t) => t.startsWith("Roster confirmed"))).toBe(true);
-    expect((await titles(kim)).length).toBe(kimBefore);
+    expect((await titles(kim)).length).toBe(kimBefore + 1); // only the "back to pending" notice
   });
 
   it("weeks published before days existed count as confirmed until a day is undone", async () => {

@@ -617,6 +617,13 @@
       "when": 1791913110725,
       "tag": "0087_soft_giant_girl",
       "breakpoints": true
+    },
+    {
+      "idx": 88,
+      "version": "6",
+      "when": 1791981019109,
+      "tag": "0088_pay_before_cancel",
+      "breakpoints": true
     }
   ]
 }
