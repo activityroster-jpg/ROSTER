@@ -110,6 +110,7 @@ export default function MarketingHome() {
         "@type": "Organization",
         "@id": `${site}/#organization`,
         name: "ActivityRoster",
+        alternateName: "Activity Roster",
         legalName: COMPANY.legalName,
         identifier: { "@type": "PropertyValue", propertyID: "Companies House company number", value: COMPANY.companyNumber },
         address: { "@type": "PostalAddress", streetAddress: COMPANY.addressLines[0], addressLocality: COMPANY.addressLines[1], postalCode: COMPANY.addressLines[2], addressCountry: "GB" },
@@ -119,10 +120,13 @@ export default function MarketingHome() {
         sameAs: [COMPANY.social.linkedin, COMPANY.social.facebook],
       },
       {
+        // The site name Google shows above the result instead of the address.
+        // It reads this from the homepage; url must be the homepage exactly.
         "@type": "WebSite",
         "@id": `${site}/#website`,
-        url: site,
+        url: `${site}/`,
         name: "ActivityRoster",
+        alternateName: ["Activity Roster", "activityroster.com"],
         publisher: { "@id": `${site}/#organization` },
       },
       {
