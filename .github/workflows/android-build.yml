@@ -57,11 +57,29 @@ jobs:
         env:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
         run: |
-          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
-            printf '%s' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
-          else
+          if [ -z "$GOOGLE_SERVICES_JSON" ]; then
             echo "::warning::GOOGLE_SERVICES_JSON is not set: the app builds, but phone notifications stay off."
+            exit 0
           fi
+          # Check it is the real Firebase file for this app before using it. A wrong paste (the
+          # web config snippet, curly quotes from a text editor) builds without notifications
+          # instead of failing the whole build.
+          printf '%s' "$GOOGLE_SERVICES_JSON" > "$RUNNER_TEMP/gs.json"
+          if REASON="$(node -e '
+            const fs = require("fs");
+            let j;
+            try { j = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); }
+            catch { console.log("it is not the google-services.json file (it does not read as JSON; often the web config snippet was copied, or a text editor changed the quotes)"); process.exit(1); }
+            const pkgs = (j.client || []).map((c) => c?.client_info?.android_client_info?.package_name);
+            if (!j.project_info) { console.log("it does not look like a google-services.json file (no project_info)"); process.exit(1); }
+            if (!pkgs.includes("com.activityroster.app")) { console.log("it is for a different Android app (" + (pkgs.join(", ") || "none") + "), not com.activityroster.app"); process.exit(1); }
+          ' "$RUNNER_TEMP/gs.json")"; then
+            cp "$RUNNER_TEMP/gs.json" android/app/google-services.json
+            echo "Firebase file checked: phone notifications on."
+          else
+            echo "::warning::GOOGLE_SERVICES_JSON was ignored because $REASON. The app is built without phone notifications. Fix: Firebase console → Project settings → Your apps → the Android app → download google-services.json, drag the file into a Chrome tab, select all, copy, and paste that into the secret."
+          fi
+          rm -f "$RUNNER_TEMP/gs.json"
 
       - name: Upload key
         id: key
