@@ -12,7 +12,7 @@ import { idSchema } from "@/lib/validation/actions";
 import { getBoard } from "@/lib/services/board";
 import { weekStart } from "@/lib/services/schedule";
 import { planAutoRoster, type AutoInstructor, type AutoSession } from "@/lib/domain/auto-roster";
-import { redoWeek, undoRedo } from "@/lib/services/week-redo";
+import { previewUndoRedo, redoWeek, undoRedo, type UndoPreview } from "@/lib/services/week-redo";
 
 type Result = { ok: boolean; error?: string; message?: string };
 
@@ -164,12 +164,32 @@ export async function autoRosterAction(input: { monday: string; mode?: "open" | 
   return { ok: true, message: msg, filled, open: stillOpen };
 }
 
-/** Put the week back as it was before a "Redo the whole week" run. */
+const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+
+/** "Left as they are: 1 session changed since the redo, 2 already worked." */
+function leftAlone(p: UndoPreview): string {
+  const parts = [p.changedSince ? `${plural(p.changedSince, "session")} changed since the redo` : "", p.past ? `${plural(p.past, "session")} already happened` : "", p.gone ? `${plural(p.gone, "session")} no longer on the roster` : ""].filter(Boolean);
+  return parts.length ? ` Left as they are: ${parts.join(", ")}.` : "";
+}
+
+/** What undoing a "Redo the whole week" would do now, shown before it runs. */
+export async function previewUndoAutoRosterAction(auditId: string): Promise<Result & { canUndo?: boolean }> {
+  const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
+  if (!idSchema.safeParse(auditId).success) return { ok: false, error: "That run can't be undone" };
+  const r = await previewUndoRedo(repos, ctx, auditId);
+  if (!r.ok) return { ok: false, error: r.error };
+  const p = r.preview;
+  if (!p.sessions) return { ok: true, canUndo: false, message: `Nothing to undo: every session this run changed has been changed again since, or has already happened.${leftAlone(p)}` };
+  return { ok: true, canUndo: true, message: `Undo only what this run changed: ${plural(p.sessions, "session")} put back as they were (${plural(p.off, "person", "people")} off, ${plural(p.on, "person", "people")} back on).${leftAlone(p)} People whose shifts change on confirmed days are told.` };
+}
+
+/** Undo a "Redo the whole week" run: only what it changed, where nothing has changed since, from today on. */
 export async function undoAutoRosterAction(auditId: string): Promise<Result> {
   const { ctx, repos } = await requireTenant({ permission: "roster.edit" });
   if (!idSchema.safeParse(auditId).success) return { ok: false, error: "That run can't be undone" };
   const r = await undoRedo(repos, ctx, auditId);
   if (!r.ok) return { ok: false, error: r.error };
   refresh();
-  return { ok: true, message: `Undone: the week is back as it was (${r.removed} taken off, ${r.added} put back).` };
+  if (!r.preview.sessions) return { ok: true, message: `Nothing to undo: every session this run changed has been changed again since, or has already happened.${leftAlone(r.preview)}` };
+  return { ok: true, message: `Undone: ${plural(r.preview.sessions, "session")} back as they were (${r.removed} taken off, ${r.added} put back).${leftAlone(r.preview)}` };
 }

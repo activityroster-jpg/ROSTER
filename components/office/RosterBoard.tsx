@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import type { BoardData, BoardInstructor, OpenRole } from "@/lib/services/board";
 import type { RotaDay, RotaSession } from "@/lib/services/schedule";
-import { autoRosterAction, undoAutoRosterAction, boardAssignAction, boardAssignManyAction, boardRemoveAction } from "@/app/(app)/office/rota/board-actions";
+import { askConfirm } from "@/lib/ui/ask-confirm";
+import { autoRosterAction, previewUndoAutoRosterAction, undoAutoRosterAction, boardAssignAction, boardAssignManyAction, boardRemoveAction } from "@/app/(app)/office/rota/board-actions";
 import { setCourseStaffingAction } from "@/app/(app)/office/courses/actions";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { groupCandidates } from "@/lib/domain/assign-order";
@@ -49,6 +50,9 @@ export function RosterBoard({ data, canEdit }: { data: BoardData; canEdit: boole
   const [autoMsg, setAutoMsg] = useState<{ ok: boolean; text: string; undoId?: string } | null>(null);
   const [autoMode, setAutoMode] = useState<"open" | "redo">("open");
   const undoAuto = (id: string) => startAuto(async () => {
+    const p = await previewUndoAutoRosterAction(id);
+    if (!p.ok || !p.canUndo) { setAutoMsg({ ok: p.ok, text: p.ok ? p.message ?? "Nothing to undo" : p.error ?? "Couldn't undo" }); return; }
+    if (!(await askConfirm(p.message ?? "Undo this run?"))) return;
     const r = await undoAutoRosterAction(id);
     setAutoMsg({ ok: r.ok, text: r.ok ? r.message ?? "Undone" : r.error ?? "Couldn't undo" });
     if (r.ok) router.refresh();
@@ -109,7 +113,7 @@ export function RosterBoard({ data, canEdit }: { data: BoardData; canEdit: boole
           </label>
           <label className="flex items-start gap-2">
             <input type="radio" name="auto-mode" checked={autoMode === "redo"} onChange={() => setAutoMode("redo")} className="mt-1" />
-            <span><span className="font-semibold">Redo the whole week.</span> Every place is worked out afresh, then saved in one go. People who keep their sessions aren&rsquo;t touched; on confirmed days only the people whose shifts change are told. You can undo it straight after.</span>
+            <span><span className="font-semibold">Redo the whole week.</span> Every place is worked out afresh, then saved in one go. People who keep their sessions aren&rsquo;t touched; on confirmed days only the people whose shifts change are told. Undo reverses only what the redo changed.</span>
           </label>
         </div>
       </ConfirmDialog>

@@ -3,15 +3,17 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { askConfirm } from "@/lib/ui/ask-confirm";
-import { undoAutoRosterAction } from "@/app/(app)/office/rota/board-actions";
+import { previewUndoAutoRosterAction, undoAutoRosterAction } from "@/app/(app)/office/rota/board-actions";
 
-/** Change log: put a week back as it was before a "Redo the whole week" run. */
+/** Change log: undo a "Redo the whole week" run (only what it changed), after saying what will change. */
 export function UndoRedoButton({ id }: { id: string }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
   const undo = () => start(async () => {
-    if (!(await askConfirm("Put this week back as it was before the redo? People whose shifts change on confirmed days are told."))) return;
+    const p = await previewUndoAutoRosterAction(id);
+    if (!p.ok || !p.canUndo) { setMsg(p.ok ? p.message ?? "Nothing to undo" : p.error ?? "Couldn't undo"); return; }
+    if (!(await askConfirm(p.message ?? "Undo this run?"))) return;
     const r = await undoAutoRosterAction(id);
     setMsg(r.ok ? r.message ?? "Undone" : r.error ?? "Couldn't undo");
     if (r.ok) router.refresh();

@@ -2,7 +2,8 @@ import type { Repositories } from "@/lib/db/repositories";
 import { actorUserId, isGhostContext, type AnyTenantContext } from "@/lib/tenant/context";
 import { course as courseTable, sessionStaffOverride as overrideTable } from "@/lib/db/schema";
 import { planAutoRoster, type AutoInstructor, type AutoSession } from "@/lib/domain/auto-roster";
-import { diffWeek, type WeekState } from "@/lib/domain/week-redo";
+import { diffWeek, planUndo, type WeekChange, type WeekState } from "@/lib/domain/week-redo";
+import { todayIso } from "@/lib/domain/time";
 import { runAtomic } from "@/lib/db/batch";
 import { getBoard, type BoardData } from "./board";
 import { syncHoursForCourse } from "./hours";
@@ -72,7 +73,8 @@ export async function applyWeekState(
   const entry = isGhostContext(ctx) ? null : t.auditLog.insertStatement(ctx, {
     id: auditId, actorUserId: actorUserId(ctx), action: audit.action, entity: "roster", entityId: board.monday,
     before: JSON.stringify({ week: before }),
-    after: JSON.stringify({ ...audit.after, added: changes.filter((c) => c.kind === "on").length, removed: changes.filter((c) => c.kind === "off").length }),
+    // The changes themselves are kept so an undo can reverse exactly these and nothing else.
+    after: JSON.stringify({ ...audit.after, added: changes.filter((c) => c.kind === "on").length, removed: changes.filter((c) => c.kind === "off").length, changes }),
   });
   await runAtomic(repos.db, [...ops, ...(entry ? [entry] : [])]);
   for (const courseId of touched) await syncHoursForCourse(repos, ctx, courseId);
@@ -125,16 +127,43 @@ export async function redoWeek(repos: Repositories, ctx: AnyTenantContext, monda
   return { ...r, open };
 }
 
-/** Put the week back as it was before a redo (from its change-log entry). */
-export async function undoRedo(repos: Repositories, ctx: AnyTenantContext, auditId: string): Promise<{ ok: true; added: number; removed: number; notified: number } | { ok: false; error: string }> {
+export interface UndoPreview { sessions: number; off: number; on: number; changedSince: number; past: number; gone: number }
+
+/** Work out an undo from its change-log entry, against the week as it is now. Nothing is written. */
+type PreparedUndo = { error: string } | { error?: undefined; board: BoardData; plan: ReturnType<typeof planUndo>; preview: UndoPreview; monday: string };
+
+async function prepareUndo(repos: Repositories, ctx: AnyTenantContext, auditId: string): Promise<PreparedUndo> {
   const row = await repos.tenant.auditLog.findById(ctx, auditId);
-  if (!row || row.action !== "auto_roster_redo" || !row.entityId || !row.before) return { ok: false, error: "That Auto-roster run can't be undone" };
+  if (!row || row.action !== "auto_roster_redo" || !row.entityId || !row.before || !row.after) return { error: "That Auto-roster run can't be undone" };
   const week = (JSON.parse(row.before) as { week?: WeekState }).week;
-  if (!week) return { ok: false, error: "That Auto-roster run can't be undone" };
+  const changes = (JSON.parse(row.after) as { changes?: WeekChange[] }).changes;
+  if (!week) return { error: "That Auto-roster run can't be undone" };
+  // Runs saved before the changes were recorded can't be told apart from later edits, so they aren't undone.
+  if (!changes) return { error: "This Auto-roster run was saved before undo could tell its changes from later ones, so it can't be undone safely. Change the sessions by hand instead." };
   const board = await getBoard(repos, ctx, row.entityId);
-  // Only sessions that still exist and are live are put back.
-  const live = weekStateOf(board);
-  const target: WeekState = Object.fromEntries(Object.keys(live).map((id) => [id, week[id] ?? live[id]!]));
-  const r = await applyWeekState(repos, ctx, board, target, { action: "auto_roster_undo", after: { week: row.entityId, undid: auditId } });
-  return { ok: true, added: r.added, removed: r.removed, notified: r.notified };
+  const dateOf = new Map(board.days.flatMap((d) => d.sessions.map((s) => [s.sessionId, d.date] as const)));
+  const today = todayIso();
+  const plan = planUndo(week, changes, weekStateOf(board), (id) => (dateOf.get(id) ?? "") >= today);
+  const moves = diffWeek(weekStateOf(board), plan.target);
+  const preview: UndoPreview = { sessions: Object.keys(plan.target).length, off: moves.filter((m) => m.kind === "off").length, on: moves.filter((m) => m.kind === "on").length, changedSince: plan.changedSince, past: plan.past, gone: plan.gone };
+  return { board, plan, preview, monday: row.entityId };
+}
+
+/** What an undo would do now, for the confirmation before it runs. */
+export async function previewUndoRedo(repos: Repositories, ctx: AnyTenantContext, auditId: string): Promise<{ ok: true; preview: UndoPreview } | { ok: false; error: string }> {
+  const p = await prepareUndo(repos, ctx, auditId);
+  return p.error !== undefined ? { ok: false, error: p.error } : { ok: true, preview: p.preview };
+}
+
+/**
+ * Undo a "Redo the whole week": reverse only what that run changed, on
+ * sessions still exactly as it left them and not yet happened. Anything
+ * changed since, or already worked, is left alone (and counted in the result).
+ */
+export async function undoRedo(repos: Repositories, ctx: AnyTenantContext, auditId: string): Promise<{ ok: true; added: number; removed: number; notified: number; preview: UndoPreview } | { ok: false; error: string }> {
+  const p = await prepareUndo(repos, ctx, auditId);
+  if (p.error !== undefined) return { ok: false, error: p.error };
+  if (!p.preview.sessions) return { ok: true, added: 0, removed: 0, notified: 0, preview: p.preview };
+  const r = await applyWeekState(repos, ctx, p.board, p.plan.target, { action: "auto_roster_undo", after: { week: p.monday, undid: auditId } });
+  return { ok: true, added: r.added, removed: r.removed, notified: r.notified, preview: p.preview };
 }

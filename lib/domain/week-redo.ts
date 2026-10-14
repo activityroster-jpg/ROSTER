@@ -21,3 +21,42 @@ export function diffWeek(before: WeekState, target: WeekState): WeekChange[] {
   }
   return out;
 }
+
+export interface UndoPlan {
+  /** The sessions to put back, each as it was before the redo. */
+  target: WeekState;
+  /** Sessions the redo changed that are left alone, and why. */
+  changedSince: number;
+  past: number;
+  gone: number;
+}
+
+const memberKey = (m: { instructorId: string; roleTypeId: string }) => `${m.instructorId}|${m.roleTypeId}`;
+const sameMembers = (a: WeekState[string], b: WeekState[string]) => {
+  const x = a.map(memberKey).sort(), y = b.map(memberKey).sort();
+  return x.length === y.length && x.every((k, i) => k === y[i]);
+};
+
+/**
+ * Undoing a redo reverses only what the redo itself did. A session the redo
+ * changed is put back as it was only when it is still exactly as the redo
+ * left it and hasn't happened yet. One changed since (by hand or another run),
+ * one in the past, or one no longer on the roster is left alone and counted.
+ * Sessions the redo didn't touch are never part of the undo. Pure.
+ */
+export function planUndo(before: WeekState, changes: WeekChange[], now: WeekState, isUpcoming: (sessionId: string) => boolean): UndoPlan {
+  const target: WeekState = {};
+  let changedSince = 0, past = 0, gone = 0;
+  for (const sessionId of new Set(changes.map((c) => c.sessionId))) {
+    const was = before[sessionId] ?? [];
+    const mine = changes.filter((c) => c.sessionId === sessionId);
+    const off = new Set(mine.filter((c) => c.kind === "off").map(memberKey));
+    const redoLeft = [...was.filter((m) => !off.has(memberKey(m))), ...mine.filter((c) => c.kind === "on").map(({ instructorId, roleTypeId }) => ({ instructorId, roleTypeId }))];
+    const current = now[sessionId];
+    if (!current) gone++;
+    else if (!isUpcoming(sessionId)) past++;
+    else if (!sameMembers(current, redoLeft)) changedSince++;
+    else target[sessionId] = was;
+  }
+  return { target, changedSince, past, gone };
+}

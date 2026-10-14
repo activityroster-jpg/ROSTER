@@ -10,7 +10,7 @@ import { assignStaff } from "@/lib/services/assignment";
 import { getBoard } from "@/lib/services/board";
 import { confirmDays } from "@/lib/services/roster-days";
 import { applyWeekState, undoRedo, weekStateOf } from "@/lib/services/week-redo";
-import { diffWeek } from "@/lib/domain/week-redo";
+import { diffWeek, planUndo } from "@/lib/domain/week-redo";
 import type { Repositories } from "@/lib/db/repositories";
 import type { SystemTenantContext } from "@/lib/tenant/context";
 
@@ -20,6 +20,29 @@ describe("diffWeek", () => {
     const after = { s1: [{ instructorId: "a", roleTypeId: "r" }, { instructorId: "c", roleTypeId: "r" }] };
     expect(diffWeek(before, after)).toEqual([{ sessionId: "s1", instructorId: "b", roleTypeId: "r", kind: "off" }, { sessionId: "s1", instructorId: "c", roleTypeId: "r", kind: "on" }]);
     expect(diffWeek(before, before)).toEqual([]);
+  });
+});
+
+describe("planUndo", () => {
+  const before = { s1: [{ instructorId: "kim", roleTypeId: "r" }], s2: [{ instructorId: "kim", roleTypeId: "r" }], s3: [], s4: [{ instructorId: "kim", roleTypeId: "r" }] };
+  const changes = [
+    { sessionId: "s1", instructorId: "kim", roleTypeId: "r", kind: "off" as const }, { sessionId: "s1", instructorId: "jo", roleTypeId: "r", kind: "on" as const },
+    { sessionId: "s2", instructorId: "kim", roleTypeId: "r", kind: "off" as const }, { sessionId: "s2", instructorId: "jo", roleTypeId: "r", kind: "on" as const },
+    { sessionId: "s4", instructorId: "kim", roleTypeId: "r", kind: "off" as const },
+  ];
+  it("puts back only sessions still as the redo left them, upcoming and still on the roster", () => {
+    const now = { s1: [{ instructorId: "jo", roleTypeId: "r" }], s2: [{ instructorId: "sam", roleTypeId: "r" }], s3: [{ instructorId: "sam", roleTypeId: "r" }] };
+    const plan = planUndo(before, changes, now, (id) => id !== "s9");
+    // s1 is as the redo left it → back to Kim. s2 was changed by hand since → left alone.
+    // s3 was never touched by the redo → never part of the undo. s4 is gone from the roster.
+    expect(plan.target).toEqual({ s1: [{ instructorId: "kim", roleTypeId: "r" }] });
+    expect(plan).toMatchObject({ changedSince: 1, past: 0, gone: 1 });
+  });
+  it("leaves sessions that have already happened", () => {
+    const now = { s1: [{ instructorId: "jo", roleTypeId: "r" }], s2: [{ instructorId: "jo", roleTypeId: "r" }], s4: [] };
+    const plan = planUndo(before, changes, now, (id) => id === "s2");
+    expect(plan.target).toEqual({ s2: [{ instructorId: "kim", roleTypeId: "r" }] });
+    expect(plan.past).toBe(2);
   });
 });
 
@@ -67,5 +90,43 @@ describe("redoing a week in one go, with undo", () => {
     const u = await undoRedo(repos, ctx, r.auditId!);
     expect(u).toMatchObject({ ok: true, added: 2, removed: 2 });
     expect(weekStateOf(await getBoard(repos, ctx, MON))).toEqual(before);
+  });
+
+  it("undo keeps changes made by hand since the redo, on any session", async () => {
+    const board = await getBoard(repos, ctx, MON);
+    const before = weekStateOf(board);
+    const [first, second, third] = Object.keys(before);
+    // The redo swaps Kim for Jo on the first session only.
+    const target = { [first!]: [{ instructorId: jo, roleTypeId: roleId }] };
+    const r = await applyWeekState(repos, ctx, board, target, { action: "auto_roster_redo", after: { week: MON } });
+    // Later, by hand: Jo also put on the second session, which the redo never touched.
+    const now = weekStateOf(await getBoard(repos, ctx, MON));
+    const hand = { ...now, [second!]: [...now[second!]!, { instructorId: jo, roleTypeId: roleId }] };
+    await applyWeekState(repos, ctx, await getBoard(repos, ctx, MON), hand, { action: "assign_by_hand", after: {} });
+    const u = await undoRedo(repos, ctx, r.auditId!);
+    expect(u).toMatchObject({ ok: true, added: 1, removed: 1 });
+    const after = weekStateOf(await getBoard(repos, ctx, MON));
+    expect(after[first!]!.map((m) => m.instructorId)).toEqual([kim]);
+    expect(after[second!]!.map((m) => m.instructorId).sort()).toEqual([jo, kim].sort()); // the hand change survives
+    if (third) expect(after[third]).toEqual(before[third]);
+  });
+
+  it("undo leaves a session alone once it has been changed again since the redo", async () => {
+    const board = await getBoard(repos, ctx, MON);
+    const before = weekStateOf(board);
+    const first = Object.keys(before)[0]!;
+    const r = await applyWeekState(repos, ctx, board, { [first]: [{ instructorId: jo, roleTypeId: roleId }] }, { action: "auto_roster_redo", after: { week: MON } });
+    // By hand, Kim is added back alongside Jo.
+    await applyWeekState(repos, ctx, await getBoard(repos, ctx, MON), { [first]: [{ instructorId: jo, roleTypeId: roleId }, { instructorId: kim, roleTypeId: roleId }] }, { action: "assign_by_hand", after: {} });
+    const u = await undoRedo(repos, ctx, r.auditId!);
+    expect(u).toMatchObject({ ok: true, added: 0, removed: 0 });
+    if (u.ok) expect(u.preview).toMatchObject({ sessions: 0, changedSince: 1 });
+    expect(weekStateOf(await getBoard(repos, ctx, MON))[first]!.map((m) => m.instructorId).sort()).toEqual([jo, kim].sort());
+  });
+
+  it("refuses to undo a run saved before its changes were recorded", async () => {
+    const row = await repos.tenant.auditLog.insert(ctx, { action: "auto_roster_redo", entity: "roster", entityId: MON, before: JSON.stringify({ week: {} }), after: JSON.stringify({ week: MON }) });
+    const u = await undoRedo(repos, ctx, row.id);
+    expect(u.ok).toBe(false);
   });
 });
