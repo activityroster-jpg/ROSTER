@@ -35,7 +35,7 @@
     "better-auth": "^1.7.7",
     "capacitor-native-biometric": "^4.2.2",
     "drizzle-orm": "^0.45.3",
-    "lucide-react": "^0.469.0",
+    "lucide-react": "^1.55.0",
     "next": "^16.3.8",
     "pdf-lib": "^1.17.1",
     "postal-mime": "3.0.1",
