@@ -1,4 +1,6 @@
 import { describe, it, expect } from "vitest";
+import { eq } from "drizzle-orm";
+import { trustedDevice } from "@/lib/db/schema";
 import { createTestDb } from "@/tests/helpers/test-db";
 import { createRepositories } from "@/lib/db/repositories";
 
@@ -26,5 +28,22 @@ describe("trusted devices", () => {
 
     expect(await control.forgetTrustedDevices(u.id)).toBe(2);
     expect(await control.isTrustedDevice(u.id, "d1", "1.2.3.4", "GB")).toBe(false);
+  });
+
+  it("refreshes 'last seen' at most every 15 minutes, not on every page", async () => {
+    const { db } = createTestDb();
+    const { control } = createRepositories(db);
+    const u = await control.createUser({ name: "Dev", email: "dev@club.test" });
+    await control.trustDevice({ userId: u.id, deviceId: "d1", ip: "1.2.3.4", country: "GB", userAgent: "UA" });
+    const seenAt = async () => (await db.select({ at: trustedDevice.lastSeenAt }).from(trustedDevice).where(eq(trustedDevice.userId, u.id)))[0]!.at.getTime();
+
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60_000);
+    await db.update(trustedDevice).set({ lastSeenAt: tenMinutesAgo }).where(eq(trustedDevice.userId, u.id));
+    expect(await control.isTrustedDevice(u.id, "d1", "1.2.3.4", "GB")).toBe(true);
+    expect(await seenAt()).toBe(tenMinutesAgo.getTime()); // recent enough: left alone
+
+    await db.update(trustedDevice).set({ lastSeenAt: new Date(Date.now() - 20 * 60_000) }).where(eq(trustedDevice.userId, u.id));
+    expect(await control.isTrustedDevice(u.id, "d1", "1.2.3.4", "GB")).toBe(true);
+    expect(Date.now() - (await seenAt())).toBeLessThan(60_000); // older: refreshed
   });
 });

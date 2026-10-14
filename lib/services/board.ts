@@ -6,7 +6,7 @@ import { getWeekAvailabilityMatrix } from "./availability";
 import { listStaffWithFit, fitReason } from "./staff";
 import { getTeachingContext, getTeachingMatrix, leadPlaceFor, relevantPlacesFor, staffingRolesOf } from "./teaching";
 import { fillablePlaces } from "@/lib/domain/teaching";
-import { findProblems, problemLabel, qualificationGap } from "./problems";
+import { findProblems, problemLabel, qualificationGap, type ProblemsReport } from "./problems";
 import { cleanRoleLines, leadTeachingRole } from "@/lib/domain/staffing";
 import { requiredInstructors } from "@/lib/domain/ratio";
 import { isUnder18 } from "@/lib/domain/age";
@@ -67,15 +67,29 @@ export interface BoardData {
  * fill them with their availability, fit and qualifications for each day, and
  * the week's problems. Tenant scoped; nothing here writes.
  */
-export async function getBoard(repos: Repositories, ctx: AnyTenantContext, mondayIso: string): Promise<BoardData> {
+/**
+ * What to leave out when the caller doesn't show it: `availability: false`
+ * leaves everyone's availability empty, `problems: false` skips the week's
+ * checks (no flags, counts of 0). Both are on unless switched off.
+ */
+export interface BoardParts {
+  availability?: boolean;
+  problems?: boolean;
+}
+
+const NO_AVAILABILITY = { rows: [] as Awaited<ReturnType<typeof getWeekAvailabilityMatrix>>["rows"] };
+const noProblems = (from: string, to: string): ProblemsReport => ({ from, to, problems: [], blocks: 0, warns: 0, bySession: {}, byCourse: {}, byInstructor: {} });
+
+export async function getBoard(repos: Repositories, ctx: AnyTenantContext, mondayIso: string, parts: BoardParts = {}): Promise<BoardData> {
   const t = repos.tenant;
   const tc = await getTeachingContext(repos, ctx);
+  const weekTo = addDays(mondayIso, 7);
   const [days, matrix, staff, teaching, problems, roles, courseTypes, settingsRows] = await Promise.all([
     getWeekRota(repos, ctx, mondayIso),
-    getWeekAvailabilityMatrix(repos, ctx, mondayIso),
+    parts.availability === false ? Promise.resolve(NO_AVAILABILITY) : getWeekAvailabilityMatrix(repos, ctx, mondayIso),
     listStaffWithFit(repos, ctx),
     getTeachingMatrix(repos, ctx, tc),
-    findProblems(repos, ctx, { from: mondayIso, to: addDays(mondayIso, 7) }),
+    parts.problems === false ? Promise.resolve(noProblems(mondayIso, weekTo)) : findProblems(repos, ctx, { from: mondayIso, to: weekTo }),
     t.roleType.list(ctx),
     t.courseType.list(ctx),
     t.orgSettings.list(ctx),
@@ -129,7 +143,7 @@ export async function getBoard(repos: Repositories, ctx: AnyTenantContext, monda
   }
 
   const availByInstructor = new Map(matrix.rows.map((r) => [r.instructorId, r]));
-  const weekEnd = addDays(mondayIso, 7);
+  const weekEnd = weekTo;
   const instructors: BoardInstructor[] = staff
     .filter((x) => x.instructor.status === "active" && !x.instructor.anonymisedAt && !x.instructor.restrictedAt)
     .map((x) => {

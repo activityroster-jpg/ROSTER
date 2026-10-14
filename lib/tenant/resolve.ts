@@ -72,6 +72,10 @@ export async function resolveTenant(headers: Headers): Promise<TenantResolution>
     return { ok: false, reason: "unknown-host" };
   }
 
+  // The sign-in lookup doesn't depend on the centre, so it runs alongside the centre lookup (one wait, not two).
+  const auth = await getAuth();
+  const sessionLookup = auth.api.getSession({ headers });
+  sessionLookup.catch(() => {}); // awaited below; this only stops an early return leaving it unhandled
   const organisation = host.kind === "tenant"
     ? await control.organisationBySlug(host.slug)
     : await control.organisationById(centreClaims!.organisationId);
@@ -83,8 +87,9 @@ export async function resolveTenant(headers: Headers): Promise<TenantResolution>
     return { ok: false, reason: "suspended", slug: slugHint, organisation };
   }
 
-  const auth = await getAuth();
-  const authSession = await auth.api.getSession({ headers });
+  // The trial length (platform pricing) is read alongside the membership check.
+  const trialLookup = trialFor(db, organisation);
+  const authSession = await sessionLookup;
   if (!authSession?.user) {
     return { ok: false, reason: "unauthenticated", slug: slugHint, organisation };
   }
@@ -104,7 +109,7 @@ export async function resolveTenant(headers: Headers): Promise<TenantResolution>
     (await isPlatformAdminEmail(authSession.user.email))
   ) {
     const ctx: TenantContext = { organisationId: organisation.id, slug: organisation.slug, userId: authSession.user.id, role: "owner", ghost: true };
-    return { ok: true, ctx, organisation, sessionId: authSession.session?.id, trial: await trialFor(db, organisation) };
+    return { ok: true, ctx, organisation, sessionId: authSession.session?.id, trial: await trialLookup };
   }
 
   let membership = await control.membershipFor(authSession.user.id, organisation.id);
@@ -127,7 +132,7 @@ export async function resolveTenant(headers: Headers): Promise<TenantResolution>
     return { ok: false, reason: "not-a-member", slug: slugHint, organisation };
   }
 
-  const trial = await trialFor(db, organisation);
+  const trial = await trialLookup;
   const ctx: TenantContext = withTrial({
     organisationId: organisation.id,
     slug: organisation.slug,

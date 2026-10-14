@@ -595,12 +595,14 @@ export class ControlPlaneRepository {
   async isTrustedDevice(userId: string, deviceId: string, _ip: string, country: string | null, city: string | null = null, strict = false): Promise<boolean> {
     void _ip;
     const rows = await this.db
-      .select({ id: trustedDevice.id, country: trustedDevice.country, city: trustedDevice.city })
+      .select({ id: trustedDevice.id, country: trustedDevice.country, city: trustedDevice.city, lastSeenAt: trustedDevice.lastSeenAt })
       .from(trustedDevice)
       .where(and(eq(trustedDevice.userId, userId), eq(trustedDevice.deviceId, deviceId)));
     const row = rows.find((r) => (r.country ?? null) === (country ?? null) && (!strict || !city || !r.city || r.city === city));
     if (!row) return false;
-    await this.db.update(trustedDevice).set({ lastSeenAt: new Date() }).where(eq(trustedDevice.id, row.id));
+    // "Last seen" to the nearest quarter of an hour: not a database write on every page.
+    const seen = row.lastSeenAt instanceof Date ? row.lastSeenAt.getTime() : 0;
+    if (Date.now() - seen > 15 * 60_000) await this.db.update(trustedDevice).set({ lastSeenAt: new Date() }).where(eq(trustedDevice.id, row.id));
     return true;
   }
 

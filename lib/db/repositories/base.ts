@@ -16,6 +16,17 @@ export type TenantTable = SQLiteTable & {
 };
 
 /**
+ * Small tables that one page reads again and again (each part of the roster
+ * board, the problems list and the checks loads its own copy): within one
+ * request, a whole-table read of these is fetched once and shared.
+ */
+const SHARED_READ_TABLES = new Set([
+  "course_type", "role_type", "org_settings", "instructor", "qualification", "qualification_type",
+  "qualification_course_type", "course_type_staffing", "instructor_course_type",
+  "compliance_type", "compliance_item", "equipment_type", "location", "location_type",
+]);
+
+/**
  * THE ONLY path to tenant data.
  *
  * Every method takes a {@link AnyTenantContext} and injects
@@ -28,15 +39,29 @@ export type TenantTable = SQLiteTable & {
  * org's rows.
  */
 export class TenantRepository<T extends TenantTable> {
+  /**
+   * Whole-table reads shared within this request (repositories are made per
+   * request). Any write through this repository, even one only prepared for a
+   * batch, clears it and stops sharing for the rest of the request, so a read
+   * after a change always goes to the database.
+   */
+  private readonly shared = new Map<string, Promise<unknown[]>>();
+  private sharing: boolean;
+
   constructor(
     protected readonly db: Database,
     protected readonly table: T,
-  ) {}
+  ) {
+    this.sharing = SHARED_READ_TABLES.has(getTableName(table as SQLiteTable));
+  }
 
   /** Ghost Mode and lapsed-trial contexts can read everything and write nothing — enforced here, not by vigilance. */
   protected assertWritable(ctx: AnyTenantContext): void {
     if (isGhostContext(ctx)) throw new GhostReadOnlyError();
     if (isReadOnlyContext(ctx)) throw new TrialReadOnlyError();
+    // Every write passes here first: stop sharing reads of this table for the rest of the request.
+    this.sharing = false;
+    this.shared.clear();
   }
 
   /** WHERE clause pinning to this tenant, optionally AND-ed with more. */
@@ -47,6 +72,18 @@ export class TenantRepository<T extends TenantTable> {
 
   /** List every row owned by the tenant (optionally further filtered). */
   async list(ctx: AnyTenantContext, where?: SQL): Promise<T["$inferSelect"][]> {
+    if (!where && this.sharing) {
+      let pending = this.shared.get(ctx.organisationId);
+      if (!pending) {
+        // A real promise: a Drizzle query is a lazy "thenable" that runs again each time it is awaited.
+        const query = this.db.select().from(this.table as SQLiteTable).where(this.scoped(ctx));
+        pending = (async () => (await query) as unknown[])();
+        this.shared.set(ctx.organisationId, pending);
+        pending.catch(() => this.shared.delete(ctx.organisationId));
+      }
+      // A copy of the list, so one caller sorting or filtering in place can't change another's.
+      return [...(await pending)] as T["$inferSelect"][];
+    }
     const rows = await this.db.select().from(this.table as SQLiteTable).where(this.scoped(ctx, where));
     return rows as T["$inferSelect"][];
   }

@@ -105,7 +105,6 @@ export async function autoRosterAction(input: { monday: string; mode?: "open" | 
   if (typeof input?.monday !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(input.monday)) return { ok: false, error: "Invalid week" };
   const redo = input.mode === "redo";
   const monday = weekStart(new Date(`${input.monday}T00:00:00Z`));
-  const board = await getBoard(repos, ctx, monday);
 
   // "Redo the whole week": the new week is worked out first, then saved in one
   // go (people who stay where they are aren't touched or told), with an undo.
@@ -119,6 +118,7 @@ export async function autoRosterAction(input: { monday: string; mode?: "open" | 
     return { ok: true, message: msg, filled: r.added, open: r.open, cleared: r.removed, ...(r.auditId && changed ? { undoId: r.auditId } : {}) };
   }
 
+  const board = await getBoard(repos, ctx, monday, { problems: false });
   const load = new Map<string, number>();
   const sessions: AutoSession[] = [];
   for (const d of board.days) {

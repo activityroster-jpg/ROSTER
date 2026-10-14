@@ -80,9 +80,14 @@ export async function requireTenant(opts?: { role?: "admin"; owner?: boolean; pe
   // welcome page, a deep link), not just the role's home page.
   const back = path.startsWith(landing) ? path : landing;
   // Unfamiliar device, country or IP → password again first; then the PIN.
-  await enforceDeviceGate(res.ctx.userId, back, res.ctx.organisationId, isOfficeRole(res.ctx.role));
   // Office roles and instructors set and enter a 4-digit PIN each session.
-  await enforcePinGate(res.ctx.userId, res.sessionId, back);
+  // Both checks run at once (the PIN check only reads), and a refusal is still
+  // taken in that order: the device first, then the PIN.
+  const gates = await Promise.allSettled([
+    enforceDeviceGate(res.ctx.userId, back, res.ctx.organisationId, isOfficeRole(res.ctx.role)),
+    enforcePinGate(res.ctx.userId, res.sessionId, back),
+  ]);
+  for (const g of gates) if (g.status === "rejected") throw g.reason;
 
   const repos = await getRepositories();
 

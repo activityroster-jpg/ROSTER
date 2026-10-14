@@ -121,7 +121,7 @@ export function planRedo(board: BoardData): { target: WeekState; open: number } 
 
 /** Redo the whole week in one go. */
 export async function redoWeek(repos: Repositories, ctx: AnyTenantContext, monday: string) {
-  const board = await getBoard(repos, ctx, monday);
+  const board = await getBoard(repos, ctx, monday, { problems: false });
   const { target, open } = planRedo(board);
   const r = await applyWeekState(repos, ctx, board, target, { action: "auto_roster_redo", after: { week: monday, open } });
   return { ...r, open };
@@ -140,7 +140,7 @@ async function prepareUndo(repos: Repositories, ctx: AnyTenantContext, auditId: 
   if (!week) return { error: "That Auto-roster run can't be undone" };
   // Runs saved before the changes were recorded can't be told apart from later edits, so they aren't undone.
   if (!changes) return { error: "This Auto-roster run was saved before undo could tell its changes from later ones, so it can't be undone safely. Change the sessions by hand instead." };
-  const board = await getBoard(repos, ctx, row.entityId);
+  const board = await getBoard(repos, ctx, row.entityId, { availability: false, problems: false });
   const dateOf = new Map(board.days.flatMap((d) => d.sessions.map((s) => [s.sessionId, d.date] as const)));
   const today = todayIso();
   const plan = planUndo(week, changes, weekStateOf(board), (id) => (dateOf.get(id) ?? "") >= today);

@@ -50,7 +50,8 @@ export async function assignableForCellAction(date: string, slot: string, instru
   // One source of truth: the same week data the roster board shows (who is on each
   // session that day, day adds included, and which places are still open), so the
   // availability sheet can never disagree with the rota.
-  const board = await getBoard(repos, ctx, weekStart(new Date(`${date}T00:00:00Z`)));
+  // (Without everyone's availability grid or the week's checks: this panel uses neither.)
+  const board = await getBoard(repos, ctx, weekStart(new Date(`${date}T00:00:00Z`)), { availability: false, problems: false });
   const activeRoles = board.roles.map((r) => ({ id: r.id, name: r.name }));
   const roleById = new Map(board.roles.map((r) => [r.id, r]));
   const me = board.instructors.find((i) => i.id === instructorId);
