@@ -25,6 +25,7 @@
 
 - **No production system was touched**, and this machine can't reach the live site (the outbound proxy refuses it), so production headers, the status page and the live Better Stack monitor were not checked from here. The deploy workflow's own smoke test covers the headers.
 - **Local only:** no real email (links and codes are read from the local server log), no Stripe keys (checkout was tested only for failing gracefully), no real phones. The local database runs statements one after another, so all-or-nothing saves are proven by code reading, not by execution, as before.
+- **The local copy needed migration 0088 applied by hand** before roster writes worked (the local database had been snapshotted before the pay-columns migration); staging and production get it from the deploy workflow. Nothing to fix in the product.
 - **The function test is as thorough as its selectors.** Where a step failed, the failure was classified by hand: a real problem, a test-data limitation (the local copy has no blog posts, for example), or a selector that didn't match. Section 7 says which.
 - **One auditor, one afternoon.** This is a careful review, not a penetration test by a second firm. The spec's checklist still has the solicitor and DPA items open; they're not code.
 
