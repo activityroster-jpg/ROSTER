@@ -9,11 +9,10 @@ import { Logo } from "@/components/Logo";
 const PRIMARY = [
   { href: "/pricing", label: "Pricing" },
   { href: "/learn", label: "Learn" },
-  { href: "/demo", label: "Demo" },
   { href: "/contact", label: "Contact" },
 ];
 
-/** The full set, shown in the mobile menu (secondary pages too; no Demo — it's a desktop experience). */
+/** The full set, shown in the mobile menu (secondary pages too). */
 const ALL = [
   { href: "/pricing", label: "Pricing" },
   { href: "/compare", label: "Compare" },
