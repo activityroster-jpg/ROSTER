@@ -13,6 +13,9 @@ on:
     - cron: "40 * * * *"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   tick:
     runs-on: ubuntu-24.04

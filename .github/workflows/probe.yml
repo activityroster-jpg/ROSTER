@@ -12,6 +12,9 @@ on:
     - cron: "17 */2 * * *"
   push:
     paths: [".github/workflows/probe.yml"]
+permissions:
+  contents: read
+
 jobs:
   probe:
     runs-on: ubuntu-24.04

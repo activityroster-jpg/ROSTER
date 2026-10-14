@@ -60,7 +60,8 @@ export async function POST(req: Request) {
       userId,
       userEmail,
       path: path ?? null,
-      message,
+      // Stored scrubbed, like the copy that goes to Sentry: an error text can quote what someone typed.
+      message: scrub(message),
       digest: digest ?? null,
       userAgent,
     });

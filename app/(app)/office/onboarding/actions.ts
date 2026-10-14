@@ -260,6 +260,6 @@ export async function addDefaultCoursesAction(): Promise<{ ok: boolean; created:
 /** Mark onboarding dismissed for this browser so the dashboard stops redirecting. */
 export async function dismissOnboardingAction(): Promise<Result> {
   const jar = await cookies();
-  jar.set(ONBOARDED_COOKIE, "1", { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" });
+  jar.set(ONBOARDED_COOKIE, "1", { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax", httpOnly: true, secure: true });
   return { ok: true };
 }

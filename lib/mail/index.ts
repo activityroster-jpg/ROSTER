@@ -135,11 +135,23 @@ export async function readOutbox(): Promise<OutboxEntry[]> {
 
 const htmlToText = (html: string) => html.replace(/<style[\s\S]*?<\/style>/gi, " ").replace(/<br\s*\/?>|<\/(p|div|h[1-6]|li|tr)>/gi, "\n").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/[ \t]+/g, " ").split("\n").map((l) => l.trim()).join("\n").replace(/\n\s*\n+/g, "\n").trim();
 
+/**
+ * Local development only (`next dev`, where nothing is sent): the links an email
+ * carries go into the server log, so a sign-up confirmation, invitation or
+ * password reset can be followed in a local browser test. Never on staging or
+ * production, where the email is really sent.
+ */
+function devLinks(env: ReturnType<typeof getEnv>, html: string): string {
+  if (env.APP_ENV !== "development") return "";
+  const links = [...html.matchAll(/href="(https?:\/\/[^"]+)"/g)].map((m) => m[1]!.replace(/&amp;/g, "&"));
+  return links.length ? ` links: ${links.join(" ")}` : "";
+}
+
 export async function sendRawEmail(msg: RawEmail): Promise<{ id: string | null; sent: boolean }> {
   const env = getEnv();
   await captureOutbox(env, { at: new Date().toISOString(), to: msg.to, from: msg.from, subject: msg.subject, text: msg.text });
   if (!canSend(env)) {
-    console.info(`[mail] (not sent: ${env.APP_ENV ?? "unset"}) ${msg.subject}`);
+    console.info(`[mail] (not sent: ${env.APP_ENV ?? "unset"}) ${msg.subject}${devLinks(env, msg.html)}`);
     return { id: null, sent: false };
   }
   const id = await dispatch(env, {
@@ -157,7 +169,7 @@ export async function sendEmail(msg: EmailMessage): Promise<void> {
   await captureOutbox(env, { at: new Date().toISOString(), to: msg.to, from, subject: msg.subject, text: htmlToText(msg.html) });
 
   if (!canSend(env)) {
-    console.info(`[mail] (not sent: ${env.APP_ENV ?? "unset"}) ${msg.subject}`);
+    console.info(`[mail] (not sent: ${env.APP_ENV ?? "unset"}) ${msg.subject}${devLinks(env, msg.html)}`);
     return;
   }
   await dispatch(env, { from, to: msg.to, subject: msg.subject, html, text, expiresAt: msg.expiresInMinutes ? new Date(Date.now() + msg.expiresInMinutes * 60_000) : null }, "system");

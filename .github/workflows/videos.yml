@@ -24,6 +24,9 @@ on:
     branches: ["claude/new-session-2wxbwe"]
     paths: ["videos/**", ".github/workflows/videos.yml"]
 
+permissions:
+  contents: read
+
 concurrency:
   group: videos-${{ github.ref }}
   cancel-in-progress: true

@@ -19,6 +19,9 @@ on:
     - cron: "30 2 * * *"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
   group: nightly-backup
   cancel-in-progress: false

@@ -41,7 +41,10 @@ export const requirePlatformAdmin = cache(async function requirePlatformAdmin():
   // The money-facing admin also requires the 4-digit PIN each session…
   await enforcePinGate(session!.user.id, session!.session?.id, "/admin");
   // …and an authenticator-app code (TOTP), enrolled once and entered per session.
+  // The security page itself is exempt so enrolment can't loop, but only when it
+  // is being rendered: a server action posted to that path gets no exemption.
   const path = h.get(PATH_HEADER) || "/admin";
-  await enforceTotpGate(session!.user.id, session!.session?.id, path.startsWith("/admin") ? path : "/admin");
+  const isAction = h.has("next-action");
+  await enforceTotpGate(session!.user.id, session!.session?.id, isAction ? "/admin" : path.startsWith("/admin") ? path : "/admin");
   return { email: email! };
 });

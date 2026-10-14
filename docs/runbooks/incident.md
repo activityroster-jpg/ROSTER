@@ -36,6 +36,23 @@ Keep a printed copy and one in Google Drive. Severity decides the clock.
   Tell the people affected if the risk is high.
 - Record every incident in `docs/incident-log.md`, reported or not.
 
+## Cloudflare-wide outage (nothing loads)
+
+Everything a centre uses runs on Cloudflare, so a Cloudflare-wide problem takes the office,
+the instructor app and the background jobs down together until Cloudflare fixes it. There is
+nothing to repair on our side. The full walk-through, by kind of outage, with the drills, is
+section 8 of `docs/security-audit-2026-10-14.md`.
+
+1. Better Stack texts you; the GitHub probe fails and emails. Check status.cloudflare.com.
+2. Post "We're aware" on the status page (template above) and keep it updated.
+3. Email centre admins from the contacts copy kept outside Cloudflare (password manager
+   note; the database is unreachable).
+4. Centres run the day from the morning roster email, the printed roster or the saved week
+   in the instructor app. Paper changes are entered when the site is back.
+5. When Cloudflare is back nothing needs restarting: queued emails and notices go out on the
+   next two-minute job and the hourly job catches up. Post "Resolved".
+6. Down for days, or the account gone: `docs/runbooks/restore.md`, Case C.
+
 ## Templates
 
 **We're aware.** "We're investigating a problem affecting [sign-in / the rota /

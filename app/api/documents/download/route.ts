@@ -26,6 +26,8 @@ export async function GET(req: Request) {
     }
   }
 
+  // A key outside this centre's namespace is refused by getDocument; answer 403 rather than an error page.
+  if (!key.startsWith(`org_${ctx.organisationId}/`)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const object = await getDocument(ctx, key);
   if (!object) return NextResponse.json({ error: "Not found" }, { status: 404 });
 

@@ -65,7 +65,10 @@ export async function requireTenant(opts?: { role?: "admin"; owner?: boolean; pe
   // Free trial over: read-only, and after the grace period locked to Billing
   // (admins) or a "trial ended" page (instructors). Billing itself stays usable.
   const path = h.get(PATH_HEADER) ?? "";
-  const billing = LOCKED_ALLOWED.some((p) => path.startsWith(p)) || opts?.allowReadOnly === true;
+  // The billing pages stay open so a centre can pay. A server action gets that
+  // allowance only by asking for it, never from the path it was posted to.
+  const isAction = h.has("next-action");
+  const billing = (!isAction && LOCKED_ALLOWED.some((p) => path.startsWith(p))) || opts?.allowReadOnly === true;
   if (res.ctx.locked && !billing) redirect(can(res.ctx, "billing.manage") ? "/office/billing?locked=1" : "/trial-ended");
   if (res.ctx.readOnly && !billing && h.has("next-action")) throw new TrialReadOnlyError();
 

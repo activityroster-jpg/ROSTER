@@ -1,6 +1,7 @@
 import { getEnv } from "@/lib/cf/bindings";
-import { isGhostContext, type AnyTenantContext } from "@/lib/tenant/context";
+import { isGhostContext, isReadOnlyContext, type AnyTenantContext } from "@/lib/tenant/context";
 import { GhostReadOnlyError } from "@/lib/auth/ghost";
+import { TrialReadOnlyError } from "@/lib/billing/trial";
 
 /**
  * Org-scoped access to the private R2 documents bucket. Every key is prefixed
@@ -20,6 +21,12 @@ export function tenantKey(ctx: AnyTenantContext, relativePath: string): string {
   return `${orgPrefix(ctx)}${clean}`;
 }
 
+/** Same rule as the repository layer: Ghost Mode and a lapsed trial can read files, never write or delete them. */
+function assertWritable(ctx: AnyTenantContext): void {
+  if (isGhostContext(ctx)) throw new GhostReadOnlyError();
+  if (isReadOnlyContext(ctx)) throw new TrialReadOnlyError();
+}
+
 /** Assert a key belongs to the tenant before any read/delete. */
 function assertScoped(ctx: AnyTenantContext, key: string): void {
   if (!key.startsWith(orgPrefix(ctx))) {
@@ -33,7 +40,7 @@ export async function putDocument(
   body: ArrayBuffer | ReadableStream | string,
   httpMetadata?: R2HTTPMetadata,
 ): Promise<string> {
-  if (isGhostContext(ctx)) throw new GhostReadOnlyError();
+  assertWritable(ctx);
   const key = tenantKey(ctx, relativePath);
   await getEnv().DOCS.put(key, body, { httpMetadata });
   return key;
@@ -45,14 +52,14 @@ export async function getDocument(ctx: AnyTenantContext, key: string): Promise<R
 }
 
 export async function deleteDocument(ctx: AnyTenantContext, key: string): Promise<void> {
-  if (isGhostContext(ctx)) throw new GhostReadOnlyError();
+  assertWritable(ctx);
   assertScoped(ctx, key);
   await getEnv().DOCS.delete(key);
 }
 
 /** Delete every file stored under this centre's prefix (erasure). Returns how many went. */
 export async function deleteAllDocuments(ctx: AnyTenantContext): Promise<number> {
-  if (isGhostContext(ctx)) throw new GhostReadOnlyError();
+  assertWritable(ctx);
   const bucket = getEnv().DOCS;
   const prefix = tenantKey(ctx, "");
   let removed = 0;
