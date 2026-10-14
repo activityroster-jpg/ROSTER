@@ -239,7 +239,7 @@ const ALL_SECTIONS: Section[] = [
         "Phone notifications for roster changes, new open shifts, leave decisions and expiring certs (they can switch these off).",
         "Your shifts, with the course, colleagues on it, student numbers and the location on each card. Your centre chooses when they appear: by default as soon as you're put on a shift, marked Pending until the office confirms the day; or, if the centre switches off “Let staff see their shifts before you confirm the day” (Settings → General → Checks when rostering), only once the day is confirmed. If your centre asks you to accept shifts: one-tap “I'll be there”, or “Can't make it” with a reason so the office can find cover.",
         "Availability has “Same as last week”, “All free” and “Clear week” so a regular pattern takes two taps.",
-        "Settings: update your name and (optionally) your mobile number, change your PIN, and set or change your password. Docs has a Replace button for a renewed cert.",
+        "Settings: update your name and (optionally) your mobile number, change your PIN, and set or change your password. Delete my account (at the foot of Settings) asks for your account and personal data to be deleted. Docs has a Replace button for a renewed cert.",
         "Face ID / fingerprint instead of typing the PIN every time; the PIN stays as the fallback.",
         "Clock in and out records an approximate location — shown as a 📍 map link on your Time clock page.",
         "A camera button on Documents to photograph a certificate straight into their record.",
