@@ -111,6 +111,12 @@ test("seed the video centres", async () => {
 
   const cts = await t.courseType.list(ctx);
   const ct = (re: RegExp) => cts.find((c) => re.test(c.name)) ?? cts.find((c) => c.active)!;
+  // Lakeside has chosen who teaches Basic Skills: Dinghy, Advanced Dinghy and Senior Instructors
+  // only (video 2 shows that row), so the starting list's Assistant Instructor link comes off.
+  const basicSkills = cts.find((c) => c.name === "Basic Skills (Level 2)");
+  if (basicSkills) {
+    for (const link of (await t.qualificationCourseType.list(ctx)).filter((r) => r.courseTypeId === basicSkills.id && r.qualificationTypeId === q("AI").id)) await t.qualificationCourseType.delete(ctx, link.id);
+  }
   const course = async (name: string, typeRe: RegExp, days: { date: string; slots: string[] }[], staff: [string, string][]) => {
     const type = ct(typeRe);
     const c = await t.course.insert(ctx, { courseTypeId: type.id, name, capacity: type.defaultCapacity ?? 8, ratio: type.studentsPerInstructor, status: "scheduled" } as never);

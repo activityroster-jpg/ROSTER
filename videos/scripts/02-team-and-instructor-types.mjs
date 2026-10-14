@@ -7,7 +7,7 @@ export default {
   who: "sam@demo.example",
   warm: ["/office/staff", "/office/course-setup"],
   start: "/office/staff",
-  description: `How to add your team to ActivityRoster and record each person's RYA instructor types: quick add with an invite, importing a spreadsheet, ticking instructor types on a profile, licences and expiry dates, and how Course setup decides who can teach each course.`,
+  description: `How to add your team to ActivityRoster and record each person's RYA instructor types: quick add with an invite, importing a spreadsheet, ticking instructor types on a profile, licences and expiry dates, and how Course setup lets your centre choose exactly who can teach each course.`,
   tags: ["RYA instructor types", "instructor qualifications", "staff records sailing centre", "licence expiry tracking", "instructor import"],
   steps: [
     { chapter: "The Instructors page", say: "This is the Instructors page, at our made-up centre, Lakeside Sailing Centre. Everyone on your team is listed here.",
@@ -42,9 +42,9 @@ export default {
 
     { chapter: "Who can teach each course", say: "Which types can teach which course is set once, in Course setup. Every RYA course comes filled in.",
       do: async (h) => { await h.goto("/office/course-setup"); await h.highlight(h.page.getByRole("columnheader", { name: /Who can teach it/i }).or(h.page.getByText("Who can teach it"))); } },
-    { say: "Basic Skills, for example, can be taught by an Assistant Instructor, a Dinghy Instructor, an Advanced Dinghy Instructor, or a Senior Instructor.",
+    { say: "Basic Skills, for example, can be taught by a Dinghy Instructor, an Advanced Dinghy Instructor, or a Senior Instructor.",
       do: async (h) => { await h.highlight(h.page.locator("tr").filter({ has: h.page.locator('input[value="Basic Skills (Level 2)"]') })); } },
-    { say: "You can change any of it here, along with each course's capacity and ratio. A course you no longer run is retired, so old records still show it.", pause: 0.8, thumb: true,
+    { say: "But it's your centre's choice. You decide exactly who can teach each type of course: tick or untick any instructor type, course by course, and auto-roster follows your rules. You can set each course's capacity and ratio here too. A course you no longer run is retired, so old records still show it.", pause: 0.8, thumb: true,
       do: async (h) => { await h.unhighlight(); await h.point(h.page.locator("tr").filter({ has: h.page.locator('input[value="Basic Skills (Level 2)"]') }).getByText("edit")); await h.page.mouse.move(1380, 790); } },
     { say: "That's your team set up. Next, inviting them to the app, so they keep their own availability and licences up to date.", pause: 1.0,
       do: async (h) => { await h.scrollTop(); } },

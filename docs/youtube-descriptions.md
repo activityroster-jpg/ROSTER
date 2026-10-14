@@ -58,7 +58,7 @@ In this video:
 - Quick add with an invite, pasting a list, or importing a spreadsheet
 - Ticking instructor types on a profile, and Principal's approval
 - Licences, expiry dates and uploads
-- Course setup: which instructor types can teach each course
+- Course setup: your centre chooses exactly which instructor types can teach each course
 
 Guide: https://activityroster.com/learn?topic=instructor-types
 Start your free month: https://activityroster.com
@@ -108,7 +108,8 @@ How availability works in ActivityRoster: who's free, and when.
 
 In this video:
 - The week grid, and the count of who's free in each slot
-- Free, maybe, busy, and not answered yet
+- Free, maybe, busy, and not answered yet (the plain grey square)
+- The dark-blue dot: someone already on a session
 - Usual weeks, and looking further ahead
 - Setting someone's availability from the office
 - Putting a free instructor straight onto a session
@@ -232,11 +233,12 @@ Tags: sailing centre software settings, office admin access, roster checks, staf
 For instructors: a tour of the ActivityRoster app. Works on any phone, and on a computer.
 
 In this video:
-- Your shifts for the next four weeks, pending and confirmed
+- Your shifts for the next four weeks (your centre chooses whether pending shifts show, or only confirmed ones)
+- Colleagues' names on each shift, never their phone numbers or emails
 - Setting your availability, your usual week, and notes
 - Asking for leave
 - Your hours, and your licences and certificates
-- Settings: your details, notifications, and a calendar link for your phone
+- Settings: your details (a mobile number is optional), notifications, and a calendar link for your phone
 
 Guide: https://activityroster.com/learn?topic=app
 Find out more: https://activityroster.com
