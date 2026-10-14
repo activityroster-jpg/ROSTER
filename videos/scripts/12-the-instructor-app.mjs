@@ -12,10 +12,14 @@ export default {
   steps: [
     { chapter: "Your schedule", say: "This one's for your instructors. Here's the app, for Kim, an instructor at Lakeside Sailing Centre. It works on any phone, and on a computer.",
       do: async (h) => { await h.point(h.page.getByRole("heading", { name: "My schedule" })); } },
-    { say: "My schedule shows every shift for the next four weeks: the times, the course, where, who else is on, and how many students. She sees colleagues' names, never their phone numbers or emails.",
+    { say: "My schedule shows every shift for the next four weeks: the times, the course, where, who else is on, and how many students.",
       do: async (h) => { await h.highlight(h.page.getByText(/Pending: your centre|✓ Confirmed/).first().locator("xpath=ancestor::div[contains(@class,'rounded')][1]")); } },
-    { say: "Pending means the centre hasn't confirmed that day yet, so it could still change. When it's confirmed, Kim gets a message, and it shows as confirmed. Your centre chooses whether staff see pending shifts at all, or only see a shift once its day is confirmed.",
-      do: async (h) => { await h.unhighlight(); await h.point(h.page.getByText(/Pending: your centre/)); } },
+    { say: "She sees colleagues' names, never their phone numbers or emails.",
+      do: async (h) => { await h.unhighlight(); await h.point(h.page.getByText(/^With /).first()); } },
+    { say: "Pending means the centre hasn't confirmed that day yet, so it could still change. When it's confirmed, Kim gets a message, and it shows as confirmed.",
+      do: async (h) => { await h.point(h.page.getByText(/Pending: your centre/).first()); } },
+    { say: "Your centre chooses whether staff see pending shifts at all, or only see a shift once its day is confirmed.",
+      do: async (h) => { await h.scrollTo(h.page.getByText(/Pending: your centre/).nth(3)); await h.wait(1500); await h.scrollTop(); } },
     { say: "The bell has her messages: new shifts, changes, and open shifts she could cover.",
       do: async (h) => { await h.point(h.page.getByRole("link", { name: /Notifications|notifications/ }).or(h.page.locator('a[href*="notifications"]'))); } },
 
