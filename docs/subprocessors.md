@@ -23,7 +23,14 @@ notice).
 
 | ActiveCampaign, LLC (Postmark) | **Backup** transactional and outreach email, used only when Resend fails | Recipient email addresses, email content (the same as Resend) | US (EU DPA and SCCs; Postmark processes in the US) | Postmark DPA (postmarkapp.com/dpa, self-serve) | SCCs / UK addendum |
 
+| Google LLC (Firebase Cloud Messaging) | Phone notifications from the instructor app (Android and iPhone) | Device notification tokens; notification text (shift changes: course, day, time). No email, phone number or other profile data | US / worldwide | Firebase Data Processing and Security Terms (accept in Firebase console → Project settings → Privacy) | SCCs / UK addendum |
+| Apple Inc. (APNs) | Delivers the notifications Firebase sends to iPhones | The same as Firebase | US / worldwide | Apple Developer Program License Agreement (data terms) | SCCs |
+
+Firebase and APNs are listed ahead of use: they become live the day `FCM_SERVICE_ACCOUNT_JSON`
+is set on the Worker. Conor tells customers (30 days' notice) before that day; until then the
+app works and simply sends no phone notifications.
+
 Postmark is listed ahead of use (P0-G): it becomes live the day `POSTMARK_SERVER_TOKEN`
 is set. Conor tells customers before that day.
 
-Last reviewed: 3 October 2026 (Postmark added, pending activation).
+Last reviewed: 14 October 2026 (Firebase and APNs added, pending activation; Postmark pending activation).

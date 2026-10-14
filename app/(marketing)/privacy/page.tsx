@@ -17,6 +17,7 @@ export default function PrivacyPage() {
         "Staff records entered by a centre: instructor names, contact details, certs (qualifications), DBS/vetting and other compliance records, availability, hours and leave.",
         "Billing data: we store only Stripe identifiers and invoice metadata — never card numbers (Stripe handles card data).",
         "Usage & technical data: log data, IP address and cookies strictly needed to run the service.",
+        "Instructor app: if you turn on phone notifications, your phone's notification token, so we can tell you about shift changes (delivered by Google Firebase and, on iPhones, Apple). Your location only at the moment you clock in, if your centre uses the time clock, and photos only when you choose to upload a document.",
       ]} />
 
       <H2>Why we process it (lawful bases)</H2>

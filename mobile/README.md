@@ -141,6 +141,10 @@ Settings → App, Face ID on the PIN screen, 📷 on Documents, 📍 on clock-in
 4. Submit. Typical review 1–3 days.
 
 **Google Play** — no Android Studio needed. GitHub builds the app:
+0. Once only: GitHub → **Actions → Android upload key (one-off) → Run workflow**.
+   Download the zip under the run's **Artifacts**, open `ADD-THESE-SECRETS.txt` and add the
+   two secrets it lists, save the zip in the password manager, then delete the run.
+   (It refuses to run again once the key secret is set.)
 1. GitHub → **Actions → Android build → Run workflow**, type the version (e.g.
    `1.0.0`). About 10 minutes later the run's **Artifacts** hold
    `ActivityRoster-<version>.aab` (for Google Play) and `.apk` (install on a

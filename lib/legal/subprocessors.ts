@@ -21,6 +21,8 @@ export const SUBPROCESSORS: Subprocessor[] = [
   { name: "Better Stack, Inc.", purpose: "Uptime monitoring and the public status page", data: "None of centres' data; it fetches our health page and holds the owner's alert contact", location: "EU / United States", status: "live" },
   { name: "Backblaze, Inc. (B2)", purpose: "Second, off-Cloudflare copy of encrypted nightly backups", data: "Encrypted database exports and document archives only", location: "EU", status: "live" },
   { name: "Anthropic, PBC", purpose: "Drafts our own business-to-business outreach emails to prospective centres", data: "Prospect business names, their public website text and business contact names. Never any centre's users, staff or students", location: "United States", status: "live" },
+  { name: "Google LLC (Firebase Cloud Messaging)", purpose: "Delivers phone notifications from the instructor app", data: "The phone's notification token and the notification text (for example a shift change: course, day and time)", location: "United States / worldwide, under EU standard contractual clauses", status: "standby" },
+  { name: "Apple Inc. (Apple Push Notification service)", purpose: "Delivers the app's phone notifications to iPhones (passed on by Firebase)", data: "The same as Firebase: the phone's token and the notification text", location: "United States / worldwide, under EU standard contractual clauses", status: "standby" },
   { name: "GitHub, Inc.", purpose: "Source code, testing and deployment automation", data: "Code and configuration only; no personal data by policy", location: "United States / EU", status: "live" },
   { name: "Have I Been Pwned", purpose: "Checks a new password against known breaches", data: "The first five characters of the password's hash only; never the password or who it belongs to", location: "Cloudflare edge", status: "live" },
 ];
@@ -29,6 +31,7 @@ export interface SubprocessorChange { date: string; summary: string }
 
 /** Newest first. Add a line here with the same change to docs/subprocessors.md. */
 export const SUBPROCESSOR_CHANGES: SubprocessorChange[] = [
+  { date: "2026-10-14", summary: "Google (Firebase Cloud Messaging) and Apple (push service) listed ahead of use for the instructor app's phone notifications; they become live only after centres have been told." },
   { date: "2026-10-03", summary: "Postmark listed as a standby email provider ahead of use; it becomes live only if Resend fails and only after centres have been told." },
   { date: "2026-10-03", summary: "Backblaze B2 added for the off-Cloudflare copy of encrypted backups; Better Stack added for uptime monitoring." },
   { date: "2026-09-29", summary: "Register first published: Cloudflare, Resend, Stripe, Sentry, Anthropic (outreach only), GitHub, Have I Been Pwned." },

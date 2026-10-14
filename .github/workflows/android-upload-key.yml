@@ -1,0 +1,78 @@
+name: Android upload key (one-off)
+
+# Makes the upload key Google Play needs to accept the app, so nobody has to run commands.
+# Press "Run workflow" once. The run's Artifacts then hold a zip with:
+#   - upload-key.jks            the key file (keep a copy in the password manager)
+#   - ADD-THESE-SECRETS.txt     the two values to paste into GitHub secrets
+# Download the zip, add the two secrets, save the zip in the password manager, then delete
+# this run (the zip is kept for 1 day at most). Google holds the real app signing key
+# (Play App Signing), so if this upload key is ever lost or leaked, Play Console can reset
+# it. It refuses to run once ANDROID_KEYSTORE_BASE64 is set, so it can't replace a key in use.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  make-key:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Refuse if a key is already set
+        env:
+          EXISTING: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$EXISTING" ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 is already set. The app already has an upload key; making another would stop Google Play accepting updates. Nothing was made."
+            exit 1
+          fi
+
+      - name: Make the key
+        run: |
+          set -euo pipefail
+          umask 077
+          OUT="$RUNNER_TEMP/key"
+          mkdir -p "$OUT"
+          PW="$(openssl rand -base64 33 | tr -d '/+=' | cut -c1-32)"
+          echo "::add-mask::$PW"
+          keytool -genkeypair -keystore "$OUT/upload-key.jks" -storetype PKCS12 -alias upload \
+            -keyalg RSA -keysize 4096 -validity 10000 -storepass "$PW" -keypass "$PW" \
+            -dname "CN=ActivityRoster, O=ACTIVEROSTER LTD, C=GB" >/dev/null 2>&1
+          B64="$(base64 -w0 "$OUT/upload-key.jks")"
+          echo "::add-mask::$B64"
+          SHA="$(keytool -list -v -keystore "$OUT/upload-key.jks" -alias upload -storepass "$PW" | sed -n 's/^[[:space:]]*SHA256: //p')"
+          {
+            echo "ActivityRoster Android upload key — made $(date -u +%Y-%m-%d)"
+            echo
+            echo "1. GitHub → the repository → Settings → Secrets and variables → Actions → New repository secret."
+            echo
+            echo "   Name:  ANDROID_KEYSTORE_PASSWORD"
+            echo "   Value: (the line below, nothing else)"
+            echo "$PW"
+            echo
+            echo "   Name:  ANDROID_KEYSTORE_BASE64"
+            echo "   Value: (the long line below, all of it, nothing else)"
+            echo "$B64"
+            echo
+            echo "2. Save this whole zip (this file and upload-key.jks) in the password manager."
+            echo "3. Delete this workflow run in GitHub Actions (… menu → Delete workflow run)."
+            echo
+            echo "Upload key SHA-256 (not secret; for ANDROID_SHA256_FINGERPRINTS later):"
+            echo "$SHA"
+          } > "$OUT/ADD-THESE-SECRETS.txt"
+          echo "Upload key made. SHA-256: $SHA" >> "$GITHUB_STEP_SUMMARY"
+          echo "Download the zip under **Artifacts**, follow ADD-THESE-SECRETS.txt, then delete this run." >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-upload-key-KEEP-PRIVATE
+          path: ${{ runner.temp }}/key/*
+          if-no-files-found: error
+          retention-days: 1
