@@ -56,6 +56,22 @@ to a company one, but only by asking Apple Developer Support
 (https://developer.apple.com/contact/), so it is quicker to wait for the D-U-N-S
 number than to start as an individual.
 
+### UK company enrolment (Google Play)
+
+1. On a computer, go to https://play.google.com/console/signup and sign in with
+   the company's Google account (`activityroster@gmail.com`, two-step
+   verification on), not a personal one; more people can be added later.
+2. Choose **An organisation or business**. A company account doesn't have to
+   run the 14-day, 12-tester closed test that new personal accounts must pass
+   before going live.
+3. Enter the organisation exactly as on the D-U-N-S record: `ACTIVEROSTER LTD`,
+   the same D-U-N-S number used for Apple, the registered office address, phone,
+   and website `https://activityroster.com`. The developer name (shown on
+   Google Play) can be *ActivityRoster*.
+4. Verify the contact email and phone with the codes Google sends, pay the
+   US$25 one-off fee, and upload any identity documents it asks for.
+   Verification usually takes a few days; Google emails when it's done.
+
 You also need a **Mac with Xcode** (free, Mac App Store) for the iOS build, and
 **Android Studio** (free) for Android. Both run fine on one Mac.
 
