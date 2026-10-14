@@ -92,7 +92,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-semibold text-navy">Dashboard</h1>
-          <p className="text-sm text-slate-500">{organisation.name} · week of {monday}</p>
+          <p className="text-sm text-slate-500">{organisation.name} · week of {new Date(`${monday}T12:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "long", timeZone: "UTC" })}</p>
         </div>
         <GuideLink topic="dashboard" />
       </div>

@@ -46,7 +46,7 @@ const FEATURES: [string, string][] = [
   ["Licence & vetting tracking", "Every RYA cert and check, with expiry alerts and a private document vault."],
   ["Time & attendance", "Clock in/out from the phone; timesheets build themselves."],
   ["Availability & leave", "Staff set availability and request leave in the app; you approve in a tap."],
-  ["Open shifts & swaps", "Uncovered sessions offered to fit, available staff."],
+  ["Open shifts", "Uncovered sessions offered to fit, available staff."],
   ["Payroll export", "Start, finish, lunch and pay per shift — spreadsheet or PDF, per person or period."],
   ["Instructor app", "Schedule, availability, hours and documents in every instructor's pocket."],
   ["Course import & booking systems", "Bring your schedule in from a spreadsheet or your booking system, matched to your course types."],

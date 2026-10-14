@@ -258,7 +258,7 @@ export default function MarketingHome() {
             {[
               { n: "1", title: "Set up your centre", body: "RYA defaults are in place from the start. A guided set-up imports your courses and staff." },
               { n: "2", title: "Build the week", body: "Drop courses on the calendar. Instructor types, ratios and supervision are checked as you go." },
-              { n: "3", title: "Run the season", body: "Staff confirm shifts, swap, pick up cover and book leave in the app. Hours flow to payroll." },
+              { n: "3", title: "Run the season", body: "Staff see their shifts, pick up open shifts and book leave in the app. Hours flow to payroll." },
             ].map((s) => (
               <div key={s.n} className="flex gap-4 rounded-card border border-slate-200 bg-white p-5 md:block md:p-6">
                 <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-teal font-display text-lg font-bold text-white">{s.n}</span>

@@ -305,7 +305,7 @@ export const GUIDES: Guide[] = [
       { kind: "list", items: [
         "Week rota: one row per session with students, ratio, instructors needed, the staff you've rostered and a check for short staffing.",
         "Availability: a grid of staff against morning, afternoon and evening for the week, with a drop-down of free, maybe and busy.",
-        "Staff & licences: instructor type, first aid, safeguarding, vetting and powerboat or safety boat ticket expiry dates, with amber for anything due within 60 days and red for expired.",
+        "Staff & licences: instructor type, first aid, safeguarding, vetting and powerboat or safety boat licence expiry dates, with amber for anything due within 60 days and red for expired.",
       ] },
       { kind: "h2", text: "How to use it" },
       { kind: "steps", items: [
