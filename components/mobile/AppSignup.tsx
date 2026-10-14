@@ -9,7 +9,7 @@ const field = "w-full rounded-xl border border-slate-300 px-4 py-3 text-base out
 const PHONE_KEY = "ar.signup.phone";
 
 /**
- * Create account: name, phone, email, password → 6-digit email code → PIN
+ * Create account: name, email, password (mobile number optional) → 6-digit email code → PIN
  * (the shared /set-pin screen) → company code. The phone is kept locally
  * until the join step, when it's saved with the instructor record.
  */
@@ -34,7 +34,8 @@ export function AppSignup() {
     e.preventDefault();
     setErr(null);
     if (name.trim().length < 2) { setErr("Enter your full name."); return; }
-    if (!/^[+\d][\d\s()-]{6,}$/.test(phone.trim())) { setErr("Enter a valid phone number."); return; }
+    // The mobile number is optional; check it only when one is given.
+    if (phone.trim() && !/^[+\d][\d\s()-]{6,}$/.test(phone.trim())) { setErr("That mobile number doesn't look right. Check it, or leave it blank."); return; }
     if (password.length < 8) { setErr("Use at least 8 characters for your password."); return; }
     if (password !== confirm) { setErr("The two passwords don't match."); return; }
     setBusy(true);
@@ -88,7 +89,7 @@ export function AppSignup() {
       <p className="mb-5 text-sm text-slate-500">Takes a minute. You&apos;ll confirm your email with a code, pick a PIN, then join your centre.</p>
       <form onSubmit={createAccount} className="space-y-3">
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" autoComplete="name" required className={field} />
-        <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Mobile number" autoComplete="tel" inputMode="tel" required className={field} />
+        <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Mobile number (optional)" autoComplete="tel" inputMode="tel" className={field} />
         <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" autoComplete="email" inputMode="email" required className={field} />
         <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password (8+ characters, letters and numbers)" autoComplete="new-password" required className={field} />
         <PasswordStrength password={password} />

@@ -229,7 +229,7 @@ const ALL_SECTIONS: Section[] = [
       ] },
       { kind: "sub", text: "How an instructor joins" },
       { kind: "steps", items: [
-        "Install the app and tap “Create your account”: name, mobile number, email and a password.",
+        "Install the app and tap “Create your account”: name, email and a password. A mobile number is optional.",
         "Enter the 6-digit code we email them to confirm the address, then choose a 4-digit PIN.",
         "Type in your company code. If their email is already on your Instructors list, they're in straight away. If not, they appear under Instructors → Join requests for you to approve or decline — so a leaked code never lets a stranger in.",
         "Works for more than one centre? They join each with its code and switch between them in the app's Settings.",
@@ -237,9 +237,9 @@ const ALL_SECTIONS: Section[] = [
       { kind: "sub", text: "What the app adds" },
       { kind: "bullets", items: [
         "Phone notifications for roster changes, new open shifts, leave decisions and expiring certs (they can switch these off).",
-        "Every shift as soon as you're assigned, marked Pending until your centre confirms the day, then Confirmed. Colleagues, student numbers and the location show on each card. If your centre asks you to accept shifts: one-tap “I'll be there”, or “Can't make it” with a reason so the office can find cover.",
+        "Your shifts, with the course, colleagues on it, student numbers and the location on each card. Your centre chooses when they appear: by default as soon as you're put on a shift, marked Pending until the office confirms the day; or, if the centre switches off “Let staff see their shifts before you confirm the day” (Settings → General → Checks when rostering), only once the day is confirmed. If your centre asks you to accept shifts: one-tap “I'll be there”, or “Can't make it” with a reason so the office can find cover.",
         "Availability has “Same as last week”, “All free” and “Clear week” so a regular pattern takes two taps.",
-        "Settings: update your name and mobile number, change your PIN, and set or change your password. Docs has a Replace button for a renewed cert.",
+        "Settings: update your name and (optionally) your mobile number, change your PIN, and set or change your password. Docs has a Replace button for a renewed cert.",
         "Face ID / fingerprint instead of typing the PIN every time; the PIN stays as the fallback.",
         "Clock in and out records an approximate location — shown as a 📍 map link on your Time clock page.",
         "A camera button on Documents to photograph a certificate straight into their record.",
@@ -704,7 +704,7 @@ const ALL_SECTIONS: Section[] = [
       { kind: "p", text: "Sensitive pages say who can open them, by name: payroll, certs and documents, emergency and guardian contacts, the emergency sheet and the whole-centre export each show a line like “Visible to Conor (superadmin) and Ellie (Payroll)”, with a link to change it. The emergency sheet always shows who is on duty, but the emergency and guardian contacts on it need the Emergency & guardian contacts tick. If an office admin follows a link to a part they can't reach, the dashboard tells them which tick they need and who to ask." },
       { kind: "p", text: "A welfare officer isn't an account: under Settings you list your welfare officers by name and, if you like, who is on duty by default on each day and slot. The roster can then show “Welfare on duty” beside each session, like locations and equipment." },
       { kind: "sub", text: "Contact details between colleagues" },
-      { kind: "p", text: "Colleagues see names and shift times only. An instructor who is happy to be contactable can switch on “Let colleagues see my phone and email” in their portal settings; they then appear in the Team contacts list in everyone's portal. Under-18s are never offered this." },
+      { kind: "p", text: "Instructors see each other's names and who is on each session, and nothing more: phone numbers and email addresses are never shown to other instructors in the app. The office still sees everyone's details on their profile, and arranges cover and swaps." },
     ],
   },
   {

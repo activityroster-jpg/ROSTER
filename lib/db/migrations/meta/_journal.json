@@ -624,6 +624,13 @@
       "when": 1791981019109,
       "tag": "0088_pay_before_cancel",
       "breakpoints": true
+    },
+    {
+      "idx": 89,
+      "version": "6",
+      "when": 1792013500169,
+      "tag": "0089_staff_see_pending",
+      "breakpoints": true
     }
   ]
 }

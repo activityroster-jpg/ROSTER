@@ -1,0 +1,1 @@
+ALTER TABLE `org_settings` ADD `staff_see_pending` integer DEFAULT true NOT NULL;

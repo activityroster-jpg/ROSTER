@@ -134,6 +134,9 @@ export const orgSettings = sqliteTable("org_settings", {
   // Off (the default): the office confirming a day is enough. On: once a day is
   // confirmed, each person also accepts or declines their shifts in the app.
   staffAcceptShifts: boolCol("staff_accept_shifts").default(false),
+  // On (the default): staff see a shift in the app as soon as they are put on it, marked
+  // pending until the office confirms the day. Off: a shift appears only once its day is confirmed.
+  staffSeePending: boolCol("staff_see_pending").default(true),
   /** 1 once the centre has instructor-type places and the course map (seeded, or upgraded by lib/services/instructor-types-upgrade.ts). */
   teachingMapVersion: integer("teaching_map_version").notNull().default(0),
   // When on (the default), the problems list flags a date/slot whose courses need
@@ -396,6 +399,7 @@ export const instructor = sqliteTable("instructor", {
   restrictedAt: integer("restricted_at", { mode: "timestamp_ms" }),
   restrictedReason: text("restricted_reason"),
   /** Opt-in: colleagues may see this person's phone and email in the portal. Never offered to under-18s. */
+  // No longer used: instructors never see each other's phone or email (kept so old rows still load).
   shareContact: boolCol("share_contact").default(false),
   /** When they were marked as having left. Starts the retention clock for their profile (Settings → Data retention). */
   leftAt: integer("left_at", { mode: "timestamp_ms" }),

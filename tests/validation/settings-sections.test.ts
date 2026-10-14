@@ -6,7 +6,14 @@ const form = (v: Record<string, string>) => (k: string) => (k in v ? v[k]! : nul
 describe("settings saved one card at a time", () => {
   it("the checks card writes only the check columns", () => {
     const r = settingsPatch("checks", form({ enforceConflictChecks: "on", enforceAvailabilityChecks: "on" }));
-    expect(r).toEqual({ ok: true, patch: { enforceLicenceChecks: false, enforceRatioChecks: false, enforceConflictChecks: true, enforceAvailabilityChecks: true, checkEquipmentQuantities: false, useKitRules: false, staffAcceptShifts: false } });
+    expect(r).toEqual({ ok: true, patch: { enforceLicenceChecks: false, enforceRatioChecks: false, enforceConflictChecks: true, enforceAvailabilityChecks: true, checkEquipmentQuantities: false, useKitRules: false, staffAcceptShifts: false, staffSeePending: false } });
+  });
+
+  it("the checks card carries whether staff see a shift before its day is confirmed", () => {
+    const on = settingsPatch("checks", form({ staffSeePending: "on" }));
+    expect(on.ok && on.patch.staffSeePending).toBe(true);
+    const off = settingsPatch("checks", form({}));
+    expect(off.ok && off.patch.staffSeePending).toBe(false);
   });
 
   it("the digest card never touches the checks", () => {

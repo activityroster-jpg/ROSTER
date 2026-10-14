@@ -16,7 +16,7 @@ export function ProfileCard({ name, phone, email }: { name: string; phone: strin
   return (
     <form onSubmit={(e) => { e.preventDefault(); start(async () => { const r = await updateMyProfileAction({ name: n, phone: p }); setMsg(r.ok ? { ok: true, text: "Saved" } : { ok: false, text: r.error ?? "Could not save" }); if (r.ok) router.refresh(); }); }} className="space-y-3">
       <label className="block text-xs font-medium text-slate-500">Your name<input value={n} onChange={(e) => setN(e.target.value)} className={field} autoComplete="name" /></label>
-      <label className="block text-xs font-medium text-slate-500">Mobile number <span className="text-slate-400">(so the office can reach you about a shift)</span><input value={p} onChange={(e) => setP(e.target.value)} className={field} inputMode="tel" autoComplete="tel" /></label>
+      <label className="block text-xs font-medium text-slate-500">Mobile number <span className="text-slate-400">(optional: so the office can reach you about a shift)</span><input value={p} onChange={(e) => setP(e.target.value)} className={field} inputMode="tel" autoComplete="tel" /></label>
       <p className="text-xs text-slate-400">Sign-in email: {email ?? "—"}. Ask your centre if that needs to change.</p>
       <div className="flex items-center gap-3">
         <button type="submit" disabled={pending || !dirty} className="rounded-lg bg-teal px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{pending ? "Saving…" : "Save"}</button>

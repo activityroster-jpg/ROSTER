@@ -9,8 +9,6 @@ import { SignOutButton } from "@/components/portal/SignOutButton";
 import { NativeSettings } from "@/components/mobile/NativeSettings";
 import { ProfileCard } from "@/components/portal/ProfileCard";
 import { PasswordCard } from "@/components/portal/PasswordCard";
-import { ShareContactPref } from "@/components/portal/ShareContactPref";
-import { isUnder18 } from "@/lib/domain/age";
 import { getAuth } from "@/lib/auth";
 import { eq } from "drizzle-orm";
 import { instructor as instructorTable } from "@/lib/db/schema";
@@ -54,7 +52,6 @@ export default async function PortalSettingsPage() {
           <h2 className="mb-3 font-semibold text-navy">About you</h2>
           <ProfileCard name={me.name} phone={me.phone} email={me.email} />
           <div className="mt-4 border-t border-slate-100 pt-3"><DetailsCard dateOfBirth={me.dateOfBirth} /></div>
-          {!isUnder18(me.dateOfBirth) ? <div className="mt-4 border-t border-slate-100 pt-3"><ShareContactPref initial={Boolean(me.shareContact)} /></div> : null}
         </Card>
       ) : null}
 

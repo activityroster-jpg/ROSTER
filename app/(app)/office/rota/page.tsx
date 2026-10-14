@@ -76,7 +76,7 @@ export default async function RotaPage({ searchParams }: { searchParams: Promise
         </div>
       </div>
 
-      {canEdit ? <RosterDays staffAccept={Boolean(settingsRows[0]?.staffAcceptShifts)} days={dayStates.map((d) => {
+      {canEdit ? <RosterDays staffAccept={Boolean(settingsRows[0]?.staffAcceptShifts)} staffSeePending={settingsRows[0]?.staffSeePending ?? true} days={dayStates.map((d) => {
         const day = rota.find((r) => r.date === d.date);
         const sessions = day?.sessions ?? [];
         const staff = sessions.flatMap((x) => x.staff.filter((m) => m.status !== "declined"));

@@ -36,6 +36,7 @@ export function GeneralSettingsForm({
   checkEquipmentQuantities = true,
   useKitRules = false,
   staffAcceptShifts = false,
+  staffSeePending = true,
   holidayPayPercent = null,
   privacyNoticeUrl = "",
   dailyDigestEnabled = false,
@@ -54,6 +55,7 @@ export function GeneralSettingsForm({
   checkEquipmentQuantities?: boolean;
   useKitRules?: boolean;
   staffAcceptShifts?: boolean;
+  staffSeePending?: boolean;
   holidayPayPercent?: number | null;
   privacyNoticeUrl?: string;
   dailyDigestEnabled?: boolean;
@@ -168,6 +170,10 @@ export function GeneralSettingsForm({
           <label className="flex items-start gap-2 text-sm text-slate-600">
             <input type="checkbox" name="staffAcceptShifts" defaultChecked={staffAcceptShifts} className="mt-0.5 h-4 w-4 rounded border-slate-300" />
             <span>Ask staff to accept or decline their shifts once you&apos;ve confirmed a day <span className="text-slate-400">(off by default: confirming the day is enough)</span> <a href="/learn?topic=rota" target="_blank" rel="noreferrer" className="text-teal hover:underline">📖 Guide</a></span>
+          </label>
+          <label className="flex items-start gap-2 text-sm text-slate-600">
+            <input type="checkbox" name="staffSeePending" defaultChecked={staffSeePending} className="mt-0.5 h-4 w-4 rounded border-slate-300" />
+            <span>Let staff see their shifts in the app before you confirm the day, marked <strong>Pending</strong> <span className="text-slate-400">(on by default; switch off to show a shift only once its day is confirmed)</span> <a href="/learn?topic=app" target="_blank" rel="noreferrer" className="text-teal hover:underline">📖 Guide</a></span>
           </label>
         </div>
       </SectionForm>

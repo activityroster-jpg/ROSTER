@@ -61,8 +61,10 @@ export default async function PortalSchedulePage() {
   const membersBySession = effectiveStaffBySession(events, allStaff, overrides);
   // Declines stay visible (the card shows "can't make it"); per-day skips do not.
   const onSession = (sessionId: string) => (membersBySession.get(sessionId) ?? []).some((m) => m.instructorId === me.id);
-  // Pending days show too (staff see their shifts as soon as they're assigned), so their clashes do.
-  const myProblems = myProblemsAll;
+  // The centre chooses whether staff see a shift before its day is confirmed (on by default,
+  // marked Pending) or only once it is confirmed. Off: pending days, and their clashes, stay hidden.
+  const seePending = settings?.staffSeePending ?? true;
+  const myProblems = seePending ? myProblemsAll : myProblemsAll.filter((p) => confirmed.has(p.date));
   // Accept / decline only when the centre asks for it, and only once the office has confirmed the day.
   const askToAccept = Boolean(settings?.staffAcceptShifts);
   const locationName = new Map(locations.map((l) => [l.id, l.name]));
@@ -70,15 +72,11 @@ export default async function PortalSchedulePage() {
   const myByCourse = new Map(myStaff.map((s) => [s.courseId, s]));
   const nameById = new Map(instructors.map((i) => [i.id, i.name]));
   const studentsByCourse = new Map(courses.map((c) => [c.id, c.capacity]));
-  const teamContacts = instructors
-    .filter((i) => i.id !== me.id && i.status === "active" && i.shareContact && !i.anonymisedAt && !i.restrictedAt && (i.phone || i.email))
-    .map((i) => ({ id: i.id, name: i.name, phone: i.phone, email: i.email }))
-    .sort((a, b) => a.name.localeCompare(b.name));
   const colleaguesOf = (sessionId: string) =>
     (membersBySession.get(sessionId) ?? []).filter((m) => m.instructorId !== me.id && m.status !== "declined").map((m) => nameById.get(m.instructorId) ?? "Instructor");
 
   const mineAll = events.filter((e) => onSession(e.id)).sort((a, b) => a.startAt - b.startAt);
-  const mine = mineAll;
+  const mine = seePending ? mineAll : mineAll.filter((e) => confirmed.has(e.date));
   const pending = mine.filter((e) => !confirmed.has(e.date)).length;
 
   const weekEnd = addDays(today, 7);
@@ -124,7 +122,7 @@ export default async function PortalSchedulePage() {
         {mine.length === 0 ? (
           <Card>
             <p className="text-sm text-slate-500">
-              No sessions on your roster yet. Set your availability so your centre knows when you&apos;re free.
+              {seePending ? "No sessions on your roster yet." : "No confirmed sessions yet: your shifts appear here once your centre confirms each day."} Set your availability so your centre knows when you&apos;re free.
             </p>
           </Card>
         ) : (
@@ -176,20 +174,6 @@ export default async function PortalSchedulePage() {
           ))
         )}
       </div>
-      {teamContacts.length ? (
-        <Card>
-          <h2 className="mb-1 font-semibold text-navy">Team contacts</h2>
-          <p className="mb-2 text-xs text-slate-500">Colleagues who chose to share their details for cover and swaps. Share yours under Settings.</p>
-          <ul className="divide-y divide-slate-100 text-sm">
-            {teamContacts.map((c) => (
-              <li key={c.id} className="flex flex-wrap items-baseline justify-between gap-2 py-1.5">
-                <span className="font-medium text-navy">{c.name}</span>
-                <span className="text-slate-600">{c.phone ? <a href={`tel:${c.phone}`} className="hover:text-teal">{c.phone}</a> : null}{c.phone && c.email ? " · " : ""}{c.email ? <a href={`mailto:${c.email}`} className="hover:text-teal">{c.email}</a> : null}</span>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      ) : null}
     </div>
   );
 }

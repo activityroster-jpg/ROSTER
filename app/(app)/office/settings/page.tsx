@@ -170,6 +170,7 @@ export default async function SettingsPage() {
           checkEquipmentQuantities={s?.checkEquipmentQuantities ?? true}
           useKitRules={Boolean(s?.useKitRules)}
           staffAcceptShifts={Boolean(s?.staffAcceptShifts)}
+          staffSeePending={s?.staffSeePending ?? true}
           holidayPayPercent={s?.holidayPayPercent ?? null}
         />
       </Card>

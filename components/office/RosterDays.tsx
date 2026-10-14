@@ -19,7 +19,7 @@ const fmt = (iso: string) => { const d = new Date(`${iso}T00:00:00Z`); return `$
  * Undo puts it back to pending with no messages, and confirming again tells
  * only the people whose shifts changed.
  */
-export function RosterDays({ days, staffAccept }: { days: DayState[]; staffAccept: boolean }) {
+export function RosterDays({ days, staffAccept, staffSeePending = true }: { days: DayState[]; staffAccept: boolean; staffSeePending?: boolean }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
@@ -50,7 +50,7 @@ export function RosterDays({ days, staffAccept }: { days: DayState[]; staffAccep
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <div>
           <p className="text-sm font-semibold text-navy">Confirm the roster</p>
-          <p className="text-xs text-slate-500">Staff see their shifts as pending until you confirm the day; confirming tells them{staffAccept ? " and asks them to accept" : ""}. Changes to a confirmed day reach the people affected straight away.</p>
+          <p className="text-xs text-slate-500">{staffSeePending ? "Staff see their shifts as pending until you confirm the day" : "Staff see a shift only once you confirm its day"}; confirming tells them{staffAccept ? " and asks them to accept" : ""}. Changes to a confirmed day reach the people affected straight away.</p>
         </div>
         <div className="flex items-center gap-2">
           {msg ? <span className="text-xs text-slate-600" role="status">{msg}</span> : null}

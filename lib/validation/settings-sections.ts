@@ -41,6 +41,7 @@ function rawFor(section: SettingsSection, get: Get): Record<string, unknown> {
         checkEquipmentQuantities: on(get("checkEquipmentQuantities")),
         useKitRules: on(get("useKitRules")),
         staffAcceptShifts: on(get("staffAcceptShifts")),
+        staffSeePending: on(get("staffSeePending")),
       };
   }
 }

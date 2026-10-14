@@ -36,13 +36,13 @@ export default function YoungPeoplePrivacyPage() {
       <UL items={[
         <>The <strong>people who run your centre</strong> (admins) can see everything above, because they roster you and have to look after you.</>,
         <>The <strong>welfare officer</strong> can see your profile and your emergency and guardian contacts, and nothing about pay or billing.</>,
-        <>Your <strong>colleagues</strong> see your first name and which sessions you are on. They cannot see your phone number or email: sharing them with colleagues is not offered to anyone under 18.</>,
+        <>Your <strong>colleagues</strong> see your first name and which sessions you are on. They cannot see your phone number or email: ActivityRoster never shows instructors each other's contact details.</>,
         <><strong>ActivityRoster staff</strong> do not browse centres&rsquo; data. A support view exists for fixing problems; every use of it is logged and visible to your centre.</>,
       ]} />
 
       <H2>Things we do differently because you are under 18</H2>
       <UL items={[
-        "Your contact details are hidden from colleagues by default.",
+        "Your contact details are never shown to colleagues.",
         "We never send you marketing, newsletters or offers, and we never build anything that profiles young people.",
         "Vetting checks are recorded by status and reference only; no certificate about you is stored as a file.",
         "When you leave the centre, your personal details are removed after the period your centre has set (12 months unless they chose otherwise); the roster history keeps only that someone did the shift.",
