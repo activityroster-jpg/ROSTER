@@ -1,13 +1,15 @@
 name: Probe production
 # Read-only: fetches a few pages on production and staging and records the
 # status code and time taken as annotations (readable without the job log).
-# Runs on demand, every two hours through the working day (so there is a
-# response-time history to look back on when something feels slow), and
-# whenever this file changes.
+# Runs on demand, every two hours, day and night (so there is a response-time
+# history to look back on when something feels slow), and whenever this file
+# changes. It also checks production's hourly background job has run in the
+# last three hours: if not, the run fails and GitHub emails you, which still
+# works if Cloudflare's own scheduler (and its alert email) has stopped.
 on:
   workflow_dispatch:
   schedule:
-    - cron: "17 6-22/2 * * *"
+    - cron: "17 */2 * * *"
   push:
     paths: [".github/workflows/probe.yml"]
 jobs:
@@ -27,3 +29,13 @@ jobs:
           for host in activityroster.com staging.activityroster.com; do
             echo "::warning::$host build: $(curl -sS --max-time 30 "https://$host/api/version")"
           done
+      - name: Hourly job ran recently (production)
+        run: |
+          body="$(curl -sS --max-time 30 https://activityroster.com/api/health || true)"
+          age="$(printf '%s' "$body" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const j=JSON.parse(s);console.log(j.tickAgeMinutes ?? "")}catch{console.log("")}})')"
+          if [ -z "$age" ]; then echo "::warning::Couldn't read when the hourly job last ran (production may not report it yet): $body"; exit 0; fi
+          echo "::notice::Hourly job last ran $age minutes ago"
+          if [ "$age" -gt 180 ]; then
+            echo "::error::Production's hourly job hasn't run for $age minutes. Check Cloudflare → Workers → roster → Settings → Triggers (Cron), and the Hourly tick (backup) workflow here."
+            exit 1
+          fi
