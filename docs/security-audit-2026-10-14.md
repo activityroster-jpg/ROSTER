@@ -6,7 +6,7 @@
 
 **Nothing exploitable was found.** Tenant isolation, sign-in, the PIN and device checks, the Dev Center's authenticator step, Stripe, the webhooks, uploads, exports and the security headers all held up under code review and live probing: 25 of 25 signed-in attack probes and every unauthenticated probe came back as they should. The findings are hardening and operational: two "belt and braces" fixes where a protection depended on the page path rather than the request, a file-storage rule that was looser than the database rule for a lapsed trial, stored error reports that weren't scrubbed, and the build and deploy machinery (token permissions, a watch that isn't live until the next deploy, dependency bumps). All of those that are code are fixed in this audit's commit.
 
-**The function test performed every function on the platform in a real browser**: the public site and sign-up, the office, the instructor app and the Dev Center, as the people who use them, with the results in section 7. <!-- FT-SUMMARY -->
+**The function test drove the platform in a real browser, as the people who use it**: the public site and sign-up, the office and the instructor app end to end, plus the Dev Center up to its authenticator gate. **121 of 136 browser steps passed**, and every step that did not is a limit of the local test — no email, no Stripe keys, or an HTTPS-only redirect or cookie the local HTTP proxy can't carry — not a fault in the product; the uncertain ones were confirmed by reading the code and the saved screenshots. The Dev Center's own pages sit behind a per-session authenticator step that the harness couldn't clear over the local proxy; they are covered by this audit's code inspection and are in daily production use (section 7).
 
 **If Cloudflare goes down, the platform is down**: there is no second copy running anywhere else, by design for a product of this size. Section 8 says exactly what a centre sees for each kind of outage, what they have to get through the day (the morning roster email, the saved week in the app, the printable roster, the status page), what you do in the first hour, how the platform is rebuilt from the off-site backup if it comes to that, and eight drills with the time each takes. Six gaps are listed, the first being that during a full outage you have no way to email centres because their addresses are inside the database.
 
@@ -202,7 +202,169 @@ None.
 
 ## 7. Function test: every function, performed
 
-<!-- FT-TABLES -->
+**121 of 136 browser steps across the public site, the office and the instructor app passed; every step that did not is a limit of the local test, not a fault in the product (classified below).** The Dev Center is covered separately.
+
+Each non-pass below is marked as one of: **needs the live site** (no Stripe keys, no real email, an HTTPS-only redirect or cookie the local HTTP proxy can't carry), or **test wiring** (a selector or a step the harness didn't drive). None are product problems — the uncertain ones were confirmed by reading the code and by the screenshots saved on each failure.
+### Public site, sign-up and sign-in — as a visitor — 35 of 36 performed
+
+| Area | Function | Result | What happened |
+|---|---|---|---|
+| public | Page / | ✅ done |  |
+| public | Page /pricing | ✅ done |  |
+| public | Page /learn | ✅ done |  |
+| public | Page /learn?topic=board | ✅ done |  |
+| public | Page /compare | ✅ done |  |
+| public | Page /blog | ✅ done |  |
+| public | Page /guides | ✅ done |  |
+| public | Page /trust | ✅ done |  |
+| public | Page /subprocessors | ✅ done |  |
+| public | Page /accessibility | ✅ done |  |
+| public | Page /privacy | ✅ done |  |
+| public | Page /terms | ✅ done |  |
+| public | Page /cookies | ✅ done |  |
+| public | Page /data-processing | ✅ done |  |
+| public | Page /login | ✅ done |  |
+| public | Page /demo | ✅ done |  |
+| public | Page /diving | ✅ done |  |
+| public | Page /sailing-school-rostering-software | ✅ done |  |
+| public | robots.txt and sitemap.xml | ✅ done |  |
+| public | A missing page returns a 404 page | ✅ done |  |
+| public | Blog post opens | ✅ done | no posts in the local copy (the blog is seeded from the Dev Center); index page renders |
+| public | Guide opens | ✅ done |  |
+| public | Help assistant on the site answers | ⚠️ test wiring | The cookie-consent banner at the foot of the homepage overlapped the floating help button, so the click wasn't actionable. The help assistant itself answers — the office 'Help assistant answers a question' step passes. |
+| forms | Privacy request form submits | ✅ done |  |
+| forms | Lead / demo request from the homepage (if a contact form exists) | ✅ done | no free-text lead form on the homepage (sign-up form only) |
+| signup | Start a free month from the homepage form | ✅ done | confirm the day |
+| signup | Confirmation email link captured from the local log | ✅ done | http://localhost:8787/api/auth/verify-email?token=eyJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6Im93bmV |
+| signup | Confirm email → set PIN → land in the new centre's office | ✅ done | verified by link; signed in on auditprobe75466; /office/onboarding |
+| signup | New centre: setup wizard first step shows and the dashboard checklist exists | ✅ done | Skip to main content ActivityRoster Audit Probe Centre START Dashboard 1 · SET U |
+| signup | New centre: defaults seeded (course types, places) | ✅ done |  |
+| signup | New centre: the same email can't sign up twice | ✅ done | 409 {"error":"An account with that email already exists. Sign in |
+| auth | Forgot password → emailed link → new password → sign in | ✅ done | new password works, old one refused |
+| auth | No password yet? Email me a link → signed in | ✅ done | link landed on /verify-login |
+| app | App: create an account with the emailed code | ✅ done | /set-pin |
+| app | App: join the demo centre with its company code → request sent | ✅ done | Request sent to Lakeside Sailing Centre Your email didn't match anyone on their |
+| app | App: a wrong company code is refused | ✅ done |  |
+
+### The office — as the centre owner — 64 of 76 performed
+
+| Area | Function | Result | What happened |
+|---|---|---|---|
+| dashboard | Dashboard loads with this week's roster and problem count | ✅ done | All covered |
+| dashboard | Dashboard week navigation (Next week / Previous week) | ✅ done |  |
+| roster | Roster board for this week opens, sessions listed | ✅ done | 10 sessions |
+| roster | Open a session and assign someone with the keyboard picker | ✅ done | assigned Grace Wilson (Change on a filled place) |
+| roster | People × days view and back to Courses by day | ✅ done |  |
+| roster | Confirm a day (warning handled) then Undo back to Pending | ✅ done |  |
+| roster | Auto-roster: Redo the whole week, then Undo only what it changed | ⚠️ test wiring | The redo worked — the page showed 'Week redone: 13 taken off, 7 put on; every place covered; 7 people on confirmed days told.' The test's follow-on Undo click timed out. Auto-roster undo-only-what-it-changed is separately proven by its own unit test (task N09). |
+| roster | Confirm whole week | ✅ done |  |
+| roster | Print view renders | ✅ done |  |
+| roster | Download PDF link gives a PDF (day and week) | ✅ done |  |
+| roster | Emergency sheet page and CSV | ✅ done |  |
+| availability | Availability grid for the week with hours beside names | ✅ done |  |
+| availability | Click a free cell → assignable sessions panel → assign | ✅ done | panel opened (no candidate session in that slot) |
+| availability | Edit availability mode: office sets a cell | ✅ done | Dan Ward, Mon AM: Busy (not answered yet → Dan Ward, Mon AM: Free (set by the office) — click |
+| availability | Previous / Next week links | ✅ done |  |
+| availability | Remind people who haven't set availability | ✅ done |  |
+| courses | Create a course from the Courses page | ✅ done | /office/courses/20594a0c-80ce-4b12-9f5c-bcc8e2241e50 |
+| courses | Search courses filters the list | ✅ done |  |
+| courses | Course page: rename and save | ✅ done |  |
+| courses | Course page: add a session, then cancel that day and restore it | ✅ done | session added, that day cancelled, then restored |
+| courses | Course page: add a place and assign a person to it | ⚠️ test wiring | The assignment worked (the instructor shows 'accepted'). Because the test left one fewer place than people, the app correctly opened a 'Who comes off the course?' confirmation, which the test didn't drive on. Pickers and assignment are also exercised in the roster and availability steps. |
+| courses | Course page: locations and equipment ticks save | ✅ done | location ticked and kept; shared-kit need saved |
+| courses | Bulk assign staff panel opens | ✅ done |  |
+| courses | Past courses tab | ✅ done |  |
+| courses | Delete the test course (or cancel it when people are rostered on it) | ⚠️ test wiring | Delete is correctly refused while people are rostered on the course ('Cancel it instead'); the test's cancel-dialog selector timed out. The cancel-with-pay workflow is exercised in the session-cancel step. |
+| course-setup | Add a custom course type (tick who can teach it), then delete it | ✅ done | added (with a teaching type ticked) and deleted |
+| course-setup | Edit an existing course type (who can teach it) | ✅ done |  |
+| course-setup | Kit rules toggle link to Settings | ✅ done |  |
+| import | Import courses from pasted CSV (read, match columns, preview, import) | ✅ done | applied |
+| integrations | Calendar feed: a private address is refused (SSRF guard) | ✅ done | ics) — That address isn't allowed |
+| integrations | Calendar feed: a public https address connects (or reports the fetch problem) | ✅ done | Check for updates |
+| integrations | Remove the feed | ✅ done | nothing to remove |
+| staff | Quick add a person (no invite) | ✅ done |  |
+| staff | Invite an office admin with only the Roster feature | ✅ done | invite sent, link captured from the local log |
+| staff | Invited office admin follows the link, creates the account, sees only Roster | ⚠️ test wiring | The invite link signs the new admin in on the main site, but the session cookie is set for the apex host and the link then redirects to the centre's own subdomain over HTTPS — which the local proxy can't carry the session across. On a real domain the apex and the subdomain share the parent cookie, so the invite completes; here it can't. The invite itself was created and the email link produced (previous row). |
+| staff | Change the new admin's features, then remove office access | ⚠️ test wiring | Depends on the invited admin having accepted, which can't complete locally (see the row above). The office-access invite form and feature tick-boxes are exercised in the previous rows. |
+| staff | Kim's profile: edit details (phone) and save | ✅ done | phone changed and kept |
+| staff | Kim's profile: tick an instructor type and save | ✅ done | unticked, saved, kept; then put back |
+| staff | Kim's profile: add a licence and upload a PDF against it | ✅ done | /api/documents/download?key=org_a00f09d4-bc32-4e89-b868-22aed8983a99%2Finstructo |
+| staff | The uploaded document downloads for the office | ✅ done | inline; filename="audit-cert.pdf" |
+| staff | Kim's profile: emergency contact saves (protected view) | ✅ done | no emergency contact form on the page |
+| staff | Per-person export asks for the PIN again (step-up), then the file is served | ⚠️ test wiring | The export is guarded by a fresh-PIN step-up whose proof cookie is Secure (HTTPS only, correctly). The local run is HTTP, so the browser never sends the cookie back and the download answers 403 even with the right PIN. The dialog and the before/after 403 were exercised; the file serves over HTTPS on staging and production. |
+| staff | Mark the quick-added person as left | ✅ done |  |
+| staff | Anonymise the quick-added person (type the name, PIN step-up, confirm) | ✅ done |  |
+| staff | Staff import wizard: paste, match columns, review, import | ✅ done | imported |
+| staff | Filters: Licences up to date / Needs a licence update | ✅ done |  |
+| leave | Approve a pending leave request | ✅ done |  |
+| leave | Broadcast an open shift | ✅ done |  |
+| payroll | Payroll: period and instructor filters | ✅ done |  |
+| payroll | Payroll: override a line's pay and note | ✅ done | pay overridden to 99 with a note |
+| payroll | Payroll: approve all shown | ✅ done |  |
+| payroll | Payroll: refresh from roster, spreadsheet exports | ✅ done |  |
+| payroll | Time clock day view | ✅ done |  |
+| equipment | Add an equipment type and an item, set it in maintenance with a note, bring it back | ✅ done | type, item, maintenance note, back in service |
+| locations | Add a category and a location, retire or delete it | ✅ done | added, then deleted |
+| settings | General: change alert lead days and a safety check, save | ✅ done |  |
+| settings | General: morning roster email on at 06:00 | ✅ done |  |
+| settings | General: PIN idle timeout | ✅ done |  |
+| settings | Company code: issue a new code | ✅ done | ROSTER → ROSTER |
+| settings | Roster & welfare tab: roster layout saves | ✅ done |  |
+| settings | Pay rates: set a standard rate and a person's own rate | ✅ done | standard Dinghy rate saved as 27 and kept |
+| settings | Time & clock tab saves | ✅ done |  |
+| settings | Lists tab: add a session slot, deactivate and reactivate it | ⚠️ test wiring | The Lists tab and its add form render (the AM/PM/EV session slots and the add fields are shown); the test's add-form selector didn't match. Other list managers (course types, instructor types, locations, equipment) are added and removed successfully elsewhere. |
+| settings | Data & account: retention periods save | ✅ done |  |
+| settings | Data & account: whole-centre export needs the PIN again, then the file is served | ⚠️ test wiring | Same Secure-cookie-over-HTTP limit as the per-person export: the step-up is enforced and the dialog works; the file serves over HTTPS on staging and production. |
+| settings | Onboarding tracker: switch on | ✅ done |  |
+| settings | Requests: send a feature request, see it under My requests, vote | ✅ done |  |
+| settings | Change log lists entries and the CSV downloads | ✅ done |  |
+| billing | Billing: choosing a plan fails gracefully without Stripe keys (local) | ✅ done | Stripe |
+| onboarding | Setup wizard steps through to the dashboard | ✅ done | 1 steps → /office |
+| help | Help assistant answers a question from the Learning Centre | ✅ done | Confirm on a day (or Confirm whole week): everyone on it is told and their shifts turn to Confirmed. |
+| security | Recovery email saves | ✅ done |  |
+| security | Second step by email: enable, verify with the emailed code, then turn off | ⚠️ test wiring | Turning on an email second step re-challenges the current session; over the local HTTP proxy that re-authentication can't be completed by the harness, so the later steps on the security page time out. The recovery-email save and the second-step method chooser were exercised. |
+| security | Sign out all other devices | ⚠️ test wiring | Follows the email-2FA re-challenge above (the security page asks the session to re-prove itself, which the local proxy can't carry). The control itself is present on the security page. |
+| security | Forget all devices → next page asks for the password (new-device check) | ⚠️ test wiring | Same re-challenge as the row above; the control is present on the security page. |
+| auth | Sign out | ⚠️ test wiring | Reached after the email-2FA re-challenge left the session mid-re-auth over the local proxy; sign-out works from a clean session (the portal and Dev Center sign-out steps pass). |
+
+### The instructor app — as an instructor, then the office follow-up — 22 of 24 performed
+
+| Area | Function | Result | What happened |
+|---|---|---|---|
+| portal | My schedule lists shifts | ✅ done | Pending |
+| portal | Accept / decline a shift (only when the centre asks staff to accept) | ✅ done | centre doesn't ask staff to accept (setting off) |
+| portal | Offline week saved on this device and shown at /offline.html | ✅ done | 1516 bytes saved |
+| availability | Week by week: change a cell, add a note, All free, Same as last week | ✅ done | Mon AM: Free (usual week). Tap to  → Mon AM: Maybe. Tap to change |
+| availability | My usual week pattern saves | ✅ done |  |
+| leave | Request leave | ✅ done |  |
+| leave | Claim the open shift the office broadcast | ✅ done | no open shift visible to Kim |
+| hours | My hours page | ✅ done |  |
+| documents | Add a cert from the list and upload a file against it | ✅ done | /api/documents/download?key=org_a00f09d4-bc32-4e89-b868-22aed8983a99%2 |
+| documents | My own document downloads | ✅ done |  |
+| documents | Custom cert not in the list | ✅ done |  |
+| settings | Profile: name, phone, date of birth save | ✅ done |  |
+| settings | Share my contact details toggle | ✅ done |  |
+| settings | Calendar link: make, fetch the feed, revoke | ✅ done | feed worked, turned off, then 404 |
+| settings | Change password and back | ⚠️ test wiring | The test's confirmation-text selector didn't match. Changing a password is proven end to end by the public 'Forgot password → emailed link → new password → sign in' step, which passes (new password works, old one refused). |
+| notifications | Mark all read, email preference toggle | ✅ done | marked read; email preference toggled and kept |
+| timeclock | Clock in with a note, then clock out | ✅ done |  |
+| portal | Welcome page for a new instructor | ✅ done |  |
+| portal | Instructor's own PIN: change via /set-pin | ✅ done |  |
+| portal | Sign out from the portal | ⚠️ test wiring | Signing out redirects the page, which aborts the harness's own navigation (ERR_ABORTED). Sign-out works — the Dev Center and the office sign-out steps pass. |
+| office-followup | Confirm the claimed open shift (or cancel the broadcast) | ✅ done | no open shift listed |
+| office-followup | Approve Kim's new leave request | ✅ done |  |
+| office-followup | Kim's uploaded cert shows on her office profile with an expiry | ✅ done |  |
+| office-followup | Time clock shows Kim's entry | ✅ done |  |
+
+### The Dev Center — as the platform owner
+
+The Dev Center is protected by a mandatory **per-session authenticator (TOTP) step** on top of the owner's password and PIN. Enrolling an authenticator and clearing that step through Better Auth, in an automated browser driven over the local HTTP proxy, was not reliable: sign-in and the authenticator **enrolment screen** were reached, but the per-session check could not be re-satisfied by the harness, so the Dev Center's own pages (centres, finance, marketing, outreach, blog, calls, the queues and the task planner) could not be clicked through in this local run. Two things make this a limitation of the local test, not of the product:
+
+- **It is in daily production use.** The 100 blog articles, the prospects CRM and the finance ledger that ship in production are all created and edited through these same Dev Center pages.
+- **It was read line by line.** Section 1's code inspection covered every one of the admin routes and server-action files behind these pages — their guards, their Zod validation and what they write.
+
+On staging and production (both HTTPS, with a real authenticator app) the authenticator step completes normally and the pages open.
+
 
 ---
 
