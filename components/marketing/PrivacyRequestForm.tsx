@@ -17,7 +17,6 @@ const KINDS = [
 const input = "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal";
 
 export type PrivacyRequestKind = (typeof KINDS)[number][0];
-export const isPrivacyRequestKind = (k: unknown): k is PrivacyRequestKind => KINDS.some(([value]) => value === k);
 
 export function PrivacyRequestForm({ initialKind = "access" }: { initialKind?: PrivacyRequestKind }) {
   const [v, setV] = useState({ kind: initialKind as string, name: "", email: "", centre: "", message: "", website: "" });
