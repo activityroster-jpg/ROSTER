@@ -70,7 +70,7 @@ jobs:
           echo "Upload key made. SHA-256: $SHA" >> "$GITHUB_STEP_SUMMARY"
           echo "Download the zip under **Artifacts**, follow ADD-THESE-SECRETS.txt, then delete this run." >> "$GITHUB_STEP_SUMMARY"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: android-upload-key-KEEP-PRIVATE
           path: ${{ runner.temp }}/key/*
