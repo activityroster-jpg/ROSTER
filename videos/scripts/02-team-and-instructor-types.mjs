@@ -49,8 +49,13 @@ export default {
     { say: "You decide exactly who can teach each type of course, and Auto-roster follows your rules.",
       do: async (h) => { await h.point(h.page.getByRole("button", { name: "Save who can teach it" })); await h.wait(1200); await h.unhighlight(); await h.click(h.page.getByRole("button", { name: "Cancel" }).first()); } },
     { say: "You can set each course's capacity and ratio here too. A course you no longer run is retired, so old records still show it.", pause: 0.8,
-      do: async (h) => { await h.point(h.page.locator("tr").filter({ has: h.page.locator('input[value="Basic Skills (Level 2)"]') }).getByText("edit")); await h.page.mouse.move(1380, 790); } },
+      do: async (h) => {
+        const row = h.page.locator("tr").filter({ has: h.page.locator('input[value="Basic Skills (Level 2)"]') });
+        await h.point(row.getByLabel("Capacity", { exact: true })); await h.highlight(row.getByLabel("Capacity", { exact: true }).locator("xpath=ancestor::td[1]")); await h.wait(1800);
+        await h.point(row.getByLabel("Students per instructor")); await h.highlight(row.getByLabel("Students per instructor").locator("xpath=ancestor::td[1]")); await h.wait(1800);
+        await h.unhighlight(); await h.point(row.getByRole("button", { name: "Delete" })); await h.wait(900); await h.page.mouse.move(1380, 790);
+      } },
     { say: "That's your team set up. Next, inviting them to the app, so they keep their own availability and licences up to date.", pause: 1.0,
-      do: async (h) => { await h.scrollTop(); } },
+      do: async (h) => { await h.goto("/office/staff"); await h.wait(600); await h.highlight(h.page.getByText("Anna Smith", { exact: true }).first()); await h.wait(1800); await h.point(h.page.getByRole("button", { name: /Everyone who hasn.t set availability/ })); } },
   ],
 };

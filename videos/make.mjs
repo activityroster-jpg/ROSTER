@@ -11,8 +11,9 @@
  * workflow). Env: VIDEO_BASE (default http://demo.localhost:8788), DEV_LOG
  * (the dev server's log, for the sign-in code), PW_CHROMIUM (optional browser
  * path), VIDEO_RESET (a command that puts the demo centre back as seeded; run
- * before every video so each one starts from the same place), and a voice
- * key (see lib/tts.mjs).
+ * before every video so each one starts from the same place), VIDEO_CARRY
+ * (with --only: the last run's downloaded set, whose videos that passed are
+ * kept so the set stays whole), and a voice key (see lib/tts.mjs).
  *
  * Every finished video is checked (lib/qa.mjs): no step that missed, no
  * stretch with nothing said, narration that ends before the end card, and a
@@ -20,7 +21,7 @@
  * demo centre (up to three tries); if it still fails the run fails, so a
  * faulty set is never published.
  */
-import { readFileSync, readdirSync, mkdirSync, writeFileSync, rmSync, existsSync, copyFileSync } from "node:fs";
+import { readFileSync, readdirSync, mkdirSync, writeFileSync, rmSync, existsSync, copyFileSync, cpSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { createRequire } from "node:module";
@@ -312,12 +313,31 @@ for (const file of scripts) {
 }
 await browser.close();
 
+// When only some videos were made (--only), keep the rest from the last run:
+// VIDEO_CARRY is that run's downloaded set. Only videos that passed its checks
+// are kept, so the set stays whole without re-recording videos that were fine.
+const kept = [];
+const CARRY = process.env.VIDEO_CARRY;
+if (only && CARRY && existsSync(join(CARRY, "checks.md"))) {
+  for (const line of readFileSync(join(CARRY, "checks.md"), "utf8").split("\n")) {
+    const m = line.match(/^\| (\d\d-[a-z0-9-]+) \| ([^|]+) \| (✓.*) \|$/);
+    if (!m || only.has(Number(m[1].slice(0, 2))) || !byNumber(Number(m[1].slice(0, 2))) || !existsSync(join(CARRY, m[1], `${m[1]}.mp4`))) continue;
+    cpSync(join(CARRY, m[1]), join(OUT, m[1]), { recursive: true });
+    kept.push({ name: m[1], row: `| ${m[1]} | ${m[2].trim()} | ${m[3].replace(/ · kept from an earlier run$/, "")} · kept from an earlier run |` });
+  }
+  console.log(`Kept ${kept.length} video(s) that passed in the last run: ${kept.map((k) => k.name).join(", ") || "none"}.`);
+}
+// A set with a video missing isn't published: one not made now, and not kept, fails the run.
+const missing = only ? scripts.map((f) => f.replace(/\.mjs$/, "")).filter((n) => !made.some((m) => m.name === n) && !kept.some((k) => k.name === n)) : [];
+for (const n of missing) made.push({ name: n, title: n, length: 0, problems: ["not made this time, and it didn't pass in the last run: make it again"], notes: [] });
+
 // The run's report: one line per video (shown on the workflow run's page).
 const failed = made.filter((m) => m.problems.length);
 const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
-writeFileSync(join(OUT, "checks.md"), [
-  `| Video | Length | Checks |`, `|---|---|---|`,
-  ...made.map((m) => `| ${m.name} | ${m.length ? mmss(m.length) : "–"} | ${m.problems.length ? `✗ ${m.problems.join("; ")}` : `✓ passed${m.notes.length ? ` (${m.notes.join("; ")})` : ""}`} |`),
-].join("\n") + "\n");
+const rows = [
+  ...made.map((m) => ({ name: m.name, row: `| ${m.name} | ${m.length ? mmss(m.length) : "–"} | ${m.problems.length ? `✗ ${m.problems.join("; ")}` : `✓ passed${m.notes.length ? ` (${m.notes.join("; ")})` : ""}`} |` })),
+  ...kept,
+].sort((a, b) => a.name.localeCompare(b.name));
+writeFileSync(join(OUT, "checks.md"), [`| Video | Length | Checks |`, `|---|---|---|`, ...rows.map((r) => r.row)].join("\n") + "\n");
 console.log(`\nMade ${made.length} video(s) in videos/out: ${made.length - failed.length} passed the checks${failed.length ? `, ${failed.length} failed (${failed.map((m) => m.name).join(", ")})` : ""}.`);
 if (failed.length) process.exitCode = 1;

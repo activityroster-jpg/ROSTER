@@ -17,7 +17,7 @@ on:
   workflow_dispatch:
     inputs:
       only:
-        description: "Video numbers to make, comma separated (blank = every video with a script)"
+        description: "Video numbers to make, comma separated (blank = every video with a script). The others are kept from the last run if they passed there."
         required: false
         default: ""
   push:
@@ -26,6 +26,7 @@ on:
 
 permissions:
   contents: read
+  actions: read # to keep the videos that passed in the last run (see "Which videos to make")
 
 concurrency:
   group: videos-${{ github.ref }}
@@ -103,6 +104,42 @@ jobs:
             sleep 2
           done
           echo "::error::The app didn't start"; tail -50 videos-dev.log; exit 1
+      - name: Which videos to make
+        # Pressed by hand: the numbers typed in (blank = all). On a push: only the
+        # videos whose script changed; anything else under videos/ (the recorder,
+        # the checks, the cards, the voice) changes every video, so all are made.
+        id: which
+        env:
+          ONLY_INPUT: ${{ inputs.only }}
+          BEFORE: ${{ github.event.before }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          only=""
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            only="$(echo "$ONLY_INPUT" | tr -d ' ')"
+          elif [ -n "$BEFORE" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ] && git fetch -q --depth=1 origin "$BEFORE"; then
+            changed="$(git diff --name-only "$BEFORE" HEAD -- videos .github/workflows/videos.yml)"
+            echo "Changed since the last push:"; echo "$changed"
+            if [ -n "$changed" ] && ! echo "$changed" | grep -qv '^videos/scripts/[0-9][0-9]-.*\.mjs$'; then
+              only="$(echo "$changed" | sed -E 's#^videos/scripts/0?([0-9]+)-.*#\1#' | sort -n | uniq | paste -sd, -)"
+            fi
+          fi
+          echo "only=$only" >> "$GITHUB_OUTPUT"
+          if [ -n "$only" ]; then echo "Making video(s) $only; the others are kept from the last run if they passed there."; else echo "Making every video."; fi
+      - name: Keep the videos that passed in the last run
+        if: ${{ steps.which.outputs.only != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/carry"
+          for run in $(gh run list --repo "$GITHUB_REPOSITORY" --workflow videos.yml --status completed --limit 20 --json databaseId,conclusion --jq '.[] | select(.conclusion == "success" or .conclusion == "failure") | .databaseId'); do
+            [ "$run" = "$GITHUB_RUN_ID" ] && continue
+            if gh run download "$run" --repo "$GITHUB_REPOSITORY" --name activityroster-videos --dir "$RUNNER_TEMP/carry" 2>/dev/null && [ -f "$RUNNER_TEMP/carry/checks.md" ]; then
+              echo "Keeping the videos that passed in run $run:"; cat "$RUNNER_TEMP/carry/checks.md"; exit 0
+            fi
+            rm -rf "$RUNNER_TEMP/carry"; mkdir -p "$RUNNER_TEMP/carry"
+          done
+          echo "::warning::No earlier set of videos to keep (they're kept 30 days); only the videos made now will be in this run's download."
       - name: Make the videos
         # Each video: a fresh demo centre, record, edit out dead air, then check
         # the finished file (lib/qa.mjs). A video that fails its checks is made
@@ -110,7 +147,9 @@ jobs:
         # set isn't published.
         env:
           VIDEO_RESET: bash videos/reset-demo.sh
-        run: node videos/make.mjs ${{ inputs.only != '' && format('--only {0}', inputs.only) || '' }}
+          VIDEO_CARRY: ${{ runner.temp }}/carry
+          ONLY: ${{ steps.which.outputs.only }}
+        run: node videos/make.mjs ${ONLY:+--only "$ONLY"}
       - name: Keep the videos for download
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
