@@ -17,7 +17,7 @@ const JURISDICTIONS = [
 
 /** Kept in step with lib/packs (PACK_OPTIONS): the kind of centre, which sets up its starting lists. */
 const ACTIVITY_TYPES = [
-  { value: "rya_centre", label: "RYA centre / school" },
+  { value: "rya_centre", label: "RYA centre / club" },
   { value: "padi_centre", label: "PADI dive centre" },
 ] as const;
 

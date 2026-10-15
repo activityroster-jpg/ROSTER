@@ -2,10 +2,10 @@ import { DEFAULT_COURSE_TYPES, DEFAULT_EQUIPMENT_TYPES, DEFAULT_GRADES, DEFAULT_
 import type { ActivityPack } from "./types";
 import { RYA_TEACHING } from "./rya-teaching";
 
-/** RYA centre / school (training centres, sailing schools and clubs): the original pack, built from the lists every centre has had so far. */
+/** RYA centre / club (training centres, sailing schools and clubs): the original pack, built from the lists every centre has had so far. */
 export const RYA_CENTRE_PACK: ActivityPack = {
   id: "rya_centre",
-  label: "RYA centre / school",
+  label: "RYA centre / club",
   blurb: "Training centres, sailing schools and clubs running RYA courses: sailing, windsurfing, powerboat, paddleboard.",
   wording: {
     body: "RYA",
