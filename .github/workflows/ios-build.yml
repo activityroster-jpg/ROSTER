@@ -100,9 +100,18 @@ jobs:
           echo "App Store Connect key in place."
 
       - name: Tools
+        # Apple only accepts apps built with the current Xcode (26 or later), so the newest
+        # released Xcode on the runner is chosen, never a beta (Apple refuses beta-built apps).
         run: |
-          sudo xcode-select -p
+          echo "Xcode versions on this runner:"; ls -d /Applications/Xcode*.app
+          XCODE="$(ls -d /Applications/Xcode_*.app 2>/dev/null | grep -vi beta | sort -V | tail -1)"
+          [ -n "$XCODE" ] && sudo xcode-select -s "$XCODE"
           xcodebuild -version
+          MAJOR="$(xcodebuild -version | awk 'NR==1 {print int($2)}')"
+          if [ "$MAJOR" -lt 26 ]; then
+            echo "::error::Apple requires Xcode 26 or later to upload an app, and the newest on this GitHub machine is Xcode $MAJOR. The workflow needs a newer runner image (runs-on in .github/workflows/ios-build.yml)."
+            exit 1
+          fi
           pod --version || sudo gem install cocoapods
 
       - name: Install the app shell
@@ -212,6 +221,7 @@ jobs:
               if grep -qi "associated-domains" "$RUNNER_TEMP"/export.log 2>/dev/null; then echo "- The App ID needs **Associated Domains** ticked: developer.apple.com → Identifiers → com.activityroster.app → tick it → Save, then run again."; fi
               if grep -qi "aps-environment" "$RUNNER_TEMP"/export.log 2>/dev/null; then echo "- The App ID needs **Push Notifications** ticked: developer.apple.com → Identifiers → com.activityroster.app → tick it → Save, then run again."; fi
               if grep -qi "Cloud signing permission" "$RUNNER_TEMP"/export.log 2>/dev/null; then echo "- The App Store Connect key does not have the **Admin** role, which Apple's cloud signing requires. Make a new Team Key with the Admin role (App Store Connect → Users and Access → Integrations → App Store Connect API → +), update all three APP_STORE_CONNECT secrets, revoke the old key, then run again."; fi
+              if grep -qi "SDK version issue" "$RUNNER_TEMP"/upload.log 2>/dev/null; then echo "- Apple refused the upload because it was built with an old Xcode: the workflow must pick Xcode 26 or later on the runner."; fi
               if grep -qiE "agreement|license" "$RUNNER_TEMP"/*.log 2>/dev/null; then echo "- Apple is waiting for an agreement to be accepted: developer.apple.com → Account → Agreements (or App Store Connect → Agreements), accept it, then run again."; fi
               if grep -qiE "authentication|401|403|invalid api key|NOT_AUTHORIZED" "$RUNNER_TEMP"/*.log 2>/dev/null; then echo "- The App Store Connect key was refused: check the three APP_STORE_CONNECT secrets, and that the key has the Admin role."; fi
               if grep -qiE "No App Store Connect app|bundle identifier.*not found|could not find.*app record" "$RUNNER_TEMP"/*.log 2>/dev/null; then echo "- The app record is missing in App Store Connect: Apps → + → New App with bundle ID com.activityroster.app."; fi
