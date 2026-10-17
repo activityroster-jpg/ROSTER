@@ -20,7 +20,9 @@ end
 
 target 'App' do
   capacitor_pods
-  # Add your Pods here
+  # Phone notifications: the platform sends through Firebase, so the app swaps Apple's token
+  # for a Firebase one (AppDelegate.swift). Only active when GoogleService-Info.plist is present.
+  pod 'FirebaseMessaging', '~> 12.0'
 end
 
 post_install do |installer|

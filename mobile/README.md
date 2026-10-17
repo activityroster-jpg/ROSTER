@@ -95,39 +95,32 @@ You also need a **Mac with Xcode** (free, Mac App Store) for the iOS build, and
    roster → Settings → Variables and Secrets → Add → type Secret).
    Until this is set, the platform simply doesn't send pushes — nothing errors.
 
-## 2. Build the projects (on the Mac)
+## 2. Build and publish from GitHub (no Mac or Android Studio needed)
 
-The `ios/` and `android/` projects are **already generated and committed**
-(icons, splash screens, permissions and usage descriptions included), so you
-don't run `cap add`. iOS uses CocoaPods.
+Both apps are built by GitHub Actions. Press **Run workflow**, type the version
+(for example `1.0.0`) and wait:
 
-```bash
-# one-off tools
-brew install cocoapods            # or: sudo gem install cocoapods
-# in the repo
-cd mobile
-npm install
-npx cap sync                      # installs iOS pods + copies config
-```
+- **iOS build** signs the app with Apple's cloud signing and sends it to
+  **TestFlight**. One-off set-up: in App Store Connect make a Team Key
+  (Users and Access → Integrations → App Store Connect API, role *App Manager*)
+  and add `APP_STORE_CONNECT_KEY_ID`, `APP_STORE_CONNECT_ISSUER_ID` and
+  `APP_STORE_CONNECT_KEY_P8` (the whole `.p8` file) as GitHub secrets. The App
+  ID `com.activityroster.app` needs *Push Notifications* and *Associated Domains*
+  ticked at developer.apple.com → Identifiers. Phone notifications switch on when
+  `GOOGLE_SERVICE_INFO_PLIST` (the Firebase file for the iOS app) is added.
+- **Android build** signs with the upload key (made once by *Android upload key*)
+  and leaves the `.aab` and `.apk` under the run's Artifacts for Google Play.
+  Phone notifications switch on when `GOOGLE_SERVICES_JSON` is added.
 
-Then:
-
-- **iOS**: copy `GoogleService-Info.plist` into `ios/App/App/`. Open Xcode
-  (`npm run ios`). Select the *App* target → **Signing & Capabilities**: choose
-  your Team, then **+ Capability** → *Push Notifications* (Background Modes →
-  Remote notifications and all usage descriptions are already in `Info.plist`).
-  Open `ios/App/App.xcworkspace` (the *workspace*, not the project).
-- **Android**: copy `google-services.json` into `android/app/`. Open Android
-  Studio (`npm run android`). Camera, location, biometric and notification
-  permissions are already declared in the manifest.
-
-Run on a device (Product → Run in Xcode; ▶ in Android Studio). Sign in with a
-real instructor account, enter a company code, and check: push toggle in
-Settings → App, Face ID on the PIN screen, 📷 on Documents, 📍 on clock-in.
+The `ios/` and `android/` projects are committed with icons, splash screens,
+permissions, usage descriptions and entitlements already in place. A Mac with
+Xcode is only needed to run the iOS app on a plugged-in phone during
+development: `cd mobile && npm install && npx cap sync`, then open
+`ios/App/App.xcworkspace` (the *workspace*, not the project) and press Run.
 
 ## 3. Publish
 
-**App Store** (Xcode → Product → Archive → Distribute → App Store Connect):
+**App Store** (the *iOS build* workflow uploads each build to TestFlight; then in App Store Connect):
 1. https://appstoreconnect.apple.com → **My Apps → +** → name *ActivityRoster*,
    bundle `com.activityroster.app`, SKU `activityroster`.
 2. Fill the listing (below). Privacy: *Data collected* — name, email, phone,
@@ -186,18 +179,16 @@ Without this, a magic link or "confirm device" email opens Safari/Chrome
 instead of the app. The site already serves both verification files from
 environment variables — set them and the links start opening in the app.
 
-1. **Worker vars** (Cloudflare → Worker → Settings → Variables):
-   `APPLE_TEAM_ID` (10 characters, from developer.apple.com → Membership),
-   `IOS_BUNDLE_ID` (e.g. `com.activityroster.app`), `ANDROID_PACKAGE`
-   (same id), `ANDROID_SHA256_FINGERPRINTS` (comma-separated; get them from
-   Play Console → Setup → App signing: both the *upload* and the *app signing*
-   certificate SHA-256). Redeploy, then check
+1. **Worker vars**: `APPLE_TEAM_ID`, `IOS_BUNDLE_ID` and `ANDROID_PACKAGE` are
+   set in `wrangler.toml`. `ANDROID_SHA256_FINGERPRINTS` is added in Cloudflare
+   (Worker → Settings → Variables; comma-separated; get them from Play Console →
+   Setup → App signing: both the *upload* and the *app signing* certificate
+   SHA-256). Deploy, then check
    `https://activityroster.com/.well-known/apple-app-site-association` and
    `https://activityroster.com/.well-known/assetlinks.json` return JSON.
-2. **Xcode**: target → Signing & Capabilities → “+ Capability” → Associated
-   Domains → add `applinks:activityroster.com` and
-   `webcredentials:activityroster.com` (also add `applinks:*.activityroster.com`
-   so centre subdomains work).
+2. **iOS**: already in `ios/App/App/App.entitlements` (`applinks:activityroster.com`,
+   `applinks:*.activityroster.com`, `webcredentials:activityroster.com`). The App ID
+   must have *Associated Domains* ticked at developer.apple.com → Identifiers.
 3. **Android**: already in `android/app/src/main/AndroidManifest.xml` (an
    `autoVerify` intent filter for `activityroster.com` and `*.activityroster.com`).
 4. The Capacitor `App` plugin’s `appUrlOpen` listener routes the opened URL
@@ -211,7 +202,8 @@ environment variables — set them and the links start opening in the app.
 
 Web changes need nothing — the app shows the live site. Only change the native
 projects when a plugin or Capacitor version changes: bump `package.json`,
-`npm install && npx cap sync`, rebuild, re-submit.
+`npm install && npx cap sync`, then run the *iOS build* and *Android build*
+workflows with a new version number and re-submit.
 
 
 ## Offline "my week" (iOS)
@@ -220,6 +212,6 @@ The portal registers a small service worker (`public/sw.js`) that shows the
 instructor's saved week when there is no signal. WKWebView only runs service
 workers for app-bound domains, so `activityroster.com` is listed under
 `WKAppBoundDomains` in `ios/App/App/Info.plist` and the Capacitor config sets
-`ios.limitsNavigationsToAppBoundDomains`. Rebuild the iOS app on the Mac
-(`npx cap sync ios`, then archive in Xcode) for this to take effect; Android
+`ios.limitsNavigationsToAppBoundDomains`. Run the *iOS build* workflow for this
+to take effect; Android
 WebView supports it without changes.

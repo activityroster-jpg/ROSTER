@@ -41,7 +41,7 @@ Three environments. Names only here, never values.
 | `FCM_SERVICE_ACCOUNT_JSON` | Push notifications for the mobile app | Firebase service account | Create a new key, set, delete old |
 | `BOATYJOBS_PARTNER_SECRET` | Recruit on Boaty Jobs: Bearer auth to the Boaty Jobs partner API, and the HMAC key its webhooks are signed with | Agreed with Boaty Jobs (same value set there) | Set the new value on both sites at the same time |
 | `BOATYJOBS_API_BASE` (optional) | Points staging at a Boaty Jobs test site; unset = https://boatyjobs.com | Boaty Jobs | n/a |
-| `APPLE_TEAM_ID`, `IOS_BUNDLE_ID`, `ANDROID_PACKAGE`, `ANDROID_SHA256_FINGERPRINTS` | Universal / app links | App stores | Edit |
+| `ANDROID_SHA256_FINGERPRINTS` | Android app links (`APPLE_TEAM_ID`, `IOS_BUNDLE_ID` and `ANDROID_PACKAGE` are plain vars in `wrangler.toml`) | Play Console → Setup → App signing | Edit |
 | `COMPANY_LEGAL_NAME`, `COMPANY_ADDRESS` | Shown in email footers | Companies House / your registered address | Edit |
 
 Non-secret vars live in `wrangler.toml` (`APP_APEX_DOMAIN`, `APP_ENV`).
@@ -54,6 +54,10 @@ Non-secret vars live in `wrangler.toml` (`APP_APEX_DOMAIN`, `APP_ENV`).
 | `CLOUDFLARE_ACCOUNT_ID` | all deploy workflows |
 | `CLOUDFLARE_ZONE_ID` | the monthly DNS zone export (dashboard → the domain → Overview → API box on the right); the API token also needs Zone → DNS → Read |
 | `OUTREACH_CRON_SECRET` | the hourly outreach tick |
+| `APP_STORE_CONNECT_KEY_ID`, `APP_STORE_CONNECT_ISSUER_ID`, `APP_STORE_CONNECT_KEY_P8` | iOS build: signs the iPhone app with Apple's cloud signing and sends it to TestFlight. From App Store Connect → Users and Access → Integrations → App Store Connect API (App Manager role); the `.p8` file is pasted whole |
+| `GOOGLE_SERVICE_INFO_PLIST` (optional) | iOS build: the Firebase file for the iOS app, pasted whole; without it the app builds with phone notifications off |
+| `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD` | Android build: the Google Play upload key (made once by the "Android upload key" workflow) |
+| `GOOGLE_SERVICES_JSON` (optional) | Android build: the Firebase file for the Android app |
 | `STAGING_RESEND_API_KEY` (optional) | Provision staging: lets staging send real email |
 | `STAGING_STRIPE_SECRET_KEY`, `STAGING_STRIPE_WEBHOOK_SECRET` (optional) | Provision staging: Stripe test mode |
 | `STAGING_ANTHROPIC_API_KEY` (optional) | Provision staging: outreach agent on staging |

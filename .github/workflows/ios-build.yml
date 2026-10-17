@@ -1,0 +1,210 @@
+name: iOS build
+
+# Builds the ActivityRoster instructor app for iPhone and iPad (mobile/) and sends it to
+# TestFlight, Apple's testing app. No Mac needed: press "Run workflow" in GitHub Actions.
+#
+# Signing is Apple's cloud signing, so there are no certificates to make or keep. It needs
+# three GitHub secrets from App Store Connect → Users and Access → Integrations →
+# App Store Connect API (a Team Key with the App Manager role):
+#   APP_STORE_CONNECT_KEY_ID, APP_STORE_CONNECT_ISSUER_ID, APP_STORE_CONNECT_KEY_P8 (whole .p8 file)
+# Phone notifications need GOOGLE_SERVICE_INFO_PLIST (the Firebase file for the iOS app,
+# pasted whole); without it the app works and simply sends no phone notifications.
+# Nothing here touches the website or database.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: "Version shown in the App Store, e.g. 1.0.0"
+        required: true
+        default: "1.0.0"
+      upload:
+        description: "Send the build to TestFlight"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-build
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: mobile
+    env:
+      TEAM_ID: D6X743P33Z
+      BUNDLE_ID: com.activityroster.app
+      LANG: en_US.UTF-8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Check the version
+        env:
+          VERSION: ${{ inputs.version_name }}
+        run: |
+          if ! printf '%s' "$VERSION" | grep -Eq '^[0-9]+(\.[0-9]+){1,2}$'; then echo "::error::Version must look like 1.0.0"; exit 1; fi
+
+      - name: App Store Connect key
+        # The three secrets are checked before anything is built, so a missing or mis-pasted one is a
+        # clear message rather than a signing error twenty minutes in. The key is written where
+        # xcodebuild and altool look for it, and never printed.
+        env:
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          KEY_P8: ${{ secrets.APP_STORE_CONNECT_KEY_P8 }}
+        run: |
+          missing=""
+          [ -z "$KEY_ID" ] && missing="$missing APP_STORE_CONNECT_KEY_ID"
+          [ -z "$ISSUER_ID" ] && missing="$missing APP_STORE_CONNECT_ISSUER_ID"
+          [ -z "$KEY_P8" ] && missing="$missing APP_STORE_CONNECT_KEY_P8"
+          if [ -n "$missing" ]; then
+            echo "::error::These GitHub secrets are not set yet:$missing. Make them from App Store Connect → Users and Access → Integrations → App Store Connect API (Team Keys, App Manager role), then Settings → Secrets and variables → Actions in this repository."
+            exit 1
+          fi
+          if ! printf '%s' "$KEY_ID" | grep -Eq '^[A-Z0-9]{10}$'; then echo "::error::APP_STORE_CONNECT_KEY_ID should be 10 letters and digits (the Key ID shown in the key's row)."; exit 1; fi
+          if ! printf '%s' "$ISSUER_ID" | grep -Eqi '^[0-9a-f-]{36}$'; then echo "::error::APP_STORE_CONNECT_ISSUER_ID should be the long code with dashes shown above the list of keys."; exit 1; fi
+          if ! printf '%s' "$KEY_P8" | grep -q 'BEGIN PRIVATE KEY'; then echo "::error::APP_STORE_CONNECT_KEY_P8 should be the whole .p8 file, including the BEGIN PRIVATE KEY and END PRIVATE KEY lines."; exit 1; fi
+          mkdir -p "$HOME/.private_keys"
+          umask 077
+          printf '%s\n' "$KEY_P8" > "$HOME/.private_keys/AuthKey_$KEY_ID.p8"
+          echo "KEY_PATH=$HOME/.private_keys/AuthKey_$KEY_ID.p8" >> "$GITHUB_ENV"
+          echo "App Store Connect key in place."
+
+      - name: Tools
+        run: |
+          sudo xcode-select -p
+          xcodebuild -version
+          pod --version || sudo gem install cocoapods
+
+      - name: Install the app shell
+        run: npm ci && npx cap sync ios
+
+      - name: Firebase file (phone notifications)
+        env:
+          PLIST: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}
+        run: |
+          if [ -z "$PLIST" ]; then
+            echo "::warning::GOOGLE_SERVICE_INFO_PLIST is not set: the app builds, but phone notifications stay off."
+            exit 0
+          fi
+          printf '%s' "$PLIST" > "$RUNNER_TEMP/gsi.plist"
+          # Check it is the real Firebase file for this app before using it, so a wrong paste builds
+          # without notifications instead of failing the whole build.
+          if ! plutil -lint -s "$RUNNER_TEMP/gsi.plist" > /dev/null 2>&1; then
+            echo "::warning::GOOGLE_SERVICE_INFO_PLIST was ignored: it does not read as a plist file (often the Android file or a web snippet was pasted). Fix: Firebase console → Project settings → Your apps → the iOS app → download GoogleService-Info.plist, open it in TextEdit, select all, copy, and paste that into the secret."
+            rm -f "$RUNNER_TEMP/gsi.plist"; exit 0
+          fi
+          BID="$(/usr/libexec/PlistBuddy -c 'Print :BUNDLE_ID' "$RUNNER_TEMP/gsi.plist" 2>/dev/null || true)"
+          if [ "$BID" != "$BUNDLE_ID" ]; then
+            echo "::warning::GOOGLE_SERVICE_INFO_PLIST was ignored: it is for a different app (${BID:-no bundle id}), not $BUNDLE_ID. The app is built without phone notifications."
+            rm -f "$RUNNER_TEMP/gsi.plist"; exit 0
+          fi
+          cp "$RUNNER_TEMP/gsi.plist" ios/App/App/GoogleService-Info.plist
+          rm -f "$RUNNER_TEMP/gsi.plist"
+          echo "Firebase file checked: phone notifications on."
+
+      - name: Build (archive)
+        # Built unsigned; signing happens at the export step with Apple's cloud signing.
+        working-directory: mobile/ios/App
+        env:
+          VERSION: ${{ inputs.version_name }}
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: |
+          set -o pipefail
+          xcodebuild -workspace App.xcworkspace -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD_NUMBER" DEVELOPMENT_TEAM="$TEAM_ID" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            -quiet archive 2>&1 | tee "$RUNNER_TEMP/archive.log"
+
+      - name: Sign and export (Apple cloud signing)
+        working-directory: mobile/ios/App
+        env:
+          VERSION: ${{ inputs.version_name }}
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          set -o pipefail
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>export</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>teamID</key><string>$TEAM_ID</string>
+            <key>uploadSymbols</key><true/>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict></plist>
+          EOF
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates -authenticationKeyPath "$KEY_PATH" \
+            -authenticationKeyID "$KEY_ID" -authenticationKeyIssuerID "$ISSUER_ID" \
+            -quiet 2>&1 | tee "$RUNNER_TEMP/export.log"
+          mkdir -p "$RUNNER_TEMP/out"
+          IPA="$(ls "$RUNNER_TEMP"/export/*.ipa | head -1)"
+          cp "$IPA" "$RUNNER_TEMP/out/ActivityRoster-$VERSION.ipa"
+          echo "IPA_PATH=$RUNNER_TEMP/out/ActivityRoster-$VERSION.ipa" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ActivityRoster-ios-${{ inputs.version_name }}-build${{ github.run_number }}
+          path: ${{ runner.temp }}/out/*
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Send to TestFlight
+        if: ${{ inputs.upload }}
+        env:
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          set -o pipefail
+          xcrun altool --upload-app --type ios --file "$IPA_PATH" --apiKey "$KEY_ID" --apiIssuer "$ISSUER_ID" 2>&1 | tee "$RUNNER_TEMP/upload.log"
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### iOS build ${{ inputs.version_name }} (build ${{ github.run_number }})"
+            echo
+            if [ "${{ job.status }}" = "success" ]; then
+              if [ "${{ inputs.upload }}" = "true" ]; then
+                echo "Sent to TestFlight. Apple takes 10–30 minutes to process it, then it appears under **App Store Connect → ActivityRoster → TestFlight**. Add yourself under *Internal Testing* the first time; after that each build reaches your TestFlight app on its own."
+              else
+                echo "Built and signed. The .ipa is under **Artifacts** below (not sent to TestFlight this time)."
+              fi
+              echo
+              [ -f ios/App/App/GoogleService-Info.plist ] && echo "Phone notifications: on." || echo "Phone notifications: off (no GOOGLE_SERVICE_INFO_PLIST yet)."
+            else
+              echo "The build did not finish. Likely causes, from the logs:"
+              echo
+              if grep -qi "associated-domains" "$RUNNER_TEMP"/export.log 2>/dev/null; then echo "- The App ID needs **Associated Domains** ticked: developer.apple.com → Identifiers → com.activityroster.app → tick it → Save, then run again."; fi
+              if grep -qi "aps-environment" "$RUNNER_TEMP"/export.log 2>/dev/null; then echo "- The App ID needs **Push Notifications** ticked: developer.apple.com → Identifiers → com.activityroster.app → tick it → Save, then run again."; fi
+              if grep -qiE "agreement|license" "$RUNNER_TEMP"/*.log 2>/dev/null; then echo "- Apple is waiting for an agreement to be accepted: developer.apple.com → Account → Agreements (or App Store Connect → Agreements), accept it, then run again."; fi
+              if grep -qiE "authentication|401|403|invalid api key|NOT_AUTHORIZED" "$RUNNER_TEMP"/*.log 2>/dev/null; then echo "- The App Store Connect key was refused: check the three APP_STORE_CONNECT secrets, and that the key has the App Manager role."; fi
+              if grep -qiE "No App Store Connect app|bundle identifier.*not found|could not find.*app record" "$RUNNER_TEMP"/*.log 2>/dev/null; then echo "- The app record is missing in App Store Connect: Apps → + → New App with bundle ID com.activityroster.app."; fi
+              echo "- Otherwise, download **ios-build-logs** under Artifacts and send it on."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep the logs when something fails
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build-logs
+          path: ${{ runner.temp }}/*.log
+          if-no-files-found: ignore
+          retention-days: 7

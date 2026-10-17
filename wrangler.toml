@@ -44,6 +44,10 @@ id = "34fc102ca9744f0793d3e0adb3bf31e1"
 [vars]
 APP_APEX_DOMAIN = "activityroster.com"
 APP_ENV = "production"
+# Universal / app links for the instructor app (/.well-known): none of these are secret.
+APPLE_TEAM_ID = "D6X743P33Z"
+IOS_BUNDLE_ID = "com.activityroster.app"
+ANDROID_PACKAGE = "com.activityroster.app"
 
 # --- Staging ----------------------------------------------------------------
 # A full copy of the stack for testing before production: its own Worker, D1,
@@ -85,3 +89,6 @@ id = "ea030b9df1db456db8d2b66fb4611e4d"
 [env.staging.vars]
 APP_APEX_DOMAIN = "staging.activityroster.com"
 APP_ENV = "staging"
+APPLE_TEAM_ID = "D6X743P33Z"
+IOS_BUNDLE_ID = "com.activityroster.app"
+ANDROID_PACKAGE = "com.activityroster.app"

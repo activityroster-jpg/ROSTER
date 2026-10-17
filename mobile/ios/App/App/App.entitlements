@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Phone notifications. Xcode switches this to "production" for App Store / TestFlight builds. -->
+	<key>aps-environment</key>
+	<string>development</string>
+	<!-- Universal links: our sign-in and "confirm device" links open in the app (the site serves
+	     /.well-known/apple-app-site-association). Needs "Associated Domains" ticked on the App ID. -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:activityroster.com</string>
+		<string>applinks:*.activityroster.com</string>
+		<string>webcredentials:activityroster.com</string>
+	</array>
+</dict>
+</plist>
