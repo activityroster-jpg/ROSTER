@@ -102,7 +102,7 @@ Both apps are built by GitHub Actions. Press **Run workflow**, type the version
 
 - **iOS build** signs the app with Apple's cloud signing and sends it to
   **TestFlight**. One-off set-up: in App Store Connect make a Team Key
-  (Users and Access → Integrations → App Store Connect API, role *App Manager*)
+  (Users and Access → Integrations → App Store Connect API, role *Admin*: cloud signing refuses lesser roles)
   and add `APP_STORE_CONNECT_KEY_ID`, `APP_STORE_CONNECT_ISSUER_ID` and
   `APP_STORE_CONNECT_KEY_P8` (the whole `.p8` file) as GitHub secrets. The App
   ID `com.activityroster.app` needs *Push Notifications* and *Associated Domains*

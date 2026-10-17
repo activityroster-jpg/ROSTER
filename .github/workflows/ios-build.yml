@@ -5,7 +5,7 @@ name: iOS build
 #
 # Signing is Apple's cloud signing, so there are no certificates to make or keep. It needs
 # three GitHub secrets from App Store Connect → Users and Access → Integrations →
-# App Store Connect API (a Team Key with the App Manager role):
+# App Store Connect API (a Team Key with the Admin role: cloud signing refuses lesser roles):
 #   APP_STORE_CONNECT_KEY_ID, APP_STORE_CONNECT_ISSUER_ID, APP_STORE_CONNECT_KEY_P8 (whole .p8 file)
 # Phone notifications need GOOGLE_SERVICE_INFO_PLIST (the Firebase file for the iOS app,
 # pasted whole); without it the app works and simply sends no phone notifications.
@@ -69,7 +69,7 @@ jobs:
           [ -z "$ISSUER_ID" ] && missing="$missing APP_STORE_CONNECT_ISSUER_ID"
           [ -z "$KEY_P8" ] && missing="$missing APP_STORE_CONNECT_KEY_P8"
           if [ -n "$missing" ]; then
-            echo "::error::These GitHub secrets are not set yet:$missing. Make them from App Store Connect → Users and Access → Integrations → App Store Connect API (Team Keys, App Manager role), then Settings → Secrets and variables → Actions in this repository."
+            echo "::error::These GitHub secrets are not set yet:$missing. Make them from App Store Connect → Users and Access → Integrations → App Store Connect API (Team Keys, Admin role), then Settings → Secrets and variables → Actions in this repository."
             exit 1
           fi
           if ! printf '%s' "$KEY_ID" | grep -Eq '^[A-Z0-9]{10}$'; then echo "::error::APP_STORE_CONNECT_KEY_ID should be 10 letters and digits (the Key ID shown in the key's row)."; exit 1; fi
@@ -193,8 +193,9 @@ jobs:
               echo
               if grep -qi "associated-domains" "$RUNNER_TEMP"/export.log 2>/dev/null; then echo "- The App ID needs **Associated Domains** ticked: developer.apple.com → Identifiers → com.activityroster.app → tick it → Save, then run again."; fi
               if grep -qi "aps-environment" "$RUNNER_TEMP"/export.log 2>/dev/null; then echo "- The App ID needs **Push Notifications** ticked: developer.apple.com → Identifiers → com.activityroster.app → tick it → Save, then run again."; fi
+              if grep -qi "Cloud signing permission" "$RUNNER_TEMP"/export.log 2>/dev/null; then echo "- The App Store Connect key does not have the **Admin** role, which Apple's cloud signing requires. Make a new Team Key with the Admin role (App Store Connect → Users and Access → Integrations → App Store Connect API → +), update all three APP_STORE_CONNECT secrets, revoke the old key, then run again."; fi
               if grep -qiE "agreement|license" "$RUNNER_TEMP"/*.log 2>/dev/null; then echo "- Apple is waiting for an agreement to be accepted: developer.apple.com → Account → Agreements (or App Store Connect → Agreements), accept it, then run again."; fi
-              if grep -qiE "authentication|401|403|invalid api key|NOT_AUTHORIZED" "$RUNNER_TEMP"/*.log 2>/dev/null; then echo "- The App Store Connect key was refused: check the three APP_STORE_CONNECT secrets, and that the key has the App Manager role."; fi
+              if grep -qiE "authentication|401|403|invalid api key|NOT_AUTHORIZED" "$RUNNER_TEMP"/*.log 2>/dev/null; then echo "- The App Store Connect key was refused: check the three APP_STORE_CONNECT secrets, and that the key has the Admin role."; fi
               if grep -qiE "No App Store Connect app|bundle identifier.*not found|could not find.*app record" "$RUNNER_TEMP"/*.log 2>/dev/null; then echo "- The app record is missing in App Store Connect: Apps → + → New App with bundle ID com.activityroster.app."; fi
               echo "- Otherwise, download **ios-build-logs** under Artifacts and send it on."
             fi

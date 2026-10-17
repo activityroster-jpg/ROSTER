@@ -54,7 +54,7 @@ Non-secret vars live in `wrangler.toml` (`APP_APEX_DOMAIN`, `APP_ENV`).
 | `CLOUDFLARE_ACCOUNT_ID` | all deploy workflows |
 | `CLOUDFLARE_ZONE_ID` | the monthly DNS zone export (dashboard → the domain → Overview → API box on the right); the API token also needs Zone → DNS → Read |
 | `OUTREACH_CRON_SECRET` | the hourly outreach tick |
-| `APP_STORE_CONNECT_KEY_ID`, `APP_STORE_CONNECT_ISSUER_ID`, `APP_STORE_CONNECT_KEY_P8` | iOS build: signs the iPhone app with Apple's cloud signing and sends it to TestFlight. From App Store Connect → Users and Access → Integrations → App Store Connect API (App Manager role); the `.p8` file is pasted whole |
+| `APP_STORE_CONNECT_KEY_ID`, `APP_STORE_CONNECT_ISSUER_ID`, `APP_STORE_CONNECT_KEY_P8` | iOS build: signs the iPhone app with Apple's cloud signing and sends it to TestFlight. From App Store Connect → Users and Access → Integrations → App Store Connect API (Admin role: cloud signing refuses lesser roles); the `.p8` file is pasted whole |
 | `GOOGLE_SERVICE_INFO_PLIST` (optional) | iOS build: the Firebase file for the iOS app, pasted whole; without it the app builds with phone notifications off |
 | `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD` | Android build: the Google Play upload key (made once by the "Android upload key" workflow) |
 | `GOOGLE_SERVICES_JSON` (optional) | Android build: the Firebase file for the Android app |
