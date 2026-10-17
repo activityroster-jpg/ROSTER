@@ -5,13 +5,14 @@ import { drainPushQueue } from "@/lib/push/queue";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/security/rate-limit";
 import { checkCronSecret } from "@/lib/security/cron-secret";
 import { checkTickHealth } from "@/lib/ops/tick-watch";
+import { runJobSync } from "@/lib/services/jobs";
 
 export const dynamic = "force-dynamic";
 
 /**
  * The delivery job: every two minutes the roster-tick worker calls this with
  * the cron secret, and it sends queued emails and phone notifications (bulk
- * notices such as a confirmed week). Each run is bounded, so a big centre's
+ * notices such as a confirmed week) and job posts on their way to Boaty Jobs. Each run is bounded, so a big centre's
  * notices go out over a few runs, never past Cloudflare's per-request limits.
  */
 async function drain(req: Request) {
@@ -22,9 +23,11 @@ async function drain(req: Request) {
   const db = await getDb();
   const mail = await drainEmailQueue(db, env, new Date(), 150, undefined, { concurrency: 5, purge: false }).catch((e: Error) => ({ due: 0, sent: 0, failed: 0, purged: 0, error: e.message }));
   const push = await drainPushQueue(db, env, 200).catch((e: Error) => ({ due: 0, sent: 0, dead: 0, error: e.message }));
+  // Job posts on their way to Boaty Jobs (publish / edit / close), with retries and backoff.
+  const jobs = await runJobSync(db, { secret: env.BOATYJOBS_PARTNER_SECRET, baseUrl: env.BOATYJOBS_API_BASE || undefined }).catch((e: Error) => ({ due: 0, sent: 0, error: e.message }));
   // Watchdog: email the owner once if the hourly job hasn't run for two hours.
   const tick = await checkTickHealth();
-  return NextResponse.json({ ok: true, mail, push, tick });
+  return NextResponse.json({ ok: true, mail, push, jobs, tick });
 }
 
 export async function POST(req: Request) { return drain(req); }

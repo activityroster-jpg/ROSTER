@@ -33,4 +33,8 @@ app works and simply sends no phone notifications.
 Postmark is listed ahead of use (P0-G): it becomes live the day `POSTMARK_SERVER_TOKEN`
 is set. Conor tells customers before that day.
 
-Last reviewed: 14 October 2026 (Firebase and APNs added, pending activation; Postmark pending activation).
+Not a sub-processor: **Boaty Jobs** (boatyjobs.com) is operated by ActiveRoster Ltd itself.
+When a centre publishes a job from "Recruit on Boaty Jobs", the job details and the centre's
+application email go to it to publish the listing (privacy policy, "Sharing"; `docs/data-map.md`).
+
+Last reviewed: 17 October 2026 (Boaty Jobs noted: same company, not a sub-processor). Previously 14 October 2026 (Firebase and APNs added, pending activation; Postmark pending activation).

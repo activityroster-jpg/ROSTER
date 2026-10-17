@@ -179,6 +179,17 @@ export const orgSettings = sqliteTable("org_settings", {
   retentionReminderAt: integer("retention_reminder_at", { mode: "timestamp_ms" }),
   /** When the retention sweep last ran for this centre. */
   retentionRanAt: integer("retention_ran_at", { mode: "timestamp_ms" }),
+  // --- Recruiting on Boaty Jobs: the centre details shown on every listing (lib/domain/jobs) ---
+  recruitTown: text("recruit_town"),
+  recruitPostcode: text("recruit_postcode"),
+  /** england | scotland | wales | northern_ireland; null = from the centre's jurisdiction. */
+  recruitRegion: text("recruit_region"),
+  recruitWebsite: text("recruit_website"),
+  recruitLogoUrl: text("recruit_logo_url"),
+  /** Where applications are emailed by default; null = the owner's email. */
+  recruitEmail: text("recruit_email"),
+  /** The "Hiring for the season?" dashboard card was dismissed (it stays hidden for that season). */
+  recruitCardDismissedAt: integer("recruit_card_dismissed_at", { mode: "timestamp_ms" }),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 }, (t) => [uniqueIndex("org_settings_org_uq").on(t.organisationId)]);
@@ -1043,6 +1054,93 @@ export const helpQuestion = sqliteTable("help_question", {
   index("help_question_org_idx").on(t.organisationId),
   index("help_question_created_idx").on(t.createdAt),
 ]);
+
+// --- Recruiting on Boaty Jobs ------------------------------------------------
+
+export const JOB_STATUSES = ["draft", "publishing", "live", "closed", "expired", "removed", "sync_failed"] as const;
+export type JobStatus = (typeof JOB_STATUSES)[number];
+export const JOB_ROLE_TYPES = ["dinghy_instructor", "senior_instructor", "assistant_instructor", "powerboat_instructor", "windsurf_instructor", "paddlesport_instructor", "safety_boat_driver", "office_admin", "other"] as const;
+export type JobRoleType = (typeof JOB_ROLE_TYPES)[number];
+export const JOB_EMPLOYMENT_TYPES = ["seasonal", "part_time", "full_time", "volunteer"] as const;
+export type JobEmploymentType = (typeof JOB_EMPLOYMENT_TYPES)[number];
+export const JOB_PAY_TYPES = ["hourly", "daily", "weekly", "season", "salary", "competitive", "volunteer"] as const;
+export type JobPayType = (typeof JOB_PAY_TYPES)[number];
+export const JOB_SYNC_ACTIONS = ["publish", "update", "close"] as const;
+export type JobSyncAction = (typeof JOB_SYNC_ACTIONS)[number];
+export const JOB_SYNC_STATUSES = ["pending", "done", "failed"] as const;
+
+/**
+ * A job post the centre publishes to Boaty Jobs (boatyjobs.com, also run by
+ * ActiveRoster Ltd). This row is the master copy: Boaty Jobs only displays it
+ * and emails applications to `application_email`. Its id is the listing's
+ * `external_id` on Boaty Jobs. Never deleted once published (closed instead);
+ * a draft that never went out can be deleted.
+ */
+export const jobPost = sqliteTable("job_post", {
+  id: id(),
+  organisationId: orgFk(),
+  title: text("title").notNull(),
+  roleType: text("role_type", { enum: JOB_ROLE_TYPES }).notNull(),
+  employmentType: text("employment_type", { enum: JOB_EMPLOYMENT_TYPES }).notNull(),
+  positions: integer("positions").notNull().default(1),
+  startDate: text("start_date").notNull(), // YYYY-MM-DD
+  endDate: text("end_date"),
+  payType: text("pay_type", { enum: JOB_PAY_TYPES }).notNull(),
+  payAmountGbp: real("pay_amount_gbp"),
+  accommodation: boolCol("accommodation").default(false),
+  locationText: text("location_text").notNull().default(""),
+  /** JSON string[]: picked from the centre's course/instructor-type catalogue, plus free text. */
+  requiredQualifications: text("required_qualifications").notNull().default("[]"),
+  description: text("description").notNull().default(""),
+  closingDate: text("closing_date").notNull(),
+  applicationEmail: text("application_email").notNull(),
+  status: text("status", { enum: JOB_STATUSES }).notNull().default("draft"),
+  /** From Boaty Jobs once published. */
+  listingId: text("listing_id"),
+  publicUrl: text("public_url"),
+  expiresAt: integer("expires_at", { mode: "timestamp_ms" }),
+  /** First time it went live (Dev Center counts jobs published per month from this). */
+  firstPublishedAt: integer("first_published_at", { mode: "timestamp_ms" }),
+  /** Why Boaty Jobs removed it (listing.removed), shown to the centre. */
+  removedReason: text("removed_reason"),
+  /** Last sync problem, shown beside the Retry button. */
+  syncError: text("sync_error"),
+  applicationsCount: integer("applications_count").notNull().default(0),
+  createdByUserId: text("created_by_user_id"),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, (t) => [
+  index("job_post_org_idx").on(t.organisationId),
+  index("job_post_status_idx").on(t.status),
+]);
+
+/**
+ * The outbox of calls to Boaty Jobs (publish / update / close). The delivery
+ * job sends due rows with retries and backoff; a row still failing 24 hours
+ * after it was queued marks its job sync_failed (lib/services/jobs).
+ */
+export const jobSync = sqliteTable("job_sync", {
+  id: id(),
+  organisationId: orgFk(),
+  jobPostId: text("job_post_id").notNull().references(() => jobPost.id, { onDelete: "cascade" }),
+  action: text("action", { enum: JOB_SYNC_ACTIONS }).notNull(),
+  /** Sent as Idempotency-Key, so a retried publish can't create two listings. */
+  idempotencyKey: text("idempotency_key").notNull(),
+  status: text("status", { enum: JOB_SYNC_STATUSES }).notNull().default("pending"),
+  attempts: integer("attempts").notNull().default(0),
+  nextAttemptAt: integer("next_attempt_at", { mode: "timestamp_ms" }).notNull(),
+  lastError: text("last_error"),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, (t) => [
+  index("job_sync_org_idx").on(t.organisationId),
+  index("job_sync_due_idx").on(t.status, t.nextAttemptAt),
+  index("job_sync_job_idx").on(t.jobPostId),
+]);
+
+export type JobPost = typeof jobPost.$inferSelect;
+export type NewJobPost = typeof jobPost.$inferInsert;
+export type JobSync = typeof jobSync.$inferSelect;
 
 // Handy inferred types used across the app.
 export type Integration = typeof integration.$inferSelect;

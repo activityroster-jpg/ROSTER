@@ -29,6 +29,8 @@ import {
   errorReport,
   emailOutbox,
   pushOutbox,
+  jobPost,
+  jobSync,
   callAvailability,
   callBooking,
   type CallAvailability,
@@ -944,5 +946,56 @@ export class PlatformRepository {
 
   async deleteTask(id: string): Promise<void> {
     await this.db.delete(platformTask).where(eq(platformTask.id, id));
+  }
+
+  // --- Recruiting on Boaty Jobs (read-only lookups across centres) -----------
+  // The sync job, the webhook and the Dev Center find WHICH centre a job belongs
+  // to here; every change is then made through the tenant repositories with a
+  // system context for that centre (lib/services/jobs).
+
+  /** Sync calls due now, oldest first. */
+  async dueJobSyncs(now: Date, limit = 25): Promise<{ id: string; organisationId: string; jobPostId: string; action: "publish" | "update" | "close"; createdAt: Date }[]> {
+    return this.db
+      .select({ id: jobSync.id, organisationId: jobSync.organisationId, jobPostId: jobSync.jobPostId, action: jobSync.action, createdAt: jobSync.createdAt })
+      .from(jobSync)
+      .where(and(eq(jobSync.status, "pending"), lte(jobSync.nextAttemptAt, now)))
+      .orderBy(asc(jobSync.nextAttemptAt))
+      .limit(limit);
+  }
+
+  /** The centre a job post belongs to (by its id, which is Boaty Jobs' external_id). */
+  async jobPostOrganisation(jobId: string): Promise<string | null> {
+    const [row] = await this.db.select({ org: jobPost.organisationId }).from(jobPost).where(eq(jobPost.id, jobId)).limit(1);
+    return row?.org ?? null;
+  }
+
+  /** Live listings whose end date passed (in case Boaty Jobs' expiry message never arrived). */
+  async lapsedLiveJobs(before: Date, limit = 100): Promise<{ id: string; organisationId: string }[]> {
+    return this.db
+      .select({ id: jobPost.id, organisationId: jobPost.organisationId })
+      .from(jobPost)
+      .where(and(eq(jobPost.status, "live"), lt(jobPost.expiresAt, before)))
+      .limit(limit);
+  }
+
+  /** For the Dev Center Growth tile: jobs first published per month, centres using Jobs, applications received. */
+  async jobStats(): Promise<{ byMonth: { month: string; published: number }[]; centres: number; applications: number; live: number }> {
+    const rows = await this.db
+      .select({ org: jobPost.organisationId, first: jobPost.firstPublishedAt, apps: jobPost.applicationsCount, status: jobPost.status })
+      .from(jobPost);
+    const months = new Map<string, number>();
+    const centres = new Set<string>();
+    let applications = 0, live = 0;
+    for (const r of rows) {
+      applications += r.apps ?? 0;
+      if (r.status === "live") live++;
+      if (!r.first) continue;
+      centres.add(r.org);
+      const d = r.first instanceof Date ? r.first : new Date(Number(r.first));
+      const key = d.toISOString().slice(0, 7);
+      months.set(key, (months.get(key) ?? 0) + 1);
+    }
+    const byMonth = [...months.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([month, published]) => ({ month, published }));
+    return { byMonth, centres: centres.size, applications, live };
   }
 }

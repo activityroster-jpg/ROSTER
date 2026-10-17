@@ -201,6 +201,16 @@ export async function seedFullOrg(
     actorUserId: owner.id,
   });
   await t.welfareDuty.insert(ctx, { date: "2026-01-05", slot: "AM", name: `Welfare ${opts.slug}` });
+  const job = await t.jobPost.insert(ctx, {
+    title: `Dinghy Instructor at ${opts.name}`,
+    roleType: "dinghy_instructor",
+    employmentType: "seasonal",
+    startDate: "2026-04-01",
+    closingDate: "2026-03-01",
+    payType: "weekly",
+    applicationEmail: `jobs@${opts.slug}.test`,
+  });
+  await t.jobSync.insert(ctx, { jobPostId: job.id, action: "publish", idempotencyKey: `seed-${opts.slug}`, nextAttemptAt: new Date(0) });
   await t.integration.insert(ctx, {
     provider: "ics_generic",
     kind: "ics",

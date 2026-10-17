@@ -39,6 +39,8 @@ Three environments. Names only here, never values.
 | `OUTREACH_CRON_SECRET` | Shared secret for the hourly tick | Generated; same value in the GitHub secret of the same name | Change both places |
 | `SENTRY_DSN` | Error reporting (EU ingest) | Sentry project settings | Regenerate the DSN in Sentry |
 | `FCM_SERVICE_ACCOUNT_JSON` | Push notifications for the mobile app | Firebase service account | Create a new key, set, delete old |
+| `BOATYJOBS_PARTNER_SECRET` | Recruit on Boaty Jobs: Bearer auth to the Boaty Jobs partner API, and the HMAC key its webhooks are signed with | Agreed with Boaty Jobs (same value set there) | Set the new value on both sites at the same time |
+| `BOATYJOBS_API_BASE` (optional) | Points staging at a Boaty Jobs test site; unset = https://boatyjobs.com | Boaty Jobs | n/a |
 | `APPLE_TEAM_ID`, `IOS_BUNDLE_ID`, `ANDROID_PACKAGE`, `ANDROID_SHA256_FINGERPRINTS` | Universal / app links | App stores | Edit |
 | `COMPANY_LEGAL_NAME`, `COMPANY_ADDRESS` | Shown in email footers | Companies House / your registered address | Edit |
 

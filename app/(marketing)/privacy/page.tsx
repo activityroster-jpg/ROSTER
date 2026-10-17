@@ -4,7 +4,7 @@ export const metadata = { title: "Privacy Policy" };
 
 export default function PrivacyPage() {
   return (
-    <LegalPage title="Privacy Policy" updated="10 October 2026">
+    <LegalPage title="Privacy Policy" updated="17 October 2026">
       <P>This policy explains what personal data ActivityRoster (&ldquo;we&rdquo;) processes, why, and your rights under the UK GDPR and the EU GDPR. It covers the ActivityRoster website and the rostering platform used by sailing &amp; watersports centres.</P>
 
       <H2>Who is the data controller</H2>
@@ -36,6 +36,7 @@ export default function PrivacyPage() {
 
       <H2>Sharing</H2>
       <P>We do not sell personal data. We share it only with the sub-processors needed to run the service (hosting, payments, email) and where legally required. The current list, with every change dated, is at <a className="text-teal hover:underline" href="/subprocessors">activityroster.com/subprocessors</a>; centres are told before a new one is added.</P>
+      <P>If a centre uses &ldquo;Recruit on Boaty Jobs&rdquo;, the job details it writes and the centre&apos;s application email are shared with <strong>Boaty Jobs</strong> (boatyjobs.com), also operated by ActiveRoster Ltd, to publish the listings. Boaty Jobs shows the listing publicly and emails applications to the centre; it tells us only how many applications arrived, never who applied.</P>
 
       <H2>Under-18s</H2>
       <P>Some instructors and assistants are under 18. They get higher-privacy defaults and nothing we build markets to them. The plain-English version for young people and their families is at <a className="text-teal hover:underline" href="/privacy/young-people">activityroster.com/privacy/young-people</a>.</P>

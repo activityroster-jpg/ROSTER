@@ -730,6 +730,17 @@ export class ControlPlaneRepository {
       .where(eq(membership.organisationId, organisationId));
   }
 
+  /** The centre owner's email: the default address job applications go to (lib/services/jobs). */
+  async ownerEmailForOrg(organisationId: string): Promise<string | null> {
+    const [row] = await this.db
+      .select({ email: user.email })
+      .from(membership)
+      .innerJoin(user, eq(user.id, membership.userId))
+      .where(and(eq(membership.organisationId, organisationId), eq(membership.role, "owner"), eq(membership.status, "active")))
+      .limit(1);
+    return row?.email ?? null;
+  }
+
   async adminEmailsForOrg(organisationId: string): Promise<string[]> {
     const rows = await this.db
       .select({ email: user.email })

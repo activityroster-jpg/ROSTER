@@ -1,12 +1,14 @@
 import { coursePageScope } from "@/lib/services/course-list";
 import { coverageForCourses } from "@/lib/services/schedule";
-import { FEATURE_LABEL, featureForPermission, ownerName } from "@/lib/auth/rbac";
+import { can, FEATURE_LABEL, featureForPermission, ownerName } from "@/lib/auth/rbac";
 import { listOfficeMembers } from "@/lib/services/office-access";
 import Link from "next/link";
 import { isUnder18 } from "@/lib/domain/age";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { requireTenant } from "@/lib/tenant/require";
+import { postingAccess, showHiringCard } from "@/lib/domain/jobs";
+import { HiringSeasonCard } from "@/components/office/RecruitBoard";
 import { ONBOARDED_COOKIE } from "@/lib/onboarding";
 import { listStaffWithFit } from "@/lib/services/staff";
 import { addDays, getSessionEvents, getWeekRota, getWeekSchedule, weekStart } from "@/lib/services/schedule";
@@ -43,7 +45,7 @@ function Tile({ href, label, value, sub, tone = "navy" }: { href: string; label:
 }
 
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ denied?: string }> }) {
-  const { ctx, repos, organisation } = await requireTenant({ permission: "office.view" });
+  const { ctx, repos, organisation, trial } = await requireTenant({ permission: "office.view" });
   const deniedFeature = featureForPermission(String((await searchParams).denied ?? ""));
   const deniedOwner = deniedFeature ? ownerName(await listOfficeMembers(repos, ctx)) : null;
   const monday = weekStart(new Date());
@@ -86,6 +88,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const todayDay = rota.find((d) => d.date === today);
   const todaySummary = summariseToday((todayDay?.sessions ?? []).map((s) => ({ sessionId: s.sessionId, courseName: s.courseName, startAt: s.startAt, endAt: s.endAt, coverageOk: s.coverageOk, staff: s.staff.map((m) => ({ instructorId: m.instructorId, name: m.name, status: m.status })) })));
   const problemsToday = problems.problems.filter((p) => p.date === today);
+  // 1 Dec – 30 Apr: free job posts on Boaty Jobs, for those who can post them.
+  const dismissedAt = settingsRows[0]?.recruitCardDismissedAt;
+  const hiringCard = can(ctx, "staff.edit") && showHiringCard(new Date(), dismissedAt ? new Date(dismissedAt).getTime() : null)
+    && postingAccess({ orgStatus: organisation.status, subscriptionStatus: organisation.subscriptionStatus ?? null, trialKind: trial.kind, readOnly: Boolean(ctx.readOnly) }).kind === "post";
 
   return (
     <div>
@@ -101,6 +107,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           You don&apos;t have <strong>{FEATURE_LABEL[deniedFeature].label}</strong> access, so that page didn&apos;t open. {deniedOwner ? `Ask ${deniedOwner} (superadmin) to tick it under Instructors → Office access.` : "Ask your centre's superadmin to tick it under Instructors → Office access."}
         </p>
       ) : null}
+
+      {hiringCard ? <HiringSeasonCard /> : null}
 
       {/* First-week nudge: a few days in and nothing confirmed yet */}
       {nudge ? (

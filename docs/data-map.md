@@ -26,6 +26,7 @@ in `docs/retention.md`. Sub-processors in `docs/subprocessors.md`.
 | `deletion_log` | One-way hash and summary of each anonymisation, so it can be re-applied after a restore | Nobody identifiable | Standard | Legal obligation (erasure) | Admins (via replay) |
 | `email_outbox` (control plane) | Each outgoing email while it is being sent or retried: recipient, subject, body; the body is cleared once sent or finally failed; rows purge after 7 days (sent) or 30 (failed) | Anyone we email | Standard; a sign-in code is in the body briefly | Contract / legitimate interests | Platform admin (Dev Center → Email: recipient masked, no bodies) |
 | `push_outbox` (control plane) | Each phone notification sent to many people at once (a published week) while it waits for the two-minute delivery job: user id, title, short body; purged 7 days after sending | Staff with the app | Standard | Contract | Nobody reads it; the delivery job only |
+| `job_post`, `job_sync` | Job adverts the centre publishes to Boaty Jobs: title, role, dates, pay, description, the centre's application email; listing id, link and application count; the queue of calls to Boaty Jobs | Centre contacts (the application email); any names a centre writes into a description | Low (published on purpose) | Legitimate interests (recruiting) | Admins with Staff access; the listing is public on boatyjobs.com |
 | `audit_log` | Who changed what and when in the centre; append-only (database triggers) | Staff (actor), subjects of changes | Standard | Legitimate interests (accountability) | Admins (plain-English change log) |
 | R2 bucket `activityroster-docs` | Uploaded certificate and vetting documents, keyed by centre | Staff | High | As `compliance_item` | Admins, via authenticated download only |
 
@@ -62,3 +63,4 @@ migration 0080 removed `guardian_link` (parent emails, consent notes), parent lo
 | Error reports | Sentry (EU) | Stack traces with emails and tokens scrubbed |
 | Outreach research and drafting | Anthropic | Prospect business names, public website text, business contact names and roles. **Never centre data.** |
 | Breached-password check | Have I Been Pwned | First five characters of the password's SHA-1 hash |
+| Job posts (only when a centre publishes one) | Boaty Jobs (boatyjobs.com), also operated by ActiveRoster Ltd: same company, so not a sub-processor | The job details, the centre's name, town, postcode, region, website and logo link, and the application email. Back from Boaty Jobs: listing id, link, expiry and an application count (never applicants' details) |

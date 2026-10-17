@@ -71,6 +71,10 @@ export interface CloudflareEnv {
   PIXABAY_API_KEY?: string;
   /** Firebase service-account JSON (whole file, as one secret) for push notifications via FCM. */
   FCM_SERVICE_ACCOUNT_JSON?: string;
+  /** Shared secret with Boaty Jobs (boatyjobs.com): Bearer auth on the partner API, and the HMAC key its webhooks are signed with. */
+  BOATYJOBS_PARTNER_SECRET?: string;
+  /** Optional: point at a Boaty Jobs staging site (default https://boatyjobs.com). */
+  BOATYJOBS_API_BASE?: string;
 }
 
 export function getEnv(): CloudflareEnv {

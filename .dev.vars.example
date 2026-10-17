@@ -48,6 +48,9 @@ PLATFORM_ADMIN_EMAILS=you@example.com
 
 # --- Push notifications (Firebase service account JSON, one line) -------------
 FCM_SERVICE_ACCOUNT_JSON=
+# Recruit on Boaty Jobs (optional locally): shared secret for the partner API and its webhooks
+BOATYJOBS_PARTNER_SECRET=
+BOATYJOBS_API_BASE=
 
 # --- Integration API keys at rest (optional) ---------------------------------
 # Dedicated AES key for booking-system tokens. Leave blank to derive one from

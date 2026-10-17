@@ -56,6 +56,8 @@ export function createTenantRepositories(db: Database) {
     deletionLog: repo(t.deletionLog),
     welfareDuty: repo(t.welfareDuty),
     helpQuestion: repo(t.helpQuestion),
+    jobPost: repo(t.jobPost),
+    jobSync: repo(t.jobSync),
   } as const;
 }
 
@@ -103,6 +105,8 @@ export const TENANT_TABLES = [
   t.deletionLog,
   t.welfareDuty,
   t.helpQuestion,
+  t.jobPost,
+  t.jobSync,
 ] as const;
 
 /** Everything a request needs: tenant repos + control-plane repo. */

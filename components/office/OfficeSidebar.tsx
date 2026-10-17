@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
-  CalendarDays, CalendarOff, ClipboardList, Clock, CreditCard, History, LayoutDashboard, LifeBuoy, Lightbulb, MapPin, Menu, Settings, Ship, Users, Wallet, X,
+  Briefcase, CalendarDays, CalendarOff, ClipboardList, Clock, CreditCard, History, LayoutDashboard, LifeBuoy, Lightbulb, MapPin, Menu, Settings, Ship, Users, Wallet, X,
  LogOut } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { signOut } from "@/lib/auth/client";
@@ -15,7 +15,7 @@ const NEEDS: Record<string, Permission> = {
   "/office": "office.view", "/office/courses": "roster.edit", "/office/rota": "rota.view", "/office/availability": "roster.edit", "/office/timeclock": "finance.view", "/office/leave": "roster.edit",
   "/office/staff": "staff.view", "/office/equipment": "roster.edit", "/office/locations": "roster.edit", "/office/finance": "finance.view",
   "/office/settings": "settings.edit", "/office/billing": "billing.manage", "/office/course-setup": "roster.edit", "/office/change-log": "settings.edit",
-  "/office/requests": "office.view",
+  "/office/requests": "office.view", "/office/recruit": "staff.edit",
 };
 
 // In the order a centre gets going: set up courses and team, then roster, then
@@ -50,6 +50,7 @@ const NAV = [
       { href: "/office/finance", label: "Payroll", icon: Wallet },
       { href: "/office/equipment", label: "Equipment", icon: Ship },
       { href: "/office/locations", label: "Locations", icon: MapPin },
+      { href: "/office/recruit", label: "Recruit on Boaty Jobs", icon: Briefcase },
     ],
   },
   {
