@@ -22,6 +22,8 @@ export interface StaffRow {
   linked: boolean;
   /** Portal access: none yet, invite sent but not accepted, or accepted. */
   inviteStatus: "none" | "pending" | "accepted";
+  /** In the app but phone notifications are off (no device registered), so they only see changes when they open it. */
+  phoneAlertsOff?: boolean;
   /** The office keeps their availability; they don't need to sign up. */
   officeManaged?: boolean;
   /** When the latest invitation went out (epoch ms), if we know. */
@@ -184,7 +186,10 @@ export function StaffTable({ rows }: { rows: StaffRow[] }) {
                         {r.hasEmail ? <InviteInstructorButton instructorId={r.id} status={r.inviteStatus} sentAt={r.inviteSentAt ?? null} queued={r.inviteQueued ?? false} /> : null}
                       </div>
                     ) : r.hasEmail ? (
-                      <InviteInstructorButton instructorId={r.id} status={r.inviteStatus} sentAt={r.inviteSentAt ?? null} queued={r.inviteQueued ?? false} />
+                      <div className="flex flex-wrap items-center gap-2">
+                        <InviteInstructorButton instructorId={r.id} status={r.inviteStatus} sentAt={r.inviteSentAt ?? null} queued={r.inviteQueued ?? false} />
+                        {r.phoneAlertsOff ? <span className="rounded-full bg-amber/15 px-2 py-0.5 text-[11px] font-medium text-amber" title="They're in the app but phone notifications are off, so roster changes only reach them when they open it. Ask them to turn notifications on: the app asks each day until they do, and it's under Settings in the app.">Phone alerts off</span> : null}
+                      </div>
                     ) : (
                       <span className="text-xs text-slate-400">Add email to invite</span>
                     )}

@@ -774,6 +774,13 @@ export class ControlPlaneRepository {
       .onConflictDoUpdate({ target: pushToken.token, set: { userId: input.userId, platform: input.platform, deviceId: input.deviceId, lastSeenAt: new Date() } });
   }
 
+  /** Which of these users have a phone registered for notifications (any device). */
+  async userIdsWithPushToken(userIds: readonly string[]): Promise<Set<string>> {
+    if (userIds.length === 0) return new Set();
+    const rows = await this.db.select({ userId: pushToken.userId }).from(pushToken).where(inList(pushToken.userId, userIds));
+    return new Set(rows.map((r) => r.userId));
+  }
+
   async deletePushToken(token: string): Promise<void> {
     await this.db.delete(pushToken).where(eq(pushToken.token, token));
   }

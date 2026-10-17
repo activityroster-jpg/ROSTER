@@ -64,6 +64,31 @@ export async function enablePush(): Promise<"granted" | "denied" | "unavailable"
   return "granted";
 }
 
+/**
+ * Where notification permission stands on this phone: "prompt" (never asked, the
+ * system box can still be shown), "granted", "denied" (the person said no; only
+ * the phone's Settings can change it now) or "unavailable" (a browser).
+ */
+export async function pushPermission(): Promise<"prompt" | "granted" | "denied" | "unavailable"> {
+  if (!isNative()) return "unavailable";
+  try {
+    const { PushNotifications } = await import("@capacitor/push-notifications");
+    const p = (await PushNotifications.checkPermissions()).receive;
+    return p === "granted" ? "granted" : p === "denied" ? "denied" : "prompt";
+  } catch { return "unavailable"; }
+}
+
+/**
+ * Open the phone's settings page for this app (where notifications are switched
+ * back on after a "Don't allow"). iOS opens it from the app-settings: link; on
+ * Android there is no such link, so the caller shows the path to tap instead.
+ */
+export function openNotificationSettings(): boolean {
+  if (!isNative() || nativePlatform() !== "ios") return false;
+  window.location.href = "app-settings:";
+  return true;
+}
+
 export async function disablePush(): Promise<void> {
   if (!isNative()) return;
   let token: string | null = null;

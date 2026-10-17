@@ -28,6 +28,7 @@ export default async function StaffPage() {
     .map((c) => ({ id: c.id, name: c.name, mandatory: Boolean(c.mandatory) }));
 
   const membershipStatus = await repos.control.membershipStatusByUser(ctx.organisationId);
+  const withPhoneAlerts = await repos.control.userIdsWithPushToken([...membershipStatus.keys()]);
   const inviteSent = await repos.control.inviteSentByUser(ctx.organisationId);
   const inviteQueued = await repos.control.inviteQueuedUsers(ctx.organisationId);
   const officeMembers = await listOfficeMembers(repos, ctx);
@@ -57,6 +58,7 @@ export default async function StaffPage() {
       hasAvailability: withAvailability.has(instructor.id),
       linked: Boolean(instructor.userId),
       inviteStatus: inviteStatusFor(instructor.userId),
+      phoneAlertsOff: Boolean(instructor.userId) && inviteStatusFor(instructor.userId) === "accepted" && !withPhoneAlerts.has(instructor.userId!),
       officeManaged: managedByOffice(instructor, settingsRow),
       inviteSentAt: instructor.userId ? (inviteSent.get(instructor.userId)?.getTime() ?? null) : null,
       inviteQueued: instructor.userId ? inviteQueued.has(instructor.userId) : false,

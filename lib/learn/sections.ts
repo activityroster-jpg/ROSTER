@@ -236,7 +236,7 @@ const ALL_SECTIONS: Section[] = [
       ] },
       { kind: "sub", text: "What the app adds" },
       { kind: "bullets", items: [
-        "Phone notifications for roster changes, new open shifts, leave decisions and expiring certs (they can switch these off).",
+        "Phone notifications for roster changes, new open shifts, leave decisions and expiring certs. The app asks them to turn these on the first time they open it and keeps a reminder at the top until they do; anyone who said no on the phone's own box is shown how to switch it back on in the phone's Settings. On the Instructors page, “Phone alerts off” next to a name means they're in the app without them.",
         "Your shifts, with the course, colleagues on it, student numbers and the location on each card. Your centre chooses when they appear: by default as soon as you're put on a shift, marked Pending until the office confirms the day; or, if the centre switches off “Let staff see their shifts before you confirm the day” (Settings → General → Checks when rostering), only once the day is confirmed. If your centre asks you to accept shifts: one-tap “I'll be there”, or “Can't make it” with a reason so the office can find cover.",
         "Availability has “Same as last week”, “All free” and “Clear week” so a regular pattern takes two taps.",
         "Settings: update your name and (optionally) your mobile number, change your PIN, and set or change your password. Delete my account (at the foot of Settings) asks for your account and personal data to be deleted. Docs has a Replace button for a renewed cert.",
