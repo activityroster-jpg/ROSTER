@@ -8,24 +8,25 @@ export const PROSPECT_STATUS_META: Record<ProspectStatus, { label: string; short
   letter_sent: { label: "Letter sent", short: "Letter", tone: "attention" },
   flyer_sent: { label: "Flyer sent", short: "Flyer", tone: "attention" },
   booklet_sent: { label: "Booklet sent", short: "Booklet", tone: "teal" },
-  email_sent: { label: "Emailed", short: "Email", tone: "attention" },
+  email_sent: { label: "Email sent", short: "Email", tone: "attention" },
   linkedin_contacted: { label: "LinkedIn contacted", short: "LinkedIn", tone: "teal" },
-  called: { label: "Called", short: "Called", tone: "teal" },
+  called: { label: "Called / visited", short: "Call", tone: "teal" },
   purchased: { label: "Signed up", short: "Signed up", tone: "covered" },
   rejected: { label: "Rejected", short: "Rejected", tone: "conflict" },
 };
 
 /** Least to most advanced; the last one ticked is the single `status` column. Rejected outranks everything. */
 export const PROSPECT_STATUS_ORDER: ProspectStatus[] = [
-  "new", "email_sent", "called", "linkedin_contacted", "ready_to_send", "letter_sent", "flyer_sent", "booklet_sent", "purchased", "rejected",
+  "new", "linkedin_contacted", "ready_to_send", "letter_sent", "flyer_sent", "booklet_sent", "email_sent", "called", "purchased", "rejected",
 ];
 
 /**
- * The postal outreach tickboxes on the Prospects list (10 Oct 2026). Several can
- * be ticked at once. "No action" is not stored: it is ticked when none of the
- * others are, and ticking it clears them.
+ * The outreach tickboxes on the Prospects list (17 Oct 2026: the board's own
+ * steps). Several can be ticked at once. "No action" is not stored: it is ticked
+ * when none of the others are, and ticking it clears them. The older letter and
+ * flyer ticks are kept on the records they were put on, shown as a chip.
  */
-export const OUTREACH_TICKS = ["ready_to_send", "letter_sent", "flyer_sent", "booklet_sent", "rejected"] as const satisfies readonly ProspectStatus[];
+export const OUTREACH_TICKS = ["ready_to_send", "booklet_sent", "email_sent", "called", "rejected"] as const satisfies readonly ProspectStatus[];
 export type OutreachTick = (typeof OUTREACH_TICKS)[number];
 export const NO_ACTION_LABEL = "No action";
 
@@ -71,60 +72,119 @@ export function prospectStatusRank(statuses: readonly ProspectStatus[]): number 
 }
 
 /**
- * The board's columns, in order, worked out from the ticks: the furthest one
- * wins (signed up, then rejected, then booklet, flyer, letter, ready to send);
- * anything else is "No action".
+ * The board's steps, in order, worked out from the ticks: the furthest one wins
+ * (signed up, then rejected, then called / visited, email sent, booklet sent,
+ * ready to send); anything else is "No action". Rejected is a step but not a
+ * column: the board keeps it behind a button.
  */
-export const PIPELINE_STAGES = ["rejected", "none", "ready", "letter", "flyer", "booklet", "signed_up"] as const;
+export const PIPELINE_STAGES = ["rejected", "none", "ready", "booklet", "email", "called", "signed_up"] as const;
 export type PipelineStage = (typeof PIPELINE_STAGES)[number];
+/** The columns the board shows, left to right. */
+export const PIPELINE_COLUMNS = ["none", "ready", "booklet", "email", "called", "signed_up"] as const satisfies readonly PipelineStage[];
 
 export const PIPELINE_META: Record<PipelineStage, { label: string; accent: string; chip: string }> = {
   rejected: { label: "Rejected", accent: "border-port", chip: "bg-port/15 text-port" },
   none: { label: "No action", accent: "border-slate-300", chip: "bg-slate-100 text-slate-600" },
   ready: { label: "Ready to send", accent: "border-slate-500", chip: "bg-slate-200 text-slate-700" },
-  letter: { label: "Letter sent", accent: "border-amber", chip: "bg-amber/15 text-amber" },
-  flyer: { label: "Flyer sent", accent: "border-amber", chip: "bg-amber/15 text-amber" },
   booklet: { label: "Booklet sent", accent: "border-teal", chip: "bg-teal/15 text-teal" },
+  email: { label: "Email sent", accent: "border-amber", chip: "bg-amber/15 text-amber" },
+  called: { label: "Call / Visited", accent: "border-navy", chip: "bg-navy/10 text-navy" },
   signed_up: { label: "Signed up", accent: "border-starboard", chip: "bg-starboard/15 text-starboard" },
 };
 
-/** The status each board column stands for. */
+/** The status each board step stands for. */
 const STAGE_STATUS: Record<PipelineStage, ProspectStatus | null> = {
-  rejected: "rejected", none: null, ready: "ready_to_send", letter: "letter_sent", flyer: "flyer_sent", booklet: "booklet_sent", signed_up: "purchased",
+  rejected: "rejected", none: null, ready: "ready_to_send", booklet: "booklet_sent", email: "email_sent", called: "called", signed_up: "purchased",
 };
+
+/** The step a stored status counts as (a posted letter or flyer counts as "Ready to send"; LinkedIn is not a step). */
+function stageOfStatus(s: ProspectStatus): PipelineStage | null {
+  if (s === "letter_sent" || s === "flyer_sent") return "ready";
+  return (Object.keys(STAGE_STATUS) as PipelineStage[]).find((k) => STAGE_STATUS[k] === s) ?? null;
+}
 
 export function stageOf(statuses: readonly ProspectStatus[]): PipelineStage {
   if (statuses.includes("purchased")) return "signed_up";
   if (statuses.includes("rejected")) return "rejected";
+  if (statuses.includes("called")) return "called";
+  if (statuses.includes("email_sent")) return "email";
   if (statuses.includes("booklet_sent")) return "booklet";
-  if (statuses.includes("flyer_sent")) return "flyer";
-  if (statuses.includes("letter_sent")) return "letter";
-  if (statuses.includes("ready_to_send")) return "ready";
+  if (statuses.includes("ready_to_send") || statuses.includes("letter_sent") || statuses.includes("flyer_sent")) return "ready";
   return "none";
 }
 
-/** Sort order "furthest along first": signed up, booklet, flyer, letter, ready, none, rejected. */
+/** Sort order "furthest along first": signed up, called, email, booklet, ready, none, rejected. */
 export function stageRank(stage: PipelineStage): number {
-  return { rejected: 0, none: 1, ready: 2, letter: 3, flyer: 4, booklet: 5, signed_up: 6 }[stage];
+  return { rejected: 0, none: 1, ready: 2, booklet: 3, email: 4, called: 5, signed_up: 6 }[stage];
 }
 
 /**
- * The ticks after dragging a prospect to a board column: what was posted
- * before it stays ticked, anything further along is cleared, and the column's
- * own status is added, so the prospect lands in exactly that column. Emails and
- * calls are kept.
+ * The ticks after dragging a prospect to a board step: what came before it stays
+ * ticked, anything further along is cleared, and the step's own status is added,
+ * so the prospect lands in exactly that column. Rejected and signed up keep every
+ * earlier step; LinkedIn contact is always kept.
  */
 export function statusesForStage(current: readonly ProspectStatus[], stage: PipelineStage): ProspectStatus[] {
-  const postal: PipelineStage[] = ["ready", "letter", "flyer", "booklet"];
-  const keepPostal = (s: ProspectStatus) => {
-    const st = (Object.keys(STAGE_STATUS) as PipelineStage[]).find((k) => STAGE_STATUS[k] === s);
-    if (!st || !postal.includes(st)) return false;
+  const keep = current.filter((s) => {
+    if (s === "linkedin_contacted") return true;
+    if (s === "rejected" || s === "purchased") return false;
+    const st = stageOfStatus(s);
+    if (!st) return false;
     if (stage === "rejected" || stage === "signed_up") return true;
-    return postal.includes(stage) && stageRank(st) < stageRank(stage);
-  };
-  const keep = current.filter((s) => s === "email_sent" || s === "called" || keepPostal(s));
+    return stageRank(st) < stageRank(stage);
+  });
   const own = STAGE_STATUS[stage];
   return Array.from(new Set([...keep, ...(own ? [own] : [])]));
+}
+
+/** A letter or flyer was posted (the older steps, kept as a chip on the tile). */
+export function letterOrFlyerSent(statuses: readonly ProspectStatus[]): boolean {
+  return statuses.includes("letter_sent") || statuses.includes("flyer_sent");
+}
+
+// --- How long since the booklet / email went -------------------------------
+
+/** Working days (Monday to Friday) from `fromISO` (YYYY-MM-DD) up to and including `today`; 0 on the day itself. Pure. */
+export function workingDaysSince(fromISO: string, today: Date = new Date()): number {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(fromISO);
+  if (!m) return 0;
+  const start = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  const end = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+  let n = 0;
+  for (let t = start + 86_400_000; t <= end; t += 86_400_000) {
+    const dow = new Date(t).getUTCDay();
+    if (dow !== 0 && dow !== 6) n++;
+  }
+  return n;
+}
+
+/** Green under 5 working days, orange 5 to 8, red after that. */
+export type SentAgeTone = "green" | "orange" | "red";
+export function sentAgeTone(workingDays: number): SentAgeTone {
+  return workingDays < 5 ? "green" : workingDays <= 8 ? "orange" : "red";
+}
+export const SENT_AGE_META: Record<SentAgeTone, { chip: string; hint: string }> = {
+  green: { chip: "bg-starboard/15 text-starboard", hint: "Sent in the last 5 working days: give it time." },
+  orange: { chip: "bg-amber/15 text-amber", hint: "5 to 8 working days: time to follow up." },
+  red: { chip: "bg-port/15 text-port", hint: "Over 8 working days with no move: chase or decide." },
+};
+
+/**
+ * When the booklet and the email went, from a prospect's log: the most recent
+ * entry that recorded each ("→ Booklet sent" / "Ticked Booklet sent" step
+ * changes; an email logged, or "→ Email sent"). Unticks don't count. Pure.
+ */
+export function outreachSentOn(entries: readonly { kind: string; summary: string | null; occurredOn: string }[]): { booklet: string | null; email: string | null } {
+  let booklet: string | null = null;
+  let email: string | null = null;
+  for (const e of entries) {
+    const text = e.summary ?? "";
+    if (/^untick/i.test(text)) continue;
+    // A step change reads "From → To" and a list tick "Ticked X": only the step landed on counts.
+    if (e.kind === "stage" && /(→|ticked)\s*booklet sent\s*$/i.test(text) && (!booklet || e.occurredOn > booklet)) booklet = e.occurredOn;
+    if ((e.kind === "email_out" || (e.kind === "stage" && /(→|ticked)\s*(email sent|emailed)\s*$/i.test(text))) && (!email || e.occurredOn > email)) email = e.occurredOn;
+  }
+  return { booklet, email };
 }
 
 /** LinkedIn tab: where contact stands with a centre. */

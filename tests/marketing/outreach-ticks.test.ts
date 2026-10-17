@@ -3,14 +3,15 @@ import { isNoAction, letterPrinted, parseProspectStatuses, sizeScore, toggleOutr
 
 describe("outreach tickboxes", () => {
   it("several can be ticked; No action is ticked when none are, and clears them", () => {
-    let s = toggleOutreach([], "letter_sent", true);
-    s = toggleOutreach(s, "flyer_sent", true);
-    expect(s.sort()).toEqual(["flyer_sent", "letter_sent"]);
+    let s = toggleOutreach([], "booklet_sent", true);
+    s = toggleOutreach(s, "email_sent", true);
+    expect(s.sort()).toEqual(["booklet_sent", "email_sent"]);
     expect(isNoAction(s)).toBe(false);
-    expect(toggleOutreach(s, "flyer_sent", false)).toEqual(["letter_sent"]);
-    const withCall = toggleOutreach(["called", "letter_sent"], null, true);
-    expect(withCall).toEqual(["called"]);
-    expect(isNoAction(withCall)).toBe(true);
+    expect(toggleOutreach(s, "email_sent", false)).toEqual(["booklet_sent"]);
+    // No action clears the step ticks; LinkedIn contact and the older letter tick are left as they were.
+    const cleared = toggleOutreach(["linkedin_contacted", "called", "booklet_sent"], null, true);
+    expect(cleared).toEqual(["linkedin_contacted"]);
+    expect(isNoAction(cleared)).toBe(true);
   });
 
   it("a stored \"new\" means nothing ticked; printed means Ready to send or Letter sent", () => {

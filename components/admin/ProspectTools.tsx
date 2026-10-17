@@ -95,6 +95,7 @@ export function ProspectTools({ hasRows }: { hasRows: boolean }) {
         <button onClick={loadDirectory} disabled={pending} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-navy hover:bg-slate-50 disabled:opacity-50">{pending ? "Working…" : "Load RYA directory"}</button>
         {hasRows ? <button onClick={() => setTab(tab === "bulk" ? "none" : "bulk")} className={`rounded-lg px-3 py-1.5 text-sm font-semibold ${tab === "bulk" ? "bg-navy text-white" : "border border-slate-300 text-navy hover:bg-slate-50"}`}>Bulk status by name</button> : null}
         {hasRows ? <button onClick={dedupe} disabled={pending} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-navy hover:bg-slate-50 disabled:opacity-50">Merge duplicates</button> : null}
+        {hasRows ? <a href="/api/admin/prospects/csv" className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-navy hover:bg-slate-50" title="Every centre with its statuses, stage, contacts and notes, as a spreadsheet">Download CSV</a> : null}
         {!hasRows ? <button onClick={seed} disabled={pending} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-500 hover:bg-slate-50">Add example rows</button> : null}
       </div>
       {tab !== "import" && importMsg ? (

@@ -345,6 +345,13 @@ export class PlatformRepository {
       .orderBy(desc(marketingInteraction.occurredOn), desc(marketingInteraction.createdAt));
   }
 
+  /** Every step change and email logged, for working out when each centre's booklet and email went (lib/marketing outreachSentOn). */
+  async outreachMarkers(limit = 20_000): Promise<{ prospectId: string; kind: ProspectInteractionKind; summary: string | null; occurredOn: string }[]> {
+    return this.db.select({ prospectId: marketingInteraction.prospectId, kind: marketingInteraction.kind, summary: marketingInteraction.summary, occurredOn: marketingInteraction.occurredOn })
+      .from(marketingInteraction).where(inArray(marketingInteraction.kind, ["stage", "email_out"]))
+      .orderBy(desc(marketingInteraction.occurredOn)).limit(limit);
+  }
+
   /** Log entries with this exact summary, newest first (the letter-batch history). */
   async interactionsWithSummary(summary: string, limit = 3000): Promise<{ prospectId: string; author: string | null; createdAt: Date }[]> {
     return this.db.select({ prospectId: marketingInteraction.prospectId, author: marketingInteraction.author, createdAt: marketingInteraction.createdAt })

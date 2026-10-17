@@ -8,15 +8,15 @@ import type { ProspectStatus } from "@/lib/db/schema";
 
 const CHIP: Record<OutreachTick, string> = {
   ready_to_send: "bg-slate-200 text-slate-700",
-  letter_sent: "bg-amber/15 text-amber",
-  flyer_sent: "bg-amber/15 text-amber",
   booklet_sent: "bg-teal/15 text-teal",
+  email_sent: "bg-amber/15 text-amber",
+  called: "bg-navy/10 text-navy",
   rejected: "bg-port/15 text-port",
 };
 
 /**
- * The outreach tickboxes: No action, Ready to send, Letter sent, Flyer sent,
- * Booklet sent, Rejected. Several can be ticked; "No action" clears the rest.
+ * The outreach tickboxes: No action, Ready to send, Booklet sent, Email sent,
+ * Called / visited, Rejected (the board's steps). Several can be ticked; "No action" clears the rest.
  * `compact` shows the ticked ones as chips that open the boxes (the list);
  * otherwise the boxes show in a row (a centre's page).
  */

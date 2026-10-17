@@ -17,9 +17,9 @@ const STRIP: Record<string, string> = {
   rejected: "border-l-port",
   none: "border-l-slate-300",
   ready: "border-l-slate-500",
-  letter: "border-l-amber",
-  flyer: "border-l-amber",
   booklet: "border-l-teal",
+  email: "border-l-amber",
+  called: "border-l-navy",
   signed_up: "border-l-starboard",
 };
 
