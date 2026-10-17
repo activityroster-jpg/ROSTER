@@ -7,10 +7,12 @@ import { LV_DEVICE_COOKIE, LV_PENDING_COOKIE, verifyLvDevice, verifyLvPending } 
 import { officeLandingFor, resolveHost } from "@/lib/tenant/host";
 import { apexDomain } from "@/lib/config";
 import { VerifyLoginForm } from "@/components/auth/VerifyLoginForm";
+import { getRepositories } from "@/lib/cf/bindings";
+import { requestFingerprint } from "@/lib/security/events";
 
 export const dynamic = "force-dynamic";
 
-/** Step two of an office sign-in: emailed code (first time on a device, or after 12 idle hours; 2FA counts instead), then "stay signed in?". */
+/** Step two of an office sign-in: emailed code when the account is somewhere new (a browser it has not used in a known place skips it; 2FA counts instead), then "stay signed in?". */
 export default async function VerifyLoginPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   const sp = await searchParams;
   const h = new Headers(await headers());
@@ -24,5 +26,12 @@ export default async function VerifyLoginPage({ searchParams }: { searchParams: 
   const recentDevice = await verifyLvDevice(authSecret(), s.user.id, jar.get(LV_DEVICE_COOKIE)?.value);
   // Signed in from an emailed link or code moments ago: the email is already proved.
   const emailProved = await verifyLvPending(authSecret(), s.session.id, jar.get(LV_PENDING_COOKIE)?.value);
-  return <VerifyLoginForm next={next} emailHint={maskEmail(s.user.email)} preVerified={twoFactor || recentDevice || emailProved} />;
+  // A browser this account hasn't used, somewhere it has signed in from before
+  // (same country and city), skips the code; only a new place asks for it.
+  let knownPlace = false;
+  if (!twoFactor && !recentDevice && !emailProved) {
+    const fp = await requestFingerprint();
+    knownPlace = await (await getRepositories()).control.hasTrustedPlace(s.user.id, fp.country, fp.city, true);
+  }
+  return <VerifyLoginForm next={next} emailHint={maskEmail(s.user.email)} preVerified={twoFactor || recentDevice || emailProved || knownPlace} />;
 }

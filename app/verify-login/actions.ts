@@ -7,7 +7,7 @@ import { getEnv, getRepositories } from "@/lib/cf/bindings";
 import { currentDeviceId } from "@/lib/auth/device-gate";
 import { LV_COOKIE, LV_DEVICE_COOKIE, LV_IDLE_MAX_AGE_S, LV_PENDING_COOKIE, LV_PENDING_MAX_AGE_S, LV_SESSION_COOKIE, lvCookieValue, lvDeviceValue, lvPendingValue, verifyLvDevice, verifyLvPending } from "@/lib/auth/login-verify";
 import { checkCode, issueCode } from "@/lib/security/reset-code";
-import { describeAgent, recordSecurityEvent, requestFingerprint } from "@/lib/security/events";
+import { describeAgent, notifySecurityChange, recordSecurityEvent, requestFingerprint } from "@/lib/security/events";
 import { rateLimit } from "@/lib/security/rate-limit";
 import { authSecret } from "@/lib/security/secrets";
 import { escapeHtml, sendEmail } from "@/lib/mail";
@@ -74,8 +74,11 @@ export async function checkLoginCodeAction(code: string): Promise<LoginVerifyRes
 
 /**
  * Finish: issue the "login verified" proof for this session and go on. Allowed
- * once the emailed code checked out (pending marker), or when the person has
- * two-factor on, because Better Auth already made them pass it to get here.
+ * once the emailed code checked out (pending marker), when the person has
+ * two-factor on (Better Auth already made them pass it to get here), when this
+ * browser passed the code within its last 12 active hours, or when the account
+ * has been used from this place (country and city) before: a new browser in a
+ * known place is not asked, it is trusted and the person is emailed about it.
  */
 export async function finishLoginAction(stay: boolean, next: string): Promise<LoginVerifyResult> {
   const who = await me();
@@ -84,7 +87,10 @@ export async function finishLoginAction(stay: boolean, next: string): Promise<Lo
   const secret = authSecret();
   const pendingOk = await verifyLvPending(secret, who.sessionId, jar.get(LV_PENDING_COOKIE)?.value);
   const deviceOk = await verifyLvDevice(secret, who.userId, jar.get(LV_DEVICE_COOKIE)?.value);
-  if (!pendingOk && !who.twoFactor && !deviceOk) return { ok: false, error: "Enter the code from your email first." };
+  const { control } = await getRepositories();
+  const fp = await requestFingerprint();
+  const placeOk = !pendingOk && !who.twoFactor && !deviceOk && (await control.hasTrustedPlace(who.userId, fp.country, fp.city, true));
+  if (!pendingOk && !who.twoFactor && !deviceOk && !placeOk) return { ok: false, error: "Enter the code from your email first." };
 
   const value = await lvCookieValue(secret, who.sessionId, stay ? "p" : "s");
   jar.set(LV_COOKIE, value, { ...cookieOpts, maxAge: LV_IDLE_MAX_AGE_S });
@@ -95,17 +101,24 @@ export async function finishLoginAction(stay: boolean, next: string): Promise<Lo
   jar.delete(LV_PENDING_COOKIE);
 
   // The emailed code is as good as the new-device check's own emailed code,
-  // so remember this device now rather than asking again a moment later.
+  // so remember this device now rather than asking again a moment later. A
+  // browser let through on a known place is remembered too, and the person is
+  // told (the brief asks for an alert on every new device).
   try {
     const deviceId = await currentDeviceId();
-    if (deviceId) {
-      const { control } = await getRepositories();
-      const fp = await requestFingerprint();
-      if (!(await control.isTrustedDevice(who.userId, deviceId, fp.ip ?? "unknown", fp.country))) {
-        await control.trustDevice({ userId: who.userId, deviceId, ip: fp.ip ?? "unknown", country: fp.country, userAgent: fp.userAgent });
+    if (deviceId && !(await control.isTrustedDevice(who.userId, deviceId, fp.ip ?? "unknown", fp.country, fp.city, true))) {
+      await control.trustDevice({ userId: who.userId, deviceId, ip: fp.ip ?? "unknown", country: fp.country, city: fp.city, userAgent: fp.userAgent });
+      if (placeOk) {
+        await recordSecurityEvent("new_device", { userId: who.userId, meta: { silent: true, step: "login" } }).catch(() => {});
+        const where = [describeAgent(fp.userAgent), fp.city, fp.country].filter(Boolean).map((v) => escapeHtml(String(v))).join(", ");
+        await notifySecurityChange(
+          who.userId,
+          "New device on your ActivityRoster account",
+          `<p>Your office account was just signed in to from a browser we hadn't seen before (${where}), in a place you've signed in from before, so we didn't ask for an emailed code.</p><p>If this was you, there's nothing to do. If it wasn't, change your password now and use "Forget all devices" under Security.</p>`,
+        ).catch(() => {});
       }
     }
   } catch { /* the device gate will simply ask */ }
-  await recordSecurityEvent("reauth_passed", { userId: who.userId, meta: { step: "login-verified", by: pendingOk ? "email-code" : who.twoFactor ? "2fa" : "recent-device", stay } }).catch(() => {});
+  await recordSecurityEvent("reauth_passed", { userId: who.userId, meta: { step: "login-verified", by: pendingOk ? "email-code" : who.twoFactor ? "2fa" : deviceOk ? "recent-device" : "known-place", stay } }).catch(() => {});
   return { ok: true, next: safeNext(next) };
 }

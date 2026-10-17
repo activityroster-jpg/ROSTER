@@ -10,11 +10,13 @@
  * Twelve hours without an office request lets ar_lv lapse; the gate then ends
  * the session, and the person signs in again from the start.
  *
- * The emailed code itself is asked for the first time a device is used and
- * again only after that device has gone 12 hours without using the office:
+ * The emailed code itself is asked only when the account is somewhere NEW: a
+ * country and city it has no confirmed device in (trusted_device, see
+ * lib/auth/device-gate.ts). A browser that passed the code within its last 12
+ * active hours skips it too:
  *   ar_lvd = "<hmac of user id>"  slid with ar_lv, 12-hour idle life
- * A sign-in on a device that still holds a valid ar_lvd skips the code and
- * goes straight to "stay signed in?". The PIN after 30 idle minutes is separate.
+ * Either way the sign-in goes straight to "stay signed in?". The PIN after 30
+ * idle minutes is separate.
  */
 import { hmacSign, timingSafeEqual } from "./pin";
 
