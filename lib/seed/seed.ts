@@ -32,56 +32,55 @@ export async function seedOrganisationDefaults(
     teachingMapVersion: pack.teaching ? TEACHING_MAP_VERSION : 0,
   });
 
-  for (const s of pack.slots) {
-    await repos.sessionSlot.insert(ctx, { ...s, active: true });
-  }
+  // Each list goes in as a few batched INSERTs rather than one round trip per
+  // row: a new centre is ~300 rows, and every call to the database is a chance
+  // for a dropped connection to leave the sign-up half-made.
+  await repos.sessionSlot.insertMany(ctx, pack.slots.map((s) => ({ ...s, active: true })));
+
   const typeIdByCode = new Map<string, string>();
-  for (const g of pack.grades) {
-    const row = await repos.qualificationType.insert(ctx, {
+  const gradeRows = await repos.qualificationType.insertMany(
+    ctx,
+    pack.grades.map((g) => ({
       ...g,
       needsSupervision: Boolean(g.needsSupervision),
       supervises: Boolean(g.supervises),
       defaultValidMonths: g.defaultValidMonths ?? null,
       active: true,
-    });
-    typeIdByCode.set(g.code, row.id);
-  }
-  for (const r of pack.roles) {
-    await repos.roleType.insert(ctx, { ...r, active: true });
-  }
+    })),
+  );
+  for (const row of gradeRows) typeIdByCode.set(row.code, row.id);
+
+  await repos.roleType.insertMany(ctx, pack.roles.map((r) => ({ ...r, active: true })));
   // One place per teaching instructor type: a course's places are "2 × Dinghy Instructor", not "2 × Instructor".
   if (pack.placesFromTypes) {
-    for (const g of pack.grades) {
-      if (!g.discipline) continue;
-      await repos.roleType.insert(ctx, { name: g.name, code: g.code, countsTowardRatio: true, isSafetyCover: false, isFirstAider: false, qualificationTypeId: typeIdByCode.get(g.code)!, active: true });
-    }
+    await repos.roleType.insertMany(
+      ctx,
+      pack.grades
+        .filter((g) => g.discipline)
+        .map((g) => ({ name: g.name, code: g.code, countsTowardRatio: true, isSafetyCover: false, isFirstAider: false, qualificationTypeId: typeIdByCode.get(g.code)!, active: true })),
+    );
   }
-  for (const c of pack.compliance(jurisdiction)) {
-    await repos.complianceType.insert(ctx, { ...c, isVetting: Boolean(c.isVetting), active: true });
-  }
-  for (const e of pack.equipment) {
-    await repos.equipmentType.insert(ctx, { ...e, active: true });
-  }
-  for (const name of pack.locationTypes) {
-    await repos.locationType.insert(ctx, { name, active: true });
-  }
+  await repos.complianceType.insertMany(ctx, pack.compliance(jurisdiction).map((c) => ({ ...c, isVetting: Boolean(c.isVetting), active: true })));
+  await repos.equipmentType.insertMany(ctx, pack.equipment.map((e) => ({ ...e, active: true })));
+  await repos.locationType.insertMany(ctx, pack.locationTypes.map((name) => ({ name, active: true })));
+
+  const courseRows = await repos.courseType.insertMany(ctx, pack.courseTypes.map((ct) => ({ ...ct, active: true })));
   const courseIdByName = new Map<string, string>();
-  for (const ct of pack.courseTypes) {
-    const row = await repos.courseType.insert(ctx, { ...ct, active: true });
-    courseIdByName.set(ct.name, row.id);
-  }
+  for (const row of courseRows) courseIdByName.set(row.name, row.id);
+
   // Who can teach what (lib/packs/rya-teaching.ts): the centre can change it in Course setup.
-  for (const rule of pack.teaching ?? []) {
+  const teaching = (pack.teaching ?? []).map((rule) => {
     const qualificationTypeId = typeIdByCode.get(rule.type);
     const courseTypeId = courseIdByName.get(rule.course);
     if (!qualificationTypeId || !courseTypeId) throw new Error(`Teaching map: unknown ${qualificationTypeId ? "course" : "instructor type"} in ${rule.type} → ${rule.course}`);
-    await repos.qualificationCourseType.insert(ctx, {
+    return {
       qualificationTypeId,
       courseTypeId,
       alsoRequiresTypeId: rule.alsoRequires ? typeIdByCode.get(rule.alsoRequires) ?? null : null,
       needsApproval: Boolean(rule.needsApproval),
-    });
-  }
+    };
+  });
+  await repos.qualificationCourseType.insertMany(ctx, teaching);
 }
 
 /** Bumped when the course map or the instructor-type places change in a way existing centres must be brought up to (lib/services/instructor-types-upgrade.ts). */

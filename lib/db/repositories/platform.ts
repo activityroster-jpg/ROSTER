@@ -146,17 +146,19 @@ export class PlatformRepository {
   }
 
   /** The signup/owner email per organisation (the earliest admin member). */
+  /** Each centre's sign-up email: its owner (the login that created it), or failing that its earliest office admin. */
   async ownerEmailByOrg(): Promise<Map<string, string>> {
     const rows = await this.db
-      .select({ org: membership.organisationId, email: user.email, created: membership.createdAt })
+      .select({ org: membership.organisationId, email: user.email, role: membership.role, created: membership.createdAt })
       .from(membership)
       .innerJoin(user, eq(user.id, membership.userId))
-      .where(eq(membership.role, "admin"));
-    const best = new Map<string, { email: string; created: number }>();
+      .where(inArray(membership.role, ["owner", "admin"]));
+    const best = new Map<string, { email: string; rank: number; created: number }>();
     for (const r of rows) {
       const created = r.created instanceof Date ? r.created.getTime() : Number(r.created ?? 0);
+      const rank = r.role === "owner" ? 0 : 1;
       const cur = best.get(r.org);
-      if (!cur || created < cur.created) best.set(r.org, { email: r.email, created });
+      if (!cur || rank < cur.rank || (rank === cur.rank && created < cur.created)) best.set(r.org, { email: r.email, rank, created });
     }
     const out = new Map<string, string>();
     for (const [org, v] of best) out.set(org, v.email);

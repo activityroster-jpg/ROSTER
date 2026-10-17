@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { getEnv, getRepositories } from "@/lib/cf/bindings";
 import { getAuth } from "@/lib/auth";
 import { trialSignupSchema } from "@/lib/validation/signup";
-import { provisionCentre } from "@/lib/billing/provision";
+import { provisionCentre, undoHalfMadeCentre } from "@/lib/billing/provision";
+import { captureException } from "@/lib/observability/sentry";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/security/rate-limit";
 import { isPwnedPassword, PWNED_MESSAGE } from "@/lib/security/pwned";
 import { verifyTurnstile } from "@/lib/security/turnstile";
@@ -18,8 +19,9 @@ const SLUG_HOLD_MS = 10 * 60 * 1000;
  * and returns the centre's URL. No card required; billing is set up later.
  *
  * Order matters: the web address is reserved first (two people can't race for
- * it), the login is created, then the centre. If the centre can't be created
- * the brand-new login is removed again so nothing is left half-made.
+ * it), the login is created, then the centre. If the centre can't be finished
+ * the half-made centre and the brand-new login are both removed again, so the
+ * same email and address can simply try again (and the reason is in Dev Center → Errors).
  */
 export async function POST(req: Request) {
   const limit = await rateLimit(`signup:${clientIp(req)}`, 8, 300);
@@ -95,11 +97,37 @@ export async function POST(req: Request) {
       ownerUserId: owner.id,
     });
   } catch (err) {
-    console.error("[signup] provisioning failed:", (err as Error).message);
-    // Don't leave a login with no centre behind — they can simply try again.
-    try { await control.deleteOrphanUser(owner.id); } catch (e) { console.error("[signup] orphan cleanup failed:", (e as Error).message); }
+    const reason = (err as Error).message;
+    console.error("[signup] provisioning failed:", reason);
+    // Undo whatever was made (centre, seeded defaults, login) so the same email and
+    // address can simply try again; record why it failed in Dev Center → Errors.
+    let undone: Awaited<ReturnType<typeof undoHalfMadeCentre>> | null = null;
+    try {
+      undone = await undoHalfMadeCentre(repos, { slug, ownerUserId: owner.id });
+    } catch (e) {
+      console.error("[signup] undo failed:", (e as Error).message);
+    }
+    const complete = Boolean(undone?.loginRemoved);
+    try {
+      await control.createErrorReport({
+        path: "/api/signup",
+        organisationSlug: slug,
+        userEmail: ownerEmail,
+        message: `Sign-up: the centre could not be set up (${reason}). ${complete ? "The half-made centre and login were removed; the person can try again." : "The half-made centre or login could NOT be removed: remove the centre in Dev Center → Centres so the email can sign up again."}`,
+      });
+    } catch (e) {
+      console.error("[signup] error report failed:", (e as Error).message);
+    }
+    await captureException(err, { tags: { where: "signup" } });
     await control.releaseSlug(slug).catch(() => {});
-    return NextResponse.json({ error: "Could not set up your centre. Please try again." }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: complete
+          ? "Could not set up your centre. Please try again."
+          : "Could not set up your centre. Please try again in a few minutes, or email hello@activityroster.com if it happens again.",
+      },
+      { status: 500 },
+    );
   } finally {
     // The organisation row now owns the slug; the hold is no longer needed.
     await control.releaseSlug(slug).catch(() => {});

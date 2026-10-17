@@ -5,8 +5,9 @@ import type { CloudflareEnv } from "@/lib/cf/bindings";
 import { JURISDICTIONS, PLANS, SETUP_MODES, type Jurisdiction, type Plan, type SetupMode, type SubscriptionStatus } from "@/lib/db/schema";
 import { seedOrganisationDefaults } from "@/lib/seed/seed";
 import { isActivityType, packFor } from "@/lib/packs";
-import type { SystemTenantContext } from "@/lib/tenant/context";
+import type { AnyTenantContext, SystemTenantContext } from "@/lib/tenant/context";
 import { escapeHtml, sendEmail } from "@/lib/mail";
+import { eraseOrganisationData } from "@/lib/services/export";
 
 export interface ProvisionParams {
   slug: string;
@@ -128,4 +129,43 @@ export async function provisionCentre(
   }
 
   return { organisationId: org.id, created: true };
+}
+
+/** A centre made longer ago than this is never touched by {@link undoHalfMadeCentre}. */
+const HALF_MADE_WINDOW_MS = 15 * 60 * 1000;
+
+/**
+ * Undo a sign-up that failed part-way through {@link provisionCentre}: remove the
+ * centre made moments ago (and whatever was seeded into it) and the brand-new
+ * login, so the same email and web address can simply try again.
+ *
+ * Guarded so it can never reach an established centre: the centre must have been
+ * created in the last few minutes, have no Stripe subscription, and have no member
+ * other than this owner. The login goes only if it belongs to no centre at all
+ * (`deleteOrphanUser`), which is also the proof that the undo is complete.
+ */
+export async function undoHalfMadeCentre(
+  repos: Repositories,
+  input: { slug: string; ownerUserId: string; deleteFiles?: (ctx: AnyTenantContext) => Promise<number> },
+): Promise<{ centreRemoved: boolean; loginRemoved: boolean }> {
+  const { control } = repos;
+  const slug = input.slug.toLowerCase();
+  let centreRemoved = false;
+
+  const org = await control.organisationBySlug(slug);
+  if (org) {
+    const created = org.createdAt instanceof Date ? org.createdAt.getTime() : Number(org.createdAt ?? 0);
+    const fresh = Date.now() - created <= HALF_MADE_WINDOW_MS;
+    const members = await control.memberUsers(org.id);
+    const onlyThisOwner = members.every((m) => m.userId === input.ownerUserId);
+    if (fresh && onlyThisOwner && !org.stripeSubscriptionId) {
+      const ctx: SystemTenantContext = { organisationId: org.id, slug: org.slug, system: true, reason: "sign-up undone" };
+      const res = await eraseOrganisationData(repos, ctx, input.deleteFiles ? { deleteFiles: input.deleteFiles } : {});
+      centreRemoved = res.erased;
+    }
+  }
+
+  const loginRemoved = await control.deleteOrphanUser(input.ownerUserId);
+  await control.releaseSlug(slug).catch(() => {});
+  return { centreRemoved, loginRemoved };
 }
