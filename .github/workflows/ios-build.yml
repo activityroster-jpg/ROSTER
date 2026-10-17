@@ -75,10 +75,22 @@ jobs:
           if ! printf '%s' "$KEY_ID" | grep -Eq '^[A-Z0-9]{10}$'; then echo "::error::APP_STORE_CONNECT_KEY_ID should be 10 letters and digits (the Key ID shown in the key's row)."; exit 1; fi
           if ! printf '%s' "$ISSUER_ID" | grep -Eqi '^[0-9a-f-]{36}$'; then echo "::error::APP_STORE_CONNECT_ISSUER_ID should be the long code with dashes shown above the list of keys."; exit 1; fi
           if ! printf '%s' "$KEY_P8" | grep -q 'BEGIN PRIVATE KEY'; then echo "::error::APP_STORE_CONNECT_KEY_P8 should be the whole .p8 file, including the BEGIN PRIVATE KEY and END PRIVATE KEY lines."; exit 1; fi
+          # Rebuild the key file from whatever was pasted: line breaks are often lost on the way
+          # through a password manager or a text box, and Apple's tools refuse a key on one line.
+          body="$(printf '%s' "$KEY_P8" | sed 's/\\n/\n/g' | tr -d '\r' | sed -e 's/-----BEGIN PRIVATE KEY-----//' -e 's/-----END PRIVATE KEY-----//' | tr -d '[:space:]')"
+          if ! printf '%s' "$body" | grep -Eq '^[A-Za-z0-9+/=]{100,}$'; then
+            echo "::error::APP_STORE_CONNECT_KEY_P8 has characters that aren't part of a key (a text editor may have changed it, or something extra was pasted). Open the .p8 file in TextEdit, select all, copy, and paste exactly that into the secret."
+            exit 1
+          fi
           mkdir -p "$HOME/.private_keys"
           umask 077
-          printf '%s\n' "$KEY_P8" > "$HOME/.private_keys/AuthKey_$KEY_ID.p8"
-          echo "KEY_PATH=$HOME/.private_keys/AuthKey_$KEY_ID.p8" >> "$GITHUB_ENV"
+          KEY_FILE="$HOME/.private_keys/AuthKey_$KEY_ID.p8"
+          { echo '-----BEGIN PRIVATE KEY-----'; printf '%s' "$body" | fold -w 64; echo; echo '-----END PRIVATE KEY-----'; } > "$KEY_FILE"
+          if ! openssl pkey -in "$KEY_FILE" -noout 2>/dev/null; then
+            echo "::error::APP_STORE_CONNECT_KEY_P8 isn't a valid key: the pasted text is damaged or incomplete. Open the .p8 file in TextEdit, select all, copy, and paste exactly that into the secret. If the file is lost, make a new key in App Store Connect and update all three secrets."
+            exit 1
+          fi
+          echo "KEY_PATH=$KEY_FILE" >> "$GITHUB_ENV"
           echo "App Store Connect key in place."
 
       - name: Tools
