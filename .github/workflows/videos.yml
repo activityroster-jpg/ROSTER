@@ -74,7 +74,7 @@ jobs:
             && echo "PIPER_MODEL=$RUNNER_TEMP/piper/en_GB-alan-medium.onnx" >> "$GITHUB_ENV" \
             || echo "::warning::Preview voice unavailable; the video will have captions but no voice."
       - name: Reuse narration already made (so unchanged lines aren't paid for twice)
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: videos/.cache
           key: videocache-${{ hashFiles('videos/scripts/**', 'videos/lib/brand-audio.mjs') }}
