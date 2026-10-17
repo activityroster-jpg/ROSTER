@@ -77,9 +77,15 @@ jobs:
           if ! printf '%s' "$KEY_P8" | grep -q 'BEGIN PRIVATE KEY'; then echo "::error::APP_STORE_CONNECT_KEY_P8 should be the whole .p8 file, including the BEGIN PRIVATE KEY and END PRIVATE KEY lines."; exit 1; fi
           # Rebuild the key file from whatever was pasted: line breaks are often lost on the way
           # through a password manager or a text box, and Apple's tools refuse a key on one line.
-          body="$(printf '%s' "$KEY_P8" | sed 's/\\n/\n/g' | tr -d '\r' | sed -e 's/-----BEGIN PRIVATE KEY-----//' -e 's/-----END PRIVATE KEY-----//' | tr -d '[:space:]')"
+          clean="$(printf '%s' "$KEY_P8" | sed 's/\\n/\n/g' | tr -d '\r')"
+          # Keep only what sits between the BEGIN and END lines (anything pasted around them, such
+          # as a file name or a label, is dropped); a key pasted on one line has no lines to cut.
+          inner="$(printf '%s\n' "$clean" | awk '/BEGIN PRIVATE KEY/{f=1;next} /END PRIVATE KEY/{f=0} f')"
+          [ -z "$inner" ] && inner="$clean"
+          body="$(printf '%s' "$inner" | sed -e 's/-----BEGIN PRIVATE KEY-----//g' -e 's/-----END PRIVATE KEY-----//g' | tr -d '[:space:]')"
           if ! printf '%s' "$body" | grep -Eq '^[A-Za-z0-9+/=]{100,}$'; then
-            echo "::error::APP_STORE_CONNECT_KEY_P8 has characters that aren't part of a key (a text editor may have changed it, or something extra was pasted). Open the .p8 file in TextEdit, select all, copy, and paste exactly that into the secret."
+            stray="$(printf '%s' "$body" | tr -d 'A-Za-z0-9+/=' | grep -o . | sort -u | tr -d '\n' | head -c 40)"
+            echo "::error::APP_STORE_CONNECT_KEY_P8 has characters that aren't part of a key: [${stray}] (${#body} characters in all). A text editor may have changed it, or something extra was pasted. Open the .p8 file in TextEdit, select all, copy, and paste exactly that into the secret."
             exit 1
           fi
           mkdir -p "$HOME/.private_keys"
