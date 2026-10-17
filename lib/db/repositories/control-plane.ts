@@ -606,6 +606,16 @@ export class ControlPlaneRepository {
     return true;
   }
 
+  /**
+   * Has this account been used (on any confirmed device) in this country before?
+   * `strict` (office users) also wants the same city when both are known. A new
+   * phone somewhere the person already works from is not a new location.
+   */
+  async hasTrustedPlace(userId: string, country: string | null, city: string | null = null, strict = false): Promise<boolean> {
+    const rows = await this.db.select({ country: trustedDevice.country, city: trustedDevice.city }).from(trustedDevice).where(eq(trustedDevice.userId, userId));
+    return rows.some((r) => (r.country ?? null) === (country ?? null) && (!strict || !city || !r.city || r.city === city));
+  }
+
   async countTrustedDevices(userId: string): Promise<number> {
     const rows = await this.db.select({ id: trustedDevice.id }).from(trustedDevice).where(eq(trustedDevice.userId, userId));
     return rows.length;

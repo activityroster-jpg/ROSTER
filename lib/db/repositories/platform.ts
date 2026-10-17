@@ -109,6 +109,30 @@ export class PlatformRepository {
     return rows[0] ?? null;
   }
 
+  /**
+   * Active centres whose Instructors list carries this (verified) email and has
+   * not been claimed by another login: the centres the app offers by name at the
+   * join step, so someone an admin already added needn't type a company code.
+   * Read across tenants on purpose; the caller only ever learns centre names.
+   */
+  async centresWithStaffEmail(email: string, userId: string): Promise<{ organisationId: string; name: string; slug: string }[]> {
+    const wanted = email.trim().toLowerCase();
+    if (!wanted) return [];
+    const rows = await this.db
+      .select({ organisationId: organisation.id, name: organisation.name, slug: organisation.slug })
+      .from(instructor)
+      .innerJoin(organisation, eq(organisation.id, instructor.organisationId))
+      .where(and(
+        sql`lower(${instructor.email}) = ${wanted}`,
+        sql`${instructor.status} <> 'pending'`,
+        sql`(${instructor.userId} is null or ${instructor.userId} = ${userId})`,
+        eq(organisation.status, "active"),
+      ))
+      .orderBy(asc(organisation.name));
+    const seen = new Set<string>();
+    return rows.filter((r) => (seen.has(r.organisationId) ? false : (seen.add(r.organisationId), true)));
+  }
+
   /** Usage counts per organisation, for the admin overview. */
   async usageByOrg(): Promise<Map<string, OrgUsage>> {
     const [ins, crs, ses] = await Promise.all([

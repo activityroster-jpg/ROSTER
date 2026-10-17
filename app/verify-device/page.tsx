@@ -8,8 +8,9 @@ import { describeAgent, requestFingerprint } from "@/lib/security/events";
 export const dynamic = "force-dynamic";
 
 /**
- * Shown when a signed-in user arrives from a device, IP or country they
- * haven't confirmed before. Password (or emailed code) → device remembered →
+ * Shown when a signed-in user arrives from a country (or, for office users, a
+ * city) their account has never been used from. A new device alone isn't
+ * asked (lib/auth/device-gate.ts). Password (or emailed code) → device remembered →
  * on to the PIN as usual. Lives outside the office/portal layouts so the gate
  * can redirect here without looping.
  */
@@ -22,5 +23,5 @@ export default async function VerifyDevicePage({ searchParams }: { searchParams:
   const hasPassword = await control.hasCredentialPassword(s.user.id);
   const fp = await requestFingerprint();
   const where = [describeAgent(fp.userAgent), fp.country].filter(Boolean).join(" · ");
-  return <VerifyDeviceForm next={next} hasPassword={hasPassword} where={where} />;
+  return <VerifyDeviceForm next={next} hasPassword={hasPassword} where={where} country={fp.country} />;
 }

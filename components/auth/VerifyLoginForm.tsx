@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { checkLoginCodeAction, finishLoginAction, sendLoginCodeAction } from "@/app/verify-login/actions";
+import { NO_CODE_ON_CLIPBOARD, PasteCodeButton, useCodeFromClipboard } from "@/components/auth/PasteCode";
 
 export function VerifyLoginForm({ next, emailHint, preVerified }: { next: string; emailHint: string; preVerified: boolean }) {
   const [step, setStep] = useState<"code" | "stay">(preVerified ? "stay" : "code");
@@ -23,6 +24,8 @@ export function VerifyLoginForm({ next, emailHint, preVerified }: { next: string
     if (!preVerified && !sentOnce.current) { sentOnce.current = true; void send(true); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useCodeFromClipboard(step === "code" && code.length === 0 && !busy, (c) => { setCode(c); setErr(null); });
 
   const submitCode = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,7 +54,10 @@ export function VerifyLoginForm({ next, emailHint, preVerified }: { next: string
             <h1 className="font-display text-xl font-semibold text-navy">Check your email</h1>
             <p className="mt-1 mb-4 text-sm text-slate-500">We&rsquo;ve sent a 6-digit code to {emailHint}. Enter it to finish signing in.</p>
             <form onSubmit={submitCode} className="space-y-3">
-              <input value={code} onChange={(e) => setCode(e.target.value)} inputMode="numeric" autoComplete="one-time-code" autoFocus placeholder="123456" aria-label="Code" className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-center font-mono text-xl tracking-widest outline-none focus:border-teal" />
+              <div className="flex gap-2">
+                <input value={code} onChange={(e) => setCode(e.target.value)} inputMode="numeric" autoComplete="one-time-code" autoFocus placeholder="123456" aria-label="Code" className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-center font-mono text-xl tracking-widest outline-none focus:border-teal" />
+                <PasteCodeButton onCode={(c) => { setCode(c); setErr(null); }} onMiss={() => setErr(NO_CODE_ON_CLIPBOARD)} disabled={busy} />
+              </div>
               {err ? <p className="text-sm text-port">{err}</p> : null}
               {note ? <p className="text-sm text-starboard">{note}</p> : null}
               <button type="submit" disabled={busy || code.trim().length < 6} className="w-full rounded-lg bg-teal px-4 py-2.5 font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{busy ? "Checking…" : "Continue"}</button>

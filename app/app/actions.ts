@@ -3,7 +3,7 @@
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getAuth } from "@/lib/auth";
-import { getEnv, getRepositories } from "@/lib/cf/bindings";
+import { getDb, getEnv, getRepositories } from "@/lib/cf/bindings";
 import type { SystemTenantContext } from "@/lib/tenant/context";
 import { CENTRE_COOKIE, CENTRE_COOKIE_MAX_AGE_S, signCentreCookie } from "@/lib/auth/centre-cookie";
 import { authSecret } from "@/lib/security/secrets";
@@ -12,6 +12,8 @@ import { rateLimit } from "@/lib/security/rate-limit";
 import { escapeHtml, sendEmail } from "@/lib/mail";
 import { writeAudit } from "@/lib/services/audit";
 import { resolveHost } from "@/lib/tenant/host";
+import { idSchema } from "@/lib/validation/actions";
+import { PlatformRepository } from "@/lib/db/repositories/platform";
 
 export type JoinResult =
   | { ok: true; status: "joined" | "requested" | "already_requested"; centre: string }
@@ -35,29 +37,24 @@ async function rememberCentre(userId: string, organisationId: string): Promise<v
   });
 }
 
+type Me = NonNullable<Awaited<ReturnType<typeof me>>>;
+
 /**
- * Join a centre with its company code.
+ * Link this login to a centre, or ask to join it.
  *  - If the centre already has an instructor with this (verified) email, the
  *    account is linked and access is immediate.
- *  - Otherwise a join request is created: a pending instructor record plus a
- *    "requested" membership, which an admin approves or declines on the Staff tab.
+ *  - Otherwise (company code only) a join request is created: a pending
+ *    instructor record plus a "requested" membership, which an admin approves
+ *    or declines on the Staff tab. `via` says how they got here, for the log.
  */
-export async function joinCentreByCodeAction(code: string, phone?: string): Promise<JoinResult> {
-  const user = await me();
-  if (!user) return { ok: false, error: "Please sign in again." };
-  if (!user.verified) return { ok: false, error: "Please verify your email first." };
-
-  const limit = await rateLimit(`join-code:${user.id}`, 10, 15 * 60, { failClosed: true });
-  if (!limit.allowed) return { ok: false, error: "Too many attempts. Try again in 15 minutes." };
-
+async function linkOrRequest(
+  user: Me,
+  org: { id: string; name: string; slug: string },
+  phone: string | undefined,
+  via: "company_code" | "staff_list",
+): Promise<JoinResult> {
   const { control, tenant } = await getRepositories();
   const repos = await getRepositories();
-  const org = await control.organisationByJoinCode(code);
-  if (!org || org.status !== "active") {
-    await recordSecurityEvent("join_code_failed", { userId: user.id, meta: { code: (code ?? "").slice(0, 12) } });
-    return { ok: false, error: "That company code isn't right. Check it with your centre and try again." };
-  }
-
   const sys: SystemTenantContext = { organisationId: org.id, slug: org.slug, system: true, reason: "app-join" };
   const cleanPhone = (phone ?? "").trim().slice(0, 40) || null;
   if (cleanPhone) await control.setUserPhone(user.id, cleanPhone).catch(() => {});
@@ -77,10 +74,16 @@ export async function joinCentreByCodeAction(code: string, phone?: string): Prom
     await tenant.instructor.update(sys, match.id, { userId: user.id, ...(cleanPhone && !match.phone ? { phone: cleanPhone } : {}) });
     if (existing) await control.setMembershipStatus(user.id, org.id, "active");
     else await control.createMembership({ userId: user.id, organisationId: org.id, role: "instructor" }, "active");
-    await writeAudit(repos, sys, { action: "app_join", entity: "instructor", entityId: match.id, after: { userId: user.id, via: "company_code" } });
-    await recordSecurityEvent("invite_accepted", { userId: user.id, organisationId: org.id, meta: { via: "company_code" } });
+    await writeAudit(repos, sys, { action: "app_join", entity: "instructor", entityId: match.id, after: { userId: user.id, via } });
+    await recordSecurityEvent("invite_accepted", { userId: user.id, organisationId: org.id, meta: { via } });
     await rememberCentre(user.id, org.id);
     return { ok: true, status: "joined", centre: org.name };
+  }
+
+  // Joining by name is only offered while the email is on the list; if it was
+  // removed in between, fall back to the code (which can still request to join).
+  if (via === "staff_list") {
+    return { ok: false, error: `Your email is no longer on ${org.name}'s instructor list. Ask them for their company code instead.` };
   }
 
   // No match → request to join (the admin decides).
@@ -110,6 +113,65 @@ export async function joinCentreByCodeAction(code: string, phone?: string): Prom
   } catch { /* ignore */ }
 
   return { ok: true, status: "requested", centre: org.name };
+}
+
+/** Join a centre with its company code (the route for anyone not yet on a centre's list). */
+export async function joinCentreByCodeAction(code: string, phone?: string): Promise<JoinResult> {
+  const user = await me();
+  if (!user) return { ok: false, error: "Please sign in again." };
+  if (!user.verified) return { ok: false, error: "Please verify your email first." };
+
+  const limit = await rateLimit(`join-code:${user.id}`, 10, 15 * 60, { failClosed: true });
+  if (!limit.allowed) return { ok: false, error: "Too many attempts. Try again in 15 minutes." };
+
+  const { control } = await getRepositories();
+  const org = await control.organisationByJoinCode(code);
+  if (!org || org.status !== "active") {
+    await recordSecurityEvent("join_code_failed", { userId: user.id, meta: { code: (code ?? "").slice(0, 12) } });
+    return { ok: false, error: "That company code isn't right. Check it with your centre and try again." };
+  }
+  return linkOrRequest(user, org, phone, "company_code");
+}
+
+/**
+ * Join a centre that already lists this verified email among its instructors:
+ * the person picks the centre by name, no company code needed. The admin typing
+ * their address on the Instructors list is the invitation; the verified email is
+ * the proof. Only centres from {@link centresForMyEmail} are accepted.
+ */
+export async function joinCentreByNameAction(organisationId: string, phone?: string): Promise<JoinResult> {
+  const user = await me();
+  if (!user) return { ok: false, error: "Please sign in again." };
+  if (!user.verified) return { ok: false, error: "Please verify your email first." };
+  const parsed = idSchema.safeParse(organisationId);
+  if (!parsed.success) return { ok: false, error: "Choose a centre." };
+
+  const limit = await rateLimit(`join-code:${user.id}`, 10, 15 * 60, { failClosed: true });
+  if (!limit.allowed) return { ok: false, error: "Too many attempts. Try again in 15 minutes." };
+
+  const offered = (await centresForMyEmail(user)).find((c) => c.organisationId === parsed.data);
+  if (!offered) return { ok: false, error: "That centre doesn't have your email on its instructor list. Ask them for their company code instead." };
+  const { control } = await getRepositories();
+  const org = await control.organisationById(offered.organisationId);
+  if (!org || org.status !== "active") return { ok: false, error: "That centre isn't available right now." };
+  return linkOrRequest(user, org, phone, "staff_list");
+}
+
+/** Centres whose Instructors list carries this verified email and that the person hasn't joined yet. */
+async function centresForMyEmail(user: Me): Promise<{ organisationId: string; name: string }[]> {
+  if (!user.verified) return [];
+  const platform = new PlatformRepository(await getDb());
+  const { control } = await getRepositories();
+  const joined = new Set((await control.membershipsForUser(user.id)).filter((m) => m.status === "active").map((m) => m.organisationId));
+  return (await platform.centresWithStaffEmail(user.email, user.id))
+    .filter((c) => !joined.has(c.organisationId))
+    .map((c) => ({ organisationId: c.organisationId, name: c.name }));
+}
+
+/** The centres the join screen offers by name (server components only; not a form endpoint). */
+export async function centresOfferedByName(): Promise<{ organisationId: string; name: string }[]> {
+  const user = await me();
+  return user ? centresForMyEmail(user) : [];
 }
 
 /** Pick which centre the app shows (must be an active membership), then go to the portal. */

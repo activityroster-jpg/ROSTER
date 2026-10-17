@@ -5,6 +5,7 @@ import { PinInput } from "@/components/auth/PinInput";
 import { Logo } from "@/components/Logo";
 import { setPinAction, verifyPinAction, resetMyPinAction, requestPinResetCodeAction } from "@/app/pin/actions";
 import { biometricPinSaved, biometricsAvailable, forgetBiometricPin, isNative, savePinForBiometrics, unlockPinWithBiometrics } from "@/lib/mobile/native";
+import { NO_CODE_ON_CLIPBOARD, PasteCodeButton, useCodeFromClipboard } from "@/components/auth/PasteCode";
 
 export function PinForm({ mode, next, hasPassword = true, userId }: { mode: "enter" | "set"; next: string; hasPassword?: boolean; userId?: string }) {
   const [pin, setPin] = useState("");
@@ -56,6 +57,8 @@ export function PinForm({ mode, next, hasPassword = true, userId }: { mode: "ent
     });
   };
 
+  useCodeFromClipboard(useCode && Boolean(codeSent) && code.length === 0, (c) => { setCode(c); setErr(null); });
+
   const sendCode = () => {
     setErr(null);
     startTransition(async () => {
@@ -97,9 +100,13 @@ export function PinForm({ mode, next, hasPassword = true, userId }: { mode: "ent
                   {codeSent ? <p className="rounded-lg bg-teal/5 px-3 py-2 text-xs text-slate-600">{codeSent}</p> : null}
                   <div className="flex gap-2">
                     <input value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" placeholder="6-digit code" aria-label="One-time code" className={`${field} text-center tracking-[0.3em]`} disabled={!codeSent} />
-                    <button type="button" onClick={sendCode} disabled={pending} className="whitespace-nowrap rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-navy hover:bg-slate-50 disabled:opacity-50">
-                      {codeSent ? "Resend" : "Email me a code"}
-                    </button>
+                    {codeSent ? (
+                      <PasteCodeButton onCode={(c) => { setCode(c); setErr(null); }} onMiss={() => setErr(NO_CODE_ON_CLIPBOARD)} disabled={pending} />
+                    ) : (
+                      <button type="button" onClick={sendCode} disabled={pending} className="whitespace-nowrap rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-navy hover:bg-slate-50 disabled:opacity-50">
+                        Email me a code
+                      </button>
+                    )}
                   </div>
                 </>
               ) : (

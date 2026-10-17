@@ -231,7 +231,7 @@ const ALL_SECTIONS: Section[] = [
       { kind: "steps", items: [
         "Install the app and tap “Create your account”: name, email and a password. A mobile number is optional.",
         "Enter the 6-digit code we email them to confirm the address, then choose a 4-digit PIN.",
-        "Type in your company code. If their email is already on your Instructors list, they're in straight away. If not, they appear under Instructors → Join requests for you to approve or decline — so a leaked code never lets a stranger in.",
+        "If their email is already on your Instructors list, the app simply shows your centre's name for them to tap: no code to type, they're in straight away. Anyone else types in your company code and appears under Instructors → Join requests for you to approve or decline — so a leaked code never lets a stranger in.",
         "Works for more than one centre? They join each with its code and switch between them in the app's Settings.",
       ] },
       { kind: "sub", text: "What the app adds" },

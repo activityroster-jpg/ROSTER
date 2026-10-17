@@ -4,13 +4,14 @@ import { useState } from "react";
 import { PasswordStrength } from "@/components/auth/PasswordStrength";
 import Link from "next/link";
 import { authClient, signIn, signUp } from "@/lib/auth/client";
+import { NO_CODE_ON_CLIPBOARD, PasteCodeButton, useCodeFromClipboard } from "@/components/auth/PasteCode";
 
 const field = "w-full rounded-xl border border-slate-300 px-4 py-3 text-base outline-none focus:border-teal";
 const PHONE_KEY = "ar.signup.phone";
 
 /**
  * Create account: name, email, password (mobile number optional) → 6-digit email code → PIN
- * (the shared /set-pin screen) → company code. The phone is kept locally
+ * (the shared /set-pin screen) → join a centre (by name, or with its company code). The phone is kept locally
  * until the join step, when it's saved with the instructor record.
  */
 export function AppSignup() {
@@ -48,11 +49,12 @@ export function AppSignup() {
     } catch (ex) { setErr((ex as Error).message); } finally { setBusy(false); }
   };
 
-  const verify = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const verify = (e: React.FormEvent) => { e.preventDefault(); void verifyCode(otp); };
+
+  const verifyCode = async (value: string) => {
     setErr(null); setBusy(true);
     try {
-      const r = await authClient.emailOtp.verifyEmail({ email: email.trim(), otp: otp.trim() });
+      const r = await authClient.emailOtp.verifyEmail({ email: email.trim(), otp: value.trim() });
       if (r.error) { setErr(r.error.message ?? "That code isn't right."); return; }
       // Make sure we hold a session (verifyEmail signs in when configured; the
       // password sign-in is a harmless no-op otherwise).
@@ -60,6 +62,9 @@ export function AppSignup() {
       window.location.href = "/set-pin?next=" + encodeURIComponent("/app/join");
     } finally { setBusy(false); }
   };
+
+  // Back from the email with the code copied: fill it in and check it.
+  useCodeFromClipboard(step === "code" && otp.length === 0 && !busy, (c) => { setOtp(c); setErr(null); void verifyCode(c); });
 
   const resend = async () => {
     setErr(null); setNote(null); setBusy(true);
@@ -72,13 +77,17 @@ export function AppSignup() {
         <h1 className="font-display text-2xl font-bold text-navy">Check your email</h1>
         <p className="mb-5 text-sm text-slate-500">We sent a 6-digit code to <span className="font-medium text-navy">{email}</span>. Enter it to confirm it&apos;s yours.</p>
         <form onSubmit={verify} className="space-y-3">
-          <input value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" placeholder="6-digit code" autoFocus className={`${field} text-center text-2xl tracking-[0.4em]`} />
+          <div className="flex gap-2">
+            <input value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" placeholder="6-digit code" autoFocus className={`${field} text-center text-2xl tracking-[0.4em]`} />
+            <PasteCodeButton onCode={(c) => { setOtp(c); setErr(null); void verifyCode(c); }} onMiss={() => setErr(NO_CODE_ON_CLIPBOARD)} disabled={busy} className="whitespace-nowrap rounded-xl border border-slate-300 px-3 text-sm font-medium text-navy disabled:opacity-50" />
+          </div>
+          <p className="text-xs text-slate-400">The code is in the email&apos;s subject line, so it shows in the notification. Copy it and come back: it fills in by itself.</p>
           {err ? <p className="text-sm text-port">{err}</p> : null}
           {note ? <p className="text-sm text-slate-600">{note}</p> : null}
           <button type="submit" disabled={busy || otp.length !== 6} className="w-full rounded-xl bg-teal px-4 py-3.5 text-base font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{busy ? "Checking…" : "Confirm email"}</button>
           <button type="button" onClick={resend} disabled={busy} className="w-full py-1 text-center text-sm font-medium text-slate-500">Resend code</button>
         </form>
-        <p className="mt-6 text-xs text-slate-400">Next: choose a 4-digit PIN, then enter your centre&apos;s company code.</p>
+        <p className="mt-6 text-xs text-slate-400">Next: choose a 4-digit PIN, then join your centre (by name if they&apos;ve already added you, or with their company code).</p>
       </div>
     );
   }

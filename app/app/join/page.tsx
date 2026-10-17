@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getAuth } from "@/lib/auth";
 import { getRepositories } from "@/lib/cf/bindings";
 import { JoinCentre } from "@/components/mobile/JoinCentre";
+import { centresOfferedByName } from "@/app/app/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -13,5 +14,7 @@ export default async function JoinPage() {
   const ms = await control.membershipsForUser(s.user.id);
   const pending = ms.find((m) => m.status === "requested");
   const hasActive = ms.some((m) => m.status === "active" && m.orgStatus === "active");
-  return <JoinCentre pendingCentre={pending?.name ?? null} canSkip={hasActive} />;
+  // Centres that already list this email among their instructors: offered by name, no code needed.
+  const offered = await centresOfferedByName();
+  return <JoinCentre pendingCentre={pending?.name ?? null} canSkip={hasActive} offered={offered} />;
 }

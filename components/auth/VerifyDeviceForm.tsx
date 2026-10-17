@@ -3,8 +3,9 @@
 import { useState, useTransition } from "react";
 import { Logo } from "@/components/Logo";
 import { requestDeviceCodeAction, verifyDeviceAction } from "@/app/verify-device/actions";
+import { NO_CODE_ON_CLIPBOARD, PasteCodeButton, useCodeFromClipboard } from "@/components/auth/PasteCode";
 
-export function VerifyDeviceForm({ next, hasPassword, where }: { next: string; hasPassword: boolean; where: string }) {
+export function VerifyDeviceForm({ next, hasPassword, where, country }: { next: string; hasPassword: boolean; where: string; country: string | null }) {
   const [pending, start] = useTransition();
   const [err, setErr] = useState<string | null>(null);
   const [useCode, setUseCode] = useState(!hasPassword);
@@ -30,15 +31,18 @@ export function VerifyDeviceForm({ next, hasPassword, where }: { next: string; h
     });
   };
 
+  // Coming back from the email with the code copied: fill it in.
+  useCodeFromClipboard(useCode && Boolean(codeSent) && code.length === 0, (c) => { setCode(c); setErr(null); });
+
   const field = "w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-teal";
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-canvas px-4">
       <div className="w-full max-w-sm rounded-card border border-slate-200 bg-white p-8 shadow-sm">
         <div className="mb-6 flex justify-center"><Logo variant="onLight" size="sm" /></div>
-        <h1 className="text-center font-display text-xl font-bold text-navy">New device or location</h1>
+        <h1 className="text-center font-display text-xl font-bold text-navy">Signing in somewhere new</h1>
         <p className="mx-auto mt-1 mb-5 max-w-xs text-center text-sm text-slate-500">
-          We haven&apos;t seen this {where ? `(${where}) ` : ""}before. {useCode ? "Enter the code we email you to continue." : "Enter your password to continue."}
+          Your account hasn&apos;t been used {country ? `in ${country}` : "from here"} before{where ? ` (${where})` : ""}. {useCode ? "Enter the code we email you to continue." : "Enter your password to continue."}
         </p>
 
         <form onSubmit={submit} className="space-y-4">
@@ -47,10 +51,15 @@ export function VerifyDeviceForm({ next, hasPassword, where }: { next: string; h
               {codeSent ? <p className="rounded-lg bg-teal/5 px-3 py-2 text-xs text-slate-600">{codeSent}</p> : null}
               <div className="flex gap-2">
                 <input value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" placeholder="6-digit code" aria-label="One-time code" className={`${field} text-center tracking-[0.3em]`} disabled={!codeSent} />
-                <button type="button" onClick={sendCode} disabled={pending} className="whitespace-nowrap rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-navy hover:bg-slate-50 disabled:opacity-50">
-                  {codeSent ? "Resend" : "Email me a code"}
-                </button>
+                {codeSent ? (
+                  <PasteCodeButton onCode={(c) => { setCode(c); setErr(null); }} onMiss={() => setErr(NO_CODE_ON_CLIPBOARD)} disabled={pending} />
+                ) : (
+                  <button type="button" onClick={sendCode} disabled={pending} className="whitespace-nowrap rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-navy hover:bg-slate-50 disabled:opacity-50">
+                    Email me a code
+                  </button>
+                )}
               </div>
+              {codeSent ? <button type="button" onClick={sendCode} disabled={pending} className="text-xs font-medium text-slate-500 hover:text-navy disabled:opacity-50">Send it again</button> : null}
             </>
           ) : (
             <div>
@@ -72,7 +81,7 @@ export function VerifyDeviceForm({ next, hasPassword, where }: { next: string; h
             </button>
           ) : null}
         </div>
-        <p className="mt-5 text-center text-[11px] text-slate-400">Once confirmed, this device won&apos;t be asked again (unless it turns up in another country).</p>
+        <p className="mt-5 text-center text-[11px] text-slate-400">Once confirmed, you won&apos;t be asked again here. A new phone or computer somewhere you already use ActivityRoster isn&apos;t asked at all; we just email you to say it signed in.</p>
       </div>
     </div>
   );
