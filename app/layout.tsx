@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Fira_Sans } from "next/font/google";
 import { apexDomain } from "@/lib/config";
 import "./globals.css";
@@ -17,6 +17,14 @@ const fira = Fira_Sans({
 
 const DESCRIPTION =
   "RYA sailing school software: staff rostering with instructor types, who can teach each course, availability and ratios checked as you schedule, and an app for your instructors. For RYA sailing schools, clubs and watersports centres.";
+
+/**
+ * viewport-fit=cover lets the page run edge to edge on phones with rounded
+ * corners and a home indicator; the app's header and bottom bar then pad
+ * themselves with env(safe-area-inset-*) so nothing sits under the notch or the
+ * indicator. Without it those values are zero in the app's web view.
+ */
+export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover", themeColor: "#0A2E52" };
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),

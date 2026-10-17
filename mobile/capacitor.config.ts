@@ -20,7 +20,10 @@ const config: CapacitorConfig = {
     cleartext: false,
   },
   ios: {
-    contentInset: "always",
+    // The page handles the notch and home indicator itself (viewport-fit=cover +
+    // env(safe-area-inset-*) in the layouts), so the web view must not inset the
+    // content as well, or the top bar is pushed down twice.
+    contentInset: "never",
     scheme: "ActivityRoster",
     backgroundColor: "#0A2E52",
     // Service workers (the offline "my week") only run in WKWebView for app-bound

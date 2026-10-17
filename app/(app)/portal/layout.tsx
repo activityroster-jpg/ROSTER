@@ -68,14 +68,15 @@ export default async function PortalLayout({ children }: { children: React.React
       {trial.kind === "read_only" ? (
         <p className="bg-amber/25 px-4 py-2 text-center text-xs font-medium text-navy">Your centre&apos;s free trial has ended, so nothing can be changed for now. Please let whoever runs your centre know.</p>
       ) : null}
-      <main id="main" className="flex-1 px-4 py-5 pb-24">
+      <main id="main" className="flex-1 px-4 py-5 pb-[calc(6rem+env(safe-area-inset-bottom))]">
         {children}
         <p className="mt-8 text-center text-[11px] text-slate-400">
           Privacy: {privacyUrl ? <><a href={privacyUrl} target="_blank" rel="noreferrer" className="underline">{organisation.name}&rsquo;s notice</a> · </> : null}
           <a href={`https://${apexDomain()}/privacy`} target="_blank" rel="noreferrer" className="underline">ActivityRoster&rsquo;s notice</a>
         </p>
       </main>
-      <nav className="fixed inset-x-0 bottom-0 mx-auto flex max-w-md items-center justify-around border-t border-slate-200 bg-white py-2">
+      {/* Sits above the home indicator on phones with rounded corners: the safe-area padding keeps the tabs clear of it. */}
+      <nav className="fixed inset-x-0 bottom-0 mx-auto flex max-w-md items-center justify-around border-t border-slate-200 bg-white pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
         {tabs.map((tab) => (
           <Link key={tab.href} href={tab.href} className="flex flex-col items-center gap-1 px-3 py-1 text-slate-500">
             <tab.icon className="h-5 w-5" />
