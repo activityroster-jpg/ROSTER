@@ -10,8 +10,10 @@ export const DEFAULT_APEX = "activityroster.com";
  * fill in once live and the site, guides and emails show the badges and links.
  */
 export const APP_STORES = {
+  /** Fill in once Apple approves the listing. */
   ios: "",
-  android: "",
+  /** Live on Google Play since 23 October 2026 (production, 23 countries). */
+  android: "https://play.google.com/store/apps/details?id=com.activityroster.app",
 } as const;
 export const appStoresLive = () => Boolean(APP_STORES.ios || APP_STORES.android);
 
