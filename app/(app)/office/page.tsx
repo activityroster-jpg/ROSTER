@@ -16,6 +16,8 @@ import { getAttendanceBoard } from "@/lib/services/timeclock";
 import { listLeave } from "@/lib/services/leave";
 import { listOpenShifts } from "@/lib/services/openshifts";
 import { getSetupStatus } from "@/lib/services/setup";
+import { exampleWeekState } from "@/lib/services/example-week";
+import { ExampleWeekNotice, LoadExampleWeekButton } from "@/components/office/ExampleWeek";
 import { Card, StatusPill } from "@/components/ui";
 import { WeekCalendarView } from "@/components/office/WeekCalendarView";
 import { todayIso } from "@/lib/domain";
@@ -51,7 +53,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const monday = weekStart(new Date());
   const today = todayIso();
 
-  const [staff, schedule, attendance, leave, shifts, setup, rota, events, settingsRows] = await Promise.all([
+  const [staff, schedule, attendance, leave, shifts, setup, rota, events, settingsRows, example] = await Promise.all([
     listStaffWithFit(repos, ctx),
     getWeekSchedule(repos, ctx, monday),
     getAttendanceBoard(repos, ctx, today),
@@ -61,6 +63,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     getWeekRota(repos, ctx, monday),
     getSessionEvents(repos, ctx, addDays(monday, -7), addDays(monday, 7 * 12)),
     repos.tenant.orgSettings.list(ctx),
+    exampleWeekState(repos, ctx),
   ]);
   const { sessions } = schedule;
   const [confirmations, problems] = await Promise.all([confirmationSummary(repos, ctx, today), findProblems(repos, ctx, { from: today, to: addDays(today, 28) })]);
@@ -75,7 +78,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const signedUpDaysAgo = organisation.createdAt ? (Date.now() - new Date(organisation.createdAt).getTime()) / 86_400_000 : 0;
   const nudge = !setup.firstDayConfirmed && signedUpDaysAgo >= 3;
   const dismissed = (await cookies()).get(ONBOARDED_COOKIE)?.value === "1";
-  if (!hasStaff && !dismissed) redirect("/office/onboarding");
+  // An empty centre goes to the wizard, unless the example week is on the roster: then there is something to see.
+  if (!hasStaff && !dismissed && !example.loaded) redirect("/office/onboarding");
 
   const blocked = staff.filter((s) => !s.fit.fit).length;
   const expiring = staff.filter((s) => s.fit.warnings.length > 0).length;
@@ -117,6 +121,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           <Link href="/office/rota" className="rounded-lg bg-navy px-3 py-1.5 text-xs font-semibold text-white hover:bg-navy-700">Open the roster →</Link>
         </div>
       ) : null}
+
+      {/* The example week is on the roster: say so on every visit, with the one click that clears it */}
+      {example.loaded ? <ExampleWeekNotice instructors={example.instructors} sessions={example.sessions} from={example.from} to={example.to} week={example.from ? weekStart(new Date(`${example.from}T00:00:00Z`)) : null} /> : null}
 
       {/* Getting started — the route to a first confirmed roster, shown until the essentials are done */}
       <div id="getting-started" />
@@ -166,6 +173,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               </li>
             ))}
           </ul>
+          {!example.loaded && !setup.steps.find((s) => s.key === "courses")?.done ? (
+            <p className="mt-4 flex flex-wrap items-center gap-2 border-t border-teal/20 pt-3 text-sm text-slate-600">
+              Want to see a working roster before adding your own? <LoadExampleWeekButton className="font-semibold text-teal hover:underline disabled:opacity-60" /> <span className="text-xs text-slate-400">Six made-up instructors and a week of sessions; one click clears it.</span>
+            </p>
+          ) : null}
         </Card>
       ) : null}
 

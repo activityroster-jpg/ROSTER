@@ -1,8 +1,9 @@
 import type { Repositories } from "@/lib/db/repositories";
 import type { AnyTenantContext } from "@/lib/tenant/context";
 import type { Organisation, SetupMode } from "@/lib/db/schema";
-import { instructor as instructorTable, rosterDay as rosterDayTable, rosterWeek as rosterWeekTable, sessionStaffOverride as overrideTable } from "@/lib/db/schema";
-import { eq, isNotNull } from "drizzle-orm";
+import { course as courseTable, courseStaff as courseStaffTable, instructor as instructorTable, rosterDay as rosterDayTable, rosterWeek as rosterWeekTable, sessionStaffOverride as overrideTable } from "@/lib/db/schema";
+import { and, eq, isNotNull, isNull, ne, notInArray, or } from "drizzle-orm";
+import { EXAMPLE_SOURCE } from "./example-week";
 
 export type SetupStepKey = "signup" | "team" | "invite" | "courses" | "roster" | "confirm" | "pay" | "plan";
 
@@ -38,16 +39,22 @@ export interface SetupStatus {
  */
 export async function getSetupStatus(repos: Repositories, ctx: AnyTenantContext, organisation?: Pick<Organisation, "stripeSubscriptionId"> | null): Promise<SetupStatus> {
   const t = repos.tenant;
-  const [settings, active, linked, courses, payRates, assignments, dayAdds, confirmedDays, publishedWeeks] = await Promise.all([
+  const [settings, everyone, linked, courses, payRates, confirmedDays, publishedWeeks] = await Promise.all([
     t.orgSettings.list(ctx),
     t.instructor.list(ctx, eq(instructorTable.status, "active")),
     t.instructor.count(ctx, isNotNull(instructorTable.userId)),
-    t.course.count(ctx),
+    t.course.count(ctx, or(isNull(courseTable.source), ne(courseTable.source, EXAMPLE_SOURCE))),
     t.payRate.count(ctx),
-    t.courseStaff.count(ctx),
-    t.sessionStaffOverride.count(ctx, eq(overrideTable.mode, "add")),
     t.rosterDay.count(ctx, isNotNull(rosterDayTable.confirmedAt)),
     t.rosterWeek.count(ctx, isNotNull(rosterWeekTable.publishedAt)),
+  ]);
+  // The example week (made-up people and courses, lib/services/example-week) is
+  // never the centre's own progress: its people, courses and shifts don't count.
+  const exampleIds = everyone.filter((i) => i.source === EXAMPLE_SOURCE).map((i) => i.id);
+  const active = everyone.filter((i) => i.source !== EXAMPLE_SOURCE);
+  const [assignments, dayAdds] = await Promise.all([
+    t.courseStaff.count(ctx, exampleIds.length ? notInArray(courseStaffTable.instructorId, exampleIds) : undefined),
+    t.sessionStaffOverride.count(ctx, exampleIds.length ? and(eq(overrideTable.mode, "add"), notInArray(overrideTable.instructorId, exampleIds)) : eq(overrideTable.mode, "add")),
   ]);
   const held = active.length ? new Set((await t.qualification.list(ctx)).map((q) => q.instructorId)) : new Set<string>();
   const untyped = active.filter((i) => !held.has(i.id)).length;

@@ -27,6 +27,8 @@ export interface CreateCourseInput {
   /** Staff the course needs, by role — e.g. 2× Instructor, 1× Safety Boat. */
   roleRequirements?: { roleTypeId: string; count: number }[];
   sessions: NewCourseSession[];
+  /** Where the course came from ("example" for the example week); null = created in-app. */
+  source?: string;
 }
 
 /** Combine a date + a slot's configured time into an absolute epoch-ms instant. */
@@ -82,6 +84,7 @@ export async function createCourseWithSessions(
     ratio: input.ratio ?? courseType.studentsPerInstructor,
     status: "scheduled" as const,
     staffRequired: totalNeeded > 0 ? totalNeeded : null,
+    source: input.source ?? null,
   };
   const statements: PromiseLike<unknown>[] = [t.course.insertStatement(ctx, course)];
   for (const s of input.sessions) {

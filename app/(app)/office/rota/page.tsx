@@ -11,6 +11,8 @@ import { can } from "@/lib/auth/rbac";
 import { availabilityHorizon } from "@/lib/services/availability";
 import { findProblems, problemLabel } from "@/lib/services/problems";
 import { getBoard } from "@/lib/services/board";
+import { exampleWeekState } from "@/lib/services/example-week";
+import { ExampleWeekNotice } from "@/components/office/ExampleWeek";
 import { RosterBoard } from "@/components/office/RosterBoard";
 import { missingExpiry } from "@/lib/domain/roster-day";
 import { instructor as instructorTable, qualification as qualificationTable } from "@/lib/db/schema";
@@ -28,7 +30,7 @@ export default async function RotaPage({ searchParams }: { searchParams: Promise
   // The board is the roster (view and edit); the print templates stay one click away.
   const view: "board" | "print" = sp.view === "print" || !canEdit ? "print" : "board";
   const board = view === "board" ? await getBoard(repos, ctx, monday) : null;
-  const [rota, dayStates, settingsRows, problems] = await Promise.all([getWeekRota(repos, ctx, monday), weekDayStates(repos, ctx, monday), repos.tenant.orgSettings.list(ctx), findProblems(repos, ctx, { from: monday, to: addDays(monday, 7) })]);
+  const [rota, dayStates, settingsRows, problems, example] = await Promise.all([getWeekRota(repos, ctx, monday), weekDayStates(repos, ctx, monday), repos.tenant.orgSettings.list(ctx), findProblems(repos, ctx, { from: monday, to: addDays(monday, 7) }), canEdit ? exampleWeekState(repos, ctx) : null]);
   const flags: Record<string, string[]> = Object.fromEntries(Object.entries(problems.bySession).map(([id, ps]) => [id, ps.map((p) => `${p.instructorName ? `${p.instructorName}: ` : ""}${problemLabel(p.kind)} (${p.detail})`)]));
   const rotaTemplate = parseRotaTemplate(settingsRows[0]?.rotaTemplate);
   const welfare = parseWelfareSettings(settingsRows[0]?.welfareOfficers, settingsRows[0]?.welfareDuty);
@@ -103,6 +105,7 @@ export default async function RotaPage({ searchParams }: { searchParams: Promise
           </ul>
         </details>
       ) : null}
+      {example?.loaded ? <ExampleWeekNotice instructors={example.instructors} sessions={example.sessions} from={example.from} to={example.to} week={null} showRosterLink={false} /> : null}
       {board ? <RosterBoard data={board} canEdit={canEdit} /> : <RotaView rota={rota} welfareOfficers={welfare.officers} canEditWelfare={canEdit} problems={flags} />}
       <p className="mt-4 text-center text-xs text-slate-400 print:mt-2">Generated from ActivityRoster · {new Date().toLocaleDateString("en-GB")}</p>
     </div>

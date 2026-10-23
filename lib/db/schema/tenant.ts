@@ -395,6 +395,8 @@ export const instructor = sqliteTable("instructor", {
   notifyEmail: boolCol("notify_email").default(true),
   /** Who keeps this person's availability (see MANAGED_BY); null follows the centre's setting. */
   managedBy: text("managed_by", { enum: MANAGED_BY }),
+  /** Where this person came from: "example" for the made-up people of the example week (cleared together). Null = added by the centre. */
+  source: text("source"),
   /** YYYY-MM-DD. Drives the under-18 flag (computed on read, lifts at 18) and its higher-privacy defaults. */
   dateOfBirth: text("date_of_birth"),
   /** Parent or guardian emergency contact for under-18s. Phone and email are sealed (AES-GCM) at rest. */

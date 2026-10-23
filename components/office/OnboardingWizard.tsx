@@ -24,6 +24,7 @@ import { schemeDiscipline, type TeachingData, type TypeOption } from "@/lib/doma
 import { InstructorTypesEditor, approvalsToSave, taughtCount, type TypesValue } from "./InstructorTypesEditor";
 import { CourseTeachersEditor, type TeacherTick } from "./CourseTeachersEditor";
 import { RosterExampleUpload, type RosterExampleRow } from "./RosterExampleUpload";
+import { LoadExampleWeekButton } from "./ExampleWeek";
 
 export interface CourseTypeOpt { id: string; name: string; scheme: string | null; audience: CourseAudience; category: string | null; active: boolean }
 export interface TeamMember { name: string; employment: string; quals: number; courses?: number; invited?: boolean }
@@ -609,6 +610,12 @@ export function OnboardingWizard({
               <li><strong className="text-navy">Spreadsheet.</strong> Import the season in one go. When new courses come in, import the updated file again: courses already on the calendar are skipped, so only the new ones are added. <a href="/office/import" className="font-semibold text-teal hover:underline">Import courses →</a></li>
               <li><strong className="text-navy">By hand.</strong> Courses → New course, for the odd one-off. <a href="/office/courses" className="font-semibold text-teal hover:underline">Open Courses →</a></li>
             </ul>
+          </div>
+
+          <div className="mx-auto mt-4 max-w-xl rounded-lg border border-dashed border-slate-300 p-4">
+            <p className="font-semibold text-navy">Or see a working roster first</p>
+            <p className="mt-1 text-sm text-slate-600">Six made-up instructors and a week of sessions go on the roster, filled by Auto-roster, so you can try everything before adding your own. One click clears it, and only it.</p>
+            <div className="mt-3"><LoadExampleWeekButton /></div>
           </div>
 
           {features.size > 0 ? (
