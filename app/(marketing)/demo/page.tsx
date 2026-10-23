@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ProductTour } from "@/components/marketing/ProductTour";
 import { DemoGate } from "@/components/marketing/DemoGate";
+import { HomeExplainer } from "@/components/marketing/HomeExplainer";
 
 export const metadata = {
   title: "Demo — a week at a busy sailing centre",
@@ -15,14 +16,15 @@ export default function DemoPage() {
         <p className="text-sm font-semibold uppercase tracking-wide text-teal">Demo</p>
         <h1 className="mt-1 font-display text-3xl font-bold text-navy">A week at a busy centre</h1>
         <p className="mx-auto mt-2 max-w-2xl text-slate-600">
-          Real screens from the platform, set up as a made-up centre in the middle of July: summer camps, club
-          nights and powerboat courses, eighteen instructors, and the problems a real week throws up. Step through
-          it in the order a new centre gets going: set up courses and team, put the courses on the calendar,
-          build and confirm the roster, run the season; then see the instructor app.
+          Real screens from the platform at a made-up centre in a busy week: camps, club nights and powerboat
+          courses, a dozen instructors, and the problems a real week throws up. Step through it in the order a new
+          centre gets going: set up courses and team, put the courses on the calendar, build and confirm the
+          roster, run the season; then see the instructor app.
         </p>
       </div>
 
       <DemoGate>
+        <HomeExplainer compact />
         <ProductTour />
       </DemoGate>
 

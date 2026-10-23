@@ -32,11 +32,11 @@ export function ProductTour() {
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[15rem_minmax(0,1fr)]">
-      <nav aria-label="Tour stops" className="min-w-0">
+      <nav aria-label="Tour stops" className="order-2 min-w-0 lg:order-1">
         {TOUR.map((g) => (
           <div key={g.group} className="mb-2 lg:mb-4">
             <p className="mb-1 px-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{g.group}</p>
-            <ul className="flex gap-1.5 overflow-x-auto pb-1 lg:flex-col lg:gap-0.5 lg:overflow-visible lg:pb-0">
+            <ul className="flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:gap-0.5 lg:overflow-visible lg:pb-0">
               {g.ids.map((sid) => {
                 const on = sid === id;
                 return (
@@ -45,7 +45,7 @@ export function ProductTour() {
                       type="button"
                       onClick={() => setIndex(ORDER.indexOf(sid))}
                       aria-current={on ? "true" : undefined}
-                      className={`w-full whitespace-nowrap rounded-lg px-3 py-1.5 text-left text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-teal ${on ? "bg-navy text-white" : "text-slate-600 hover:bg-slate-100"}`}
+                      className={`w-full whitespace-nowrap rounded-lg px-3 py-2 text-left text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-teal ${on ? "bg-navy text-white" : "text-slate-600 hover:bg-slate-100"}`}
                     >
                       {SCREENS[sid].title}
                     </button>
@@ -57,7 +57,7 @@ export function ProductTour() {
         ))}
       </nav>
 
-      <figure className="min-w-0">
+      <figure className="order-1 min-w-0 lg:order-2">
         <div className={screen.device === "phone" ? "mx-auto w-full max-w-[300px]" : ""}>
           <ScreenShot key={id} screen={screen} eager />
         </div>
@@ -73,6 +73,7 @@ export function ProductTour() {
             <button type="button" onClick={() => go(1)} aria-label="Next screen" className="rounded-lg bg-navy px-3 py-1.5 text-sm font-semibold text-white hover:bg-navy-700">Next →</button>
           </div>
         </figcaption>
+        <p className="mt-4 text-sm text-slate-500">Like what you see? <a href="/start?src=demo" className="font-semibold text-teal hover:underline">Start my free month →</a> No card, ready in a minute.</p>
         <link rel="prefetch" href={next.src} as="image" />
       </figure>
     </div>

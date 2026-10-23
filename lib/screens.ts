@@ -1,6 +1,6 @@
 /**
  * Real screenshots of the platform (public/screens), taken from a made-up busy
- * centre, "Lough Shore Sailing Centre", in the week of 13 July 2026. Every
+ * centre, "Lakeside Sailing Centre", in a busy week (videos/screens.mjs retakes them). Every
  * person, phone number and course in them is invented. One catalogue feeds
  * the demo tour (/demo) and the Learning Centre (/learn), so a retake only
  * has to replace the files.

@@ -4,13 +4,21 @@ import { useEffect, useState } from "react";
 import { EXPLAINER, videoUrl } from "@/lib/learn/videos";
 import { GuideVideo } from "./GuideVideo";
 
-/** The homepage's two-minute explainer, shown once the video is on the site. */
-export function HomeExplainer() {
+/** The two-minute explainer, shown once the video is on the site: a full band on the home page, or compact (video and one line) at the top of the demo. */
+export function HomeExplainer({ compact = false }: { compact?: boolean }) {
   const [ready, setReady] = useState(false);
   useEffect(() => {
     fetch(videoUrl(EXPLAINER, "png"), { method: "HEAD" }).then((r) => setReady(r.ok)).catch(() => {});
   }, []);
   if (!ready) return null;
+  if (compact) {
+    return (
+      <div className="mb-8">
+        <GuideVideo video={EXPLAINER} />
+        <p className="mt-3 text-center text-sm text-slate-600">Two minutes on what it does; the screens below are the detail.</p>
+      </div>
+    );
+  }
   return (
     <section id="see-it" className="border-b border-slate-200 bg-canvas">
       <div className="mx-auto max-w-4xl px-4 py-12 md:py-16">

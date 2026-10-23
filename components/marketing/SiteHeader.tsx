@@ -8,13 +8,14 @@ import { Logo } from "@/components/Logo";
 /** Primary nav shown on desktop — kept short so the header stays uncluttered. */
 const PRIMARY = [
   { href: "/pricing", label: "Pricing" },
-  { href: "/learn", label: "Learn" },
+  { href: "/learn", label: "Learning Centre" },
   { href: "/contact", label: "Contact" },
 ];
 
 /** The full set, shown in the mobile menu (secondary pages too). */
 const ALL = [
   { href: "/start", label: "Start my free month" },
+  { href: "/features", label: "Features" },
   { href: "/pricing", label: "Pricing" },
   { href: "/compare", label: "Compare" },
   { href: "/learn", label: "Learning Centre" },

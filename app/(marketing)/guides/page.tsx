@@ -3,7 +3,7 @@ import { GUIDES } from "@/lib/seo/guides";
 import { LANDINGS } from "@/lib/seo/landings";
 
 export const metadata = {
-  title: "Sailing School Guides: Staffing, Rotas & Compliance",
+  title: "Sailing school guides",
   description: "Practical answers for RYA sailing schools: instructor ratios, availability, qualification tracking, safety boats, freelancers, a free staff rota template and a compliance checklist.",
   alternates: { canonical: "/guides" },
 };

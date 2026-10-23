@@ -35,7 +35,7 @@ export default async function ComingSoonPage({ searchParams }: { searchParams: P
         {sp.wrong ? <p role="alert" className="text-sm text-amber-200">That PIN didn&apos;t work. Try again.</p> : null}
         <button type="submit" className="rounded-lg bg-white px-4 py-3 font-semibold text-navy hover:bg-white/90">View the site</button>
       </form>
-      <p className="mt-12 text-xs text-white/50">Already using ActivityRoster? <a href="/login" className="underline hover:text-white">Sign in</a></p>
+      <p className="mt-12 text-xs text-white/50">Already using ActivityRoster? <a href="/sign-in" className="underline hover:text-white">Sign in</a></p>
     </main>
   );
 }

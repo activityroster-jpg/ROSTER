@@ -19,7 +19,7 @@ export function DemoGate({ children }: { children: React.ReactNode }) {
   return (
     <div className="mx-auto max-w-xl rounded-card border border-slate-200 bg-white p-6 shadow-lg">
       <p className="font-display text-xl font-semibold text-navy">See every screen</p>
-      <p className="mb-4 mt-1 text-sm text-slate-600">Enter your email and the tour opens straight away: the office, the roster board, payroll and the instructor app, at a made-up centre in July.</p>
+      <p className="mb-4 mt-1 text-sm text-slate-600">Enter your email and the tour opens straight away: the office, the roster board, payroll and the instructor app, at a made-up centre in a busy week.</p>
       <EmailStart source="demo" variant="demo" buttonLabel="Open the tour" onOpened={() => setOpen(true)} />
     </div>
   );
