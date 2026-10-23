@@ -1,80 +1,8 @@
 import { and, asc, desc, eq, getTableColumns, gte, inArray, lt, lte, sql } from "drizzle-orm";
 import type { Database } from "@/lib/db/client";
+import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import { inList, rowsPerInsert } from "@/lib/db/params";
-import {
-  organisation,
-  membership,
-  user,
-  instructor,
-  orgSettings,
-  course,
-  courseSession,
-  auditLog,
-  marketingProspect,
-  marketingInteraction,
-  platformPricing,
-  blogPost,
-  integration,
-  platformTask,
-  financeTransaction,
-  financeSettings,
-  financeReceiptInbox,
-  outreachCampaign,
-  outreachLead,
-  outreachMessage,
-  outreachSuppression,
-  aiUsage,
-  privacyRequest,
-  trialFeedback,
-  errorReport,
-  emailOutbox,
-  pushOutbox,
-  jobPost,
-  jobSync,
-  callAvailability,
-  callBooking,
-  type CallAvailability,
-  type NewCallAvailability,
-  type CallBooking,
-  type NewCallBooking,
-  type CallBookingStatus,
-  type BlogPost,
-  type NewBlogPost,
-  type MarketingProspect,
-  type MarketingInteraction,
-  type ProspectInteractionKind,
-  type NewMarketingProspect,
-  type Organisation,
-  type PlatformPricing,
-  type PlatformTask,
-  type NewPlatformTask,
-  type FinanceTransaction,
-  type NewFinanceTransaction,
-  type FinanceReceiptInbox,
-  type NewFinanceReceiptInbox,
-  type FinanceSettings,
-  type OutreachCampaign,
-  type NewOutreachCampaign,
-  type OutreachLead,
-  type NewOutreachLead,
-  type OutreachMessage,
-  type OutreachSuppression,
-  type AiUsage,
-  type NewAiUsage,
-  type PrivacyRequest,
-  type TrialFeedback,
-  type NewTrialFeedback,
-  type NewPrivacyRequest,
-  type PrivacyRequestStatus,
-  type EmailOutbox,
-  type NewEmailOutbox,
-  type PushOutbox,
-  type EmailOutboxStatus,
-  type OutreachLeadStatus,
-  type SuppressionReason,
-  type TaskStatus,
-  type ProspectStatus,
-} from "@/lib/db/schema";
+import { organisation, membership, user, instructor, orgSettings, course, courseSession, auditLog, marketingProspect, marketingInteraction, platformPricing, blogPost, integration, platformTask, financeTransaction, financeSettings, financeReceiptInbox, outreachCampaign, outreachLead, outreachMessage, outreachSuppression, aiUsage, privacyRequest, trialFeedback, errorReport, emailOutbox, pushOutbox, jobPost, jobSync, callAvailability, callBooking, type CallAvailability, type NewCallAvailability, type CallBooking, type NewCallBooking, type CallBookingStatus, type BlogPost, type NewBlogPost, type MarketingProspect, type MarketingInteraction, type ProspectInteractionKind, type NewMarketingProspect, type Organisation, type PlatformPricing, type PlatformTask, type NewPlatformTask, type FinanceTransaction, type NewFinanceTransaction, type FinanceReceiptInbox, type NewFinanceReceiptInbox, type FinanceSettings, type OutreachCampaign, type NewOutreachCampaign, type OutreachLead, type NewOutreachLead, type OutreachMessage, type OutreachSuppression, type AiUsage, type NewAiUsage, type PrivacyRequest, type TrialFeedback, type NewTrialFeedback, type NewPrivacyRequest, type PrivacyRequestStatus, type EmailOutbox, type NewEmailOutbox, type PushOutbox, type EmailOutboxStatus, type OutreachLeadStatus, type SuppressionReason, type TaskStatus, type ProspectStatus, courseStaff, rosterDay, lead, onboardingEmail, type Lead, type OnboardingEmail, type OnboardingEmailStep } from "@/lib/db/schema";
 import { DEFAULT_PRICING } from "@/lib/pricing";
 import { parseProspectStatuses, primaryProspectStatus, prospectStatusRank } from "@/lib/marketing";
 
@@ -82,6 +10,22 @@ export interface OrgUsage {
   instructors: number;
   courses: number;
   sessions: number;
+}
+
+/** The setup actions the Funnel page and the welcome series read from each centre's change log. */
+export const FUNNEL_ACTIONS = ["onboarding_set_preferences", "onboarding_set_courses", "invite_instructor", "load_example_week", "auto_roster"] as const;
+
+export interface FunnelMilestones {
+  /** The centre's own people (the example week's never count), and how many are linked to an app login. */
+  instructors: number;
+  linked: number;
+  courses: number;
+  shifts: number;
+  confirmedDays: number;
+  /** The office keeps availability, so nobody needs the app. */
+  officeRuns: boolean;
+  /** Which of FUNNEL_ACTIONS the change log holds. */
+  actions: Set<string>;
 }
 
 export interface OrgMember {
@@ -501,6 +445,83 @@ export class PlatformRepository {
       .orderBy(desc(auditLog.createdAt))
       .limit(limit);
     return rows;
+  }
+
+  // --- Funnel and welcome series (Dev Center → Funnel; lib/services/welcome-series)
+
+  async listLeads(limit = 300): Promise<Lead[]> {
+    return this.db.select().from(lead).orderBy(desc(lead.createdAt)).limit(limit);
+  }
+
+  async leadById(id: string): Promise<Lead | null> {
+    const rows = await this.db.select().from(lead).where(eq(lead.id, id)).limit(1);
+    return rows[0] ?? null;
+  }
+
+  /** Lower-cased emails already on the prospect list, so a lead is added once. */
+  async prospectEmails(): Promise<Set<string>> {
+    const rows = await this.db.select({ email: marketingProspect.email }).from(marketingProspect);
+    return new Set(rows.map((r) => (r.email ?? "").trim().toLowerCase()).filter(Boolean));
+  }
+
+  /** Each centre's owner login (the earliest owner, else its earliest admin): who the welcome series writes to, and whether they confirmed their email. */
+  async ownersByOrg(): Promise<Map<string, { userId: string; email: string; emailVerified: boolean }>> {
+    const rows = await this.db
+      .select({ org: membership.organisationId, userId: user.id, email: user.email, emailVerified: user.emailVerified, role: membership.role, created: membership.createdAt })
+      .from(membership)
+      .innerJoin(user, eq(user.id, membership.userId))
+      .where(inArray(membership.role, ["owner", "admin"]));
+    const best = new Map<string, { userId: string; email: string; emailVerified: boolean; rank: number; created: number }>();
+    for (const r of rows) {
+      const created = r.created instanceof Date ? r.created.getTime() : Number(r.created ?? 0);
+      const rank = r.role === "owner" ? 0 : 1;
+      const cur = best.get(r.org);
+      if (!cur || rank < cur.rank || (rank === cur.rank && created < cur.created)) best.set(r.org, { userId: r.userId, email: r.email, emailVerified: Boolean(r.emailVerified), rank, created });
+    }
+    return new Map([...best].map(([org, v]) => [org, { userId: v.userId, email: v.email, emailVerified: v.emailVerified }]));
+  }
+
+  /**
+   * How far each centre has got, from its own data (the example week never
+   * counts): people added and linked to the app, courses on the calendar,
+   * shifts on the roster, days confirmed, whether the office keeps
+   * availability, and which setup actions its change log holds.
+   */
+  async funnelMilestones(): Promise<Map<string, FunnelMilestones>> {
+    const notExample = (col: SQLiteColumn) => sql`(${col} is null or ${col} <> 'example')`;
+    const [people, courses, shifts, days, settings, actions] = await Promise.all([
+      this.db.select({ org: instructor.organisationId, n: sql<number>`count(*)`, linked: sql<number>`sum(case when ${instructor.userId} is not null then 1 else 0 end)` }).from(instructor).where(notExample(instructor.source)).groupBy(instructor.organisationId),
+      this.db.select({ org: course.organisationId, n: sql<number>`count(*)` }).from(course).where(notExample(course.source)).groupBy(course.organisationId),
+      this.db.select({ org: courseStaff.organisationId, n: sql<number>`count(*)` }).from(courseStaff).innerJoin(instructor, eq(instructor.id, courseStaff.instructorId)).where(notExample(instructor.source)).groupBy(courseStaff.organisationId),
+      this.db.select({ org: rosterDay.organisationId, n: sql<number>`count(*)` }).from(rosterDay).where(sql`${rosterDay.confirmedAt} is not null`).groupBy(rosterDay.organisationId),
+      this.db.select({ org: orgSettings.organisationId, managedBy: orgSettings.staffManagedBy }).from(orgSettings),
+      this.db.select({ org: auditLog.organisationId, action: auditLog.action }).from(auditLog).where(inArray(auditLog.action, [...FUNNEL_ACTIONS])).groupBy(auditLog.organisationId, auditLog.action),
+    ]);
+    const map = new Map<string, FunnelMilestones>();
+    const ensure = (id: string): FunnelMilestones => {
+      let m = map.get(id);
+      if (!m) { m = { instructors: 0, linked: 0, courses: 0, shifts: 0, confirmedDays: 0, officeRuns: false, actions: new Set() }; map.set(id, m); }
+      return m;
+    };
+    for (const r of people) { const m = ensure(r.org); m.instructors = Number(r.n); m.linked = Number(r.linked ?? 0); }
+    for (const r of courses) ensure(r.org).courses = Number(r.n);
+    for (const r of shifts) ensure(r.org).shifts = Number(r.n);
+    for (const r of days) ensure(r.org).confirmedDays = Number(r.n);
+    for (const r of settings) ensure(r.org).officeRuns = r.managedBy === "office";
+    for (const r of actions) ensure(r.org).actions.add(r.action);
+    return map;
+  }
+
+  async onboardingEmails(): Promise<Map<string, OnboardingEmail[]>> {
+    const rows = await this.db.select().from(onboardingEmail).orderBy(asc(onboardingEmail.createdAt));
+    const out = new Map<string, OnboardingEmail[]>();
+    for (const r of rows) out.set(r.organisationId, [...(out.get(r.organisationId) ?? []), r]);
+    return out;
+  }
+
+  /** Record a step as sent or skipped; a second record for the same centre and step is ignored. */
+  async recordOnboardingEmail(values: { organisationId: string; step: OnboardingEmailStep; status: "sent" | "skipped"; sentTo: string | null }): Promise<void> {
+    await this.db.insert(onboardingEmail).values(values).onConflictDoNothing();
   }
 
   // --- Global pricing ------------------------------------------------------

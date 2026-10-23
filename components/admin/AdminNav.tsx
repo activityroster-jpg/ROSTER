@@ -16,6 +16,7 @@ export function adminSections(opts: { staging: boolean }): NavSection[] {
   return [
     { id: "overview", label: "Overview", pages: [
       { href: "/admin", label: "Centres", hint: "every centre, its plan and status" },
+      { href: "/admin/funnel", label: "Funnel", hint: "sign-ups from the first email to the first roster, the welcome series, and the leads behind them" },
       { href: "/admin/finance", label: "Finance", hint: "revenue, pricing and discounts" },
       { href: "/admin/tasks", label: "Tasks", hint: "the build and launch planner" },
       { href: "/admin/requests", label: "Requests", hint: "feature requests and problem reports from centres" },

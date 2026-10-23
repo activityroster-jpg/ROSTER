@@ -25,6 +25,7 @@ describe("every centre table is covered by the isolation test", () => {
       "trial_feedback", // the trial-end survey, read in the Dev Center
       "feature_request", // requests centres send to ActivityRoster, read in the Dev Center; the board shows only the public title
       "feature_request_vote", // "we need this too" counts, never shown by centre
+      "onboarding_email", // which step of the welcome series each centre has had, written by the hourly sweep and read in the Dev Center
     ]);
     const missing = withOrg.filter((n) => !listed.has(n) && !controlPlane.has(n));
     expect(missing, "add these to TENANT_TABLES and createTenantRepositories, or to the control-plane list here with a reason").toEqual([]);

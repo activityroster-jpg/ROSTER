@@ -349,6 +349,32 @@ export const lead = sqliteTable("lead", {
   createdAt: createdAt(),
 }, (t) => [uniqueIndex("lead_email_uq").on(t.email)]);
 
+// --- Welcome series (lib/services/welcome-series) ---------------------------
+
+export const ONBOARDING_EMAIL_STEPS = ["welcome", "courses", "team", "trial_ending"] as const;
+export type OnboardingEmailStep = (typeof ONBOARDING_EMAIL_STEPS)[number];
+export const ONBOARDING_EMAIL_STATUSES = ["sent", "skipped"] as const;
+
+/**
+ * One row per centre per step of the welcome series: sent, or skipped because
+ * the step no longer applied (courses already in, team already invited, a plan
+ * chosen, or the window passed). Control-plane: the hourly sweep reads every
+ * centre in one pass, and the Dev Center's Funnel page shows the result.
+ */
+export const onboardingEmail = sqliteTable("onboarding_email", {
+  id: id(),
+  organisationId: text("organisation_id").notNull(),
+  step: text("step", { enum: ONBOARDING_EMAIL_STEPS }).notNull(),
+  status: text("status", { enum: ONBOARDING_EMAIL_STATUSES }).notNull(),
+  /** The owner address it went to (null when skipped). */
+  sentTo: text("sent_to"),
+  createdAt: createdAt(),
+}, (t) => [
+  uniqueIndex("onboarding_email_org_step_uq").on(t.organisationId, t.step),
+  index("onboarding_email_org_idx").on(t.organisationId),
+]);
+export type OnboardingEmail = typeof onboardingEmail.$inferSelect;
+
 // --- Marketing prospects (platform-owner outreach CRM) ---------------------
 
 /** Outreach pipeline stage for a prospect centre/club. */

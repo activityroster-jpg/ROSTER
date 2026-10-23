@@ -6,6 +6,7 @@ import { researchBatch, runDueSends } from "@/lib/outreach/engine";
 import { sendDailyDigests } from "@/lib/services/digest";
 import { sweepLeaving } from "@/lib/services/leaving";
 import { sweepTrialSurvey } from "@/lib/services/trial-survey";
+import { sweepWelcomeSeries } from "@/lib/services/welcome-series";
 import { drainEmailQueue } from "@/lib/mail/queue";
 import { drainPushQueue } from "@/lib/push/queue";
 import { sweepRetention } from "@/lib/services/retention";
@@ -41,6 +42,8 @@ async function tick(req: Request) {
   const leaving = await sweepLeaving(db, env).catch((e: Error) => ({ checked: 0, reminded: 0, due: 0, error: e.message }));
   // Trial ended without a plan: invite the admins once to the survey that earns another free month.
   const trialSurvey = await sweepTrialSurvey(db, env).catch((e: Error) => ({ checked: 0, sent: 0, error: e.message }));
+  // New centres: the welcome series, one step at a time, each once.
+  const welcome = await sweepWelcomeSeries(db, env).catch((e: Error) => ({ checked: 0, sent: 0, skipped: 0, error: e.message }));
   // Invitations nobody has answered after a day: one reminder each.
   const inviteReminders = await sweepInviteReminders(db, env).catch((e: Error) => ({ due: 0, sent: 0, error: e.message }));
   // Invitations a centre's daily cap held back (fair use): they go once the new day's allowance opens.
@@ -54,7 +57,7 @@ async function tick(req: Request) {
   const rateLimitsPurged = await new ControlPlaneRepository(db).purgeRateLimits().catch(() => 0);
   const retention = await sweepRetention(db, env).catch((e: Error) => ({ centres: 0, ran: 0, reminded: 0, platform: {}, error: e.message }));
   await recordTick();
-  return NextResponse.json({ ok: true, campaigns: running.length, research, sends, digests, leaving, trialSurvey, inviteReminders, queuedInvites, mail, push, pushPurged, retention, rateLimitsPurged });
+  return NextResponse.json({ ok: true, campaigns: running.length, research, sends, digests, leaving, trialSurvey, welcome, inviteReminders, queuedInvites, mail, push, pushPurged, retention, rateLimitsPurged });
 }
 
 export async function POST(req: Request) { return tick(req); }

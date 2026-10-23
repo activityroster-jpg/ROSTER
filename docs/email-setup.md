@@ -179,3 +179,23 @@ day to day; Postmark is only used when Resend fails.
    and shows the date of the last failover, if any.
 
 Tell customers before step 5: Postmark is in `docs/subprocessors.md` as pending.
+
+## Welcome series (new centres)
+
+Four service emails to each new centre's owner in its first month, sent by the hourly
+tick (`lib/services/welcome-series.ts`), each once per centre:
+
+| Step | When | Skipped when |
+|---|---|---|
+| Welcome: the three steps and the guide | the first tick after the owner confirms their email (never after day 3) | the email is never confirmed |
+| Put your courses on the calendar | day 2 (until day 7) | the centre already has courses of its own |
+| Invite your team to the app | day 7 (until day 14) | someone is already linked to the app, or the office keeps availability |
+| Your free month ends on … | five days before the trial ends | a plan has been chosen, or the trial has already ended |
+
+Each email links the centre's own office pages, the matching video and the Learning
+Centre. Nothing goes to the platform owner's centres (`PLATFORM_ADMIN_EMAILS`) or the
+app-store reviewer logins (`APP_REVIEW_EMAILS`). What was sent or skipped, per centre,
+is on the Dev Center's **Funnel** page, which also counts sign-ups stage by stage
+(email entered, centre created, email confirmed, wizard steps, team, invites, courses,
+first roster, first confirmed day, plan chosen) from the centres' own data.
+
