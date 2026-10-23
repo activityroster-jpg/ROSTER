@@ -163,6 +163,8 @@ export const organisation = sqliteTable("organisation", {
   id: id(),
   name: text("name").notNull(),
   slug: text("slug").notNull(),
+  /** When the centre changed its web address itself (allowed once, within 30 days of signing up). */
+  slugChangedAt: integer("slug_changed_at", { mode: "timestamp_ms" }),
   jurisdiction: text("jurisdiction", { enum: JURISDICTIONS }).notNull(),
   activityType: text("activity_type", { enum: ACTIVITY_TYPES }).notNull().default("rya_centre"),
   plan: text("plan", { enum: PLANS }).notNull().default("rostering"),

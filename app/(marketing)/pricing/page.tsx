@@ -116,7 +116,7 @@ export default async function PricingPage() {
                 {t.userCap ? null : <Link href="/terms#fair-use" className="mt-1.5 self-start text-xs text-slate-500 underline hover:text-navy">Fair use applies</Link>}
                 <div className="mt-auto pt-6">
                   <a
-                    href="/#get-demo"
+                    href={`/start?plan=${tid}&src=pricing`}
                     className={`block rounded-lg px-6 py-3 text-center font-semibold transition ${popular ? "bg-teal text-white hover:bg-teal-700" : "border border-teal text-teal hover:bg-teal/5"}`}
                   >
                     {freeFirstMonth ? "Start my free month" : "Get started"}

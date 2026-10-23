@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRight, Check, ShieldCheck } from "lucide-react";
 import { ComplianceFlow } from "@/components/marketing/ComplianceFlow";
 import { ScreenShot } from "@/components/marketing/ScreenShot";
-import { LeadCapture } from "@/components/marketing/LeadCapture";
+import { EmailStart } from "@/components/marketing/EmailStart";
 import { SCREENS } from "@/lib/screens";
 import { apexDomain } from "@/lib/config";
 
@@ -152,7 +152,7 @@ export default function DivingPage() {
             <Link href="/pricing" className="mt-5 inline-flex items-center gap-1 text-sm font-semibold text-white/80 hover:text-white">See pricing <ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
           </div>
           <div className="rounded-card bg-white p-6 shadow-xl">
-            <LeadCapture source="landing:diving" variant="inline" apex={apex} defaultActivityType="padi_centre" />
+            <EmailStart source="landing:diving" activityType="padi_centre" />
           </div>
         </div>
       </section>

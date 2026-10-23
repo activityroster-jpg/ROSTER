@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { BuiltWithCentres } from "@/components/marketing/BuiltWithCentres";
 import { AlertTriangle, Anchor, ArrowRight, BookOpen, CalendarCheck, CalendarOff, ClipboardCheck, Clock, FileCheck, FileText, GitCompare, KeyRound, LifeBuoy, Newspaper, ShieldCheck, Ship, Smartphone, Sparkles, Tag, Upload, Users, Wallet, Waves } from "lucide-react";
-import { LeadCapture } from "@/components/marketing/LeadCapture";
+import { EmailStart } from "@/components/marketing/EmailStart";
 import { ComplianceFlow } from "@/components/marketing/ComplianceFlow";
 import { ScreenShot } from "@/components/marketing/ScreenShot";
 import { HomeExplainer } from "@/components/marketing/HomeExplainer";
@@ -162,16 +162,12 @@ export default function MarketingHome() {
               Build rotas that are actually ready to run. ActivityRoster checks each instructor&rsquo;s type against the place and
               the course, availability, course ratios and Senior Instructor cover as you schedule.
             </p>
-            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-              <a href="#get-demo" className="rounded-lg bg-[#0C6B74] px-6 py-3.5 text-center font-semibold text-white shadow-lg transition hover:bg-teal-700">
-                Start my free month →
-              </a>
-              <Link href="/demo" className="rounded-lg border border-white/30 px-6 py-3.5 text-center font-semibold text-white hover:bg-white/10">
-                Take the tour
-              </Link>
+            <div className="mt-7 max-w-xl">
+              <EmailStart source="hero" variant="hero" />
             </div>
             <p className="mt-3 text-sm text-white/70">
-              Free for a month · no card · set up in an afternoon ·{" "}
+              <Link href="/demo" className="font-semibold text-white underline decoration-white/40 underline-offset-2 hover:decoration-white">Take the tour first</Link>
+              {" "}· set up in an afternoon ·{" "}
               <Link href="/pricing" className="font-semibold text-white underline decoration-white/40 underline-offset-2 hover:decoration-white">from £35/month</Link>
             </p>
           </div>
@@ -362,7 +358,7 @@ export default function MarketingHome() {
             </ul>
           </div>
           <div className="rounded-card bg-white p-6 shadow-xl">
-            <LeadCapture source="footer" variant="inline" apex={apex} />
+            <div className="rounded-card bg-white p-6 shadow-lg"><EmailStart source="footer" /></div>
           </div>
         </div>
       </section>

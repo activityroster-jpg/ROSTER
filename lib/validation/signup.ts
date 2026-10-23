@@ -48,6 +48,10 @@ export const trialSignupSchema = z.object({
   acceptedTerms: z.literal(true, {
     errorMap: () => ({ message: "Please agree to the Terms and Privacy Policy to continue." }),
   }),
+  /** The plan chosen on the pricing page, if any (the centre can change it later). */
+  tier: z.enum(["small_club", "standard"]).optional(),
+  /** Which box on the site the sign-up came from, for the funnel. */
+  source: z.string().trim().max(60).optional(),
 });
 
 export type TrialSignupInput = z.infer<typeof trialSignupSchema>;

@@ -6,6 +6,9 @@ import { GeneralSettingsForm } from "@/components/office/GeneralSettingsForm";
 import { ConfigManager, type ConfigItem } from "@/components/office/ConfigManager";
 import { BreakPolicyForm } from "@/components/office/BreakPolicyForm";
 import { CompanyCodeCard } from "@/components/office/CompanyCodeCard";
+import { WebAddressCard } from "@/components/office/WebAddressCard";
+import { SLUG_CHANGE_WINDOW_MS } from "./actions";
+import { apexDomain } from "@/lib/config";
 import { CourseScheduleDefaults } from "@/components/office/CourseScheduleDefaults";
 import { TimeclockSettingsForm } from "@/components/office/TimeclockSettingsForm";
 import { parseDefaultSchedule } from "@/lib/domain";
@@ -142,6 +145,23 @@ export default async function SettingsPage() {
         ]}
         panels={{
           general: (<>
+      <Card className="mb-6">
+        <div className="mb-1 flex items-center justify-between">
+          <h2 className="font-semibold text-navy">Web address</h2>
+          <a href="/learn?topic=settings" target="_blank" rel="noreferrer" className="text-xs font-medium text-teal hover:underline">📖 Read the guide</a>
+        </div>
+        {(() => {
+          const created = organisation.createdAt instanceof Date ? organisation.createdAt.getTime() : Number(organisation.createdAt);
+          const daysLeft = Math.ceil((created + SLUG_CHANGE_WINDOW_MS - Date.now()) / 86_400_000);
+          const canChange = ctx.role === "owner" && !organisation.slugChangedAt && daysLeft > 0;
+          const reason = organisation.slugChangedAt
+            ? "The address was changed once and is now fixed, so every link your team has still works."
+            : daysLeft > 0
+              ? (ctx.role === "owner" ? `It can be changed once, within ${daysLeft} more day${daysLeft === 1 ? "" : "s"}. After that it is fixed, because every link your team has been sent points at it.` : "The owner can change it once within 30 days of signing up.")
+              : "The address is fixed now: every link your team has been sent points at it.";
+          return <WebAddressCard slug={organisation.slug} apex={apexDomain()} canChange={canChange} reason={reason} />;
+        })()}
+      </Card>
       <Card className="mb-6">
         <div className="mb-1 flex items-center justify-between">
           <h2 className="font-semibold text-navy">Company code · instructor app</h2>

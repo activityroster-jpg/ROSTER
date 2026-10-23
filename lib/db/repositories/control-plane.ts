@@ -74,6 +74,18 @@ export class ControlPlaneRepository {
 
   /** Permanently delete an organisation. Cascades to all tenant-owned tables
    *  (ON DELETE CASCADE) — GDPR erasure. */
+  /**
+   * Give a centre a new web address. The caller has checked the format, the
+   * reserved list and the 30-day rule; this checks nobody else holds it and
+   * records when it happened. Returns false when the address is taken.
+   */
+  async changeSlug(id: string, newSlug: string): Promise<boolean> {
+    const slug = newSlug.toLowerCase();
+    if (await this.slugTaken(slug)) return false;
+    const rows = await this.db.update(organisation).set({ slug, slugChangedAt: new Date(), updatedAt: new Date() }).where(eq(organisation.id, id)).returning({ id: organisation.id });
+    return rows.length > 0;
+  }
+
   async deleteOrganisation(id: string): Promise<void> {
     await this.db.delete(organisation).where(eq(organisation.id, id));
   }

@@ -18,6 +18,7 @@ import { parseRetention, RETENTION_DEFAULTS } from "@/lib/services/retention";
 import { SLOT_CODES } from "@/lib/db/schema";
 import { cleanTrackerConfig } from "@/lib/validation/onboarding-tracker";
 import { saveTracker } from "@/lib/services/onboarding-tracker";
+import { isReservedSubdomain, SLUG_PATTERN } from "@/lib/tenant/reserved";
 
 export type ActionState = { ok: boolean; error?: string; message?: string };
 
@@ -246,6 +247,27 @@ export async function regenerateJoinCodeAction(): Promise<ActionState> {
   await writeAudit(repos, ctx, { action: "regenerate_join_code", entity: "org_settings", before: { code: before }, after: { code: after } });
   revalidatePath("/office/settings");
   return { ok: true, message: "New company code issued" };
+}
+
+/** How long after signing up the web address may still be changed (once). */
+export const SLUG_CHANGE_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
+
+/**
+ * Change the centre's web address: owner only, once, within 30 days of signing
+ * up, to a valid unreserved address nobody else holds. Logged.
+ */
+export async function changeSlugAction(input: string): Promise<ActionState> {
+  const { ctx, repos, organisation } = await requireTenant({ owner: true });
+  const next = z.string().trim().toLowerCase().regex(SLUG_PATTERN, "Use 3–63 letters, numbers or hyphens").safeParse(input);
+  if (!next.success) return { ok: false, error: next.error.issues[0]?.message ?? "That address isn't valid" };
+  if (isReservedSubdomain(next.data)) return { ok: false, error: "That address is reserved — choose another" };
+  if (next.data === organisation.slug) return { ok: true, message: "That is already your address" };
+  if (organisation.slugChangedAt) return { ok: false, error: "The address has already been changed once; it is now fixed" };
+  const created = organisation.createdAt instanceof Date ? organisation.createdAt.getTime() : Number(organisation.createdAt);
+  if (Date.now() - created > SLUG_CHANGE_WINDOW_MS) return { ok: false, error: "The address can only be changed in the first 30 days" };
+  if (!(await repos.control.changeSlug(ctx.organisationId, next.data))) return { ok: false, error: "That address is already taken — try another" };
+  await writeAudit(repos, ctx, { action: "change_web_address", entity: "organisation", entityId: ctx.organisationId, before: { slug: organisation.slug }, after: { slug: next.data } });
+  return { ok: true, message: "Address changed" };
 }
 
 /** Save how the roster PDF is laid out (onboarding step and Settings → Roster PDF). */

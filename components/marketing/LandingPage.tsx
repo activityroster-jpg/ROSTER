@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRight, Check, ShieldCheck } from "lucide-react";
 import { ComplianceFlow } from "./ComplianceFlow";
 import { ScreenShot } from "./ScreenShot";
-import { LeadCapture } from "./LeadCapture";
+import { EmailStart } from "./EmailStart";
 import { BuiltWithCentres } from "./BuiltWithCentres";
 import { SCREENS } from "@/lib/screens";
 import { landingBySlug, type Landing } from "@/lib/seo/landings";
@@ -186,7 +186,7 @@ export function LandingPage({ slug }: { slug: string }) {
             <Link href="/pricing" className="mt-5 inline-flex items-center gap-1 text-sm font-semibold text-white/80 hover:text-white">See pricing <ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
           </div>
           <div className="rounded-card bg-white p-6 shadow-xl">
-            <LeadCapture source={`landing:${l.slug}`} variant="inline" apex={apex} />
+            <EmailStart source={`landing:${l.slug}`} />
           </div>
         </div>
       </section>

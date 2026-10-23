@@ -703,7 +703,7 @@ const ALL_SECTIONS: Section[] = [
     label: "Settings & configuration",
     blurb: "Tune courses, instructor types, places, checks and how sessions run.",
     blocks: [
-      { kind: "p", text: "Settings is where you adjust the defaults you set during onboarding. It is split into tabs: General (company code, warnings, the checks applied when rostering, the availability window, holiday pay), Roster & welfare (welfare officers, the roster PDF, course default schedules), Time & pay, Lists (slots, instructor types and certificates, places on courses, checks) and Data & account (retention, export, billing, security, PIN). Switching off a safety check asks you to confirm and names what will no longer be stopped." },
+      { kind: "p", text: "Settings is where you adjust the defaults you set during onboarding. It is split into tabs: General (your web address, which the owner can change once within 30 days of signing up, then the company code, warnings, the checks applied when rostering, the availability window, holiday pay), Roster & welfare (welfare officers, the roster PDF, course default schedules), Time & pay, Lists (slots, instructor types and certificates, places on courses, checks) and Data & account (retention, export, billing, security, PIN). Switching off a safety check asks you to confirm and names what will no longer be stopped." },
       { kind: "bullets", items: [
         "Activate or retire course types, instructor types and compliance checks — retired items keep their history and stop appearing for new records. Retiring an instructor type retires its place on courses with it.",
         "Switch optional features on or off.",

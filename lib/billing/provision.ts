@@ -28,6 +28,8 @@ export interface ProvisionParams {
   ownerUserId?: string;
   /** IANA zone detected from the sign-up browser; kept internally (digest timing, device clock fallback), never shown. */
   timeZone?: string;
+  /** The plan chosen on the pricing page; defaults to Standard. */
+  tier?: "small_club" | "standard";
 }
 
 function coerceSetupMode(v: string | undefined): SetupMode {
@@ -85,6 +87,7 @@ export async function provisionCentre(
     subscriptionStatus: params.subscriptionStatus ?? "active",
     stripeCustomerId: params.stripeCustomerId,
     stripeSubscriptionId: params.stripeSubscriptionId,
+    ...(params.tier ? { tier: params.tier } : {}),
   });
 
   const owner = params.ownerUserId

@@ -14,6 +14,7 @@ const PRIMARY = [
 
 /** The full set, shown in the mobile menu (secondary pages too). */
 const ALL = [
+  { href: "/start", label: "Start my free month" },
   { href: "/pricing", label: "Pricing" },
   { href: "/compare", label: "Compare" },
   { href: "/learn", label: "Learning Centre" },
@@ -38,23 +39,20 @@ export function SiteHeader() {
               {l.label}
             </Link>
           ))}
-          <a href="/#get-demo" className="rounded-lg bg-navy px-4 py-2 text-white transition hover:bg-navy-700">
+          <Link href="/start" className="rounded-lg bg-navy px-4 py-2 text-white transition hover:bg-navy-700">
             Try free for a month
-          </a>
-          <Link href="/login" className="rounded-lg border border-slate-300 px-3.5 py-2 text-navy transition hover:bg-slate-50">
+          </Link>
+          <Link href="/sign-in" className="rounded-lg border border-slate-300 px-3.5 py-2 text-navy transition hover:bg-slate-50">
             Sign in
           </Link>
         </nav>
 
         {/* Mobile controls */}
         <div className="flex items-center gap-2 md:hidden">
-          {/* Sign in lives in the menu on the narrowest phones so the bar never wraps. */}
-          <Link href="/login" className="hidden whitespace-nowrap rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-navy min-[420px]:inline-block">
+          {/* One button on phones: the page itself carries the sign-up box, and the menu has the rest. */}
+          <Link href="/sign-in" className="whitespace-nowrap rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-navy">
             Sign in
           </Link>
-          <a href="/#get-demo" className="whitespace-nowrap rounded-lg bg-navy px-3 py-2 text-sm font-medium text-white">
-            Try free
-          </a>
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
@@ -71,7 +69,7 @@ export function SiteHeader() {
       {open ? (
         <nav className="border-t border-slate-200 bg-white md:hidden">
           <div className="mx-auto max-w-6xl px-4 py-2">
-            {[...ALL, { href: "/login", label: "Sign in" }].map((l) => (
+            {[...ALL, { href: "/sign-in", label: "Sign in" }].map((l) => (
               <Link
                 key={l.href}
                 href={l.href}

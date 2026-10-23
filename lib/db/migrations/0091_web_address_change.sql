@@ -1,0 +1,1 @@
+ALTER TABLE `organisation` ADD `slug_changed_at` integer;

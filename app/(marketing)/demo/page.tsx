@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { ProductTour } from "@/components/marketing/ProductTour";
-import { LeadCapture } from "@/components/marketing/LeadCapture";
-import { apexDomain } from "@/lib/config";
+import { DemoGate } from "@/components/marketing/DemoGate";
 
 export const metadata = {
   title: "Demo — a week at a busy sailing centre",
@@ -23,11 +22,13 @@ export default function DemoPage() {
         </p>
       </div>
 
-      <ProductTour />
+      <DemoGate>
+        <ProductTour />
+      </DemoGate>
 
-      <div className="mx-auto mt-12 max-w-md">
-        <LeadCapture source="demo" apex={apexDomain()} />
-        <p className="mt-4 text-center text-sm text-slate-500">
+      <div className="mx-auto mt-12 max-w-md text-center">
+        <Link href="/start?src=demo" className="inline-block rounded-lg bg-teal px-6 py-3.5 font-semibold text-white hover:bg-teal-700">Start my free month →</Link>
+        <p className="mt-4 text-sm text-slate-500">
           <Link href="/" className="font-semibold text-teal hover:underline">← Back to the overview</Link>
         </p>
       </div>
