@@ -1,3 +1,4 @@
+import { APP_STORES, appStoresLive } from "@/lib/config";
 import { escapeHtml } from "./index";
 
 /**
@@ -37,6 +38,13 @@ function who(input: InviteEmailInput): string {
   return input.inviterName ? `${input.inviterName} at ${input.centreName}` : input.centreName;
 }
 
+/** App Store and Google Play buttons for instructor invites, once the apps are live (lib/config APP_STORES). */
+function storeLinks(): string {
+  if (!appStoresLive()) return "";
+  const btn = (href: string, label: string) => `<a href="${href}" style="display:inline-block;background:#111;color:#fff;padding:8px 14px;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px;margin:0 8px 8px 0">${label}</a>`;
+  return `<p style="margin:12px 0 4px"><strong>Get the instructor app</strong></p><p>${APP_STORES.ios ? btn(APP_STORES.ios, " App Store") : ""}${APP_STORES.android ? btn(APP_STORES.android, "▶ Google Play") : ""}</p>`;
+}
+
 export function inviteEmail(input: InviteEmailInput): { subject: string; html: string } {
   const c = escapeHtml(input.centreName);
   const steps = STEPS[input.kind].map((s) => `<li style="margin:0 0 4px">${escapeHtml(s)}</li>`).join("");
@@ -48,6 +56,7 @@ export function inviteEmail(input: InviteEmailInput): { subject: string; html: s
       <p><a href="${input.url ?? input.signInUrl}" style="display:inline-block;background:#0C6B74;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none">Accept and create your account</a></p>
       <p style="margin-bottom:4px"><strong>What happens next</strong></p>
       <ol style="margin-top:0;padding-left:20px">${steps}</ol>
+      ${input.kind === "instructor" ? storeLinks() : ""}
       <p style="color:#64748b;font-size:12px">The button works once and only for a short while. If it has expired, open <a href="${input.signInUrl}">${escapeHtml(input.signInUrl.replace(/^https?:\/\//, "").replace(/\?.*$/, ""))}</a>, enter ${escapeHtml(input.email)} and choose “Set up your account”.</p>
       <p style="color:#64748b;font-size:12px">Not expecting this? You can ignore it; nothing happens unless you accept.</p>
     `,

@@ -12,7 +12,11 @@ export interface OfferedCentre { organisationId: string; name: string }
  * company code. Anyone else (or someone joining a centre that hasn't listed
  * them yet) enters the centre's 6-character company code.
  */
-export function JoinCentre({ pendingCentre, canSkip, offered }: { pendingCentre: string | null; canSkip: boolean; offered: OfferedCentre[] }) {
+export function JoinCentre({ pendingCentre, canSkip, offered, needsPin = false }: { pendingCentre: string | null; canSkip: boolean; offered: OfferedCentre[]; needsPin?: boolean }) {
+  const [pin, setPin] = useState("");
+  const [pin2, setPin2] = useState("");
+  const pinOk = !needsPin || (/^\d{4}$/.test(pin) && pin === pin2);
+  const pinProblem = needsPin && pin.length === 4 && pin2.length === 4 && pin !== pin2 ? "The two PINs don't match." : null;
   const [mode, setMode] = useState<"name" | "code">(offered.length ? "name" : "code");
   const [chosen, setChosen] = useState<string>(offered[0]?.organisationId ?? "");
   const [code, setCode] = useState("");
@@ -32,13 +36,13 @@ export function JoinCentre({ pendingCentre, canSkip, offered }: { pendingCentre:
   const submitCode = async (e: React.FormEvent) => {
     e.preventDefault();
     setErr(null); setBusy(true);
-    try { finish(await joinCentreByCodeAction(code, phone)); } finally { setBusy(false); }
+    try { finish(await joinCentreByCodeAction(code, phone, needsPin ? pin : undefined)); } finally { setBusy(false); }
   };
 
   const submitName = async (e: React.FormEvent) => {
     e.preventDefault();
     setErr(null); setBusy(true);
-    try { finish(await joinCentreByNameAction(chosen, phone)); } finally { setBusy(false); }
+    try { finish(await joinCentreByNameAction(chosen, phone, needsPin ? pin : undefined)); } finally { setBusy(false); }
   };
 
   if (result && result.ok && result.status !== "joined") {
@@ -80,7 +84,18 @@ export function JoinCentre({ pendingCentre, canSkip, offered }: { pendingCentre:
               </select>
             )}
             {err ? <p className="text-sm text-port">{err}</p> : null}
-            <button type="submit" disabled={busy || !chosen} className={button}>{busy ? "Joining…" : `Yes, join ${chosenName}`}</button>
+          {needsPin ? (
+            <div className="rounded-xl border border-slate-200 bg-canvas p-3">
+              <p className="text-sm font-semibold text-navy">Choose a 4-digit PIN</p>
+              <p className="mb-2 text-xs text-slate-500">It gets you back into the app after a while away, instead of your password.</p>
+              <div className="grid grid-cols-2 gap-2">
+                <input value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))} inputMode="numeric" autoComplete="off" placeholder="PIN" aria-label="PIN" className="rounded-xl border border-slate-300 px-3 py-3 text-center font-mono text-lg tracking-[0.4em] outline-none focus:border-teal" />
+                <input value={pin2} onChange={(e) => setPin2(e.target.value.replace(/\D/g, "").slice(0, 4))} inputMode="numeric" autoComplete="off" placeholder="Again" aria-label="PIN again" className="rounded-xl border border-slate-300 px-3 py-3 text-center font-mono text-lg tracking-[0.4em] outline-none focus:border-teal" />
+              </div>
+              {pinProblem ? <p className="mt-1 text-xs text-port">{pinProblem}</p> : null}
+            </div>
+          ) : null}
+            <button type="submit" disabled={busy || !chosen || !pinOk} className={button}>{busy ? "Joining…" : `Yes, join ${chosenName}`}</button>
           </form>
           <button type="button" onClick={() => { setMode("code"); setErr(null); }} className="mt-4 block w-full text-center text-sm font-medium text-slate-500">Not your centre? Enter a company code instead</button>
         </>
@@ -91,7 +106,18 @@ export function JoinCentre({ pendingCentre, canSkip, offered }: { pendingCentre:
           <form onSubmit={submitCode} className="space-y-3">
             <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6))} placeholder="e.g. 7KD4PX" autoCapitalize="characters" autoCorrect="off" spellCheck={false} autoFocus className="w-full rounded-xl border border-slate-300 px-4 py-3 text-center font-mono text-2xl tracking-[0.4em] outline-none focus:border-teal" />
             {err ? <p className="text-sm text-port">{err}</p> : null}
-            <button type="submit" disabled={busy || code.length !== 6} className={button}>{busy ? "Checking…" : "Join centre"}</button>
+          {needsPin ? (
+            <div className="rounded-xl border border-slate-200 bg-canvas p-3">
+              <p className="text-sm font-semibold text-navy">Choose a 4-digit PIN</p>
+              <p className="mb-2 text-xs text-slate-500">It gets you back into the app after a while away, instead of your password.</p>
+              <div className="grid grid-cols-2 gap-2">
+                <input value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))} inputMode="numeric" autoComplete="off" placeholder="PIN" aria-label="PIN" className="rounded-xl border border-slate-300 px-3 py-3 text-center font-mono text-lg tracking-[0.4em] outline-none focus:border-teal" />
+                <input value={pin2} onChange={(e) => setPin2(e.target.value.replace(/\D/g, "").slice(0, 4))} inputMode="numeric" autoComplete="off" placeholder="Again" aria-label="PIN again" className="rounded-xl border border-slate-300 px-3 py-3 text-center font-mono text-lg tracking-[0.4em] outline-none focus:border-teal" />
+              </div>
+              {pinProblem ? <p className="mt-1 text-xs text-port">{pinProblem}</p> : null}
+            </div>
+          ) : null}
+            <button type="submit" disabled={busy || code.length !== 6 || !pinOk} className={button}>{busy ? "Checking…" : "Join centre"}</button>
           </form>
           {offered.length ? <button type="button" onClick={() => { setMode("name"); setErr(null); }} className="mt-4 block w-full text-center text-sm font-medium text-slate-500">Back to {offered.length === 1 ? offered[0]!.name : "the centres that listed you"}</button> : null}
         </>

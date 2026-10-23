@@ -10,6 +10,7 @@ import { unreadCount } from "@/lib/services/notifications";
 import { Logo } from "@/components/Logo";
 import { NativeBridge } from "@/components/mobile/NativeBridge";
 import { PushPrompt } from "@/components/mobile/PushPrompt";
+import { WhatsNew } from "@/components/portal/WhatsNew";
 import { ensureExpiryReminders } from "@/lib/services/reminders";
 
 const TABS = [
@@ -65,6 +66,7 @@ export default async function PortalLayout({ children }: { children: React.React
       </header>
       <IncidentBanner />
       <PushPrompt />
+      <WhatsNew buildId={process.env.NEXT_PUBLIC_BUILD_ID ?? null} />
       {trial.kind === "read_only" ? (
         <p className="bg-amber/25 px-4 py-2 text-center text-xs font-medium text-navy">Your centre&apos;s free trial has ended, so nothing can be changed for now. Please let whoever runs your centre know.</p>
       ) : null}

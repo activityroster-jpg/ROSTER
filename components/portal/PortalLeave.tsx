@@ -12,6 +12,21 @@ import type { OpenShiftRow } from "@/lib/services/openshifts";
 
 const TONE = { pending: "attention", approved: "covered", declined: "conflict", cancelled: "neutral" } as const;
 
+
+/** Quick picks above the date fields: tomorrow, the coming weekend, next week (Mon to Sun). */
+function presets(now = new Date()): { label: string; from: string; to: string }[] {
+  const iso = (d: Date) => d.toISOString().slice(0, 10);
+  const day = (n: number) => { const d = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate() + n)); return d; };
+  const dow = now.getDay(); // 0 = Sunday
+  const toSat = dow === 6 ? 7 : (6 - dow) || 7;
+  const toMon = ((8 - dow) % 7) || 7;
+  return [
+    { label: "Tomorrow", from: iso(day(1)), to: iso(day(1)) },
+    { label: "This weekend", from: iso(day(toSat)), to: iso(day(toSat + 1)) },
+    { label: "Next week", from: iso(day(toMon)), to: iso(day(toMon + 6)) },
+  ];
+}
+
 export function PortalLeave({ myLeave, shifts }: { myLeave: LeaveRow[]; shifts: OpenShiftRow[] }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -56,8 +71,13 @@ export function PortalLeave({ myLeave, shifts }: { myLeave: LeaveRow[]; shifts: 
         <p className="font-semibold text-navy">Request leave</p>
         <div className="mt-3 grid gap-2">
           <select value={type} onChange={(e) => setType(e.target.value)} className="rounded-lg border border-slate-300 px-3 py-2 text-sm">
-            {LEAVE_TYPES.map((t) => <option key={t} value={t} className="capitalize">{t}</option>)}
+            {LEAVE_TYPES.map((t) => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1).replace(/_/g, " ")}</option>)}
           </select>
+          <div className="flex flex-wrap gap-1.5">
+            {presets().map((p) => (
+              <button key={p.label} type="button" onClick={() => { setStart(p.from); setEnd(p.to); setDaysEdited(false); autoDays(p.from, p.to); }} className={`rounded-full border px-3 py-1.5 text-xs font-medium ${start === p.from && (end || start) === p.to ? "border-teal bg-teal text-white" : "border-slate-300 text-navy hover:border-teal"}`}>{p.label}</button>
+            ))}
+          </div>
           <div className="grid grid-cols-2 gap-2">
             <label className="text-xs text-slate-500">From<input type="date" required value={start} onChange={(e) => onStart(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" /></label>
             <label className="text-xs text-slate-500">To<input type="date" value={end} min={start || undefined} onChange={(e) => onEnd(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" /></label>

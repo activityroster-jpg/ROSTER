@@ -9,6 +9,7 @@ import { JoinRequests, type JoinRequestRow } from "@/components/office/JoinReque
 import { AddInstructorForm } from "@/components/office/AddInstructorForm";
 import { QuickAddStaff } from "@/components/office/QuickAddStaff";
 import { CopyInviteMessage } from "@/components/office/CopyInviteMessage";
+import { StoreBadges } from "@/components/marketing/StoreBadges";
 import { StaffTable, type StaffRow } from "@/components/office/StaffTable";
 import { GuideLink } from "@/components/GuideLink";
 import { OfficeAccess } from "@/components/office/OfficeAccess";
@@ -84,6 +85,9 @@ export default async function StaffPage() {
         <div>
           <h1 className="font-display text-2xl font-bold text-navy">Instructors</h1>
           <p className="text-sm text-slate-500">{currentCount} instructor{currentCount === 1 ? "" : "s"}{under18Count ? ` · ${under18Count} under 18` : ""} · whether each has set availability and whose licences need updating</p>
+          {(() => { const active = rows.filter((r) => r.status !== "inactive"); const inApp = active.filter((r) => r.inviteStatus === "accepted").length; const alerts = active.filter((r) => r.inviteStatus === "accepted" && !r.phoneAlertsOff).length; return active.length ? (
+            <p className="mt-1 text-sm text-slate-600"><span className="font-semibold text-navy">{inApp} of {active.length}</span> in the app · <span className="font-semibold text-navy">{alerts}</span> with phone alerts{settingsRow?.staffManagedBy === "office" ? " (the office keeps availability, so the app is optional)" : ""} <StoreBadges className="ml-2 align-middle" /></p>
+          ) : null; })()}
         </div>
         <div className="flex flex-none items-center gap-3">
           <GuideLink topic="staff" />

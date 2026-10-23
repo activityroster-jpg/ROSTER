@@ -16,5 +16,7 @@ export default async function JoinPage() {
   const hasActive = ms.some((m) => m.status === "active" && m.orgStatus === "active");
   // Centres that already list this email among their instructors: offered by name, no code needed.
   const offered = await centresOfferedByName();
-  return <JoinCentre pendingCentre={pending?.name ?? null} canSkip={hasActive} offered={offered} />;
+  // A new account chooses its PIN here, on the same screen as joining (three screens, not four).
+  const needsPin = !(await control.getUserSecurity(s.user.id))?.pinHash;
+  return <JoinCentre pendingCentre={pending?.name ?? null} canSkip={hasActive} offered={offered} needsPin={needsPin} />;
 }

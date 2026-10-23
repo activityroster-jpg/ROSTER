@@ -10,8 +10,8 @@ const field = "w-full rounded-xl border border-slate-300 px-4 py-3 text-base out
 const PHONE_KEY = "ar.signup.phone";
 
 /**
- * Create account: name, email, password (mobile number optional) → 6-digit email code → PIN
- * (the shared /set-pin screen) → join a centre (by name, or with its company code). The phone is kept locally
+ * Create account: name, email, password (mobile number optional) → 6-digit email code → join a
+ * centre (by name, or with its company code) choosing the PIN on the same screen. The phone is kept locally
  * until the join step, when it's saved with the instructor record.
  */
 export function AppSignup() {
@@ -20,7 +20,7 @@ export function AppSignup() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirm, setConfirm] = useState("");
+  const [showPw, setShowPw] = useState(false);
   const [otp, setOtp] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -38,7 +38,6 @@ export function AppSignup() {
     // The mobile number is optional; check it only when one is given.
     if (phone.trim() && !/^[+\d][\d\s()-]{6,}$/.test(phone.trim())) { setErr("That mobile number doesn't look right. Check it, or leave it blank."); return; }
     if (password.length < 8) { setErr("Use at least 8 characters for your password."); return; }
-    if (password !== confirm) { setErr("The two passwords don't match."); return; }
     setBusy(true);
     try {
       const res = await signUp.email({ name: name.trim(), email: email.trim(), password });
@@ -59,7 +58,7 @@ export function AppSignup() {
       // Make sure we hold a session (verifyEmail signs in when configured; the
       // password sign-in is a harmless no-op otherwise).
       await signIn.email({ email: email.trim(), password });
-      window.location.href = "/set-pin?next=" + encodeURIComponent("/app/join");
+      window.location.href = "/app/join";
     } finally { setBusy(false); }
   };
 
@@ -87,7 +86,7 @@ export function AppSignup() {
           <button type="submit" disabled={busy || otp.length !== 6} className="w-full rounded-xl bg-teal px-4 py-3.5 text-base font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{busy ? "Checking…" : "Confirm email"}</button>
           <button type="button" onClick={resend} disabled={busy} className="w-full py-1 text-center text-sm font-medium text-slate-500">Resend code</button>
         </form>
-        <p className="mt-6 text-xs text-slate-400">Next: choose a 4-digit PIN, then join your centre (by name if they&apos;ve already added you, or with their company code).</p>
+        <p className="mt-6 text-xs text-slate-400">Next: join your centre (by name if they&apos;ve already added you, or with their company code) and choose a 4-digit PIN, on one screen.</p>
       </div>
     );
   }
@@ -95,14 +94,16 @@ export function AppSignup() {
   return (
     <div>
       <h1 className="font-display text-2xl font-bold text-navy">Create your account</h1>
-      <p className="mb-5 text-sm text-slate-500">Takes a minute. You&apos;ll confirm your email with a code, pick a PIN, then join your centre.</p>
+      <p className="mb-5 text-sm text-slate-500">Takes a minute. You&apos;ll confirm your email with a code, then join your centre and pick a PIN.</p>
       <form onSubmit={createAccount} className="space-y-3">
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" autoComplete="name" required className={field} />
         <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Mobile number (optional)" autoComplete="tel" inputMode="tel" className={field} />
         <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" autoComplete="email" inputMode="email" required className={field} />
-        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password (8+ characters, letters and numbers)" autoComplete="new-password" required className={field} />
+        <div className="relative">
+          <input type={showPw ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password (8+ characters, letters and numbers)" autoComplete="new-password" required className={`${field} pr-16`} />
+          <button type="button" onClick={() => setShowPw((v) => !v)} aria-pressed={showPw} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-xs font-semibold text-teal hover:bg-teal/10">{showPw ? "Hide" : "Show"}</button>
+        </div>
         <PasswordStrength password={password} />
-        <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Confirm password" autoComplete="new-password" required className={field} />
         {err ? <p className="text-sm text-port">{err}</p> : null}
         <button type="submit" disabled={busy} className="w-full rounded-xl bg-teal px-4 py-3.5 text-base font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{busy ? "Creating…" : "Continue"}</button>
       </form>

@@ -14,6 +14,7 @@ import { writeAudit } from "@/lib/services/audit";
 import { resolveHost } from "@/lib/tenant/host";
 import { idSchema } from "@/lib/validation/actions";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
+import { hashPin, PIN_COOKIE, PIN_IDLE_MAX_AGE_S, PIN_REGEX, pinCookieValue } from "@/lib/auth/pin";
 
 export type JoinResult =
   | { ok: true; status: "joined" | "requested" | "already_requested"; centre: string }
@@ -22,7 +23,27 @@ export type JoinResult =
 async function me() {
   const auth = await getAuth();
   const s = await auth.api.getSession({ headers: new Headers(await headers()) });
-  return s?.user ? { id: s.user.id, email: s.user.email.toLowerCase(), name: s.user.name, verified: Boolean(s.user.emailVerified) } : null;
+  return s?.user ? { id: s.user.id, email: s.user.email.toLowerCase(), name: s.user.name, verified: Boolean(s.user.emailVerified), sessionId: s.session?.id as string | undefined } : null;
+}
+
+/**
+ * A new account chooses its PIN on the join screen (one screen for the PIN and
+ * the centre). Only when the account has none yet: an existing PIN is never
+ * replaced here. Sets the verified cookie so the portal opens straight away.
+ */
+async function choosePinIfNone(user: { id: string; sessionId?: string }, pin: string | undefined): Promise<string | null> {
+  if (pin === undefined) return null;
+  if (!PIN_REGEX.test(pin)) return "Your PIN must be exactly 4 digits.";
+  const { control } = await getRepositories();
+  if ((await control.getUserSecurity(user.id))?.pinHash) return null;
+  await control.setUserPin(user.id, await hashPin(pin));
+  await recordSecurityEvent("pin_set", { userId: user.id });
+  if (user.sessionId) {
+    const env = getEnv();
+    const jar = await cookies();
+    jar.set(PIN_COOKIE, await pinCookieValue(authSecret(env), user.sessionId, 30), { httpOnly: true, secure: true, sameSite: "lax", path: "/", domain: `.${env.APP_APEX_DOMAIN}`, maxAge: PIN_IDLE_MAX_AGE_S });
+  }
+  return null;
 }
 
 /**
@@ -116,10 +137,12 @@ async function linkOrRequest(
 }
 
 /** Join a centre with its company code (the route for anyone not yet on a centre's list). */
-export async function joinCentreByCodeAction(code: string, phone?: string): Promise<JoinResult> {
+export async function joinCentreByCodeAction(code: string, phone?: string, pin?: string): Promise<JoinResult> {
   const user = await me();
   if (!user) return { ok: false, error: "Please sign in again." };
   if (!user.verified) return { ok: false, error: "Please verify your email first." };
+  const pinError = await choosePinIfNone(user, pin);
+  if (pinError) return { ok: false, error: pinError };
 
   const limit = await rateLimit(`join-code:${user.id}`, 10, 15 * 60, { failClosed: true });
   if (!limit.allowed) return { ok: false, error: "Too many attempts. Try again in 15 minutes." };
@@ -139,10 +162,12 @@ export async function joinCentreByCodeAction(code: string, phone?: string): Prom
  * their address on the Instructors list is the invitation; the verified email is
  * the proof. Only centres from {@link centresForMyEmail} are accepted.
  */
-export async function joinCentreByNameAction(organisationId: string, phone?: string): Promise<JoinResult> {
+export async function joinCentreByNameAction(organisationId: string, phone?: string, pin?: string): Promise<JoinResult> {
   const user = await me();
   if (!user) return { ok: false, error: "Please sign in again." };
   if (!user.verified) return { ok: false, error: "Please verify your email first." };
+  const pinError = await choosePinIfNone(user, pin);
+  if (pinError) return { ok: false, error: pinError };
   const parsed = idSchema.safeParse(organisationId);
   if (!parsed.success) return { ok: false, error: "Choose a centre." };
 
