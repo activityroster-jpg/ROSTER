@@ -46,6 +46,8 @@ Three environments. Names only here, never values.
 
 Non-secret vars live in `wrangler.toml` (`APP_APEX_DOMAIN`, `APP_ENV`).
 
+| `APP_REVIEW_EMAILS` (optional, a variable not a secret) | Comma-separated emails of the logins made for Apple and Google's app reviewers. They sign in from abroad and can't read our emails, so the "somewhere new" check trusts them wherever they are (still logged). Remove when not reviewing. |
+
 ## GitHub repository secrets (Settings → Secrets and variables → Actions)
 
 | Name | Used by |

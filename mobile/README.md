@@ -123,15 +123,13 @@ development: `cd mobile && npm install && npx cap sync`, then open
 **App Store** (the *iOS build* workflow uploads each build to TestFlight; then in App Store Connect):
 1. https://appstoreconnect.apple.com → **My Apps → +** → name *ActivityRoster*,
    bundle `com.activityroster.app`, SKU `activityroster`.
-2. Fill the listing (below). Privacy: *Data collected* — name, email, phone,
-   precise location (only when clocking in, linked to the user), photos (user
-   uploads). Age rating 4+. Category *Business*.
-3. **App Review note** (paste this): “Staff rostering app for RYA sailing
-   centres. To test: create an account, verify the emailed code, set a PIN, then
-   enter company code **XXXXXX** (a demo centre). The centre admin approves
-   join requests at …/office/staff.” Create a demo centre first and put its
-   company code here — reviewers need a way in.
-4. Submit. Typical review 1–3 days.
+2. Fill the listing from **`docs/app-store/listing.md`**: every text field, the
+   screenshots in that folder, the App Privacy answers, age rating (4+) and
+   category (Business). The app is iPhone-only, so no iPad screenshots.
+3. Make the reviewer login the way that file describes and paste the App Review
+   note from it. Reviewers sign in from the USA: `APP_REVIEW_EMAILS` (a Worker
+   variable) lets that login through the "somewhere new" sign-in check.
+4. Pick the TestFlight build, choose *Manually release*, submit. Typical review 1–3 days.
 
 **Google Play** — no Android Studio needed. GitHub builds the app:
 0. Once only: GitHub → **Actions → Android upload key (one-off) → Run workflow**.
@@ -169,9 +167,9 @@ development: `cd mobile && npm install && npx cap sync`, then open
   its company code; work for more than one? Switch between them in Settings.
   Your centre must use ActivityRoster (activityroster.com).
 - **Keywords**: RYA, sailing, rota, roster, instructor, watersports, staff, timesheet
-- **Screenshots**: take them on a phone from the running app (Schedule,
-  Availability, Clock, Documents, Settings). Apple needs 6.7" and 6.5" sizes;
-  Play needs at least 2 phone screenshots.
+- **Screenshots**: `node videos/store-shots.mjs` against the local demo centre
+  (started as the Make videos workflow does) writes Apple's 6.9" and 6.5" sets to
+  `docs/app-store/`; the Play sets are in `docs/play-store/`.
 
 ## 4. Universal links (open our links in the app)
 

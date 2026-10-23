@@ -36,6 +36,8 @@ export interface CloudflareEnv {
   STRIPE_PRICE_ROSTERING?: string;
   STRIPE_PRICE_FULL?: string;
   SENTRY_DSN?: string;
+  /** Logins made for the app stores' reviewers (comma-separated emails): the "somewhere new" sign-in check lets them through. */
+  APP_REVIEW_EMAILS?: string;
   RESEND_API_KEY?: string;
   /** Separate Resend key for the outreach ("news") stream, so campaigns never share the system domain's reputation. */
   RESEND_API_KEY_NEWS?: string;
