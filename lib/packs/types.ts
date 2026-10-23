@@ -51,4 +51,6 @@ export interface ActivityPack {
   teaching?: TeachingSeed[];
   /** One place per teaching instructor type (Dinghy Instructor, Powerboat Instructor…) instead of generic Instructor/Senior/Assistant places. */
   placesFromTypes?: boolean;
+  /** The handful most centres run, ticked by default on the setup wizard (the rest are behind "Show all"). */
+  commonCourses?: string[];
 }

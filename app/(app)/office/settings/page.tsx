@@ -7,7 +7,7 @@ import { ConfigManager, type ConfigItem } from "@/components/office/ConfigManage
 import { BreakPolicyForm } from "@/components/office/BreakPolicyForm";
 import { CompanyCodeCard } from "@/components/office/CompanyCodeCard";
 import { WebAddressCard } from "@/components/office/WebAddressCard";
-import { SLUG_CHANGE_WINDOW_MS } from "./actions";
+import { slugChangeDaysLeft } from "@/lib/tenant/web-address";
 import { apexDomain } from "@/lib/config";
 import { CourseScheduleDefaults } from "@/components/office/CourseScheduleDefaults";
 import { TimeclockSettingsForm } from "@/components/office/TimeclockSettingsForm";
@@ -151,8 +151,7 @@ export default async function SettingsPage() {
           <a href="/learn?topic=settings" target="_blank" rel="noreferrer" className="text-xs font-medium text-teal hover:underline">📖 Read the guide</a>
         </div>
         {(() => {
-          const created = organisation.createdAt instanceof Date ? organisation.createdAt.getTime() : Number(organisation.createdAt);
-          const daysLeft = Math.ceil((created + SLUG_CHANGE_WINDOW_MS - Date.now()) / 86_400_000);
+          const daysLeft = slugChangeDaysLeft(organisation.createdAt);
           const canChange = ctx.role === "owner" && !organisation.slugChangedAt && daysLeft > 0;
           const reason = organisation.slugChangedAt
             ? "The address was changed once and is now fixed, so every link your team has still works."

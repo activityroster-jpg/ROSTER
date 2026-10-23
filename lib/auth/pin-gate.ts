@@ -10,12 +10,22 @@ import { PIN_COOKIE, verifyPinCookie } from "./pin";
  * requirePlatformAdmin. Redirects to /set-pin if they have no PIN yet, or /pin if
  * this session hasn't verified it.
  */
+/** How long a new account may use the office before a PIN is required. */
+export const PIN_GRACE_MS = 24 * 60 * 60 * 1000;
+
 export async function enforcePinGate(userId: string, sessionId: string | undefined, next: string): Promise<void> {
   if (!sessionId) redirect("/sign-in"); // no session id to bind the PIN cookie to → treat as signed out
   const { control } = await getRepositories();
   const sec = await control.getUserSecurity(userId);
   const nextParam = `?next=${encodeURIComponent(next)}`;
-  if (!sec?.pinHash) redirect(`/set-pin${nextParam}`);
+  if (!sec?.pinHash) {
+    // A brand-new centre owner gets their first day in the office without a PIN
+    // (the wizard asks at the end, and the office shows a reminder); anyone else
+    // without one chooses it now.
+    const created = sec?.createdAt instanceof Date ? sec.createdAt.getTime() : Number(sec?.createdAt ?? 0);
+    if (next.startsWith("/office") && Date.now() - created < PIN_GRACE_MS) return;
+    redirect(`/set-pin${nextParam}`);
+  }
 
   const jar = await cookies();
   const secret = authSecret();

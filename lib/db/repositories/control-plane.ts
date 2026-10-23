@@ -477,15 +477,15 @@ export class ControlPlaneRepository {
     return removed.length;
   }
 
-  async getUserSecurity(userId: string): Promise<{ pinHash: string | null; pinFailedCount: number; pinLockedUntil: Date | null } | null> {
+  async getUserSecurity(userId: string): Promise<{ pinHash: string | null; pinFailedCount: number; pinLockedUntil: Date | null; createdAt: Date } | null> {
     const rows = await this.db
-      .select({ pinHash: user.pinHash, pinFailedCount: user.pinFailedCount, pinLockedUntil: user.pinLockedUntil })
+      .select({ pinHash: user.pinHash, pinFailedCount: user.pinFailedCount, pinLockedUntil: user.pinLockedUntil, createdAt: user.createdAt })
       .from(user)
       .where(eq(user.id, userId))
       .limit(1);
     const r = rows[0];
     if (!r) return null;
-    return { pinHash: r.pinHash ?? null, pinFailedCount: r.pinFailedCount ?? 0, pinLockedUntil: r.pinLockedUntil ?? null };
+    return { pinHash: r.pinHash ?? null, pinFailedCount: r.pinFailedCount ?? 0, pinLockedUntil: r.pinLockedUntil ?? null , createdAt: r.createdAt instanceof Date ? r.createdAt : new Date(Number(r.createdAt))};
   }
 
   /** Which second step a user chose (authenticator app or emailed code). */

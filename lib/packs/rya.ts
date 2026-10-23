@@ -28,4 +28,5 @@ export const RYA_CENTRE_PACK: ActivityPack = {
   courseTypes: DEFAULT_COURSE_TYPES,
   teaching: RYA_TEACHING,
   placesFromTypes: true,
+  commonCourses: ["Start Sailing (Level 1)", "Basic Skills (Level 2)", "Youth Stage 1", "Youth Stage 2", "Youth Stage 3", "Summer Camp (5-day)", "Powerboat Level 2", "Safety Boat Course"],
 };

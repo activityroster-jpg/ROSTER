@@ -40,7 +40,9 @@ const AUDIENCE_ORDER: { key: CourseAudience; label: string; hint: string }[] = [
   { key: "all", label: "All ages", hint: "Runs for any age group" },
 ];
 
-const STEP_LABELS = ["How you run", "Courses", "Team", "Invite", "Onboarding", "Roster PDF", "Finish"];
+const STEP_LABELS = ["How you run", "Courses", "Team", "Finish"];
+/** Optional screens reached from the finish step: 5 tell the team, 6 onboarding tracker, 7 roster PDF. */
+const OPT_INVITE = 5, OPT_TRACKER = 6, OPT_PDF = 7;
 const FINISH = STEP_LABELS.length;
 
 /** The message the office sends on its team chat alongside the invites. */
@@ -69,8 +71,7 @@ export function OnboardingWizard({
   initialStaffManagedBy = "staff",
   initialTracker,
   joinCode = null,
-  rosterExamples = [],
-}: {
+  rosterExamples = [], commonCourseNames = [], hasPin = true }: {
   centreName: string;
   /** The centre's activity pack words (RYA / PADI …). */
   wording: PackWording;
@@ -86,6 +87,10 @@ export function OnboardingWizard({
   /** The centre's code for joining from the app, for the team-chat message. */
   joinCode?: string | null;
   rosterExamples?: RosterExampleRow[];
+  /** Ticked by default on a fresh centre; the rest sit behind "Show all". */
+  commonCourseNames?: string[];
+  /** False until the owner has chosen a PIN (asked again at the finish step). */
+  hasPin?: boolean;
 }) {
   const router = useRouter();
   const [step, setStep] = useState(1);
@@ -107,7 +112,12 @@ export function OnboardingWizard({
   // Tick what the centre already runs (active types). A brand-new centre whose
   // seeded types are all active therefore starts with the RYA list ticked and
   // unticks what it doesn't run; re-opening the wizard never wipes the list.
-  const [selectedCourses, setSelectedCourses] = useState<Set<string>>(() => new Set(courseTypes.filter((c) => c.active).map((c) => c.id)));
+  const fresh = courseTypes.length > 0 && courseTypes.every((c) => c.active) && commonCourseNames.length > 0;
+  const commonIds = new Set(courseTypes.filter((c) => commonCourseNames.includes(c.name)).map((c) => c.id));
+  const [selectedCourses, setSelectedCourses] = useState<Set<string>>(() => new Set(fresh ? [...commonIds] : courseTypes.filter((c) => c.active).map((c) => c.id)));
+  const [showAll, setShowAll] = useState(!fresh);
+  // The short list: the common courses plus anything already ticked. "Show all" lifts it.
+  const visibleCourse = (c: CourseTypeOpt) => showAll || commonIds.has(c.id) || selectedCourses.has(c.id);
   const toggleCourse = (id: string) => setSelectedCourses((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const [ccName, setCcName] = useState("");
   const [ccAudience, setCcAudience] = useState<CourseAudience>("youth");
@@ -237,7 +247,7 @@ export function OnboardingWizard({
     setMsg(null);
     startTransition(async () => {
       const res = await saveOnboardingTrackerAction(tracker);
-      if (res.ok) setStep(6); else setMsg(res.error ?? "Could not save");
+      if (res.ok) setStep(FINISH); else setMsg(res.error ?? "Could not save");
     });
   };
 
@@ -251,8 +261,8 @@ export function OnboardingWizard({
         <button onClick={skip} disabled={pending} className="text-sm text-slate-400 hover:text-slate-600">Skip for now →</button>
       </div>
       <div className="mb-6 rounded-card border border-teal/30 bg-teal/5 p-4 text-sm text-slate-700">
-        <p className="font-semibold text-navy">Setting up is the part that takes time. It&apos;s an investment.</p>
-        <p className="mt-1">Allow 20 to 30 minutes for {centreName}. Once every course you run is set up, and every instructor is marked with what they can teach, Auto-roster fills your week in seconds and rostering becomes quick and easy. Steps 1 to {FINISH} are essential; anything extra you switch on comes after, as optional steps.</p>
+        <p className="font-semibold text-navy">About five minutes, three steps.</p>
+        <p className="mt-1">Tell us how {centreName} runs, tick the courses you run and add your team. Once each instructor is marked with what they can teach, Auto-roster fills your week in seconds. Everything else is optional and waits for you on the dashboard.</p>
       </div>
 
       <div className="mb-6 flex flex-wrap items-center gap-2 text-xs font-semibold">
@@ -375,17 +385,17 @@ export function OnboardingWizard({
           <p className="mt-1 text-sm text-slate-500">Tick <strong className="text-navy">every course you will ever run</strong>, across the whole year, not just this month&apos;s. Each one comes with its staffing and ratios already set, and a course left out can&apos;t go on the calendar until it&apos;s added. Grouped by youth and adult; add your own below. Missing some? Use &ldquo;{wording.addAllCourses.replace(/^\+ /, "")}&rdquo;.</p>
 
           <div className="mt-5 space-y-5">
-            {AUDIENCE_ORDER.filter((a) => grouped.has(a.key)).map((a) => (
+            {AUDIENCE_ORDER.filter((a) => [...(grouped.get(a.key) ?? new Map<string, CourseTypeOpt[]>()).values()].some((list) => list.some(visibleCourse))).map((a) => (
               <div key={a.key}>
                 <div className="mb-2 flex items-baseline gap-2">
                   <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${a.key === "youth" ? "bg-amber/15 text-amber" : a.key === "adult" ? "bg-teal/15 text-teal" : "bg-slate-100 text-slate-500"}`}>{a.label}</span>
                   <span className="text-xs text-slate-400">{a.hint}</span>
                 </div>
-                {[...(grouped.get(a.key) ?? new Map()).entries()].map(([cat, list]) => (
+                {[...(grouped.get(a.key) ?? new Map<string, CourseTypeOpt[]>()).entries()].filter(([, list]) => list.some(visibleCourse)).map(([cat, list]) => (
                   <div key={cat} className="mb-2.5">
                     <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">{cat}</p>
                     <div className="flex flex-wrap gap-1.5">
-                      {(list as CourseTypeOpt[]).map((c) => {
+                      {list.filter(visibleCourse).map((c) => {
                         const on = selectedCourses.has(c.id);
                         return (
                           <button key={c.id} type="button" onClick={() => toggleCourse(c.id)}
@@ -401,6 +411,11 @@ export function OnboardingWizard({
             ))}
           </div>
 
+          {!showAll ? (
+            <p className="text-sm text-slate-600">Showing the courses most centres run. <button type="button" onClick={() => setShowAll(true)} className="font-semibold text-teal hover:underline">Show all {allCourses.length} courses</button></p>
+          ) : fresh ? (
+            <p className="text-sm text-slate-600"><button type="button" onClick={() => setShowAll(false)} className="font-semibold text-teal hover:underline">Show fewer</button></p>
+          ) : null}
           <div className="mt-5 rounded-lg bg-canvas p-4">
             <p className="text-sm font-semibold text-navy">Add your own course</p>
             <p className="mb-3 text-xs text-slate-500">For anything not listed — e.g. a bespoke camp, a club night, a school programme.</p>
@@ -492,13 +507,13 @@ export function OnboardingWizard({
 
           <div className="mt-6 flex justify-between">
             <button onClick={() => setStep(2)} className="text-sm font-semibold text-slate-500 hover:text-navy">← Back</button>
-            <button onClick={() => { setMsg(null); setStep(4); }} className="rounded-lg bg-teal px-5 py-2.5 font-semibold text-white hover:bg-teal-700">Continue →</button>
+            <button onClick={() => { setMsg(null); setStep(FINISH); }} className="rounded-lg bg-teal px-5 py-2.5 font-semibold text-white hover:bg-teal-700">Continue →</button>
           </div>
         </div>
       ) : null}
 
       {/* STEP 4 — tell the team the invites are coming */}
-      {step === 4 ? (
+      {step === OPT_INVITE ? (
         <div className="rounded-card border border-slate-200 bg-white p-6">
           <h2 className="font-display text-lg font-semibold text-navy">Let your team know the invite is coming</h2>
           {managedBy === "office" ? (
@@ -529,35 +544,35 @@ export function OnboardingWizard({
             </>
           )}
           <div className="mt-6 flex justify-between">
-            <button onClick={() => setStep(3)} className="text-sm font-semibold text-slate-500 hover:text-navy">← Back</button>
-            <button onClick={() => { setMsg(null); setStep(5); }} className="rounded-lg bg-teal px-5 py-2.5 font-semibold text-white hover:bg-teal-700">Continue →</button>
+            <button onClick={() => setStep(FINISH)} className="text-sm font-semibold text-slate-500 hover:text-navy">← Back</button>
+            <button onClick={() => { setMsg(null); setStep(FINISH); }} className="rounded-lg bg-teal px-5 py-2.5 font-semibold text-white hover:bg-teal-700">Done →</button>
           </div>
         </div>
       ) : null}
 
       {/* STEP 5 — instructor onboarding tracker */}
-      {step === 5 ? (
+      {step === OPT_TRACKER ? (
         <div className="rounded-card border border-slate-200 bg-white p-6">
           <h2 className="font-display text-lg font-semibold text-navy">Track each new instructor&apos;s onboarding?</h2>
           <p className="mt-1 text-sm text-slate-500">A checklist on each instructor&apos;s page showing how far through getting started they are. We&apos;ve ticked the steps we recommend; most of them tick themselves as the person signs up and their details go in. Add your own, or change it later in Settings.</p>
           <div className="mt-4"><OnboardingTrackerEditor value={tracker} onChange={setTracker} payOn={features.has("payroll")} /></div>
           {msg ? <p className="mt-3 text-sm text-port">{msg}</p> : null}
           <div className="mt-6 flex justify-between">
-            <button onClick={() => setStep(4)} className="text-sm font-semibold text-slate-500 hover:text-navy">← Back</button>
+            <button onClick={() => setStep(FINISH)} className="text-sm font-semibold text-slate-500 hover:text-navy">← Back</button>
             <button onClick={saveTrackerThenNext} disabled={pending} className="rounded-lg bg-teal px-5 py-2.5 font-semibold text-white hover:bg-teal-700 disabled:opacity-60">{pending ? "Saving…" : "Continue →"}</button>
           </div>
         </div>
       ) : null}
 
       {/* STEP 6 — roster PDF layout */}
-      {step === 6 ? (
+      {step === OPT_PDF ? (
         <div className="rounded-card border border-slate-200 bg-white p-6">
           <h2 className="font-semibold text-navy">Your roster PDF</h2>
           <p className="mb-4 mt-1 text-sm text-slate-500">The roster you download and pin up or email. The defaults suit most centres; you can change this later under Settings → Roster PDF.</p>
           <div className="mb-5"><RosterExampleUpload initial={rosterExamples} /></div>
           <RotaTemplateForm initial={DEFAULT_ROTA_TEMPLATE} compact onSaved={() => setStep(FINISH)} />
           <div className="mt-6 flex justify-between">
-            <button onClick={() => setStep(5)} className="text-sm font-semibold text-slate-500 hover:text-navy">← Back</button>
+            <button onClick={() => setStep(FINISH)} className="text-sm font-semibold text-slate-500 hover:text-navy">← Back</button>
             <button onClick={() => setStep(FINISH)} className="text-sm font-semibold text-slate-500 hover:text-navy">Keep the defaults →</button>
           </div>
         </div>
@@ -570,6 +585,21 @@ export function OnboardingWizard({
           <p className="mx-auto mt-2 max-w-md text-center text-sm text-slate-600">
             {selectedCourses.size} course type{selectedCourses.size === 1 ? "" : "s"} and {team.length} team member{team.length === 1 ? "" : "s"} ready. Your dashboard has a checklist for the rest.
           </p>
+          {!hasPin ? (
+            <div className="mx-auto mt-6 max-w-xl rounded-lg border border-amber/50 bg-amber/10 p-4">
+              <p className="font-semibold text-navy">Choose your 4-digit PIN</p>
+              <p className="mt-1 text-sm text-slate-600">It is what you type to get back in after 30 minutes away, instead of your whole password. Takes ten seconds.</p>
+              <a href="/set-pin?next=%2Foffice%2Fonboarding" className="mt-3 inline-block rounded-lg bg-navy px-4 py-2 text-sm font-semibold text-white hover:bg-navy-700">Set my PIN →</a>
+            </div>
+          ) : null}
+          <div className="mx-auto mt-6 max-w-xl">
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">When you have a minute</p>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={() => setStep(OPT_INVITE)} className="rounded-full border border-dashed border-slate-300 px-3 py-1.5 text-xs font-medium text-navy hover:border-teal">Tell your team the invite is coming</button>
+              <button type="button" onClick={() => setStep(OPT_TRACKER)} className="rounded-full border border-dashed border-slate-300 px-3 py-1.5 text-xs font-medium text-navy hover:border-teal">Track each new instructor&apos;s onboarding</button>
+              <button type="button" onClick={() => setStep(OPT_PDF)} className="rounded-full border border-dashed border-slate-300 px-3 py-1.5 text-xs font-medium text-navy hover:border-teal">Choose your roster PDF style</button>
+            </div>
+          </div>
 
           <div className="mx-auto mt-6 max-w-xl rounded-lg border border-teal/40 bg-teal/5 p-4">
             <p className="font-semibold text-navy">Next: put your courses on the calendar</p>

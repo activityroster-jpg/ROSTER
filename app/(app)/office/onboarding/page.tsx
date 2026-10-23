@@ -5,6 +5,7 @@ import { parseFeatures } from "@/lib/features";
 import { trackerOffer } from "@/lib/services/onboarding-tracker";
 import { getTeachingData } from "@/lib/services/teaching";
 import { listRosterExamples, type RosterExample } from "@/lib/services/roster-example";
+import { actorUserId } from "@/lib/tenant/context";
 
 export const dynamic = "force-dynamic";
 
@@ -24,12 +25,16 @@ export default async function OnboardingPage() {
 
   const s = settings[0];
   const joinCode = await repos.control.ensureJoinCode(ctx.organisationId).catch(() => null);
+  const uid = actorUserId(ctx);
+  const hasPin = uid ? Boolean((await repos.control.getUserSecurity(uid))?.pinHash) : true;
   let rosterExamples: RosterExample[] = [];
   try { rosterExamples = await listRosterExamples(ctx); } catch { /* storage unavailable: offer the upload anyway */ }
   return (
     <OnboardingWizard
       centreName={organisation.name}
       wording={packFor(organisation.activityType).wording}
+      commonCourseNames={packFor(organisation.activityType).commonCourses ?? []}
+      hasPin={hasPin}
       courseTypes={courseOpts}
       teaching={teaching}
       existingStaff={staff}

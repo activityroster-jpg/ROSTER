@@ -14,6 +14,7 @@ import { instructor as instructorTable } from "@/lib/db/schema";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { surveyStatus } from "@/lib/services/trial-survey";
 import { can } from "@/lib/auth/rbac";
+import { getSetupStatus } from "@/lib/services/setup";
 import { HelpAssistant } from "@/components/HelpAssistant";
 
 export default async function OfficeLayout({ children }: { children: React.ReactNode }) {
@@ -30,6 +31,22 @@ export default async function OfficeLayout({ children }: { children: React.React
   if (uid) {
     try {
       if (!(await repos.control.hasCredentialPassword(uid))) nudgeEmail = (await repos.control.userById(uid))?.email ?? null;
+    } catch { /* cosmetic */ }
+  }
+  // No PIN yet (first day): a reminder on every page until it is chosen.
+  let needsPin = false;
+  if (uid) { try { needsPin = !(await repos.control.getUserSecurity(uid))?.pinHash; } catch { /* cosmetic */ } }
+  // Still setting up (centres under 30 days old): how many essential steps are left.
+  let setupLeft = 0;
+  // The trial reminder waits until the last week, or until the first roster is
+  // built: a centre still setting up has nothing to decide yet.
+  let firstRosterOut = true;
+  const orgAgeMs = Date.now() - (organisation.createdAt instanceof Date ? organisation.createdAt.getTime() : Number(organisation.createdAt));
+  if (orgAgeMs < 30 * 86_400_000) {
+    try {
+      const st = await getSetupStatus(repos, ctx);
+      setupLeft = st.complete ? 0 : st.steps.filter((s) => s.stage === "essential" && !s.done).length;
+      firstRosterOut = st.steps.find((s) => s.key === "roster")?.done ?? true;
     } catch { /* cosmetic */ }
   }
   let clockOn = false;
@@ -91,11 +108,21 @@ export default async function OfficeLayout({ children }: { children: React.React
           <Link href="/office/billing" className="block bg-amber/25 px-6 py-2 text-center text-sm font-medium text-navy hover:bg-amber/30">
             Your free trial has ended — everything is read-only, and locks in {banner.daysLeft} day{banner.daysLeft === 1 ? "" : "s"}. Choose a plan →
           </Link>
-        ) : banner?.kind === "trial" ? (
+        ) : banner?.kind === "trial" && (banner.daysLeft <= 7 || firstRosterOut) ? (
           <Link href="/office/billing" className="block bg-amber/15 px-6 py-2 text-center text-sm font-medium text-navy hover:bg-amber/20">
             {banner.daysLeft > 0
               ? `You're on a free trial — ${banner.daysLeft} day${banner.daysLeft === 1 ? "" : "s"} left. Add payment to keep your centre active →`
               : "Your free trial has ended — add payment to keep your centre active →"}
+          </Link>
+        ) : null}
+        {needsPin ? (
+          <Link href="/set-pin?next=%2Foffice" className="block bg-navy/5 px-6 py-2 text-center text-sm font-medium text-navy hover:bg-navy/10">
+            Choose your 4-digit PIN: it gets you back in after 30 minutes away. Takes ten seconds →
+          </Link>
+        ) : null}
+        {setupLeft > 0 ? (
+          <Link href="/office#getting-started" className="block bg-teal/10 px-6 py-2 text-center text-sm font-medium text-navy hover:bg-teal/15">
+            Finish setting up: {setupLeft} step{setupLeft === 1 ? "" : "s"} left →
           </Link>
         ) : null}
         <div id="main" className="w-full max-w-[110rem] px-4 py-6 sm:px-6 sm:py-8 lg:px-8">{children}</div>

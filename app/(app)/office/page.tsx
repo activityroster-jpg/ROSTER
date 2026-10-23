@@ -119,6 +119,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       ) : null}
 
       {/* Getting started — the route to a first confirmed roster, shown until the essentials are done */}
+      <div id="getting-started" />
       {!setup.complete ? (
         <Card className="mb-6 border-teal/40 bg-teal/5">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -134,6 +135,12 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               <a href="/learn?topic=getting-started" target="_blank" rel="noreferrer" className="text-xs font-medium text-teal hover:underline">📖 Read the guide</a>
             </div>
           </div>
+          {(() => { const nxt = setup.steps.find((x) => x.stage === "essential" && !x.done); return nxt ? (
+            <Link href={nxt.href} className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-teal bg-teal/5 px-4 py-3 hover:bg-teal/10">
+              <span><span className="text-xs font-semibold uppercase tracking-wide text-teal">Next</span><span className="block font-semibold text-navy">{nxt.label}</span>{nxt.hint ? <span className="block text-xs text-slate-500">{nxt.hint}</span> : null}</span>
+              <span className="rounded-lg bg-teal px-4 py-2 text-sm font-semibold text-white">Do this now →</span>
+            </Link>
+          ) : null; })()}
           <ol className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {setup.steps.filter((s) => s.stage === "essential").map((s, i) => {
               const next = !s.done && setup.steps.filter((x) => x.stage === "essential").findIndex((x) => !x.done) === i;
