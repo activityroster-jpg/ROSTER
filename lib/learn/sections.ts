@@ -3,6 +3,7 @@
  * assistant (lib/help), so the two can never drift apart. Every user-facing
  * feature ships with a section here (CLAUDE.md).
  */
+import { APP_STORES } from "@/lib/config";
 
 /** A block of guide content. */
 export type Block =
@@ -215,9 +216,9 @@ const ALL_SECTIONS: Section[] = [
     id: "app",
     icon: "📱",
     label: "The instructor app",
-    blurb: "ActivityRoster on the App Store and Google Play — your roster, hours and certs in your pocket.",
+    blurb: "ActivityRoster for iPhone and Android — your roster, hours and certs in your pocket.",
     blocks: [
-      { kind: "p", text: "Instructors and volunteers use the free ActivityRoster app (iPhone and Android). Everything in the instructor portal is in it — schedule, availability, clock in/out, leave, hours, documents — plus phone notifications, Face ID / fingerprint unlock and a camera button for cert photos." },
+      { kind: "p", text: `Instructors and volunteers use the free ActivityRoster app for iPhone and Android${APP_STORES.ios || APP_STORES.android ? ` (${[APP_STORES.ios ? "App Store" : "", APP_STORES.android ? "Google Play" : ""].filter(Boolean).join(" and ")})` : " (in the app stores shortly; until then the web portal does the same job on any phone)"}. Everything in the instructor portal is in it — schedule, availability, clock in/out, leave, hours, documents — plus phone notifications, Face ID / fingerprint unlock and a camera button for cert photos.` },
       { kind: "sub", text: "No signal on the beach" },
       { kind: "p", text: "Each time you open My schedule with a signal, the next seven days are saved on your phone. If the schedule can't load later, you see that saved week instead, with the time it was saved. Signing out removes it from the phone. Face ID or fingerprint unlocks the app in place of typing your PIN (Settings → App), and the PIN is always there as the fallback." },
       { kind: "sub", text: "Shifts in your own calendar" },

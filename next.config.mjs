@@ -18,6 +18,9 @@ const securityHeaders = [
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // No next/image anywhere, so the /_next/image optimiser route is switched off
+  // (one less surface; its SVG handling had a published advisory).
+  images: { unoptimized: true },
   experimental: {
     // Keep server bundles lean for the Workers runtime.
     serverMinification: true,

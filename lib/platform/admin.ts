@@ -37,7 +37,7 @@ export const requirePlatformAdmin = cache(async function requirePlatformAdmin():
   // The Dev Center's own door: signs an admin in and sends them back here.
   if (!(await isPlatformAdminEmail(email))) redirect("/dev");
   // Unfamiliar device/network → password again; then the 4-digit PIN.
-  await enforceDeviceGate(session!.user.id, "/admin", null, true);
+  await enforceDeviceGate(session!.user.id, "/admin", null, true, true);
   // The money-facing admin also requires the 4-digit PIN each session…
   await enforcePinGate(session!.user.id, session!.session?.id, "/admin");
   // …and an authenticator-app code (TOTP), enrolled once and entered per session.

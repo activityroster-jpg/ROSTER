@@ -31,7 +31,7 @@ export function SwitchCentre({ centres, joinHref }: { centres: CentreOption[]; j
         ))}
       </ul>
       {err ? <p className="mt-2 text-sm text-port">{err}</p> : null}
-      <a href={joinHref} className="mt-4 block rounded-xl border-2 border-dashed border-slate-300 px-4 py-3 text-center text-sm font-semibold text-slate-600">＋ Join another centre with a code</a>
+      <a href={joinHref} className="mt-4 block rounded-xl border-2 border-dashed border-slate-300 px-4 py-3 text-center text-sm font-semibold text-slate-600">＋ Join another centre</a>
     </div>
   );
 }

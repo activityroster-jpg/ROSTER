@@ -5,6 +5,16 @@
  */
 export const DEFAULT_APEX = "activityroster.com";
 
+/**
+ * Where the instructor app is published. Empty until each store has approved it;
+ * fill in once live and the site, guides and emails show the badges and links.
+ */
+export const APP_STORES = {
+  ios: "",
+  android: "",
+} as const;
+export const appStoresLive = () => Boolean(APP_STORES.ios || APP_STORES.android);
+
 export function apexDomain(): string {
   // On the server the Worker var wins (staging and production share one build);
   // in the browser only the build-time public var exists.

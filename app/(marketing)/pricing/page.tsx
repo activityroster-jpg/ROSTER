@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Check } from "lucide-react";
 import { getDb } from "@/lib/cf/bindings";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
-import { fmtMoney, comparisonRow, COMPETITOR_PRICING, ON_SITE_DAY_PRICE } from "@/lib/pricing";
+import { fmtMoney, comparisonRow, COMPETITOR_PRICING, ON_SITE_DAY_PRICE, PRICES_CHECKED_ON } from "@/lib/pricing";
 import { TIERS, TIER_ORDER } from "@/lib/tiers";
 
 export const dynamic = "force-dynamic";
@@ -193,26 +193,30 @@ export default async function PricingPage() {
       <div className="mt-12 overflow-hidden rounded-card border border-starboard/40 bg-starboard/5 shadow-sm">
         <div className="p-7">
           <p className="text-sm font-semibold uppercase tracking-wide text-starboard">Flat price vs the per-user platforms</p>
-          <h2 className="mt-1 font-display text-2xl font-bold text-navy">Cheaper than the per-user platforms — at every size</h2>
+          <h2 className="mt-1 font-display text-2xl font-bold text-navy">Cheaper than the per-user platforms once you count everyone</h2>
           <p className="mt-2 max-w-2xl text-slate-600">
             {COMPETITOR_NAMES_AND} charge per user. A centre rosters everyone (instructors, assistants, shore
             crew, volunteers), so per-seat pricing bills your whole volunteer base. One flat price per centre comes out
-            cheaper at every size.{" "}
+            cheaper for almost every centre, and the gap widens as the team grows.{" "}
             <Link href="/compare" className="font-semibold text-teal hover:underline">Full comparison →</Link>
           </p>
 
-          {/* Phones: one compact row per team size. */}
-          <ul className="mt-5 divide-y divide-slate-100 overflow-hidden rounded-lg border border-slate-200 bg-white md:hidden">
+          {/* Phones: one card per team size, every provider's figure shown. */}
+          <ul className="mt-5 space-y-3 md:hidden">
             {rows.map((r) => (
-              <li key={r.people} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
-                <div>
+              <li key={r.people} className="rounded-lg border border-slate-200 bg-white p-3">
+                <div className="flex items-baseline justify-between">
                   <p className="font-semibold text-navy">{r.people} people</p>
-                  <p className="text-xs text-slate-500">Per-user tools from {fmtMoney(r.cheapestRival, currency)}/mo</p>
+                  <p className="text-sm text-slate-500">{r.plan}</p>
                 </div>
-                <div className="text-right">
-                  <p className="whitespace-nowrap font-semibold text-navy">{fmtMoney(r.ours, currency)}/mo</p>
-                  <p className="text-xs text-slate-400">{r.plan}</p>
-                  <p className="text-xs font-semibold text-starboard">{r.save > 0 ? `Save ${fmtMoney(r.save * 12, currency)} a year` : "Cheapest"}</p>
+                <div className="mt-2 grid grid-cols-2 gap-1.5 text-xs">
+                  {r.competitors.map((c) => (
+                    <div key={c.name} className="flex justify-between rounded bg-slate-50 px-2 py-1 text-slate-600"><span>{c.name}</span><span>{fmtMoney(c.monthly, currency)}/mo</span></div>
+                  ))}
+                </div>
+                <div className="mt-2 flex items-baseline justify-between rounded bg-starboard/10 px-2 py-1.5 text-sm">
+                  <span className="font-semibold text-navy">ActivityRoster {fmtMoney(r.ours, currency)}/mo</span>
+                  <span className="font-medium text-starboard">{r.save > 0 ? `Save ${fmtMoney(r.save * 12, currency)} a year` : "Within a few pounds"}</span>
                 </div>
               </li>
             ))}
@@ -257,14 +261,17 @@ export default async function PricingPage() {
             </table>
           </div>
           <p className="mt-3 text-xs text-slate-500">
-            Even at {smallClubCap} people our Small Club plan comes in under all four; a {biggest.people}-person centre would
-            pay from {fmtMoney(biggest.cheapestRival, currency)} a month on a per-seat tool — with us it&apos;s still just{" "}
+            {rows[0]!.save > 0
+              ? <>Even at {smallClubCap} people our Small Club plan comes in under all four; </>
+              : <>At {smallClubCap} people our Small Club plan is within a few pounds of the cheapest entry plan; from {(rows.find((r) => r.save > 0) ?? biggest).people} people up we are cheaper than all four, and </>}
+            a {biggest.people}-person centre would pay from {fmtMoney(biggest.cheapestRival, currency)} a month on a per-seat tool — with us it&apos;s still just{" "}
             {fmtMoney(standard.monthlyPrice, currency)}. &ldquo;You save&rdquo; is measured against the cheapest of the four.
           </p>
           <p className="mt-2 text-xs italic text-slate-400">
-            Competitor prices are estimates for feature-comparable paid tiers (scheduling, time &amp; attendance and leave)
-            and may be out of date — check each provider&apos;s current pricing. Figures are illustrative; providers
-            typically range from about £2 to £6 per user per month.
+            Competitor figures are our estimates for the paid tier that matches what we include (scheduling, time &amp; attendance
+            and leave), checked on {PRICES_CHECKED_ON} against each provider&apos;s published pricing:{" "}
+            {COMPETITOR_PRICING.map((c, i) => <span key={c.name}>{i ? ", " : ""}<a href={c.url} target="_blank" rel="noreferrer" className="underline hover:text-navy">{c.name}</a></span>)}.
+            Entry plans can be cheaper (RotaCloud&apos;s starts at about £2 per person) and providers change prices; treat the table as a guide and check the links.
           </p>
         </div>
       </div>

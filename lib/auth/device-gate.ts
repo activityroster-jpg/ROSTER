@@ -28,7 +28,11 @@ export async function currentDeviceId(): Promise<string | null> {
  * confirmed devices yet (brand-new account) has the current one trusted too:
  * the sign-in itself was the proof, and there is no baseline to compare against.
  */
-export async function enforceDeviceGate(userId: string, next: string, organisationId: string | null, strict = false): Promise<void> {
+/**
+ * `challengeNewDevice` (the Dev Center): a device the account has never used is
+ * always asked for the password or code, even in a known place.
+ */
+export async function enforceDeviceGate(userId: string, next: string, organisationId: string | null, strict = false, challengeNewDevice = false): Promise<void> {
   const deviceId = await currentDeviceId();
   const fp = await requestFingerprint();
   const ip = fp.ip ?? "unknown";
@@ -47,7 +51,7 @@ export async function enforceDeviceGate(userId: string, next: string, organisati
   }
 
   const first = (await control.countTrustedDevices(userId)) === 0;
-  if (first || (await control.hasTrustedPlace(userId, fp.country, fp.city, strict))) {
+  if (first || (!challengeNewDevice && (await control.hasTrustedPlace(userId, fp.country, fp.city, strict)))) {
     await control.trustDevice({ userId, deviceId, ip, country: fp.country, city: fp.city, userAgent: fp.userAgent });
     await control.logSecurityEvent({ userId, organisationId, kind: "new_device", ...fp, meta: JSON.stringify({ first, silent: true }) }).catch(() => {});
     if (!first) {

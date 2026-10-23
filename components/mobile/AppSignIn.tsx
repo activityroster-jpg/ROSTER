@@ -67,7 +67,7 @@ export function AppSignIn() {
       <div className="mt-8 rounded-xl border border-slate-200 bg-white p-4 text-center">
         <p className="text-sm text-slate-600">First time here?</p>
         <Link href="/app/signup" className="mt-2 inline-block w-full rounded-xl border-2 border-teal px-4 py-3 text-base font-semibold text-teal">Create your account</Link>
-        <p className="mt-2 text-xs text-slate-400">You&apos;ll need your centre&apos;s company code — ask your admin.</p>
+        <p className="mt-2 text-xs text-slate-400">If your centre has already added you, it&apos;s offered by name after you sign in. Otherwise ask them for their company code.</p>
       </div>
     </div>
   );

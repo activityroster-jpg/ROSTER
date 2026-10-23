@@ -103,8 +103,13 @@ export function tierSaving(people: number, ourMonthly: number, perUser: number =
   return { people, theirs, ours: ourMonthly, save, pct };
 }
 
+/** When the competitor figures below were last checked against each provider's published pricing. */
+export const PRICES_CHECKED_ON = "23 October 2026";
+
 export interface CompetitorPricing {
   name: string;
+  /** The provider's own pricing page, so anyone can check. */
+  url: string;
   /** Representative £/user/month for a feature-comparable paid tier (scheduling
    *  + time & attendance + leave — the tier that matches what we include, not
    *  each platform's cheapest entry plan). Illustrative; real prices vary. */
@@ -114,10 +119,10 @@ export interface CompetitorPricing {
 /** The per-user platforms we compare against on /compare, each a column in the
  *  pricing table. Rates are illustrative, for feature-comparable paid tiers. */
 export const COMPETITOR_PRICING: CompetitorPricing[] = [
-  { name: "Deputy", perUser: 4.5 },
-  { name: "When I Work", perUser: 4 },
-  { name: "RotaCloud", perUser: 3.8 },
-  { name: "Planday", perUser: 4.2 },
+  { name: "Deputy", perUser: 4.5, url: "https://www.deputy.com/pricing" },
+  { name: "When I Work", perUser: 4, url: "https://wheniwork.com/pricing" },
+  { name: "RotaCloud", perUser: 3, url: "https://rotacloud.com/pricing" },
+  { name: "Planday", perUser: 4.2, url: "https://www.planday.com/pricing" },
 ];
 
 export interface ComparisonRow {
