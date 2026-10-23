@@ -77,6 +77,38 @@ async function PayRatesPanel({ repos, ctx, currency, featureOn }: { repos: Repos
 
 export const dynamic = "force-dynamic";
 
+/** "Find a setting": every setting by the words people use for it, and where it lives. */
+const SETTINGS_INDEX = [
+  { label: "Web address", tab: "general", anchor: "web-address", keywords: "url subdomain slug link domain change address" },
+  { label: "Company code for the instructor app", tab: "general", anchor: "company-code", keywords: "join code centre code app sign up" },
+  { label: "Checks when rostering (licences, ratios, clashes, availability)", tab: "general", anchor: "general-form", keywords: "enforce licence ratio conflict double booking availability kit rules" },
+  { label: "Expiry warning lead time", tab: "general", anchor: "general-form", keywords: "alert days certs expiring reminder" },
+  { label: "Availability window (weeks ahead)", tab: "general", anchor: "general-form", keywords: "how far ahead weeks availability horizon" },
+  { label: "Who keeps availability: staff in the app or the office", tab: "general", anchor: "general-form", keywords: "office managed staff managed app sign up" },
+  { label: "Staff accept or decline shifts", tab: "general", anchor: "general-form", keywords: "confirm shifts accept decline pending" },
+  { label: "Morning digest email", tab: "general", anchor: "general-form", keywords: "daily digest email morning" },
+  { label: "Idle timeout and PIN", tab: "general", anchor: "general-form", keywords: "sign out idle minutes pin lock" },
+  { label: "Currency", tab: "general", anchor: "general-form", keywords: "gbp eur pounds euros" },
+  { label: "Holiday pay", tab: "general", anchor: "general-form", keywords: "holiday pay percent accrual" },
+  { label: "Your privacy notice link", tab: "general", anchor: "general-form", keywords: "privacy notice url gdpr staff" },
+  { label: "Instructor onboarding tracker", tab: "general", anchor: "onboarding-tracker", keywords: "checklist new instructor onboarding steps" },
+  { label: "Welfare officers", tab: "roster", anchor: "welfare", keywords: "welfare duty safeguarding officer" },
+  { label: "Roster PDF layout", tab: "roster", anchor: "rota-pdf", keywords: "print pdf download layout template example roster" },
+  { label: "Pay rates", tab: "pay", anchor: "pay-rates", keywords: "rate hourly session day payroll wages money" },
+  { label: "Course default schedule", tab: "time", anchor: "course-schedule", keywords: "sessions per course default times days" },
+  { label: "Time clock and pay source", tab: "time", anchor: "course-schedule", keywords: "clock in clock out actual hours pay source" },
+  { label: "Lunch breaks", tab: "time", anchor: "course-schedule", keywords: "break unpaid minutes lunch" },
+  { label: "Session slots (AM, PM, EV)", tab: "lists", anchor: "lists", keywords: "morning afternoon evening slot times" },
+  { label: "Instructor types and certificates", tab: "lists", anchor: "lists", keywords: "qualification grade ladder rank certificate dinghy instructor" },
+  { label: "Places on courses", tab: "lists", anchor: "lists", keywords: "role place safety boat first aider ratio" },
+  { label: "Checks (DBS, first aid, safeguarding)", tab: "lists", anchor: "lists", keywords: "compliance vetting dbs pvg accessni garda first aid mandatory" },
+  { label: "Equipment, locations, course setup, integrations", tab: "lists", anchor: "more-settings", keywords: "boats kit locations booking system import course types" },
+  { label: "Data retention", tab: "data", anchor: "retention", keywords: "keep delete years retention schedule" },
+  { label: "Export all data", tab: "data", anchor: "data-billing", keywords: "export json download backup" },
+  { label: "Billing", tab: "data", anchor: "data-billing", keywords: "invoice plan card subscription stripe" },
+  { label: "Security, two-factor and PIN", tab: "data", anchor: "data-billing", keywords: "2fa password authenticator pin devices" },
+];
+
 export default async function SettingsPage() {
   // Settings, or just its Pay rates tab for office admins who have Payroll but not Settings.
   const { ctx, repos, organisation } = await requireTenant({ role: "admin" });
@@ -135,6 +167,7 @@ export default async function SettingsPage() {
       </Link>
 
       <SettingsTabs
+        index={SETTINGS_INDEX}
         tabs={[
           { id: "general", label: "General", hint: "Company code, warnings, checks when rostering, availability window, holiday pay" },
           { id: "roster", label: "Roster & welfare", hint: "Welfare officers, the roster PDF, course default schedules" },
@@ -145,6 +178,7 @@ export default async function SettingsPage() {
         ]}
         panels={{
           general: (<>
+      <div id="web-address" className="scroll-mt-6" />
       <Card className="mb-6">
         <div className="mb-1 flex items-center justify-between">
           <h2 className="font-semibold text-navy">Web address</h2>
@@ -161,6 +195,7 @@ export default async function SettingsPage() {
           return <WebAddressCard slug={organisation.slug} apex={apexDomain()} canChange={canChange} reason={reason} />;
         })()}
       </Card>
+      <div id="company-code" className="scroll-mt-6" />
       <Card className="mb-6">
         <div className="mb-1 flex items-center justify-between">
           <h2 className="font-semibold text-navy">Company code · instructor app</h2>
@@ -169,6 +204,7 @@ export default async function SettingsPage() {
         <CompanyCodeCard code={joinCode} />
       </Card>
 
+      <div id="general-form" className="scroll-mt-6" />
       <Card className="mb-6">
         <h2 className="mb-1 font-semibold text-navy">General</h2>
         <p className="mb-3 text-xs text-slate-500">How early to warn about expiring certs, and which checks to enforce when rostering.</p>
@@ -208,6 +244,7 @@ export default async function SettingsPage() {
           </>),
           roster: (<>
       <div id="rota-pdf" className="mb-6">
+      <div id="welfare" className="scroll-mt-6" />
       <Card className="mb-6">
         <div className="mb-1 flex items-center justify-between"><h2 className="font-semibold text-navy">Welfare officers</h2><a href="/learn?topic=roles" target="_blank" rel="noreferrer" className="text-xs font-medium text-teal hover:underline">📖 Read the guide</a></div>
         <p className="mb-3 text-xs text-slate-500">Not accounts: just names, so the roster and the emergency sheet can say who is on welfare duty. Set a default pattern here and change any single day on the roster.</p>
@@ -228,6 +265,7 @@ export default async function SettingsPage() {
           </>),
           pay: canPay ? <PayRatesPanel repos={repos} ctx={ctx} currency={s?.currency ?? "GBP"} featureOn={hasFeature(s?.enabledFeatures, "payroll")} /> : null,
           time: (<>
+      <div id="course-schedule" className="scroll-mt-6" />
       <div className="mb-6 grid gap-6 lg:grid-cols-3">
         <Card>
           <div className="mb-1 flex items-center justify-between">
@@ -251,6 +289,7 @@ export default async function SettingsPage() {
 
           </>),
           lists: (<>
+      <div id="lists" className="scroll-mt-6" />
       <div className="grid gap-6 lg:grid-cols-2">
         <ConfigManager
           title="Session slots"
@@ -298,6 +337,7 @@ export default async function SettingsPage() {
         <a href="/office/locations" className="font-medium text-teal hover:underline">Locations</a> tabs.
       </p>
 
+      <div id="more-settings" className="scroll-mt-6" />
       <Card className="mt-8">
         <h2 className="mb-1 font-semibold text-navy">More settings</h2>
         <p className="mb-3 text-xs text-slate-500">These areas have their own page — a change there is the same as here.</p>
@@ -330,6 +370,7 @@ export default async function SettingsPage() {
       </Card>
       </div>
 
+      <div id="data-billing" className="scroll-mt-6" />
       <Card className="mt-6">
         <h2 className="mb-1 font-semibold text-navy">Data &amp; billing</h2>
         <p className="mb-3 text-xs text-slate-500"><span aria-hidden>👁 </span>Whole-centre export: {await whoCanSeeText(repos, ctx, "exports")}</p>

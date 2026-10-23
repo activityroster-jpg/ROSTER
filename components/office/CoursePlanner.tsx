@@ -71,6 +71,7 @@ export function CoursePlanner({ courseTypes, events, slotStyle, roles = [], rele
   const [locationIds, setLocationIds] = useState<string[]>([]);
   const [equipmentIds, setEquipmentIds] = useState<string[]>([]);
   const [showMore, setShowMore] = useState(false);
+  const [showBuilder, setShowBuilder] = useState(false);
   const toggle = (set: (f: (v: string[]) => string[]) => void, id: string) => set((v) => (v.includes(id) ? v.filter((x) => x !== id) : [...v, id]));
   const relevant = relevantByType[courseTypeId] ?? [];
   // A new line starts on the course's lead instructor type, then the next relevant place not yet listed.
@@ -170,7 +171,7 @@ export function CoursePlanner({ courseTypes, events, slotStyle, roles = [], rele
                     </div>
                   ))}
                 </div>
-                <button type="button" onClick={() => addRow(d)} className="mt-1 flex w-full items-center justify-center gap-1 rounded-md border border-teal/40 bg-teal/5 py-1 text-[11px] font-semibold text-teal hover:bg-teal hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-teal" aria-label={`Add a session on ${fmtDay(d)}`}>
+                <button type="button" onClick={() => { setShowBuilder(true); addRow(d); }} className="mt-1 flex w-full items-center justify-center gap-1 rounded-md border border-teal/40 bg-teal/5 py-1 text-[11px] font-semibold text-teal hover:bg-teal hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-teal" aria-label={`Add a session on ${fmtDay(d)}`}>
                   <span aria-hidden="true">＋</span> Add
                 </button>
               </div>
@@ -179,9 +180,13 @@ export function CoursePlanner({ courseTypes, events, slotStyle, roles = [], rele
         </div>
       </div>
 
+      {/* Builder: behind a button, so the calendar and the list get the space; tapping a day opens it */}
+      {!showBuilder ? (
+        <button type="button" onClick={() => setShowBuilder(true)} className="rounded-lg bg-teal px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal-700">＋ Add a course</button>
+      ) : (<>
       {/* Builder */}
       <div className="rounded-card border border-slate-200 bg-white p-4">
-        <h2 className="font-semibold text-navy">Add a course</h2>
+        <div className="flex items-center justify-between"><h2 className="font-semibold text-navy">Add a course</h2><button type="button" onClick={() => setShowBuilder(false)} className="text-xs font-medium text-slate-500 hover:text-navy">Close</button></div>
         <p className="mb-3 text-xs text-slate-500">Pick the type and add each session (any days, exact times if you need them). Staff, locations and equipment are optional under “More options”.</p>
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
@@ -302,6 +307,7 @@ export function CoursePlanner({ courseTypes, events, slotStyle, roles = [], rele
           {msg ? <span className={`text-sm ${msg.ok ? "text-starboard" : "text-port"}`} role="status">{msg.text}</span> : null}
         </div>
       </div>
+      </>)}
       {editing ? <CourseEditorModal courseId={editing} onClose={() => setEditing(null)} /> : null}
     </div>
   );

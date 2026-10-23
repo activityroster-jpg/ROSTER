@@ -3,6 +3,7 @@ import { apexDomain } from "@/lib/config";
 import { requireTenant } from "@/lib/tenant/require";
 import { getRepositories } from "@/lib/cf/bindings";
 import { OfficeSidebar } from "@/components/office/OfficeSidebar";
+import { parseFeatures } from "@/lib/features";
 import { GhostBanner } from "@/components/office/GhostBanner";
 import { SetPasswordNudge } from "@/components/office/SetPasswordNudge";
 import { IncidentBanner, MaintenanceNotice } from "@/components/IncidentBanner";
@@ -50,6 +51,7 @@ export default async function OfficeLayout({ children }: { children: React.React
     } catch { /* cosmetic */ }
   }
   let clockOn = false;
+  let extras: string[] | null = null;
   let privacyUrl: string | null = null;
 
   // The shared admin login usually has no instructor record of its own; only
@@ -60,6 +62,7 @@ export default async function OfficeLayout({ children }: { children: React.React
     hasInstructorRecord = (await tenant.instructor.count(ctx, eq(instructorTable.userId, ctx.userId))) > 0;
     const settings = (await tenant.orgSettings.list(ctx))[0];
     clockOn = Boolean(settings?.timeclockEnabled);
+    extras = settings?.enabledFeatures != null ? parseFeatures(settings.enabledFeatures) : null;
     privacyUrl = settings?.privacyNoticeUrl ?? null;
   } catch { /* defaults */ }
 
@@ -82,7 +85,7 @@ export default async function OfficeLayout({ children }: { children: React.React
 
   return (
     <div className="flex min-h-screen bg-canvas">
-      <OfficeSidebar orgName={organisation.name} clockOn={clockOn} hasInstructorRecord={hasInstructorRecord} role={ctx.role} features={ctx.features ?? []} />
+      <OfficeSidebar orgName={organisation.name} clockOn={clockOn} hasInstructorRecord={hasInstructorRecord} role={ctx.role} features={ctx.features ?? []} extras={extras} />
       <div className="flex-1 overflow-x-hidden pt-14 lg:pt-0">
         <IncidentBanner />
         {ctx.ghost ? <GhostBanner centreName={organisation.name} /> : null}

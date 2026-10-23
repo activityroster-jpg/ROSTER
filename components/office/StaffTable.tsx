@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Search, ChevronsUpDown } from "lucide-react";
 import { StatusPill } from "@/components/ui";
+import { AccessChip } from "./AccessChip";
 import { InviteInstructorButton } from "@/components/office/InviteInstructorButton";
 import { RemindButton } from "@/components/office/RemindButton";
 
@@ -180,18 +181,8 @@ export function StaffTable({ rows }: { rows: StaffRow[] }) {
                   <td className="px-4 py-3">
                     {r.status === "inactive" ? (
                       <span className="text-xs text-slate-400">Access ended</span>
-                    ) : r.officeManaged && r.inviteStatus === "none" ? (
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600" title="The office keeps their availability; they don't need the app">No sign-up needed</span>
-                        {r.hasEmail ? <InviteInstructorButton instructorId={r.id} status={r.inviteStatus} sentAt={r.inviteSentAt ?? null} queued={r.inviteQueued ?? false} /> : null}
-                      </div>
-                    ) : r.hasEmail ? (
-                      <div className="flex flex-wrap items-center gap-2">
-                        <InviteInstructorButton instructorId={r.id} status={r.inviteStatus} sentAt={r.inviteSentAt ?? null} queued={r.inviteQueued ?? false} />
-                        {r.phoneAlertsOff ? <span className="rounded-full bg-amber/15 px-2 py-0.5 text-[11px] font-medium text-amber" title="They're in the app but phone notifications are off, so roster changes only reach them when they open it. Ask them to turn notifications on: the app asks each day until they do, and it's under Settings in the app.">Phone alerts off</span> : null}
-                      </div>
                     ) : (
-                      <span className="text-xs text-slate-400">Add email to invite</span>
+                      <AccessChip instructorId={r.id} status={r.inviteStatus} sentAt={r.inviteSentAt ?? null} queued={r.inviteQueued ?? false} hasEmail={Boolean(r.hasEmail)} officeManaged={Boolean(r.officeManaged)} phoneAlertsOff={Boolean(r.phoneAlertsOff)} />
                     )}
                   </td>
                 </tr>

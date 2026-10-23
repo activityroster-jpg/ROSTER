@@ -25,6 +25,7 @@ import { InstructorTypesEditor, approvalsToSave, taughtCount, type TypesValue } 
 import { CourseTeachersEditor, type TeacherTick } from "./CourseTeachersEditor";
 import { RosterExampleUpload, type RosterExampleRow } from "./RosterExampleUpload";
 import { LoadExampleWeekButton } from "./ExampleWeek";
+import { teamChatMessage } from "@/lib/domain/team-chat";
 
 export interface CourseTypeOpt { id: string; name: string; scheme: string | null; audience: CourseAudience; category: string | null; active: boolean }
 export interface TeamMember { name: string; employment: string; quals: number; courses?: number; invited?: boolean }
@@ -45,16 +46,6 @@ const STEP_LABELS = ["How you run", "Courses", "Team", "Finish"];
 /** Optional screens reached from the finish step: 5 tell the team, 6 onboarding tracker, 7 roster PDF. */
 const OPT_INVITE = 5, OPT_TRACKER = 6, OPT_PDF = 7;
 const FINISH = STEP_LABELS.length;
-
-/** The message the office sends on its team chat alongside the invites. */
-export function teamChatMessage(centreName: string, joinCode: string | null, finishBy: string): string {
-  return [
-    `Hi all, ${centreName} now uses ActivityRoster for the roster.`,
-    "You should have an email from ActivityRoster inviting you to set up your account. If you can't see it, check your spam or junk folder.",
-    `Please set your password, add your instructor licences and fill in your availability by ${finishBy}.`,
-    joinCode ? `No email? Go to activityroster.com/app (or the ActivityRoster app), create an account with the email we have for you, and enter our centre code ${joinCode}.` : "No email? Let the office know and we'll send it again.",
-  ].join("\n\n");
-}
 
 const Recommended = ({ children = "Recommended" }: { children?: string }) => (
   <span className="ml-2 rounded-full bg-starboard/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-starboard">{children}</span>

@@ -18,7 +18,7 @@ import { listOpenShifts } from "@/lib/services/openshifts";
 import { getSetupStatus } from "@/lib/services/setup";
 import { exampleWeekState } from "@/lib/services/example-week";
 import { ExampleWeekNotice, LoadExampleWeekButton } from "@/components/office/ExampleWeek";
-import { Card, StatusPill } from "@/components/ui";
+import { Card, Hint, StatusPill } from "@/components/ui";
 import { WeekCalendarView } from "@/components/office/WeekCalendarView";
 import { todayIso } from "@/lib/domain";
 import { GuideLink } from "@/components/GuideLink";
@@ -209,7 +209,20 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         {!clockOn ? <Tile href="/office/finance" label="Paid hours this month" value={"→"} sub="Review payroll" /> : null}
       </div>
 
-      {/* Needs attention */}
+      {/* Needs attention: the tiles, or one line when every one of them is zero */}
+      {(() => { const quiet = (licenceOn ? blocked : 0) + expiring + (ratioOn ? uncovered : 0) + pendingLeave + openShifts + confirmations.awaiting + problems.problems.length === 0; return quiet ? (
+        <details className="mb-8 rounded-card border border-starboard/30 bg-starboard/5 px-4 py-3">
+          <summary className="cursor-pointer text-sm text-navy"><span className="font-semibold">All quiet.</span> Nothing needs attention: no certs expiring, no leave waiting, no open shifts, nothing on the roster to sort out. <span className="text-xs text-slate-500">Show the tiles</span></summary>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <Tile href="/office/staff" label="Certs expiring" value={0} sub="Within lead time" />
+            <Tile href="/office/leave" label="Leave to approve" value={0} sub="Pending requests" />
+            <Tile href="/office/leave" label="Open shifts" value={0} sub="Need cover" />
+            <Tile href="/office/rota" label="Awaiting replies" value={0} sub="On confirmed days" />
+            <Tile href="#problems" label="Problems on the roster" value={0} sub="Next 4 weeks" />
+          </div>
+        </details>
+      ) : null; })()}
+      {(licenceOn ? blocked : 0) + expiring + (ratioOn ? uncovered : 0) + pendingLeave + openShifts + confirmations.awaiting + problems.problems.length > 0 ? (<>
       <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Needs attention</p>
       <div className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {licenceOn ? <Tile href="/office/staff" label="Not cleared to roster" value={blocked} sub="Missing or expired certs" tone={blocked > 0 ? "port" : "navy"} /> : null}
@@ -220,12 +233,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <Tile href="/office/rota" label="Awaiting replies" value={confirmations.awaiting} sub={confirmations.declined ? `${confirmations.declined} can't make it` : "On confirmed days"} tone={confirmations.declined > 0 ? "port" : confirmations.awaiting > 0 ? "amber" : "navy"} />
         <Tile href="#problems" label="Problems on the roster" value={problems.problems.length} sub={problems.blocks ? `${problems.blocks} blocking · next 4 weeks` : "Next 4 weeks"} tone={problems.blocks > 0 ? "port" : problems.warns > 0 ? "amber" : "navy"} />
       </div>
+      </>) : null}
 
       {/* Problems: what contradicts a rule the centre has switched on, as the data stands now */}
       {problems.problems.length > 0 ? (
         <div id="problems" className="mb-8">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <h2 className="font-display text-lg font-semibold text-navy">Problems to sort out</h2>
+            <h2 className="font-display text-lg font-semibold text-navy">Problems to sort out<Hint text="What contradicts a rule you switched on: clashes, someone in a place they aren't qualified for, a course short of instructors, or no Senior Instructor cover (someone teaching under supervision, such as an Assistant or Dinghy Instructor, with no Senior Instructor on duty)." /></h2>
             <a href="/learn?topic=problems" target="_blank" rel="noreferrer" className="text-xs font-medium text-teal hover:underline">📖 Read the guide</a>
           </div>
           <Card className="p-0">

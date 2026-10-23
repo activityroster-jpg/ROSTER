@@ -1,5 +1,7 @@
 "use client";
 
+import { Hint } from "@/components/ui";
+
 import { useMemo, useState } from "react";
 import { approvalCourses, coursesTaught, rulesByCourse, type TeachingData } from "@/lib/domain/teaching";
 import { groupByLadder } from "@/lib/domain/ladders";
@@ -75,7 +77,7 @@ export function InstructorTypesEditor({ data, value, onChange, personName, compa
     <div className="space-y-4">
       <div>
         <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm font-medium text-navy">Instructor types {who === "they" ? "they hold" : `${who} holds`} <span className="text-xs font-normal text-slate-400">({value.typeIds.size} ticked · tick every one that applies)</span></p>
+          <p className="text-sm font-medium text-navy">Instructor types {who === "they" ? "they hold" : `${who} holds`} <span className="text-xs font-normal text-slate-400">({value.typeIds.size} ticked · tick every one that applies)</span><Hint text="An instructor type is a qualification such as Dinghy Instructor or Senior Instructor. It decides which places on a course this person can fill; a higher type on the same ladder can fill a lower place." /></p>
           <a href="/learn?topic=instructor-types" target="_blank" rel="noreferrer" className="text-xs font-medium text-teal hover:underline">📖 Read the guide</a>
         </div>
         <div className={`space-y-3 rounded-lg border border-slate-200 p-3 ${compact ? "max-h-80 overflow-y-auto" : ""}`}>

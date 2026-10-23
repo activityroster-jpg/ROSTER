@@ -147,6 +147,7 @@ const ALL_SECTIONS: Section[] = [
     label: "Instructors & team",
     blurb: "Add instructors and the instructor types they hold.",
     blocks: [
+      { kind: "p", text: "The App access column shows one chip per person: Not invited, Invite sent (with when), In the app, In the app · alerts off, or No sign-up needed when the office keeps their availability. Open the chip for the invite or re-send button and a note on what the status means. Next to Add instructors, “Copy team-chat message” copies the note that tells your team the invite is real." },
       { kind: "p", text: "The Instructors tab lists everyone at your centre with their status and whether they're cleared to roster." },
       { kind: "sub", text: "The quick way" },
       { kind: "p", text: "Under Add instructors, Quick add takes just a name and an email, with “Send the invite” ticked: they fill in their own phone, date of birth and certificates from the invite. For the start of the season, Paste a list takes one person per line as copied from an email or spreadsheet (“Sam Jones, sam@example.org” or “Kim Lee <kim@example.org>”); it shows how many it found before you add them. People without an email are added but not invited." },
@@ -405,6 +406,7 @@ const ALL_SECTIONS: Section[] = [
     label: "The roster board",
     blurb: "Build and fix the week on one screen: courses by day, or people across days.",
     blocks: [
+      { kind: "p", text: "Keyboard shortcuts on the roster week: ← and → (or [ and ]) move a week, T goes to this week, P switches between the board and the print view, E opens the emergency sheet, and ? shows the list. Press ⌨ Shortcuts under the week to see them." },
       { kind: "p", text: "The Roster page is where the week is built. “Courses by day” shows each day's sessions as cards with who's on them and the places still open; the people list on the right shows everyone's availability for the slot you've clicked. Drag a person onto a session, or click a person and then a session. “People × days” turns it round: a row per instructor, a column per day and slot, free slots tinted green, and beside each name the hours they are rostered that week." },
       { kind: "sub", text: "The side panel" },
       { kind: "bullets", items: [
@@ -706,6 +708,7 @@ const ALL_SECTIONS: Section[] = [
     label: "Settings & configuration",
     blurb: "Tune courses, instructor types, places, checks and how sessions run.",
     blocks: [
+      { kind: "p", text: "Settings has an index on the left (General, Roster & welfare, Pay rates, Time & clock, Lists, Data & account) and a “Find a setting” box above it: type a word such as “holiday”, “digest” or “DBS” and pick the result to jump straight to that setting." },
       { kind: "p", text: "Settings is where you adjust the defaults you set during onboarding. It is split into tabs: General (your web address, which the owner can change once within 30 days of signing up, then the company code, warnings, the checks applied when rostering, the availability window, holiday pay), Roster & welfare (welfare officers, the roster PDF, course default schedules), Time & pay, Lists (slots, instructor types and certificates, places on courses, checks) and Data & account (retention, export, billing, security, PIN). Switching off a safety check asks you to confirm and names what will no longer be stopped." },
       { kind: "bullets", items: [
         "Activate or retire course types, instructor types and compliance checks — retired items keep their history and stop appearing for new records. Retiring an instructor type retires its place on courses with it.",

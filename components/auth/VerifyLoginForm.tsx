@@ -73,7 +73,7 @@ export function VerifyLoginForm({ next, emailHint, preVerified }: { next: string
             <p className="mt-1 mb-4 text-sm text-slate-500">Either way you&rsquo;ll be asked for your PIN after 30 minutes without activity, and to sign in again after 12 hours away. We only email a code when your account is used somewhere new.</p>
             {err ? <p className="mb-3 text-sm text-port">{err}</p> : null}
             <button type="button" onClick={() => void finish(true)} disabled={busy} className="w-full rounded-lg bg-teal px-4 py-2.5 font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{busy ? "One moment…" : "Yes, stay signed in on this device"}</button>
-            <button type="button" onClick={() => void finish(false)} disabled={busy} className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-2.5 font-semibold text-navy hover:bg-slate-50 disabled:opacity-50">Just this once (sign me out when I close the browser)</button>
+            <button type="button" onClick={() => void finish(false)} disabled={busy} className="mt-3 w-full text-center text-sm font-medium text-slate-500 hover:text-navy disabled:opacity-50">Just this once</button>
             <p className="mt-3 text-xs text-slate-400">Pick &ldquo;just this once&rdquo; on a shared or public computer.</p>
           </>
         )}

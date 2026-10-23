@@ -4,6 +4,7 @@ import { AddPackLists } from "@/components/office/AddPackLists";
 import { CourseTypeTable, type CourseTypeRow } from "@/components/office/CourseTypeTable";
 import { OneOffCourseTypes } from "@/components/office/OneOffCourseTypes";
 import { KitRules } from "@/components/office/KitRules";
+import { Hint } from "@/components/ui";
 import { getKitRules } from "@/lib/services/kit";
 import { eq } from "drizzle-orm";
 import { course as courseTable } from "@/lib/db/schema";
@@ -50,7 +51,7 @@ export default async function CourseSetupPage() {
     <div>
       <h1 className="mb-1 font-display text-2xl font-semibold text-navy">Course setup</h1>
       <p className="mb-4 text-sm text-slate-500">
-        Your course-type catalogue. Edit any field in place, say which instructor types can teach each course, add new types, or delete ones you don&apos;t run. A type
+        Your course-type catalogue. Edit any field in place, say which instructor types can teach each course<Hint text="Each place on a course is an instructor type (Dinghy Instructor, Powerboat Instructor, Safety Boat). Auto-roster fills a place with someone who holds that type, or a higher one on the same ladder." />, add new types, or delete ones you don&apos;t run. Rows are read-only until you press Edit. A type
         that&apos;s already used by courses is retired rather than deleted, so past courses still show it.
       </p>
       <a href="/learn?topic=courses" target="_blank" rel="noreferrer" className="mb-4 inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-navy hover:bg-slate-50">📖 Read the guide</a>

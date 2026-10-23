@@ -8,6 +8,7 @@ import { Card } from "@/components/ui";
 import { JoinRequests, type JoinRequestRow } from "@/components/office/JoinRequests";
 import { AddInstructorForm } from "@/components/office/AddInstructorForm";
 import { QuickAddStaff } from "@/components/office/QuickAddStaff";
+import { CopyInviteMessage } from "@/components/office/CopyInviteMessage";
 import { StaffTable, type StaffRow } from "@/components/office/StaffTable";
 import { GuideLink } from "@/components/GuideLink";
 import { OfficeAccess } from "@/components/office/OfficeAccess";
@@ -16,7 +17,7 @@ import { listOfficeMembers } from "@/lib/services/office-access";
 export const dynamic = "force-dynamic";
 
 export default async function StaffPage() {
-  const { ctx, repos } = await requireTenant({ permission: "staff.view" });
+  const { ctx, repos, organisation } = await requireTenant({ permission: "staff.view" });
   const [staff, teaching, teachingData, complianceTypes] = await Promise.all([
     listStaffWithFit(repos, ctx),
     getTeachingMatrix(repos, ctx),
@@ -31,6 +32,7 @@ export default async function StaffPage() {
   const withPhoneAlerts = await repos.control.userIdsWithPushToken([...membershipStatus.keys()]);
   const inviteSent = await repos.control.inviteSentByUser(ctx.organisationId);
   const inviteQueued = await repos.control.inviteQueuedUsers(ctx.organisationId);
+  const joinCode = await repos.control.ensureJoinCode(ctx.organisationId);
   const officeMembers = await listOfficeMembers(repos, ctx);
   const settingsRow = (await repos.tenant.orgSettings.list(ctx))[0];
   const withAvailability = new Set((await repos.tenant.availability.distinct(ctx, availabilityTable.instructorId)) as string[]);
@@ -103,6 +105,7 @@ export default async function StaffPage() {
           ? <>The office keeps availability here, so a name is enough: staff don&rsquo;t need to sign up. You can still invite anyone who wants the app. <a href="/learn?topic=office-managed" target="_blank" rel="noreferrer" className="text-teal hover:underline">📖 Read the guide</a></>
           : "The quickest way: a name and email, and they set up the rest from the invite. Or give them your company code (Settings) and they can join from the app."}</p>
         <QuickAddStaff officeMode={settingsRow?.staffManagedBy === "office"} />
+        {settingsRow?.staffManagedBy !== "office" ? <div className="mt-3"><p className="mb-1 text-xs text-slate-500">Invites come from ActivityRoster, so they are easy to miss. Send this on your team chat so people know the invite is real:</p><CopyInviteMessage centreName={organisation.name} joinCode={joinCode} /></div> : null}
         <details className="mt-4 border-t border-slate-100 pt-3">
           <summary className="cursor-pointer text-sm font-medium text-navy">Add with all details (instructor types, checks)</summary>
           <div className="mt-3"><AddInstructorForm teaching={teachingData} checks={checkChoices} /></div>

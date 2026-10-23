@@ -69,12 +69,14 @@ const NAV = [
  * a menu button that slides the same list in, so the office works at the
  * slipway as well as at the desk.
  */
-export function OfficeSidebar({ orgName, clockOn, hasInstructorRecord, role = "owner", features = [] }: { orgName: string; clockOn: boolean; hasInstructorRecord: boolean; role?: MembershipRole; features?: readonly OfficeFeature[] | readonly string[] }) {
+export function OfficeSidebar({ orgName, clockOn, hasInstructorRecord, role = "owner", features = [], extras = null }: { orgName: string; clockOn: boolean; hasInstructorRecord: boolean; role?: MembershipRole; /** The optional extras the centre switched on in setup; null = never chosen, so everything shows. */ extras?: string[] | null; features?: readonly OfficeFeature[] | readonly string[] }) {
   const doSignOut = async () => { try { await signOut(); } finally { window.location.href = "/sign-in"; } };
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   useEffect(() => { setOpen(false); }, [pathname]);
-  const nav = NAV.map((g) => ({ ...g, items: g.items.filter((i) => (clockOn || i.href !== "/office/timeclock") && can({ role, features }, NEEDS[i.href] ?? "settings.edit")) })).filter((g) => g.items.length > 0);
+  // Extras the centre left off in setup stay out of the way until switched on in Settings.
+  const extraOff = (href: string) => extras !== null && ((href === "/office/equipment" && !extras.includes("equipment")) || (href === "/office/locations" && !extras.includes("locations") && !extras.includes("operatingAreas")) || (href === "/office/finance" && !extras.includes("payroll")));
+  const nav = NAV.map((g) => ({ ...g, items: g.items.filter((i) => (clockOn || i.href !== "/office/timeclock") && !extraOff(i.href) && can({ role, features }, NEEDS[i.href] ?? "settings.edit")) })).filter((g) => g.items.length > 0);
   const active = (href: string) => (href === "/office" ? pathname === "/office" : pathname.startsWith(href));
 
   const list = (

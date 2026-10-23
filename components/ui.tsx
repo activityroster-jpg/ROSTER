@@ -34,3 +34,10 @@ export function SectionHeading({ eyebrow, title }: { eyebrow?: string; title: st
     </div>
   );
 }
+
+/** A one-sentence plain-English note on a piece of jargon: a small "?" that shows it on hover, tap or focus. */
+export function Hint({ text }: { text: string }) {
+  return (
+    <span tabIndex={0} role="note" aria-label={text} title={text} className="ml-1 inline-flex h-4 w-4 cursor-help select-none items-center justify-center rounded-full border border-slate-300 align-middle text-[10px] font-semibold normal-case text-slate-500 hover:border-navy hover:text-navy focus:border-navy focus:outline-none">?</span>
+  );
+}

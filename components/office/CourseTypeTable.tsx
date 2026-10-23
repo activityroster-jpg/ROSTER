@@ -2,6 +2,7 @@
 
 import { askConfirm } from "@/lib/ui/ask-confirm";
 import { useState, useTransition } from "react";
+import { Hint } from "@/components/ui";
 import { useRouter } from "next/navigation";
 import {
   addCourseTypeAction,
@@ -37,6 +38,7 @@ const cell = "rounded border border-slate-300 px-2 py-1 text-sm outline-none foc
 function Row({ row, types, onMsg }: { row: CourseTypeRow; types: TypeOption[]; onMsg: (m: { ok: boolean; text: string }) => void }) {
   const router = useRouter();
   const [pending, start] = useTransition();
+  const [editing, setEditing] = useState(false);
   const [editingTeachers, setEditingTeachers] = useState(false);
   const [teachers, setTeachers] = useState<TeacherTick[]>(row.teachers);
   const anyTypes = types.some((t) => t.discipline);
@@ -75,6 +77,26 @@ function Row({ row, types, onMsg }: { row: CourseTypeRow; types: TypeOption[]; o
     );
   }
 
+  if (!editing && !editingTeachers) {
+    return (
+      <tr>
+        <td className="px-4 py-2 font-medium text-navy">{row.name}</td>
+        <td className="px-4 py-2 text-slate-600">{row.scheme || "—"}</td>
+        <td className="px-4 py-2 capitalize text-slate-600">{row.audience}</td>
+        <td className="px-4 py-2 text-slate-600">{row.defaultCapacity}</td>
+        <td className="px-4 py-2 text-slate-600">1:{row.studentsPerInstructor}</td>
+        <td className="max-w-[14rem] px-4 py-2">
+          <button type="button" onClick={() => setEditingTeachers(true)} className="text-left text-xs hover:underline">
+            {row.teachers.length ? <span className="text-navy">{teacherSummary(types, row.teachers)}</span> : anyTypes ? <span className="font-semibold text-amber">⚠ Pick who can teach it</span> : <span className="text-slate-400">—</span>}
+          </button>
+        </td>
+        <td className="whitespace-nowrap px-4 py-2 text-right">
+          <button type="button" onClick={() => setEditing(true)} className="text-xs font-medium text-teal hover:underline">Edit</button>
+        </td>
+      </tr>
+    );
+  }
+
   return (
     <>
     <tr>
@@ -107,6 +129,7 @@ function Row({ row, types, onMsg }: { row: CourseTypeRow; types: TypeOption[]; o
         >
           Delete
         </button>
+        {!dirty ? <button type="button" onClick={() => { setEditing(false); setEditingTeachers(false); }} className="ml-3 text-xs font-medium text-navy hover:underline">Done</button> : null}
       </td>
     </tr>
     {editingTeachers ? (
@@ -155,8 +178,8 @@ export function CourseTypeTable({ rows, types, schemePlaceholder = "e.g. RYA You
               <th className="px-4 py-3">Scheme</th>
               <th className="px-4 py-3">Audience</th>
               <th className="px-4 py-3">Capacity</th>
-              <th className="px-4 py-3">Ratio</th>
-              <th className="px-4 py-3">Who can teach it</th>
+              <th className="px-4 py-3">Ratio<Hint text="Students per instructor: 1:4 means one instructor for every four students. The roster flags a course that is short." /></th>
+              <th className="px-4 py-3">Who can teach it<Hint text="The instructor types that can teach this course. Each place on a course is filled by someone holding that type, or a higher one on the same ladder." /></th>
               <th className="px-4 py-3"></th>
             </tr>
           </thead>

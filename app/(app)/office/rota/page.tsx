@@ -14,6 +14,7 @@ import { getBoard } from "@/lib/services/board";
 import { exampleWeekState } from "@/lib/services/example-week";
 import { ExampleWeekNotice } from "@/components/office/ExampleWeek";
 import { RosterBoard } from "@/components/office/RosterBoard";
+import { BoardShortcuts } from "@/components/office/BoardShortcuts";
 import { missingExpiry } from "@/lib/domain/roster-day";
 import { instructor as instructorTable, qualification as qualificationTable } from "@/lib/db/schema";
 
@@ -73,6 +74,7 @@ export default async function RotaPage({ searchParams }: { searchParams: Promise
           ) : null}
           <Link href="/office/rota/emergency" className="rounded-lg border border-port/40 px-3 py-1.5 text-sm font-medium text-port hover:bg-port/5">Emergency sheet</Link>
           <a href="/learn?topic=rostering" target="_blank" rel="noreferrer" className="text-sm font-medium text-teal hover:underline">📖 Guide</a>
+          <BoardShortcuts monday={monday} thisMonday={thisMonday} view={view} />
           <RotaDownload weekStart={monday} today={new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date())} defaultRange={rotaTemplate.range} />
           <Link href="/office/settings#rota-pdf" className="text-xs text-slate-400 hover:text-navy">Change layout</Link>
         </div>
