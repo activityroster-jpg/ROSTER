@@ -23,6 +23,7 @@ const WHO = "kim@demo.example";
 /** Each is a tab in App Store Connect's Product Page; the file name says which tab and the pixel size. */
 const SIZES = [
   { tag: "tab-iphone-dynamic-island-1206x2622", width: 402, height: 874, scale: 3 },
+  { tag: "tab-iphone-duo-2007x2853", width: 669, height: 951, scale: 3 },
   { tag: "tab-ipad-13in-2064x2752", width: 1032, height: 1376, scale: 2 },
   { tag: "iphone69-1320x2868", width: 440, height: 956, scale: 3 },
   { tag: "iphone65-1242x2688", width: 414, height: 896, scale: 3 },
