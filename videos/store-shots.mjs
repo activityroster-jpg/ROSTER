@@ -20,9 +20,12 @@ const PIN = "4826";
 const WHO = "kim@demo.example";
 
 /** Apple's sizes: the pixel size is the CSS viewport × 3. */
+/** Each is a tab in App Store Connect's Product Page; the file name says which tab and the pixel size. */
 const SIZES = [
-  { tag: "iphone69", width: 440, height: 956 }, // 1320 × 2868
-  { tag: "iphone65", width: 414, height: 896 }, // 1242 × 2688
+  { tag: "tab-iphone-dynamic-island-1206x2622", width: 402, height: 874, scale: 3 },
+  { tag: "tab-ipad-13in-2064x2752", width: 1032, height: 1376, scale: 2 },
+  { tag: "iphone69-1320x2868", width: 440, height: 956, scale: 3 },
+  { tag: "iphone65-1242x2688", width: 414, height: 896, scale: 3 },
 ];
 const SHOTS = [
   { n: "01-schedule", path: "/portal" },
@@ -70,7 +73,7 @@ mkdirSync(OUT, { recursive: true });
 const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM || undefined });
 const wanted = (process.env.SIZES || "").split(",").filter(Boolean);
 for (const size of SIZES.filter((s) => wanted.length === 0 || wanted.includes(s.tag))) {
-  const ctx = await browser.newContext({ viewport: { width: size.width, height: size.height }, deviceScaleFactor: 3, isMobile: true, hasTouch: true, locale: "en-GB", timezoneId: "Europe/London" });
+  const ctx = await browser.newContext({ viewport: { width: size.width, height: size.height }, deviceScaleFactor: size.scale, isMobile: true, hasTouch: true, locale: "en-GB", timezoneId: "Europe/London" });
   const page = await ctx.newPage();
   page.setDefaultTimeout(120_000);
   await signIn(page);
