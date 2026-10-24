@@ -105,7 +105,7 @@ Everything else: not collected. No advertising, no analytics, no tracking across
 > Password: REVIEWER PASSWORD
 > PIN (asked after signing in): 4826
 >
-> Sign in, enter the PIN, and you land on My schedule for the demo centre (Lakeside Sailing Centre). Available, Leave, Hours, Docs and Settings are the tabs along the bottom. Phone notifications are optional and the app asks to turn them on; location is only used by the Clock tab, which this demo centre has switched on so you can see it. Nothing in the app is a purchase. The demo centre's data is made up.
+> Sign in, enter the PIN, and you land on My schedule for the demo centre (Lakeside Sailing Centre). Account deletion is under Settings → Delete my account (PIN to confirm; it completes immediately). Available, Leave, Hours, Docs and Settings are the tabs along the bottom. Phone notifications are optional and the app asks to turn them on; location is only used by the Clock tab, which this demo centre has switched on so you can see it. Nothing in the app is a purchase. The demo centre's data is made up.
 
 ### Making the reviewer login (once, before you submit)
 

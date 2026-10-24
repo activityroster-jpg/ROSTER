@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import Link from "next/link";
+import { DeleteAccountCard } from "@/components/portal/DeleteAccountCard";
 import { requireTenant } from "@/lib/tenant/require";
 import { getEnv } from "@/lib/cf/bindings";
 import { resolveHost } from "@/lib/tenant/host";
@@ -76,10 +77,7 @@ export default async function PortalSettingsPage() {
         <Link href="/set-pin?next=/portal/settings" className="mb-4 inline-block text-sm font-semibold text-teal">Change my PIN →</Link>
         <div className="mb-4 border-t border-slate-100 pt-3"><PasswordCard hasPassword={hasPassword} /></div>
         <SignOutButton to={onApex ? "/app" : "/sign-in"} />
-        <div className="mt-4 border-t border-slate-100 pt-3">
-          <p className="mb-1 text-xs text-slate-500">Want your ActivityRoster account and personal data deleted? Ask here and we&apos;ll reply within 30 days. Your centre may have to keep some records (for example hours worked) for as long as the law requires.</p>
-          <Link href="/privacy-request?kind=erasure" className="text-sm font-semibold text-red-700 hover:underline">Delete my account →</Link>
-        </div>
+        <DeleteAccountCard after={onApex ? "/app?deleted=1" : "/sign-in?deleted=1"} />
       </Card>
     </div>
   );

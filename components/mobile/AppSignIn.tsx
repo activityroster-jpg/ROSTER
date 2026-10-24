@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Turnstile } from "@/components/auth/Turnstile";
 import { twoFactorHintAction } from "@/app/(app)/sign-in/actions";
 import Link from "next/link";
@@ -10,6 +10,8 @@ import { appLandingAction } from "@/app/app/actions";
 const field = "w-full rounded-xl border border-slate-300 px-4 py-3 text-base outline-none focus:border-teal";
 
 export function AppSignIn() {
+  const [deleted, setDeleted] = useState(false);
+  useEffect(() => { try { setDeleted(new URLSearchParams(window.location.search).get("deleted") === "1"); } catch { /* ignore */ } }, []);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -51,6 +53,7 @@ export function AppSignIn() {
 
   return (
     <div>
+      {deleted ? <p className="mb-4 rounded-lg border border-starboard/40 bg-starboard/5 px-3 py-2 text-sm text-navy">Your account has been deleted. Thanks for using ActivityRoster.</p> : null}
       <h1 className="font-display text-2xl font-bold text-navy">Sign in</h1>
       <p className="mb-5 text-sm text-slate-500">Your roster, availability, hours and certs — all in your pocket.</p>
       <form onSubmit={submit} className="space-y-3">
