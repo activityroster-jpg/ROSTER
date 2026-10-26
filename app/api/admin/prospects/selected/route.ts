@@ -29,7 +29,7 @@ export async function POST(req: Request) {
 
   const head = [
     "Name", "Email", "Contact name", "Contact role", "Website", "Region", "Address 1", "Address 2", "Town", "Postcode", "Country",
-    "Stage", "Ticks", "Booklet sent on", "Email sent on", "Kind of centre", "RYA services", "Sole trader (needs consent to email)", "Lawful basis",
+    "Stage", "Ticks", "Booklet sent on", "Email sent on", "Kind of centre", "RYA services", "Sole trader (needs consent to email)", "Lawful basis", "Website needs work",
     "Notes", "Email subject", "Email body",
   ];
   const lines = [head.map(cell).join(",")];
@@ -37,11 +37,11 @@ export async function POST(req: Request) {
     const statuses = parseProspectStatuses(p.statuses, p.status);
     const sent = outreachSentOn(byProspect.get(p.id) ?? []);
     const services = servicesOf(p.notes);
-    const mail = followUpEmail({ id: p.id, name: p.name, city: p.city, region: p.region, contactName: p.contactName, services, activityType: p.activityType, bookletSentOn: sent.booklet ?? day(p.updatedAt) });
+    const mail = followUpEmail({ id: p.id, name: p.name, city: p.city, region: p.region, contactName: p.contactName, services, activityType: p.activityType, bookletSentOn: sent.booklet ?? day(p.updatedAt), websiteOffer: Boolean(p.websiteNeedsWork) });
     lines.push([
       p.name, p.email, p.contactName, p.contactRole, p.website, p.region, p.addressLine1, p.addressLine2, p.city, p.postcode, p.country,
       PIPELINE_META[stageOf(statuses)].label, statuses.map((s) => PROSPECT_STATUS_META[s].label).join("; "),
-      sent.booklet ?? "", sent.email ?? "", p.activityType, services.join("; "), p.soleTrader ? "Yes" : "", p.lawfulBasis,
+      sent.booklet ?? "", sent.email ?? "", p.activityType, services.join("; "), p.soleTrader ? "Yes" : "", p.lawfulBasis, p.websiteNeedsWork ? "Yes" : "",
       p.notes, mail.subject, mail.body,
     ].map(cell).join(","));
   }

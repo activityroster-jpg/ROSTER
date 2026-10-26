@@ -45,6 +45,7 @@ export interface ProspectRow {
   activityType: string;
   soleTrader: boolean;
   lawfulBasis: string;
+  websiteNeedsWork: boolean;
   /** Epoch ms — "Added" sort. */
   createdAt: number;
 }
@@ -62,7 +63,7 @@ const VIBE_RANK = { green: 3, orange: 2, none: 1, red: 0 } as const;
 const PAGE_SIZE = 200;
 
 const mailtoHref = (r: ProspectRow) => {
-  const { subject, body } = followUpEmail({ id: r.id, name: r.name, city: r.city, region: r.region, contactName: r.contactName, activityType: r.activityType });
+  const { subject, body } = followUpEmail({ id: r.id, name: r.name, city: r.city, region: r.region, contactName: r.contactName, activityType: r.activityType, websiteOffer: r.websiteNeedsWork });
   return `mailto:${encodeURIComponent(r.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 };
 /**
@@ -73,7 +74,7 @@ const mailtoHref = (r: ProspectRow) => {
  * signature comes from Gmail's own signature setting (see the prospect page).
  */
 const gmailHref = (r: ProspectRow) => {
-  const { subject, body } = followUpEmail({ id: r.id, name: r.name, city: r.city, region: r.region, contactName: r.contactName, activityType: r.activityType });
+  const { subject, body } = followUpEmail({ id: r.id, name: r.name, city: r.city, region: r.region, contactName: r.contactName, activityType: r.activityType, websiteOffer: r.websiteNeedsWork });
   const q = new URLSearchParams({ view: "cm", fs: "1", to: r.email, su: subject, body });
   return `https://mail.google.com/mail/?${q.toString()}`;
 };

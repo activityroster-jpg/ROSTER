@@ -148,6 +148,15 @@ export async function setEngagedAction(id: string, engaged: boolean): Promise<Pr
   return { ok: true };
 }
 
+/** Tick "Website needs work": the follow-up email then mentions the websites we build. */
+export async function setWebsiteNeedsWorkAction(id: string, on: boolean): Promise<ProspectResult> {
+  const repo = await platform();
+  const updated = await repo.updateProspect(id, { websiteNeedsWork: Boolean(on) });
+  if (!updated) return { ok: false, error: "Not found" };
+  revalidateProspects(id);
+  return { ok: true };
+}
+
 const text = (max: number) => z.string().trim().max(max);
 const ProspectEdit = z.object({
   name: text(200).min(1, "Name is required"),

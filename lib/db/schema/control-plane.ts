@@ -441,6 +441,8 @@ export const marketingProspect = sqliteTable("marketing_prospect", {
   topPick: integer("top_pick", { mode: "boolean" }),
   /** Which activity pack this centre would get: an RYA centre/school or a PADI dive centre (lib/packs). */
   activityType: text("activity_type", { enum: ACTIVITY_TYPES }).notNull().default("rya_centre"),
+  /** Their website looks dated: the follow-up email adds a line about the websites we build (bookings and membership in one place). */
+  websiteNeedsWork: boolCol("website_needs_work").default(false),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 }, (t) => [

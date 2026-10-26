@@ -26,4 +26,14 @@ describe("booklet follow-up email", () => {
     expect(shapes.size).toBeGreaterThan(10);
     expect(followUpEmail(centres[3]!)).toEqual(followUpEmail(centres[3]!));
   });
+
+  it("adds one website line only when the centre is ticked for it", () => {
+    const c = centres[5]!;
+    const plain = followUpEmail(c).body;
+    const withSite = followUpEmail({ ...c, websiteOffer: true }).body;
+    expect(plain).not.toMatch(/website/i);
+    expect(withSite).toMatch(/website/i);
+    expect(withSite).toMatch(/bookings and membership/);
+    expect(withSite.split(LEARN_URL)).toHaveLength(2);
+  });
 });

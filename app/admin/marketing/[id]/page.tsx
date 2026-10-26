@@ -52,6 +52,7 @@ export default async function ProspectPage({ params }: { params: Promise<{ id: s
     activityType: p.activityType ?? "rya_centre",
     soleTrader: Boolean(p.soleTrader),
     lawfulBasis: p.lawfulBasis,
+    websiteNeedsWork: Boolean(p.websiteNeedsWork),
     createdAt: ms(p.createdAt) ?? 0,
     updatedAt: ms(p.updatedAt) ?? 0,
   };

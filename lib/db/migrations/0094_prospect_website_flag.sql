@@ -1,0 +1,1 @@
+ALTER TABLE `marketing_prospect` ADD `website_needs_work` integer DEFAULT false NOT NULL;

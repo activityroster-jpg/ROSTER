@@ -20,6 +20,7 @@ import {
   addInteractionAction,
   deleteInteractionAction,
   setEngagedAction,
+  setWebsiteNeedsWorkAction,
   setProspectActivityTypeAction,
   setProspectBasisAction,
   updateProspectAction,
@@ -49,6 +50,7 @@ export interface ProspectDetailData {
   activityType: string;
   soleTrader: boolean;
   lawfulBasis: string;
+  websiteNeedsWork: boolean;
   createdAt: number;
   updatedAt: number;
 }
@@ -142,7 +144,7 @@ export function ProspectDetail({ prospect: p, interactions }: { prospect: Prospe
   const vibe = VIBE_META[vibeOf(p.stage, Boolean(p.engagedAt)) ?? "none"];
   const complete = addressComplete(p);
   // The booklet follow-up, written for this centre (lib/marketing-email/follow-up); signs off "Conor" and Gmail adds the logo signature.
-  const emailDraft = () => followUpEmail({ id: p.id, name: p.name, city: p.city, region: p.region, contactName: p.contactName, services: servicesOf(p.notes), activityType: p.activityType, bookletSentOn: outreachSentOn(interactions).booklet });
+  const emailDraft = () => followUpEmail({ id: p.id, name: p.name, city: p.city, region: p.region, contactName: p.contactName, services: servicesOf(p.notes), activityType: p.activityType, bookletSentOn: outreachSentOn(interactions).booklet, websiteOffer: p.websiteNeedsWork });
   const gmail = () => { const { subject, body } = emailDraft(); return `https://mail.google.com/mail/?${new URLSearchParams({ view: "cm", fs: "1", to: p.email, su: subject, body })}`; };
   const mailto = () => { const { subject, body } = emailDraft(); return `mailto:${encodeURIComponent(p.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`; };
   const touchpoints = p.statuses.filter((s) => s === "email_sent" || s === "called" || s === "purchased");
@@ -193,7 +195,11 @@ export function ProspectDetail({ prospect: p, interactions }: { prospect: Prospe
           </div>
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-2">
+        <label className="mt-4 flex w-fit cursor-pointer items-center gap-2 text-sm text-navy" title="Their website looks dated: the email adds a line about the websites we build">
+          <input type="checkbox" checked={p.websiteNeedsWork} disabled={pending} onChange={(e) => run(() => setWebsiteNeedsWorkAction(p.id, e.target.checked))} className="h-4 w-4 accent-teal" />
+          Website needs work <span className="text-xs text-slate-400">(adds a line about the websites we build to the email)</span>
+        </label>
+        <div className="mt-2 flex flex-wrap gap-2">
           {p.email ? <a href={gmail()} target="_blank" rel="noreferrer" className={linkBtn}>📧 Draft in Gmail</a> : <span className={`${linkBtn} cursor-not-allowed text-slate-300`}>📧 No email on file</span>}
           {p.email ? <a href={mailto()} className={linkBtn}>✉️ Draft in mail app</a> : null}
           {complete ? <a href={`/admin/marketing/${p.id}/letter`} target="_blank" rel="noreferrer" className={linkBtn}>✉ Letter</a> : <span className={`${linkBtn} cursor-not-allowed text-slate-300`} title="Add street, town and postcode first">✉ Letter (address incomplete)</span>}

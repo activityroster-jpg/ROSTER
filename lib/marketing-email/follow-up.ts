@@ -19,6 +19,8 @@ export interface FollowUpInput {
   activityType?: string | null;
   /** YYYY-MM-DD the booklet went. */
   bookletSentOn?: string | null;
+  /** Their website looks dated: add one line about the websites we build. */
+  websiteOffer?: boolean;
 }
 
 /** A stable small number from the id, so the same centre always gets the same wording. */
@@ -61,11 +63,18 @@ export function followUpEmail(c: FollowUpInput): { subject: string; body: string
   // What it is, in one line: rostering and compliance, built for RYA training centres and clubs.
   const what = at(2, [
     `ActivityRoster is rostering and compliance software designed specifically for RYA training centres and clubs: it builds your instructor roster and checks ratios, instructor types and Senior Instructor cover as you go.`,
-    `It's staff rostering built for RYA training centres and clubs, with the compliance side done for you: RYA ratios, the right instructor in every place, and licence and DBS expiry tracked.`,
-    `In short, it's a roster made for RYA centres and clubs that won't let a session go out short of instructors, without a Senior Instructor, or with someone whose ticket has lapsed.`,
-    `We built it for RYA training centres and clubs: one place for the instructor roster and the compliance checks that usually live in a spreadsheet and someone's head.`,
-    `It does two jobs for RYA centres and clubs: rosters your instructors in minutes, and checks every session against RYA ratios, instructor types and certificate expiry.`,
+    `ActivityRoster is staff rostering built for RYA training centres and clubs, with the compliance side done for you: RYA ratios, the right instructor in every place, and licence and DBS expiry tracked.`,
+    `In short, ActivityRoster is a roster made for RYA centres and clubs that won't let a session go out short of instructors, without a Senior Instructor, or with someone whose ticket has lapsed.`,
+    `We built ActivityRoster for RYA training centres and clubs: one place for the instructor roster and the compliance checks that usually live in a spreadsheet and someone's head.`,
+    `ActivityRoster does two jobs for RYA centres and clubs: rosters your instructors in minutes, and checks every session against RYA ratios, instructor types and certificate expiry.`,
   ]);
+  // For clubs whose website looks dated: one line about the sites we build, as an offer, never a criticism of theirs.
+  const website = c.websiteOffer ? at(12, [
+    `We also build websites for clubs and centres that bring bookings and membership into one place, kept secure, up to date and GDPR-compliant.`,
+    `Alongside the roster, we design club websites with bookings and membership built in, on a modern, secure, data-compliant setup.`,
+    `We also do custom websites that tie bookings and membership together in one place, with security and data protection handled properly.`,
+    `If a new website is ever on the list, we build those too: bookings and membership in one place, secure and GDPR-compliant from the start.`,
+  ]) : null;
   const link = at(6, [
     `The Learning Centre shows how it works in a few short videos: ${LEARN_URL}`,
     `You can see how it works here, no sign-up needed: ${LEARN_URL}`,
@@ -90,7 +99,8 @@ export function followUpEmail(c: FollowUpInput): { subject: string; body: string
   const body = [
     greeting, "",
     pick(c.id, 11, 2) === 0 ? `${opening} ${what}` : opening,
-    ...(pick(c.id, 11, 2) === 0 ? [] : ["", what]), "",
+    ...(pick(c.id, 11, 2) === 0 ? [] : ["", what]),
+    ...(website ? ["", website] : []), "",
     link, "",
     `${ask} ${optOut}`, "",
     closing,
