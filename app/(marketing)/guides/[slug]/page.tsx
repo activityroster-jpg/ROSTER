@@ -4,6 +4,7 @@ import { Download, Lightbulb } from "lucide-react";
 import { guideBySlug, type GuideBlock } from "@/lib/seo/guides";
 import { landingBySlug } from "@/lib/seo/landings";
 import { apexDomain } from "@/lib/config";
+import { OG_IMAGE, SCHEMA_AUDIENCE } from "@/lib/seo/og";
 
 // Rendered on request: pages pre-built from generateStaticParams need an
 // incremental cache on Cloudflare, which this deployment doesn't have, so they
@@ -18,7 +19,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     title: g.title,
     description: g.description,
     alternates: { canonical: `/guides/${g.slug}` },
-    openGraph: { title: g.title, description: g.description, url: `/guides/${g.slug}`, type: "article" },
+    openGraph: { title: g.title, description: g.description, url: `/guides/${g.slug}`, type: "article", images: [OG_IMAGE] },
   };
 }
 
@@ -76,12 +77,13 @@ export default async function GuidePage({ params }: { params: Promise<{ slug: st
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
-      { "@type": "Article", headline: g.title, description: g.description, dateModified: g.updated, datePublished: g.updated, mainEntityOfPage: `${site}/guides/${g.slug}`, author: { "@type": "Organization", name: "ActivityRoster" }, publisher: { "@type": "Organization", name: "ActivityRoster", url: site } },
+      { "@type": "Article", headline: g.title, description: g.description, dateModified: g.updated, datePublished: g.updated, mainEntityOfPage: `${site}/guides/${g.slug}`, audience: SCHEMA_AUDIENCE, author: { "@type": "Organization", name: "ActivityRoster" }, publisher: { "@type": "Organization", name: "ActivityRoster", url: site } },
       { "@type": "BreadcrumbList", itemListElement: [
         { "@type": "ListItem", position: 1, name: "Home", item: `${site}/` },
         { "@type": "ListItem", position: 2, name: "Guides", item: `${site}/guides` },
         { "@type": "ListItem", position: 3, name: g.title, item: `${site}/guides/${g.slug}` },
       ] },
+      ...(g.faqs?.length ? [{ "@type": "FAQPage", mainEntity: g.faqs.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })) }] : []),
     ],
   };
 
@@ -93,7 +95,7 @@ export default async function GuidePage({ params }: { params: Promise<{ slug: st
         <Link href="/guides" className="hover:text-navy">Guides</Link>
       </nav>
       <h1 className="font-display text-3xl font-bold leading-tight text-navy sm:text-4xl" style={{ textWrap: "balance" }}>{g.title}</h1>
-      <p className="mt-2 text-sm text-slate-400">{g.readMins} min read · Updated {updated}</p>
+      <p className="mt-2 text-sm text-slate-400">{g.readMins} min read · Updated {updated} · Written for Principals, Chief Instructors and centre managers</p>
 
       <div className="mt-6 rounded-card border border-teal/30 bg-teal/5 p-5">
         <p className="text-xs font-bold uppercase tracking-widest text-teal">The short answer</p>
@@ -110,6 +112,20 @@ export default async function GuidePage({ params }: { params: Promise<{ slug: st
       <div className="mt-8 space-y-4">
         {g.blocks.map((b, i) => <Block key={i} b={b} />)}
       </div>
+
+      {g.faqs?.length ? (
+        <section className="mt-10">
+          <h2 className="font-display text-2xl font-semibold text-navy">Questions</h2>
+          <dl className="mt-4 space-y-4">
+            {g.faqs.map((f) => (
+              <div key={f.q}>
+                <dt className="font-semibold text-navy">{f.q}</dt>
+                <dd className="mt-1 leading-relaxed text-slate-700">{f.a}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      ) : null}
 
       <aside className="mt-12 rounded-card bg-navy p-6 text-white">
         <p className="text-xs font-bold uppercase tracking-widest text-[#4fd1c5]">How ActivityRoster handles this</p>

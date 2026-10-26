@@ -5,7 +5,7 @@ const CAT = "Digital & data";
 export const BATCH_08_DIGITAL: SeedArticle[] = [
   {
     slug: "getting-found-online-a-beginners-guide-to-seo",
-    title: "Getting Found Online: A Beginner's Guide to SEO",
+    title: "SEO for Sailing Schools: A Beginner's Guide to Getting Found",
     category: CAT,
     excerpt: "Search is where most learners start. A jargon-free introduction to ranking your centre.",
     tags: ["SEO", "digital", "marketing"],

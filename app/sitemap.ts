@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { apexDomain } from "@/lib/config";
 import { COMPETITORS } from "@/lib/marketing/competitors";
-import { LANDINGS } from "@/lib/seo/landings";
+import { LANDINGS, LANDINGS_UPDATED } from "@/lib/seo/landings";
 import { GUIDES } from "@/lib/seo/guides";
 import { getDb } from "@/lib/cf/bindings";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
@@ -39,7 +39,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Pages written for what RYA centres search for, and the guides that answer their questions.
   const landingRoutes: MetadataRoute.Sitemap = LANDINGS.map((l, i) => ({
     url: `${site}/${l.slug}`,
-    lastModified: now,
+    lastModified: new Date(`${LANDINGS_UPDATED}T00:00:00Z`),
     changeFrequency: "monthly",
     priority: i < 2 ? 0.95 : 0.85,
   }));

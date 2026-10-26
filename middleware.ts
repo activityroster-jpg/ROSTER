@@ -79,6 +79,9 @@ export async function middleware(req: NextRequest) {
   if (nonce) fwd.set("content-security-policy", csp);
   const withCsp = <T extends NextResponse>(res: T): T => {
     res.headers.set("Content-Security-Policy", csp);
+    // Staging is a copy of the live site: never let a search engine index it
+    // as a duplicate (robots.ts disallows it too).
+    if (process.env.APP_ENV === "staging") res.headers.set("X-Robots-Tag", "noindex, nofollow");
     return res;
   };
   const next = () => {

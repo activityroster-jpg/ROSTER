@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Blog — Running an RYA Centre or Club",
-  description: "Practical guides on running RYA sailing schools and clubs: courses, safety, staff, marketing and growth.",
+  description: "For Principals, Chief Instructors, centre managers and club officers: practical articles on running an RYA sailing school or club, from staffing, safety and compliance to courses, marketing and growth.",
   alternates: { canonical: "/blog" },
 };
 
@@ -40,7 +40,7 @@ export default async function BlogIndex({ searchParams }: { searchParams: Promis
         <p className="text-sm font-semibold uppercase tracking-wide text-teal">Blog</p>
         <h1 className="mt-1 font-display text-3xl font-bold text-navy sm:text-4xl">Running an RYA centre or club</h1>
         <p className="mx-auto mt-3 max-w-2xl text-slate-600">
-          Practical guides for sailing schools and clubs — courses, safety and compliance, instructors, marketing and growth.
+          Written for the people who run the centre: Principals, Chief Instructors, centre managers and club officers. Staffing, safety and compliance, courses, marketing and growth.
         </p>
       </div>
 

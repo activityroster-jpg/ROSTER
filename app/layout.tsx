@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Fira_Sans } from "next/font/google";
 import { apexDomain } from "@/lib/config";
+import { OG_IMAGE } from "@/lib/seo/og";
 import "./globals.css";
 import { ActionFailureWatcher } from "@/components/ActionFailureWatcher";
 
@@ -16,7 +17,7 @@ const fira = Fira_Sans({
 });
 
 const DESCRIPTION =
-  "RYA sailing school software: staff rostering with instructor types, who can teach each course, availability and ratios checked as you schedule, and an app for your instructors. For RYA sailing schools, clubs and watersports centres.";
+  "RYA sailing school software for Principals, Chief Instructors and centre managers: staff rostering checked against instructor types, ratios and supervision, instructor licences tracked, and an app for the team. For RYA training centres, sailing schools and clubs.";
 
 /**
  * viewport-fit=cover lets the page run edge to edge on phones with rounded
@@ -36,8 +37,8 @@ export const metadata: Metadata = {
   applicationName: "ActivityRoster",
   keywords: [
     "RYA sailing school software", "RYA staff rostering software", "sailing school rostering software",
-    "sailing instructor scheduling software", "RYA qualification tracking", "sailing centre management software",
-    "watersports staff scheduling", "RYA instructor qualifications", "RYA training centre",
+    "sailing instructor scheduling software", "RYA qualification tracking software", "sailing centre management software",
+    "watersports staff scheduling", "sailing club duty roster software", "RYA training centre software", "instructor rota software",
   ],
   // No site-wide canonical: each page sets its own. (A canonical of "/" here
   // told search engines every page was a copy of the homepage; fixed 6 Oct.)
@@ -48,11 +49,13 @@ export const metadata: Metadata = {
     description: DESCRIPTION,
     url: SITE,
     locale: "en_GB",
+    images: [OG_IMAGE],
   },
   twitter: {
     card: "summary_large_image",
     title: "ActivityRoster — RYA sailing school software",
     description: DESCRIPTION,
+    images: [OG_IMAGE.url],
   },
   robots: {
     index: true,

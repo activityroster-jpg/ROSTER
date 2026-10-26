@@ -182,13 +182,15 @@ A team that returns builds on itself. Returning instructors train the new ones, 
   },
   {
     slug: "the-rya-instructor-pathway-explained",
-    title: "The RYA Instructor Pathway Explained",
+    title: "The RYA Instructor Pathway, Explained for Principals",
     category: CAT,
-    excerpt: "From assistant instructor to senior and beyond — a clear overview of how instructors progress and how to plan your team around it.",
+    excerpt: "Which award lets an instructor teach which course, who must supervise whom, and how to plan your centre's team around the pathway.",
     tags: ["pathway", "qualifications", "development"],
     coverEmoji: "🪜",
     imageQuery: "young sailing instructor coaching junior sailors pontoon",
-    body: `Understanding the RYA instructor pathway is essential for anyone running a centre, both to staff it legally and to develop the people in it. The pathway is also a powerful retention tool once instructors can see where they are on it and what the next step involves. This article gives a plain overview of the main dinghy, windsurfing and powerboat instructor routes as they are commonly structured, and how to plan your team around them. The detail changes, so always check the current RYA guidance and your own recognition requirements before relying on any particular step.
+    body: `This article is written for the people who staff a centre: Principals, Chief Instructors and centre managers who need to know which award allows an instructor to do what, and how to grow the next cohort from their own juniors. If you are an instructor looking for your own next course, the RYA's own pages and your Chief Instructor are the place to start; this is about the centre's side of the pathway.
+
+Understanding the RYA instructor pathway is essential for anyone running a centre, both to staff it legally and to develop the people in it. The pathway is also a powerful retention tool once instructors can see where they are on it and what the next step involves. This article gives a plain overview of the main dinghy, windsurfing and powerboat instructor routes as they are commonly structured, and how to plan your team around them. The detail changes, so always check the current RYA guidance and your own recognition requirements before relying on any particular step.
 
 ## The shape of the pathway
 

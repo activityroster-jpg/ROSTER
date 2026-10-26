@@ -3,8 +3,8 @@ import { GUIDES } from "@/lib/seo/guides";
 import { LANDINGS } from "@/lib/seo/landings";
 
 export const metadata = {
-  title: "Sailing school guides",
-  description: "Practical answers for RYA sailing schools: instructor ratios, availability, qualification tracking, safety boats, freelancers, a free staff rota template and a compliance checklist.",
+  title: "Sailing school and club guides",
+  description: "Practical answers for Principals and centre managers of RYA sailing schools and clubs: instructor ratios, availability, qualification expiry, inspection records, safety boats, duty rotas and free templates.",
   alternates: { canonical: "/guides" },
 };
 
@@ -13,11 +13,12 @@ export default function GuidesPage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-12">
       <div className="max-w-3xl">
-        <p className="text-sm font-semibold uppercase tracking-wide text-teal">Sailing school guides</p>
-        <h1 className="mt-1 font-display text-3xl font-bold text-navy sm:text-4xl" style={{ textWrap: "balance" }}>Running the staff side of a sailing school</h1>
+        <p className="text-sm font-semibold uppercase tracking-wide text-teal">Guides for Principals, Chief Instructors and centre managers</p>
+        <h1 className="mt-1 font-display text-3xl font-bold text-navy sm:text-4xl" style={{ textWrap: "balance" }}>Running the staff side of a sailing school or club</h1>
         <p className="mt-3 text-slate-600">
           Straight answers to the questions that come up every season: how many instructors a course needs, how to collect availability,
-          how to keep track of licences and safety boats, and how to build a rota you can run. Free to read, and free to use without our software.
+          how long qualifications last, what an inspection wants to see, how to keep track of licences and safety boats, and how to build a rota or
+          club duty rota you can run. Free to read, and free to use without our software.
         </p>
       </div>
       <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3">

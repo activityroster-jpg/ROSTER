@@ -7,6 +7,7 @@ import { BuiltWithCentres } from "./BuiltWithCentres";
 import { SCREENS } from "@/lib/screens";
 import { landingBySlug, type Landing } from "@/lib/seo/landings";
 import { guideBySlug } from "@/lib/seo/guides";
+import { OG_IMAGE, SCHEMA_AUDIENCE } from "@/lib/seo/og";
 import { apexDomain } from "@/lib/config";
 
 /** Page metadata for a search page: its own title, description and canonical. */
@@ -16,7 +17,7 @@ export function landingMetadata(slug: string) {
     title: l.title,
     description: l.description,
     alternates: { canonical: `/${l.slug}` },
-    openGraph: { title: `${l.title} | ActivityRoster`, description: l.description, url: `/${l.slug}`, type: "website" },
+    openGraph: { title: `${l.title} | ActivityRoster`, description: l.description, url: `/${l.slug}`, type: "website", images: [OG_IMAGE] },
   };
 }
 
@@ -40,7 +41,7 @@ export function LandingPage({ slug }: { slug: string }) {
     "@context": "https://schema.org",
     "@graph": [
       { "@type": "WebPage", "@id": `${site}/${l.slug}#page`, url: `${site}/${l.slug}`, name: l.title, description: l.description, isPartOf: { "@id": `${site}/#website` }, about: { "@id": `${site}/#software` } },
-      { "@type": "SoftwareApplication", "@id": `${site}/#software`, name: "ActivityRoster", applicationCategory: "BusinessApplication", operatingSystem: "Web, iOS, Android", offers: { "@type": "Offer", price: "35", priceCurrency: "GBP" } },
+      { "@type": "SoftwareApplication", "@id": `${site}/#software`, name: "ActivityRoster", url: site, applicationCategory: "BusinessApplication", operatingSystem: "Web, iOS, Android", audience: SCHEMA_AUDIENCE, offers: { "@type": "Offer", price: "35", priceCurrency: "GBP" } },
       { "@type": "BreadcrumbList", itemListElement: [
         { "@type": "ListItem", position: 1, name: "Home", item: `${site}/` },
         { "@type": "ListItem", position: 2, name: l.navLabel, item: `${site}/${l.slug}` },
@@ -63,6 +64,7 @@ export function LandingPage({ slug }: { slug: string }) {
             <div>
               <p className="text-sm font-semibold uppercase tracking-wide text-teal">{l.eyebrow}</p>
               <h1 className="mt-2 font-display text-3xl font-bold leading-tight text-navy md:text-4xl" style={{ textWrap: "balance" }}>{l.h1}</h1>
+              <p className="mt-2 text-sm font-medium text-teal">For Principals, Chief Instructors, centre managers and club officers at RYA training centres and clubs.</p>
               <p className="mt-4 text-lg text-slate-600">{l.intro}</p>
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <a href="#start" className="rounded-lg bg-teal px-6 py-3 text-center font-semibold text-white shadow-sm hover:bg-teal-700">Start my free month →</a>

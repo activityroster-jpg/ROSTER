@@ -6,6 +6,9 @@ import { PlatformRepository } from "@/lib/db/repositories/platform";
 import { renderMarkdown, readingMinutes } from "@/lib/blog/markdown";
 import { blogCoverUrl, coverImageFor } from "@/lib/blog/images";
 import { SmartImg } from "@/components/blog/SmartImg";
+import { relatedForCategory } from "@/lib/blog/related";
+import { OG_IMAGE, SCHEMA_AUDIENCE } from "@/lib/seo/og";
+import { apexDomain } from "@/lib/config";
 
 export const dynamic = "force-dynamic";
 
@@ -41,8 +44,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       publishedTime: published,
       authors: [post.author],
       tags: post.tags.split(",").map((t) => t.trim()).filter(Boolean),
+      images: [{ url: blogCoverUrl(post.coverImageKey, post.slug, post.category), alt: post.title }, OG_IMAGE],
     },
-    twitter: { card: "summary_large_image", title: post.title, description: post.seoDescription || post.excerpt },
+    twitter: { card: "summary_large_image", title: post.title, description: post.seoDescription || post.excerpt, images: [blogCoverUrl(post.coverImageKey, post.slug, post.category)] },
   };
 }
 
@@ -59,13 +63,20 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   const rawCredit = (post.coverImageCredit ?? "").trim();
   const credit = post.coverImageKey && /[A-Z ]/.test(rawCredit) ? rawCredit : null;
   const publishedIso = post.publishAt ? new Date(post.publishAt instanceof Date ? post.publishAt.getTime() : Number(post.publishAt)).toISOString() : undefined;
+  const site = `https://${apexDomain()}`;
+  const cover = blogCoverUrl(post.coverImageKey, post.slug, post.category);
+  const related = relatedForCategory(post.category);
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
     headline: post.title,
     description: post.seoDescription || post.excerpt,
-    author: { "@type": "Organization", name: post.author },
-    publisher: { "@type": "Organization", name: "ActivityRoster" },
+    mainEntityOfPage: `${site}/blog/${post.slug}`,
+    image: cover.startsWith("http") ? cover : `${site}${cover}`,
+    isPartOf: { "@id": `${site}/#website` },
+    audience: SCHEMA_AUDIENCE,
+    author: { "@type": "Organization", name: post.author, url: site },
+    publisher: { "@type": "Organization", "@id": `${site}/#organization`, name: "ActivityRoster", logo: { "@type": "ImageObject", url: `${site}/email-logo.png` } },
     datePublished: publishedIso,
     dateModified: post.updatedAt instanceof Date ? post.updatedAt.toISOString() : publishedIso,
     articleSection: post.category,
@@ -84,7 +95,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
 
       <h1 className="mt-4 font-display text-3xl font-bold leading-tight text-navy sm:text-4xl">{post.title}</h1>
       <p className="mt-3 text-lg text-slate-600">{post.excerpt}</p>
-      <p className="mt-3 text-sm text-slate-400">{post.author} · {fmtDate(post.publishAt)} · {mins} min read</p>
+      <p className="mt-3 text-sm text-slate-400">{post.author} · {fmtDate(post.publishAt)} · {mins} min read · For Principals, Chief Instructors and centre managers</p>
 
       <figure className="mt-6">
         <div className="relative h-56 w-full overflow-hidden rounded-card sm:h-80">
@@ -109,9 +120,28 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         </div>
       ) : null}
 
-      <div className="mt-12 rounded-card border border-teal bg-navy p-8 text-center text-white">
-        <h2 className="font-display text-2xl font-bold">Run your centre the easy way</h2>
-        <p className="mx-auto mt-2 max-w-xl text-sm text-white/80">ActivityRoster handles rostering, instructor types, certs, ratio checks and more — purpose-built for RYA sailing and watersports centres.</p>
+      {/* Where this leads: the software pages and guides for this topic, named as buyers search for them */}
+      <aside aria-labelledby="related-heading" className="mt-10 rounded-card border border-slate-200 bg-white p-6">
+        <h2 id="related-heading" className="font-display text-lg font-semibold text-navy">If you run the centre</h2>
+        <div className="mt-3 grid gap-6 sm:grid-cols-2">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Software for this</p>
+            <ul className="mt-2 space-y-1.5">
+              {related.landings.map((l) => <li key={l.slug}><Link href={`/${l.slug}`} className="font-medium text-teal hover:underline">{l.navLabel}</Link><span className="text-sm text-slate-500"> · {l.keyword}</span></li>)}
+            </ul>
+          </div>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Guides</p>
+            <ul className="mt-2 space-y-1.5">
+              {related.guides.map((g) => <li key={g.slug}><Link href={`/guides/${g.slug}`} className="font-medium text-teal hover:underline">{g.title}</Link></li>)}
+            </ul>
+          </div>
+        </div>
+      </aside>
+
+      <div className="mt-8 rounded-card border border-teal bg-navy p-8 text-center text-white">
+        <h2 className="font-display text-2xl font-bold">Rostering and compliance software for RYA centres and clubs</h2>
+        <p className="mx-auto mt-2 max-w-xl text-sm text-white/80">For Principals, Chief Instructors and centre managers: instructor types, ratios, supervision and licences checked as you build the roster, and an app for the team.</p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
           <a href="/#get-demo" className="rounded-lg bg-teal px-6 py-3 font-semibold text-white hover:bg-teal-700">Start a free month</a>
           <Link href="/learn" className="rounded-lg border border-white/30 px-6 py-3 font-semibold text-white hover:bg-white/10">Learning Centre</Link>

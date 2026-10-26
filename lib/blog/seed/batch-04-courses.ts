@@ -336,7 +336,7 @@ Track bookings, fill rates and the crossover: how many paddleboarders book a sai
   },
   {
     slug: "assessing-and-certifying-learners-fairly",
-    title: "Assessing and Certifying Learners Fairly",
+    title: "Assessing and Certifying Learners: The Standard Your Centre Sets",
     category: CAT,
     excerpt: "Certification means something only if it's consistent. How to assess fairly, record it properly, and protect your name.",
     tags: ["assessment", "certification", "quality"],
@@ -390,7 +390,7 @@ It can feel as though honest assessment costs customers. In practice, a centre k
   },
   {
     slug: "handling-mixed-ability-groups-on-the-water",
-    title: "Handling Mixed-Ability Groups on the Water",
+    title: "Mixed-Ability Groups: How to Staff, Brief and Roster for Them",
     category: CAT,
     excerpt: "Real groups are rarely uniform. How to teach effectively, and safely, when abilities vary within a single session.",
     tags: ["teaching", "delivery", "groups"],

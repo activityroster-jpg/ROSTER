@@ -711,9 +711,9 @@ Choose three things to do this season: perhaps an access statement on the websit
   },
   {
     slug: "how-many-instructors-do-you-really-need",
-    title: "How Many Instructors Do You Really Need?",
+    title: "Seasonal Staffing: How Many Instructors to Hire for the Season",
     category: CAT,
-    excerpt: "Staff too lean and you risk safety; too heavy and you kill your margins. How to find the right number for each session, every time.",
+    excerpt: "Staff too lean and you risk safety; too heavy and you kill your margins. How to size your instructor team for the season, and for each session.",
     tags: ["staffing", "ratios", "operations"],
     coverEmoji: "👥",
     imageQuery: "group of sailing instructors team on beach",

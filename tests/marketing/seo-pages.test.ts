@@ -5,6 +5,9 @@ import { LANDINGS, landingBySlug } from "@/lib/seo/landings";
 import { GUIDES, guideBySlug } from "@/lib/seo/guides";
 import { SCREENS } from "@/lib/screens";
 import { SECTIONS } from "@/lib/learn/sections";
+import { CATEGORY_LINKS, relatedForCategory } from "@/lib/blog/related";
+import { SEED_ARTICLES } from "@/lib/blog/seed";
+import { OG_IMAGE } from "@/lib/seo/og";
 
 const learnIds = new Set(SECTIONS.map((s) => s.id));
 
@@ -49,5 +52,32 @@ describe("guides", () => {
     const ratios = guideBySlug("how-many-instructors-do-i-need-for-an-rya-course")!;
     const table = ratios.blocks.find((b) => b.kind === "table");
     expect(table && table.kind === "table" ? table.caption : "").toMatch(/example ratios/i);
+  });
+});
+
+describe("written for the people who run the centre", () => {
+  it("every blog category leads to real software pages and guides", () => {
+    for (const a of SEED_ARTICLES) expect(CATEGORY_LINKS[a.category], a.category).toBeTruthy();
+    for (const [cat, links] of Object.entries(CATEGORY_LINKS)) {
+      for (const slug of links.landings) expect(landingBySlug(slug), `${cat} → ${slug}`).toBeTruthy();
+      for (const slug of links.guides) expect(guideBySlug(slug), `${cat} → ${slug}`).toBeTruthy();
+      expect(relatedForCategory(cat).landings.length).toBe(links.landings.length);
+    }
+    // A hand-written post with its own category still gets the pillar pages.
+    expect(relatedForCategory("Something else").landings[0]?.slug).toBe("rya-sailing-school-software");
+  });
+
+  it("article titles speak to the centre, not to instructors or learners", () => {
+    for (const a of SEED_ARTICLES) expect(a.title, a.slug).not.toMatch(/\bfor (instructors|sailors|learners|students)\b/i);
+  });
+
+  it("guide FAQs are real questions with answers, and the share image exists", () => {
+    for (const g of GUIDES) {
+      for (const f of g.faqs ?? []) {
+        expect(f.q.trim().endsWith("?"), `${g.slug}: ${f.q}`).toBe(true);
+        expect(f.a.length, `${g.slug}: ${f.q}`).toBeGreaterThan(40);
+      }
+    }
+    expect(existsSync(join(process.cwd(), "public", OG_IMAGE.url))).toBe(true);
   });
 });

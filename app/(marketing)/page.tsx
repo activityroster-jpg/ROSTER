@@ -8,13 +8,22 @@ import { ScreenShot } from "@/components/marketing/ScreenShot";
 import { HomeExplainer } from "@/components/marketing/HomeExplainer";
 import { SCREENS } from "@/lib/screens";
 import { apexDomain, COMPANY } from "@/lib/config";
+import { SCHEMA_AUDIENCE } from "@/lib/seo/og";
 
 export const metadata = {
   title: { absolute: "RYA Sailing School Software & Staff Rostering | ActivityRoster" },
   description:
-    "The operating system for RYA sailing centres. Build rotas that are ready to run: the right instructor type in every place, availability, course ratios and Senior Instructor cover checked as you schedule. Free for a month.",
+    "RYA sailing school software for Principals, Chief Instructors and centre managers. Build rotas that are ready to run: the right instructor type in every place, availability, course ratios and Senior Instructor cover checked as you schedule. Free for a month.",
   alternates: { canonical: "/" },
 };
+
+/** The four people who buy and run it, each sent to the page written for their search. */
+const WHO = [
+  { title: "Principals and owners", body: "Accountable for recognition, safety and the margin. See the whole season's staffing, every licence and every override from one place.", href: "/sailing-centre-management-software", link: "Sailing centre management software" },
+  { title: "Chief and Senior Instructors", body: "Responsible for who teaches what, under whose supervision. Build the week with instructor types, ratios and Senior Instructor cover checked as you go.", href: "/rya-staff-rostering-software", link: "RYA staff rostering software" },
+  { title: "Centre managers and the office", body: "The rota, availability, leave, hours and payroll without the spreadsheet and the WhatsApp thread.", href: "/sailing-school-rostering-software", link: "Sailing school rostering software" },
+  { title: "Club officers", body: "Sailing secretaries, training officers and bosuns running duty rotas with volunteers, at one flat price per club.", href: "/sailing-club-duty-roster", link: "Sailing club duty roster software" },
+];
 
 export default function MarketingHome() {
   const apex = apexDomain();
@@ -33,6 +42,8 @@ export default function MarketingHome() {
         url: site,
         description: "RYA sailing school software: compliance-aware staff rostering, qualification tracking and course administration for RYA sailing and watersports centres, schools and clubs.",
         areaServed: "GB",
+        audience: SCHEMA_AUDIENCE,
+        knowsAbout: ["RYA training centre staffing", "sailing school rostering", "RYA instructor qualifications and expiry", "instructor ratios and safety boat cover", "sailing club duty rotas"],
         sameAs: [COMPANY.social.linkedin, COMPANY.social.facebook],
       },
       {
@@ -48,8 +59,10 @@ export default function MarketingHome() {
       {
         "@type": "SoftwareApplication",
         name: "ActivityRoster",
+        url: site,
         applicationCategory: "BusinessApplication",
-        operatingSystem: "Web",
+        operatingSystem: "Web, iOS, Android",
+        audience: SCHEMA_AUDIENCE,
         offers: { "@type": "Offer", price: "35", priceCurrency: "GBP" },
         description: "RYA sailing school software. Instructor types, who can teach each course, availability and course ratios checked as you schedule. Flat per-centre pricing from £35/month.",
       },
@@ -78,6 +91,7 @@ export default function MarketingHome() {
               Build rotas that are actually ready to run. ActivityRoster checks each instructor&rsquo;s type against the place and
               the course, availability, course ratios and Senior Instructor cover as you schedule.
             </p>
+            <p className="mt-3 text-sm font-medium text-[#4fd1c5]">Built for the people who run the centre: Principals, Chief Instructors, centre managers and club officers.</p>
             <div className="mt-7 max-w-xl">
               <EmailStart source="hero" variant="hero" />
             </div>
@@ -111,6 +125,23 @@ export default function MarketingHome() {
               <p className="mt-0.5 text-xs text-slate-500">{s}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* Who it's for: the people who run the centre, in their own job titles */}
+      <section className="border-b border-slate-200 bg-white">
+        <div className="mx-auto max-w-6xl px-4 py-12 md:py-14">
+          <p className="text-sm font-semibold uppercase tracking-wide text-teal">Who it&rsquo;s for</p>
+          <h2 className="mt-1 font-display text-2xl font-semibold text-navy md:text-3xl" style={{ textWrap: "balance" }}>Built for the people who run an RYA centre or club</h2>
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {WHO.map((w) => (
+              <div key={w.title} className="flex flex-col rounded-card border border-slate-200 bg-canvas p-5">
+                <h3 className="font-display text-lg font-semibold text-navy">{w.title}</h3>
+                <p className="mt-1 flex-1 text-sm text-slate-600">{w.body}</p>
+                <Link href={w.href} className="mt-3 text-sm font-semibold text-teal hover:underline">{w.link} →</Link>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 

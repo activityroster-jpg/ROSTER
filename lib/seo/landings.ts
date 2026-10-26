@@ -39,6 +39,9 @@ export interface Landing {
   learn: string;
 }
 
+/** When the pages' content last changed: the sitemap's lastModified for them. Bump it when you edit this file. */
+export const LANDINGS_UPDATED = "2026-10-26";
+
 export const LANDINGS: Landing[] = [
   {
     slug: "rya-sailing-school-software",
@@ -322,7 +325,7 @@ export const LANDINGS: Landing[] = [
       { q: "Can we switch a check off?", a: "Yes, in Settings. Switching off a safety check asks you to confirm and tells you what will no longer be stopped." },
       { q: "What about under-18 instructors?", a: "They're marked as under 18 from their date of birth, with their contact details kept private from colleagues. Working hours are the centre's to manage; each person's rostered hours for the week show beside their name." },
     ],
-    guides: ["rya-sailing-school-compliance-checklist", "how-to-prevent-expired-qualifications-being-rostered", "how-to-manage-safety-boat-cover"],
+    guides: ["rya-recognition-inspection-what-to-have-ready", "rya-sailing-school-compliance-checklist", "how-to-prevent-expired-qualifications-being-rostered"],
     related: ["rya-qualification-tracking-software", "rya-staff-rostering-software", "rya-sailing-school-software"],
     learn: "problems",
   },
@@ -359,7 +362,7 @@ export const LANDINGS: Landing[] = [
       { q: "Can we add our own qualifications?", a: "Yes. The RYA list is there from the start and you can add any other licence or check your centre needs." },
       { q: "What happens when someone renews?", a: "They upload the new certificate from the app, the office verifies it, and they can be rostered again straight away." },
     ],
-    guides: ["how-to-track-rya-instructor-qualifications", "how-to-prevent-expired-qualifications-being-rostered", "rya-sailing-school-compliance-checklist"],
+    guides: ["how-long-do-rya-instructor-qualifications-last", "how-to-track-rya-instructor-qualifications", "how-to-prevent-expired-qualifications-being-rostered"],
     related: ["rya-instructor-management-software", "sailing-school-compliance-software", "rya-staff-rostering-software"],
     learn: "licences",
   },
@@ -404,12 +407,12 @@ export const LANDINGS: Landing[] = [
     slug: "sailing-club-duty-roster",
     navLabel: "Sailing club duty roster",
     keyword: "sailing club duty roster",
-    alsoFor: ["sailing club volunteer rota", "club safety boat duty rota"],
+    alsoFor: ["sailing club duty rota software", "sailing club volunteer rota", "club safety boat duty rota"],
     title: "Sailing Club Duty Roster Software",
     description: "Run your sailing club's duty roster for training, racing and safety boat duties. Volunteers set availability in an app, licences are tracked, and nobody costs extra per user.",
     eyebrow: "Sailing club duty roster",
     h1: "A duty roster your club's volunteers will actually use",
-    intro: "Club duty rosters live in spreadsheets, on noticeboards and in long email threads, and someone always ends up on safety boat without a licence. ActivityRoster gives clubs the same checks a sailing school gets, with pricing that doesn't charge for every volunteer.",
+    intro: "Whether you are the sailing secretary, the training officer or the bosun, the club duty rota lives in spreadsheets, on noticeboards and in long email threads, and someone always ends up on safety boat without a licence. ActivityRoster gives clubs the same checks a sailing school gets, with pricing that doesn't charge for every volunteer.",
     heroScreen: "appHome",
     showFlow: false,
     sections: [
@@ -433,7 +436,7 @@ export const LANDINGS: Landing[] = [
       { q: "What happens when a member can't do their duty?", a: "They tap \"Can't make it after all?\" in the app and the duty officer is told at once. The duty can then be offered as an open shift for anyone free to claim." },
       { q: "Do members need to install an app?", a: "The app is the easiest way, but everything works in a phone browser too, and the duty sheet still prints for the noticeboard." },
     ],
-    guides: ["how-to-manage-safety-boat-cover", "how-should-a-sailing-school-manage-instructor-availability", "sailing-school-staff-scheduling-spreadsheet-template"],
+    guides: ["how-to-run-a-sailing-club-duty-rota", "how-to-manage-safety-boat-cover", "how-should-a-sailing-school-manage-instructor-availability"],
     related: ["sailing-school-rostering-software", "rya-staff-rostering-software", "watersports-staff-scheduling"],
     learn: "app",
   },

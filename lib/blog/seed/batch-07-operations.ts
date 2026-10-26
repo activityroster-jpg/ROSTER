@@ -63,7 +63,7 @@ Admin sprawl returns whenever a new spreadsheet is started, a new app is adopted
   },
   {
     slug: "rostering-without-the-headache",
-    title: "Rostering Without the Headache",
+    title: "Staff Rostering for Sailing Schools, Without the Headache",
     category: CAT,
     excerpt: "Building the weekly roster is many managers' least favourite job. How to make it fast and painless.",
     tags: ["rostering", "operations", "staff"],
@@ -560,7 +560,7 @@ Save this checklist with the dates each item was done and who did it. Next year,
   },
   {
     slug: "why-spreadsheets-eventually-let-you-down",
-    title: "Why Spreadsheets Eventually Let You Down",
+    title: "Why the Sailing School Rota Spreadsheet Eventually Lets You Down",
     category: CAT,
     excerpt: "Spreadsheets get most centres started — and eventually hold them back. The warning signs.",
     tags: ["spreadsheets", "systems", "operations"],
@@ -621,7 +621,7 @@ Spreadsheets remain excellent for one-off analysis, the budget model, the fleet 
   },
   {
     slug: "choosing-software-for-your-sailing-centre",
-    title: "Choosing Software for Your Sailing Centre",
+    title: "Choosing Sailing School Software: What to Look For",
     category: CAT,
     excerpt: "The right system saves hours and prevents mistakes. What to look for when you choose.",
     tags: ["software", "systems", "operations"],

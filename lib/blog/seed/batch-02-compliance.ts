@@ -142,9 +142,9 @@ Imagine the worst day: a serious injury to a learner, an investigator at the doo
   },
   {
     slug: "understanding-instructor-ratios-and-safety-cover",
-    title: "Understanding Instructor Ratios and Safety Cover",
+    title: "Instructor Ratios and Safety Cover: What to Check on Every Roster",
     category: CAT,
-    excerpt: "Ratios and safety cover are the backbone of safe delivery. How to plan them, count them properly, and never fall short.",
+    excerpt: "Ratios and safety cover are the backbone of safe delivery. How a Principal sets them, counts them properly and makes meeting them routine.",
     tags: ["ratios", "safety cover", "operations"],
     coverEmoji: "📏",
     imageQuery: "rib safety boat escorting fleet of sailing dinghies",
@@ -210,9 +210,9 @@ Get this right and most of the other safety systems have something solid to stan
   },
   {
     slug: "tracking-instructor-qualifications-and-expiry-dates",
-    title: "Tracking Instructor Qualifications and Expiry Dates",
+    title: "Instructor Qualification Renewals: The Centre's Annual Plan",
     category: CAT,
-    excerpt: "An expired first-aid certificate can ground an instructor. How to keep every licence current without the last-minute panic.",
+    excerpt: "An expired first aid certificate can ground an instructor. How to run renewals for the whole team each year without the last-minute panic.",
     tags: ["qualifications", "compliance", "records"],
     coverEmoji: "🎫",
     imageQuery: "certificates folder records office desk",
@@ -413,9 +413,9 @@ Data protection done this way is not a burden; it is part of the trust that lets
   },
   {
     slug: "weather-decision-making-for-instructors",
-    title: "Weather Decision-Making for Instructors",
+    title: "Launch or Stay Ashore: Making Weather Decisions as a Centre",
     category: CAT,
-    excerpt: "The call to launch or stay ashore is the most important one your team makes. How to make it consistently and confidently.",
+    excerpt: "The call to launch or stay ashore is the most important one your centre makes. How to make it consistently, and back the person who makes it.",
     tags: ["weather", "safety", "decision-making"],
     coverEmoji: "🌤️",
     imageQuery: "dark storm clouds over sailing dinghies lake",
@@ -471,13 +471,15 @@ The question is never whether it is possible to sail. Skilled people can sail in
   },
   {
     slug: "first-aid-requirements-for-watersports-staff",
-    title: "First Aid Requirements for Watersports Staff",
+    title: "First Aid Cover at Your Centre: The Principal's Checklist",
     category: CAT,
-    excerpt: "What first-aid cover your team needs, how to keep it current, and how to be genuinely ready when it counts.",
+    excerpt: "Who at your centre needs a current first aid certificate, how to keep every expiry date in view, and how to be genuinely ready when it counts.",
     tags: ["first aid", "compliance", "safety"],
     coverEmoji: "⛑️",
     imageQuery: "first aid kit lifeguard rescue training outdoors",
-    body: `Every RYA instructor must hold a current first aid certificate to teach, and every centre must be able to give first aid to anyone on its site. Those two facts are well known. What is less well understood is what kind of first aid matters most in a watersports setting, how to go beyond the minimum, and how to make sure that when someone collapses on the pontoon the response is quick, calm and correct. This article covers the requirements and the readiness.
+    body: `For Principals and centre managers: this covers what the centre must have in place and how to keep it that way, season after season. It is not a guide to becoming a first aid instructor or to booking your own course.
+
+Every RYA instructor must hold a current first aid certificate to teach, and every centre must be able to give first aid to anyone on its site. Those two facts are well known. What is less well understood is what kind of first aid matters most in a watersports setting, how to go beyond the minimum, and how to make sure that when someone collapses on the pontoon the response is quick, calm and correct. This article covers the requirements and the readiness.
 
 ## The qualification requirement
 
@@ -668,7 +670,7 @@ Put a review of the emergency action plan on the annual calendar alongside the r
   },
   {
     slug: "keeping-your-recognition-inspection-stress-free",
-    title: "Keeping Your Recognition Inspection Stress-Free",
+    title: "RYA Recognition Inspection: How to Keep It Stress-Free",
     category: CAT,
     excerpt: "Inspections feel daunting, but a well-run centre has little to fear. How to be ready all year round instead of cramming.",
     tags: ["inspection", "recognition", "compliance"],
@@ -730,7 +732,7 @@ The best Principals treat the inspection as free consultancy and a yearly discip
   },
   {
     slug: "cold-water-and-sun-safety-for-sailors",
-    title: "Cold Water and Sun Safety for Sailors",
+    title: "Cold Water and Sun Safety: Your Centre's Duty of Care",
     category: CAT,
     excerpt: "Two of the most underestimated risks on the water. Practical steps to protect learners and staff all season.",
     tags: ["safety", "cold water", "sun"],
