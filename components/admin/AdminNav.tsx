@@ -39,6 +39,7 @@ export function adminSections(opts: { staging: boolean }): NavSection[] {
       { href: "/admin/change-log", label: "Change log", hint: "what changed in the platform and when" },
     ] },
     { id: "trust", label: "Trust & compliance", pages: [
+      { href: "/admin/users", label: "Users", hint: "every login on the platform, and removing one" },
       { href: "/admin/security", label: "Security", hint: "your second step and recent sign-in events" },
       { href: "/admin/privacy", label: "Privacy requests", hint: "access, erasure and restriction requests" },
     ] },

@@ -716,6 +716,47 @@ export class ControlPlaneRepository {
     throw new Error("Could not generate a unique company code");
   }
 
+  /**
+   * Dev Center → Users: every login on the platform, newest first, with the
+   * centres each belongs to and when they were last signed in. Optional
+   * search on name or email.
+   */
+  async listAllUsers(opts: { search?: string; limit?: number } = {}): Promise<{
+    id: string; name: string; email: string; emailVerified: boolean; createdAt: Date; lastActiveAt: Date | null;
+    centres: { organisationId: string; name: string; slug: string; role: MembershipRole; status: MembershipStatus; orgStatus: string }[];
+  }[]> {
+    const q = opts.search?.trim().toLowerCase();
+    const like = q ? `%${q.replace(/[%_\\]/g, (c) => `\\${c}`)}%` : null;
+    const rows = await this.db
+      .select({ id: user.id, name: user.name, email: user.email, emailVerified: user.emailVerified, createdAt: user.createdAt })
+      .from(user)
+      .where(like ? sql`(lower(${user.email}) like ${like} escape '\\' or lower(${user.name}) like ${like} escape '\\')` : undefined)
+      .orderBy(sql`${user.createdAt} desc`)
+      .limit(opts.limit ?? 500);
+    if (rows.length === 0) return [];
+    const ids = rows.map((r) => r.id);
+    const [last, members] = await Promise.all([
+      this.db.select({ userId: session.userId, at: sql<number>`max(${session.updatedAt})` }).from(session).where(inList(session.userId, ids)).groupBy(session.userId),
+      this.db
+        .select({ userId: membership.userId, organisationId: membership.organisationId, name: organisation.name, slug: organisation.slug, role: membership.role, status: membership.status, orgStatus: organisation.status })
+        .from(membership)
+        .innerJoin(organisation, eq(organisation.id, membership.organisationId))
+        .where(inList(membership.userId, ids)),
+    ]);
+    const lastBy = new Map(last.map((l) => [l.userId, l.at]));
+    const centresBy = new Map<string, typeof members>();
+    for (const m of members) centresBy.set(m.userId, [...(centresBy.get(m.userId) ?? []), m]);
+    return rows.map((r) => {
+      const at = lastBy.get(r.id);
+      return {
+        ...r,
+        emailVerified: Boolean(r.emailVerified),
+        lastActiveAt: at != null ? new Date(Number(at)) : null,
+        centres: (centresBy.get(r.id) ?? []).map(({ userId: _u, ...c }) => c),
+      };
+    });
+  }
+
   /** Every centre a user belongs to (any status), with the centre's name/slug. */
   async membershipsForUser(userId: string): Promise<{ organisationId: string; name: string; slug: string; role: MembershipRole; status: MembershipStatus; orgStatus: string }[]> {
     return this.db

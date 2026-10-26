@@ -28,6 +28,7 @@ import { ORG_STATUSES, SUBSCRIPTION_STATUSES, PLANS, ORG_TIERS, ERROR_REPORT_STA
 import { writeAudit } from "@/lib/services/audit";
 import { fairUseSchema } from "@/lib/services/fair-use";
 import { removeTestCentre } from "@/lib/services/test-centre";
+import { deleteMyAccount } from "@/lib/services/account-deletion";
 import { upgradeInstructorTypes, type UpgradeReport } from "@/lib/services/instructor-types-upgrade";
 
 type Result = { ok: boolean; error?: string };
@@ -396,4 +397,31 @@ export async function upgradeInstructorTypesAction(organisationId: string, dryRu
     console.error(`[ops] instructor types upgrade failed for ${org.slug}`, err);
     return { ok: false, error: `It stopped part way (${(err as Error).message}). Safe to run again: it carries on where it left off.` };
   }
+}
+
+/**
+ * Dev Center → Users: remove a login. The same deletion as "Delete my account"
+ * in the app: the login, sessions and devices go, and in every centre the
+ * person is anonymised (roster and pay history stays as "Former staff member").
+ * Refused for your own login, platform admins, and the owner of a live centre.
+ */
+export async function removeUserAction(input: { userId: string; confirmEmail: string }): Promise<Result> {
+  const { email: by } = await requirePlatformAdmin();
+  const parsed = z.object({ userId: idSchema, confirmEmail: z.string().trim().toLowerCase().max(320) }).safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Invalid request" };
+  const repos = await getRepositories();
+  const target = await repos.control.userById(parsed.data.userId);
+  if (!target) return { ok: false, error: "That login has already gone." };
+  if (target.email.toLowerCase() !== parsed.data.confirmEmail) return { ok: false, error: "Type the email exactly to confirm." };
+  if (target.email.toLowerCase() === by.toLowerCase()) return { ok: false, error: "You can't remove your own login here." };
+  const r = await deleteMyAccount(repos, target.id, { isPlatformAdmin: await isPlatformAdminEmail(target.email) });
+  if (!r.ok) {
+    if (r.reason === "owner") return { ok: false, error: `${target.email} owns a live centre. Transfer ownership on the centre's page, or remove the centre, first.` };
+    return { ok: false, error: r.message };
+  }
+  // Logged against the admin who did it: the removed login's own events go with it.
+  const admin = await repos.control.userByEmail(by);
+  if (admin) await recordSecurityEvent("account_deleted", { userId: admin.id, meta: { removedUserId: target.id, centres: r.centres, via: "dev_center" } }).catch(() => {});
+  revalidatePath("/admin/users");
+  return { ok: true };
 }
