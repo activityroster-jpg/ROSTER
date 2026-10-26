@@ -4,10 +4,22 @@ import { useEffect, useState } from "react";
 import { signIn, authClient } from "@/lib/auth/client";
 import { twoFactorHintAction } from "./actions";
 import { Turnstile } from "@/components/auth/Turnstile";
+import { isNative } from "@/lib/mobile/native";
 
 type Mode = "link" | "password" | "setup";
 
 export default function SignInPage() {
+  // Inside the instructor app this web page must never show: its "Set up your
+  // account" emails a link that opens the browser and sets up an office. The
+  // app's own sign-in uses 6-digit codes and keeps people in the app.
+  const [inApp, setInApp] = useState(false);
+  useEffect(() => {
+    if (!isNative()) return;
+    setInApp(true);
+    let email = "";
+    try { email = new URLSearchParams(window.location.search).get("email") ?? ""; } catch { /* ignore */ }
+    window.location.replace(`/app${email ? `?email=${encodeURIComponent(email)}` : ""}`);
+  }, []);
   const [mode, setMode] = useState<Mode>("password");
   const [expired, setExpired] = useState(false);
   const [linkUsed, setLinkUsed] = useState(false);
@@ -103,6 +115,7 @@ export default function SignInPage() {
     } finally { setBusy(false); }
   };
 
+  if (inApp) return <div className="min-h-screen bg-canvas" aria-busy="true" />;
   if (sent) {
     return (
       <div className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-4">

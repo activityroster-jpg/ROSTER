@@ -8,6 +8,7 @@ import { enforceLoginVerified } from "@/lib/auth/login-gate";
 import { GhostReadOnlyError } from "@/lib/auth/ghost";
 import { TrialReadOnlyError, type TrialState } from "@/lib/billing/trial";
 import { PATH_HEADER } from "@/lib/auth/device";
+import { resolveHost } from "./host";
 import type { TenantContext } from "./context";
 import { resolveTenant } from "./resolve";
 import { can, isOfficeRole, landingFor, type Permission } from "@/lib/auth/rbac";
@@ -39,7 +40,9 @@ export async function requireTenant(opts?: { role?: "admin"; owner?: boolean; pe
   if (!res.ok) {
     switch (res.reason) {
       case "unauthenticated":
-        redirect("/sign-in");
+        // The instructor app opens the portal on the main domain: send it to the
+        // app's own sign-in (6-digit codes, stays in the app), never the web one.
+        redirect((h.get(PATH_HEADER) ?? "").startsWith("/portal") && !isTenantHost(h.get("host")) ? "/app" : "/sign-in");
       // eslint-disable-next-line no-fallthrough
       case "not-a-member":
         redirect("/no-access");
@@ -100,4 +103,9 @@ export async function requireTenant(opts?: { role?: "admin"; owner?: boolean; pe
   void opts?.skipMfaGate;
 
   return { ctx: res.ctx, organisation: res.organisation, repos, trial: res.trial };
+}
+
+/** A centre's own subdomain (yourcentre.activityroster.com), as opposed to the main domain the app uses. */
+function isTenantHost(host: string | null): boolean {
+  return resolveHost(host, process.env.APP_APEX_DOMAIN || process.env.NEXT_PUBLIC_APEX_DOMAIN || "activityroster.com").kind === "tenant";
 }
