@@ -22,7 +22,8 @@ export interface InviteEmailInput {
 
 const STEPS: Record<InviteKind, string[]> = {
   instructor: [
-    "Set a password and a 4-digit PIN.",
+    "On your phone: get the ActivityRoster app and create your account with this email address. Your centre is offered by name, no code needed.",
+    "On a computer: use the button above instead. It sets your password and a 4-digit PIN.",
     "Mark the days you're free, so the office can roster you.",
     "Upload your certificates (first aid, instructor licences or ratings and so on).",
   ],

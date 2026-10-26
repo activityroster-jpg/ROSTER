@@ -39,10 +39,15 @@ export async function requireTenant(opts?: { role?: "admin"; owner?: boolean; pe
 
   if (!res.ok) {
     switch (res.reason) {
-      case "unauthenticated":
+      case "unauthenticated": {
         // The instructor app opens the portal on the main domain: send it to the
         // app's own sign-in (6-digit codes, stays in the app), never the web one.
-        redirect((h.get(PATH_HEADER) ?? "").startsWith("/portal") && !isTenantHost(h.get("host")) ? "/app" : "/sign-in");
+        // On a centre's own address, say which side was asked for, so an
+        // instructor gets the instructor sign-in and no office email code.
+        const portal = (h.get(PATH_HEADER) ?? "").startsWith("/portal");
+        if (portal && !isTenantHost(h.get("host"))) redirect("/app");
+        redirect(`/sign-in?next=${portal ? "/portal" : "/office"}`);
+      }
       // eslint-disable-next-line no-fallthrough
       case "not-a-member":
         redirect("/no-access");

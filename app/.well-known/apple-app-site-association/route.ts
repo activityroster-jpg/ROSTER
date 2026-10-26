@@ -1,4 +1,5 @@
 import { getEnv } from "@/lib/cf/bindings";
+import { APP_LINK_PATHS } from "@/lib/mobile/links";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +14,7 @@ export async function GET() {
   const appID = `${env.APPLE_TEAM_ID}.${env.IOS_BUNDLE_ID}`;
   const body = {
     applinks: {
-      details: [{ appIDs: [appID], components: [{ "/": "/app/*" }, { "/": "/api/auth/*" }, { "/": "/portal/*" }, { "/": "/set-pin" }, { "/": "/pin" }] }],
+      details: [{ appIDs: [appID], components: APP_LINK_PATHS.map((p) => ({ "/": p })) }],
     },
     webcredentials: { apps: [appID] },
   };

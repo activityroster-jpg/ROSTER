@@ -12,7 +12,6 @@ const field = "w-full rounded-xl border border-slate-300 px-4 py-3 text-base out
 
 export function AppSignIn() {
   const [deleted, setDeleted] = useState(false);
-  useEffect(() => { try { setDeleted(new URLSearchParams(window.location.search).get("deleted") === "1"); } catch { /* ignore */ } }, []);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -39,17 +38,31 @@ export function AppSignIn() {
     window.location.href = await appLandingAction();
   };
 
-  const sendCode = async () => {
+  const sendCode = async (to: string = email) => {
     setErr(null); setNote(null);
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())) { setErr("Enter your email first, then tap “Email me a code”."); return; }
+    const addr = to.trim();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(addr)) { setErr("Enter your email first, then tap “Email me a code”."); return; }
     setBusy(true);
     try {
-      const r = await authClient.emailOtp.sendVerificationOtp({ email: email.trim(), type: "sign-in" });
+      const r = await authClient.emailOtp.sendVerificationOtp({ email: addr, type: "sign-in" });
       if (r.error) { setErr(r.error.message ?? "Could not send the code"); return; }
       setCodeMode(true); setOtp("");
-      setNote(`We've emailed a 6-digit code to ${email.trim()}. It's in the subject line.`);
+      setNote(`We've emailed a 6-digit code to ${addr}. It's in the subject line.`);
     } finally { setBusy(false); }
   };
+
+  // Arriving from elsewhere in the app: the web sign-in hands over with the
+  // address; "Create account" hands over when the email already has a login.
+  useEffect(() => {
+    try {
+      const q = new URLSearchParams(window.location.search);
+      setDeleted(q.get("deleted") === "1");
+      const em = q.get("email") ?? "";
+      if (em && em.length <= 200) setEmail(em);
+      if (q.get("existing") === "1") setNote("You already have an account with this email. Sign in with your password, or get a one-time code by email.");
+    } catch { /* ignore */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const signInWithCode = async (value: string) => {
     setErr(null); setBusy(true);
@@ -99,7 +112,7 @@ export function AppSignIn() {
           {err ? <p className="text-sm text-port">{err}</p> : null}
           <button type="submit" disabled={busy || otp.length !== 6} className="w-full rounded-xl bg-teal px-4 py-3.5 text-base font-semibold text-white hover:bg-teal-700 disabled:opacity-50">{busy ? "Signing in…" : "Sign in"}</button>
           <div className="flex justify-between text-sm">
-            <button type="button" onClick={sendCode} disabled={busy} className="font-medium text-slate-500">Send a new code</button>
+            <button type="button" onClick={() => void sendCode()} disabled={busy} className="font-medium text-slate-500">Send a new code</button>
             <button type="button" onClick={() => { setCodeMode(false); setErr(null); setNote(null); }} className="font-medium text-slate-500">Use my password</button>
           </div>
         </form>
@@ -114,7 +127,7 @@ export function AppSignIn() {
         <button type="submit" disabled={busy} className="w-full rounded-xl bg-teal px-4 py-3.5 text-base font-semibold text-white hover:bg-teal-700 disabled:opacity-50">
           {busy ? "Signing in…" : "Sign in"}
         </button>
-        <button type="button" onClick={sendCode} disabled={busy} className={needsCheck ? "w-full rounded-xl border-2 border-teal px-4 py-3 text-base font-semibold text-teal" : "w-full py-1 text-center text-sm font-semibold text-teal"}>Email me a sign-in code instead</button>
+        <button type="button" onClick={() => void sendCode()} disabled={busy} className={needsCheck ? "w-full rounded-xl border-2 border-teal px-4 py-3 text-base font-semibold text-teal" : "w-full py-1 text-center text-sm font-semibold text-teal"}>Email me a sign-in code instead</button>
         <button type="button" onClick={forgot} disabled={busy} className="w-full py-1 text-center text-sm font-medium text-slate-500">Forgot password?</button>
       </form>
       )}
@@ -123,6 +136,7 @@ export function AppSignIn() {
         <Link href="/app/signup" className="mt-2 inline-block w-full rounded-xl border-2 border-teal px-4 py-3 text-base font-semibold text-teal">Create your account</Link>
         <p className="mt-2 text-xs text-slate-400">If your centre has already added you, it&apos;s offered by name after you sign in. Otherwise ask them for their company code.</p>
       </div>
+      <p className="mt-4 text-center text-xs text-slate-400">Running a centre rather than working at one? Centres are set up on the <a href="/start" target="_blank" rel="noopener noreferrer" className="underline">website</a>, not in the app.</p>
     </div>
   );
 }

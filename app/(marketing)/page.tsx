@@ -100,6 +100,7 @@ export default function MarketingHome() {
               {" "}· set up in an afternoon ·{" "}
               <Link href="/pricing" className="font-semibold text-white underline decoration-white/40 underline-offset-2 hover:decoration-white">from £35/month</Link>
             </p>
+            <p className="mt-2 text-xs text-white/60">Instructor or staff member? You don&rsquo;t sign up here: <Link href="/instructors" className="underline decoration-white/40 underline-offset-2 hover:text-white">get the app and join your centre →</Link></p>
           </div>
           <div>
             <ScreenShot screen={SCREENS.courses} eager className="ring-1 ring-white/20" />

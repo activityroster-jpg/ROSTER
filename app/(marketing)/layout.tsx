@@ -30,6 +30,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
             <Link href="/demo" className="hidden py-1.5 hover:text-navy md:inline-block">Demo</Link>
             <Link href="/contact" className="inline-block py-1.5 hover:text-navy">Contact</Link>
             <Link href="/sign-in" className="inline-block py-1.5 hover:text-navy">Sign in</Link>
+            <Link href="/instructors" className="inline-block py-1.5 hover:text-navy">Instructor app</Link>
             <Link href="/privacy" className="inline-block py-1.5 hover:text-navy">Privacy</Link>
             <Link href="/terms" className="inline-block py-1.5 hover:text-navy">Terms</Link>
             <Link href="/data-processing" className="inline-block py-1.5 hover:text-navy">Data processing</Link>

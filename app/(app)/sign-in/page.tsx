@@ -5,6 +5,7 @@ import { signIn, authClient } from "@/lib/auth/client";
 import { twoFactorHintAction } from "./actions";
 import { Turnstile } from "@/components/auth/Turnstile";
 import { isNative } from "@/lib/mobile/native";
+import Link from "next/link";
 
 type Mode = "link" | "password" | "setup";
 
@@ -42,13 +43,15 @@ export default function SignInPage() {
   // the office opens; instructors go straight to their portal.
   const isPortal = next === "/portal" || next.startsWith("/go?to=portal");
   const isDev = next === "/admin";
-  const after = isPortal ? next : `/verify-login?next=${encodeURIComponent(next)}`;
+  // Creating a centre with an existing login: straight back to /start, no office code.
+  const toStart = next === "/start";
+  const after = isPortal || toStart ? next : `/verify-login?next=${encodeURIComponent(next)}`;
   // Remember how this person last signed in on this device.
   useEffect(() => {
     try { if (window.localStorage.getItem("ar.signin.mode") === "link") setMode("link"); } catch { /* blocked storage */ }
     const q = new URLSearchParams(window.location.search);
     const n = q.get("next");
-    if (n === "/portal" || n === "/office" || n === "/go?to=portal" || n === "/go?to=office" || n === "/admin") setNext(n);
+    if (n === "/portal" || n === "/office" || n === "/go?to=portal" || n === "/go?to=office" || n === "/admin" || n === "/start") setNext(n);
     if (q.get("expired") === "1") setExpired(true);
     // An emailed link that was already used, or has expired (the auth library adds ?error=).
     if (q.get("error")) setLinkUsed(true);
@@ -135,7 +138,7 @@ export default function SignInPage() {
 
   return (
     <div className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-4">
-      <h1 className="mb-1 font-display text-2xl font-semibold text-navy">{mode === "setup" ? "Set up your account" : isDev ? "Dev Center sign in" : isPortal ? "Instructor sign in" : "Sign in"}</h1>
+      <h1 className="mb-1 font-display text-2xl font-semibold text-navy">{mode === "setup" ? "Set up your account" : isDev ? "Dev Center sign in" : isPortal ? "Instructor sign in" : toStart ? "Sign in to create your centre" : "Sign in"}</h1>
       <p className="mb-6 text-sm text-slate-500">{mode === "setup" ? "Been invited to a centre? Enter your email and we'll send a link to confirm it. Then you'll choose your password." : isDev ? "Platform owner only. Enter your email and password; then the emailed code, your PIN and your authenticator code." : isPortal ? "Enter your email and password to open your portal." : "Enter your email and password. If your account is being used somewhere new, we'll email you a code first."}</p>
       {linkUsed ? <p role="status" className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">That link has already been used or has expired. If you&rsquo;ve already set up your account, sign in with your password. If not, send yourself a new link below.</p> : null}
       {expired ? <p role="status" className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">You were signed out after a while away. Sign in again to carry on.</p> : null}
@@ -186,6 +189,14 @@ export default function SignInPage() {
         <button type="button" onClick={() => { setMode("setup"); setError(null); setNote(null); }} className="mt-4 w-full rounded-card border border-teal/30 bg-teal/5 px-4 py-3 text-left text-sm text-navy hover:bg-teal/10">
           <span className="font-semibold">First time here, or been invited?</span> <span className="text-teal">Set up your account →</span>
         </button>
+      ) : null}
+      {!isPortal && !isDev ? (
+        <div className="mt-4 rounded-card border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+          <span className="font-semibold text-navy">Instructor or staff member?</span> Your centre adds you; there&rsquo;s nothing to set up here.{" "}
+          <a href="/app" className="font-semibold text-teal hover:underline">Instructor sign-in →</a>
+          <span className="mx-1.5 text-slate-300">·</span>
+          <Link href="/instructors" className="font-medium text-slate-500 hover:text-navy">How it works</Link>
+        </div>
       ) : null}
       <p className="mt-4 text-center text-xs text-slate-400">Forgot your PIN? Get in with a sign-in link above, then reset it from the PIN screen.</p>
     </div>

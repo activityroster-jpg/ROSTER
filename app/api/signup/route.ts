@@ -45,15 +45,27 @@ export async function POST(req: Request) {
   if (await control.slugTaken(slug)) {
     return NextResponse.json({ error: "That address is already taken — try another." }, { status: 409 });
   }
+  // Someone who already has a login (an instructor, or a person who created an
+  // account in the app before coming here) may own a centre with it, but only
+  // while signed in as that person: the session is the proof, not the typed email.
+  const auth = await getAuth();
   const existing = await control.userByEmail(ownerEmail);
   if (existing) {
-    return NextResponse.json(
-      { error: "An account with that email already exists. Sign in instead, or use a different email." },
-      { status: 409 },
-    );
-  }
-  if (await isPwnedPassword(password)) {
-    return NextResponse.json({ error: PWNED_MESSAGE }, { status: 400 });
+    const s = await auth.api.getSession({ headers: new Headers(req.headers) }).catch(() => null);
+    if (!s?.user || s.user.email.toLowerCase() !== ownerEmail) {
+      return NextResponse.json(
+        { error: "This email already has an ActivityRoster account. Sign in with it, then come back here to create your centre.", code: "exists" },
+        { status: 409 },
+      );
+    }
+    if (!s.user.emailVerified) {
+      return NextResponse.json({ error: "Confirm your email address first (the link we sent when you created your account), then create your centre." }, { status: 403 });
+    }
+  } else {
+    if (!password) return NextResponse.json({ error: "Choose a password." }, { status: 400 });
+    if (await isPwnedPassword(password)) {
+      return NextResponse.json({ error: PWNED_MESSAGE }, { status: 400 });
+    }
   }
 
   // Hold the address while we work; another signup for the same slug now waits.
@@ -63,19 +75,21 @@ export async function POST(req: Request) {
 
   // Create the owner's login through Better Auth (hashes the password + creates
   // the account). The owner must click the confirmation email before signing in.
+  // An existing, signed-in login skips this: it already is the owner.
   const centreUrl = `https://${slug}.${env.APP_APEX_DOMAIN}`;
-  const auth = await getAuth();
-  try {
-    await auth.api.signUpEmail({
-      body: { email: ownerEmail, password, name: centreName, callbackURL: `${centreUrl}/office` },
-    });
-  } catch (err) {
-    console.error("[signup] account creation failed:", (err as Error).message);
-    await control.releaseSlug(slug).catch(() => {});
-    return NextResponse.json({ error: "Could not create your account. Try a different email or sign in." }, { status: 400 });
+  if (!existing) {
+    try {
+      await auth.api.signUpEmail({
+        body: { email: ownerEmail, password: password!, name: centreName, callbackURL: `${centreUrl}/office` },
+      });
+    } catch (err) {
+      console.error("[signup] account creation failed:", (err as Error).message);
+      await control.releaseSlug(slug).catch(() => {});
+      return NextResponse.json({ error: "Could not create your account. Try a different email or sign in." }, { status: 400 });
+    }
   }
 
-  const owner = await control.userByEmail(ownerEmail);
+  const owner = existing ?? await control.userByEmail(ownerEmail);
   if (!owner) {
     await control.releaseSlug(slug).catch(() => {});
     return NextResponse.json({ error: "Could not create your account. Please try again." }, { status: 500 });
@@ -137,12 +151,15 @@ export async function POST(req: Request) {
   // Send the confirmation email explicitly, best-effort: a mail failure must not
   // fail an already-provisioned centre. We report only whether it sent so the UI
   // can guide the owner; the underlying error is logged server-side, not returned.
+  // An existing login proved its email long ago and is signed in: straight in.
   let emailSent = false;
-  try {
-    await auth.api.sendVerificationEmail({ body: { email: ownerEmail, callbackURL: `${centreUrl}/office` } });
-    emailSent = true;
-  } catch (err) {
-    console.error("[signup] verification email failed:", (err as Error).message);
+  if (!existing) {
+    try {
+      await auth.api.sendVerificationEmail({ body: { email: ownerEmail, callbackURL: `${centreUrl}/office` } });
+      emailSent = true;
+    } catch (err) {
+      console.error("[signup] verification email failed:", (err as Error).message);
+    }
   }
 
   // Best-effort lead capture for the marketing funnel.
@@ -152,5 +169,5 @@ export async function POST(req: Request) {
     /* ignore */
   }
 
-  return NextResponse.json({ ok: true, slug, url: `https://${slug}.${env.APP_APEX_DOMAIN}`, setupMode, emailSent });
+  return NextResponse.json({ ok: true, slug, url: `https://${slug}.${env.APP_APEX_DOMAIN}`, setupMode, emailSent, existingAccount: Boolean(existing) });
 }

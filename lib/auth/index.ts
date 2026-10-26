@@ -45,6 +45,20 @@ export function createAuth(db: Database, env: CloudflareEnv) {
       enabled: true,
       minPasswordLength: 8,
       requireEmailVerification: true,
+      // "Create account" with an email that already has one: the library answers
+      // as if it worked (so nobody can test which emails exist) and nothing
+      // changes. The owner of the address gets told how to get in instead.
+      onExistingUserSignUp: async ({ user: u }) => {
+        await sendEmail({
+          to: u.email,
+          subject: "You already have an ActivityRoster account",
+          html: `
+            <p>Someone, most likely you, just tried to create an ActivityRoster account with this email address, but you already have one. Nothing has changed.</p>
+            <p><strong>To get in:</strong> open the ActivityRoster app and sign in with your password, or tap <em>Email me a sign-in code instead</em> and we'll send a 6-digit code. Forgotten your password? Use <em>Forgot password?</em> on the sign-in screen.</p>
+            <p style="color:#64748b;font-size:12px">If this wasn't you, you can ignore this email: nobody can get into your account without access to this inbox.</p>
+          `,
+        }).catch(() => {});
+      },
       // A password reset logs out every other session — an intruder who
       // triggered the reset (or was already inside) loses access.
       revokeSessionsOnPasswordReset: true,

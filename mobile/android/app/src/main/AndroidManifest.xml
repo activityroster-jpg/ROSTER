@@ -26,6 +26,10 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" android:host="activityroster.com" />
                 <data android:scheme="https" android:host="*.activityroster.com" />
+                <data android:pathPrefix="/app" />
+                <data android:pathPrefix="/portal" />
+                <data android:pathPrefix="/set-pin" />
+                <data android:pathPrefix="/pin" />
             </intent-filter>
         </activity>
 

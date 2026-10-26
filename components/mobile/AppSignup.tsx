@@ -5,6 +5,7 @@ import { PasswordStrength } from "@/components/auth/PasswordStrength";
 import Link from "next/link";
 import { authClient, signIn, signUp } from "@/lib/auth/client";
 import { NO_CODE_ON_CLIPBOARD, PasteCodeButton, useCodeFromClipboard } from "@/components/auth/PasteCode";
+import { appLandingAction } from "@/app/app/actions";
 
 const field = "w-full rounded-xl border border-slate-300 px-4 py-3 text-base outline-none focus:border-teal";
 const PHONE_KEY = "ar.signup.phone";
@@ -41,7 +42,12 @@ export function AppSignup() {
     setBusy(true);
     try {
       const res = await signUp.email({ name: name.trim(), email: email.trim(), password });
-      if (res.error && !/already|exist/i.test(res.error.message ?? "")) { setErr(res.error.message ?? "Could not create your account"); return; }
+      if (res.error) {
+        // An account already: don't walk them through a code that ends at the
+        // sign-in screen anyway. Hand over to sign-in with the address filled in.
+        if (/already|exist/i.test(res.error.message ?? "")) { window.location.href = `/app?email=${encodeURIComponent(email.trim())}&existing=1`; return; }
+        setErr(res.error.message ?? "Could not create your account"); return;
+      }
       try { sessionStorage.setItem(PHONE_KEY, phone.trim()); } catch { /* ignore */ }
       await sendCode();
       setStep("code");
@@ -55,9 +61,16 @@ export function AppSignup() {
     try {
       const r = await authClient.emailOtp.verifyEmail({ email: email.trim(), otp: value.trim() });
       if (r.error) { setErr(r.error.message ?? "That code isn't right."); return; }
-      // Make sure we hold a session (verifyEmail signs in when configured; the
-      // password sign-in is a harmless no-op otherwise).
-      await signIn.email({ email: email.trim(), password });
+      // The code proved the address. A brand-new account signs in with the
+      // password just chosen. If that fails, the email already had an account
+      // (sign-up never says so, on purpose) with a different password: hand
+      // over to sign-in, which says so and offers a one-time code instead.
+      const si = await signIn.email({ email: email.trim(), password });
+      if (si.error) {
+        const s = await authClient.getSession().catch(() => null);
+        window.location.href = s?.data?.session ? await appLandingAction() : `/app?email=${encodeURIComponent(email.trim())}&existing=1`;
+        return;
+      }
       window.location.href = "/app/join";
     } finally { setBusy(false); }
   };
@@ -94,7 +107,8 @@ export function AppSignup() {
   return (
     <div>
       <h1 className="font-display text-2xl font-bold text-navy">Create your account</h1>
-      <p className="mb-5 text-sm text-slate-500">Takes a minute. You&apos;ll confirm your email with a code, then join your centre and pick a PIN.</p>
+      <p className="mb-2 text-sm text-slate-500">Takes a minute. You&apos;ll confirm your email with a code, then join your centre and pick a PIN.</p>
+      <p className="mb-5 text-xs text-slate-400">This is an instructor account. Running a centre? Centres are set up on the <a href="/start" target="_blank" rel="noopener noreferrer" className="underline">website</a>, not in the app; then your team joins here.</p>
       <form onSubmit={createAccount} className="space-y-3">
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" autoComplete="name" required className={field} />
         <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Mobile number (optional)" autoComplete="tel" inputMode="tel" className={field} />

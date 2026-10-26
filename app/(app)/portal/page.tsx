@@ -11,6 +11,8 @@ import { loadOverrides } from "@/lib/services/session-staff";
 import { effectiveStaffBySession } from "@/lib/domain/session-staff";
 import Link from "next/link";
 import { OfflineWeek, type OfflineSession } from "@/components/portal/OfflineWeek";
+import { isOfficeRole } from "@/lib/auth/rbac";
+import { apexDomain } from "@/lib/config";
 
 export const dynamic = "force-dynamic";
 
@@ -31,10 +33,21 @@ export default async function PortalSchedulePage() {
 
   const me = (await repos.tenant.instructor.list(ctx, eq(instructorTable.userId, ctx.userId)))[0];
   if (!me) {
+    // The owner or an office admin opened the app: it shows the instructors' side,
+    // and they aren't on the staff list (yet). Say so, and where the office is.
+    if (isOfficeRole(ctx.role)) {
+      const office = `${organisation.slug}.${apexDomain()}/office`;
+      return (
+        <Card>
+          <p className="font-semibold text-navy">You run {organisation.name}; this app is the instructors&apos; side.</p>
+          <p className="mt-1 text-sm text-slate-600">The office (roster, staff, courses) is on the web at <a href={`https://${office}`} target="_blank" rel="noopener noreferrer" className="font-medium text-teal underline">{office}</a>. To see your own shifts here, add yourself as an instructor under Office → Staff with this email.</p>
+        </Card>
+      );
+    }
     return (
       <Card>
         <p className="text-sm text-slate-600">
-          Your instructor profile isn&apos;t linked yet. Ask your centre admin to connect your account.
+          Your instructor profile isn&apos;t linked yet. Ask whoever runs {organisation.name} to add <span className="font-medium text-navy">this email</span> to their Instructors list; then sign out and back in.
         </p>
       </Card>
     );

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { PasswordStrength } from "@/components/auth/PasswordStrength";
 import { Turnstile } from "@/components/auth/Turnstile";
 import { authClient } from "@/lib/auth/client";
+import { SignOutLink } from "@/components/SignOutLink";
 
 const JURISDICTIONS = [
   { value: "england", label: "England" },
@@ -40,6 +41,8 @@ export function StartSignup({
   leadCaptured = false,
   plan,
   defaultActivityType = "rya_centre",
+  signedInAs = null,
+  runs = [],
 }: {
   apex: string;
   initialEmail?: string;
@@ -47,8 +50,13 @@ export function StartSignup({
   leadCaptured?: boolean;
   plan?: string;
   defaultActivityType?: ActivityType;
+  /** Already signed in: the centre is created for this login, with no new password. */
+  signedInAs?: string | null;
+  /** Centres this login already runs, so a second click on "try free" doesn't make a duplicate by accident. */
+  runs?: { name: string; slug: string }[];
 }) {
   const [step, setStep] = useState<1 | 2>(initialEmail ? 2 : 1);
+  const [existsElsewhere, setExistsElsewhere] = useState(false);
   const [email, setEmail] = useState(initialEmail);
   const [lead, setLead] = useState(leadCaptured);
   const [password, setPassword] = useState("");
@@ -95,8 +103,8 @@ export function StartSignup({
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    if (password.length < 8) { setError("Choose a password of at least 8 characters, with letters and numbers."); return; }
+    setError(null); setExistsElsewhere(false);
+    if (!signedInAs && password.length < 8) { setError("Choose a password of at least 8 characters, with letters and numbers."); return; }
     if (centreName.trim().length < 2) { setError("Enter your centre or club's name."); return; }
     if (slug.length < 3) { setError("Your web address needs at least 3 characters."); return; }
     setStatus("busy");
@@ -106,12 +114,12 @@ export function StartSignup({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ownerEmail: email, password, centreName: centreName.trim(), slug, jurisdiction, activityType, acceptedTerms: true, source, tier: plan, turnstileToken,
+          ownerEmail: email, ...(signedInAs ? {} : { password }), centreName: centreName.trim(), slug, jurisdiction, activityType, acceptedTerms: true, source, tier: plan, turnstileToken,
           timeZone: (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { return undefined; } })(),
         }),
       });
-      const data = (await res.json()) as { ok?: boolean; error?: string; url?: string; emailSent?: boolean };
-      if (!res.ok || !data.ok) { setError(data.error || "Something went wrong. Please try again."); setStatus("error"); return; }
+      const data = (await res.json()) as { ok?: boolean; error?: string; code?: string; url?: string; emailSent?: boolean };
+      if (!res.ok || !data.ok) { setError(data.error || "Something went wrong. Please try again."); setExistsElsewhere(data.code === "exists"); setStatus("error"); return; }
       setResult({ url: data.url ?? `https://${slug}.${apex}`, emailSent: data.emailSent ?? false });
       setStatus("done");
     } catch {
@@ -132,6 +140,15 @@ export function StartSignup({
   const field = "w-full rounded-lg border border-slate-300 px-4 py-3 text-base text-navy outline-none focus:border-teal";
   const button = "w-full rounded-lg bg-teal px-5 py-3.5 text-base font-semibold text-white transition hover:bg-teal-700 disabled:opacity-60";
 
+  if (status === "done" && result && signedInAs) {
+    return (
+      <div className="rounded-card bg-white p-6 shadow-lg">
+        <p className="font-display text-xl font-semibold text-navy">✅ Your centre is ready</p>
+        <p className="mt-2 text-sm text-slate-600"><span className="font-semibold text-navy">{centreName}</span> is set up at <span className="font-semibold text-navy">{slug}.{apex}</span>. You&apos;re already signed in, so go straight in; a short set-up takes it from there.</p>
+        <a href={`${result.url}/office`} className={`${button} mt-4 inline-block text-center`}>Open my centre →</a>
+      </div>
+    );
+  }
   if (status === "done" && result) {
     return (
       <div className="rounded-card bg-white p-6 shadow-lg">
@@ -167,15 +184,29 @@ export function StartSignup({
   return (
     <form onSubmit={submit} className="rounded-card bg-white p-6 shadow-lg">
       <p className="font-display text-lg font-semibold text-navy">Nearly there</p>
-      <p className="mb-4 mt-1 text-sm text-slate-600">
-        Step 2 of 2 for <span className="font-medium text-navy">{email}</span>{" "}
-        <button type="button" onClick={() => { setStep(1); setError(null); }} className="text-xs font-semibold text-teal hover:underline">(change)</button>
-      </p>
+      {signedInAs ? (
+        <p className="mb-4 mt-1 text-sm text-slate-600">
+          Creating the centre for <span className="font-medium text-navy">{signedInAs}</span>, which you&apos;re signed in as. No new password needed.{" "}
+          <span className="text-xs text-slate-400">Not you? <SignOutLink /></span>
+        </p>
+      ) : (
+        <p className="mb-4 mt-1 text-sm text-slate-600">
+          Step 2 of 2 for <span className="font-medium text-navy">{email}</span>{" "}
+          <button type="button" onClick={() => { setStep(1); setError(null); }} className="text-xs font-semibold text-teal hover:underline">(change)</button>
+        </p>
+      )}
+      {runs.length ? (
+        <p className="mb-4 rounded-lg border border-amber/40 bg-amber/5 px-3 py-2 text-xs text-navy">
+          You already run <span className="font-semibold">{runs.map((r) => r.name).join(" and ")}</span>: <a href={`https://${runs[0]!.slug}.${apex}/office`} className="font-semibold text-teal hover:underline">open it</a>. Carry on here only to set up another centre.
+        </p>
+      ) : null}
       <div className="grid gap-3">
-        <div>
-          <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Choose a password" aria-label="Password" autoComplete="new-password" autoFocus className={field} />
-          <PasswordStrength password={password} />
-        </div>
+        {signedInAs ? null : (
+          <div>
+            <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Choose a password" aria-label="Password" autoComplete="new-password" autoFocus className={field} />
+            <PasswordStrength password={password} />
+          </div>
+        )}
         <input required value={centreName} onChange={(e) => onCentreName(e.target.value)} placeholder="Centre or club name" aria-label="Centre name" className={field} />
         {editSlug ? (
           <div>
@@ -202,7 +233,7 @@ export function StartSignup({
         <p className="-mt-1 text-xs text-slate-500">The kind of centre sets up your course list and instructor types; where you are sets the vetting checks (DBS, PVG, AccessNI or Garda), currency and clock.</p>
       </div>
 
-      {error ? <p className="mt-3 text-sm text-port">{error}</p> : null}
+      {error ? <p className="mt-3 text-sm text-port">{error}{existsElsewhere ? <> <a href="/sign-in?next=%2Fstart" className="font-semibold text-teal underline">Sign in and come back →</a></> : null}</p> : null}
       {status === "busy" ? (
         <div className="mt-4" role="status" aria-live="polite">
           <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200"><div className="h-full rounded-full bg-teal transition-[width] duration-300 ease-out" style={{ width: `${progress}%` }} /></div>

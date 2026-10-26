@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { ShieldCheck } from "lucide-react";
+import { headers } from "next/headers";
 import { apexDomain } from "@/lib/config";
+import { getAuth } from "@/lib/auth";
+import { getRepositories } from "@/lib/cf/bindings";
+import { isOfficeRole } from "@/lib/auth/rbac";
 import { StartSignup } from "@/components/marketing/StartSignup";
 
 export const dynamic = "force-dynamic";
@@ -25,6 +29,13 @@ export default async function StartPage({ searchParams }: { searchParams: Promis
   const plan = PLANS.has(one("plan")) ? one("plan") : undefined;
   const type = one("type") === "padi_centre" ? "padi_centre" : "rya_centre";
   const apex = apexDomain();
+  // Already signed in (an instructor starting a club, or someone who made their
+  // account in the app first): the centre is created for that login, no new password.
+  const session = await (await getAuth()).api.getSession({ headers: new Headers(await headers()) }).catch(() => null);
+  const signedInAs = session?.user?.email ?? null;
+  const runs = session?.user
+    ? (await (await getRepositories()).control.membershipsForUser(session.user.id)).filter((m) => m.status === "active" && m.orgStatus === "active" && isOfficeRole(m.role)).map((m) => ({ name: m.name, slug: m.slug }))
+    : [];
 
   return (
     <div className="bg-canvas">
@@ -41,8 +52,12 @@ export default async function StartPage({ searchParams }: { searchParams: Promis
           <p className="mt-6 text-sm text-slate-500">
             Prefer to see it first? <Link href="/demo" className="font-semibold text-teal hover:underline">Take the tour</Link> · Already have a centre? <Link href="/sign-in" className="font-semibold text-teal hover:underline">Sign in</Link>
           </p>
+          <p className="mt-4 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+            <span className="font-semibold text-navy">Instructor or staff member?</span> You don&rsquo;t create a centre: yours adds you, and you use the app.{" "}
+            <Link href="/instructors" className="font-semibold text-teal hover:underline">How it works →</Link>
+          </p>
         </div>
-        <StartSignup apex={apex} initialEmail={email} source={src} leadCaptured={one("lead") === "1"} plan={plan} defaultActivityType={type} />
+        <StartSignup apex={apex} initialEmail={signedInAs ?? email} source={src} leadCaptured={one("lead") === "1"} plan={plan} defaultActivityType={type} signedInAs={signedInAs} runs={runs} />
       </div>
     </div>
   );
