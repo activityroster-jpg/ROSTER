@@ -46,6 +46,21 @@ export function ProspectPipeline({ tiles: initial, today }: { tiles: PipelineTil
   const [showRejected, setShowRejected] = useState(false);
   const [shown, setShown] = useState<Record<PipelineStage, number>>(() => Object.fromEntries(PIPELINE_STAGES.map((s) => [s, CHUNK])) as Record<PipelineStage, number>);
   const [err, setErr] = useState<string | null>(null);
+  // Ticked centres, for "Download info": every detail and a follow-up email each, as a spreadsheet.
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [downloading, setDownloading] = useState(false);
+  const toggle = (id: string) => setPicked((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const download = async () => {
+    setErr(null); setDownloading(true);
+    try {
+      const res = await fetch("/api/admin/prospects/selected", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ids: [...picked] }) });
+      if (!res.ok) { setErr(await res.text() || "Couldn't make the spreadsheet"); return; }
+      const url = URL.createObjectURL(await res.blob());
+      const a = document.createElement("a");
+      a.href = url; a.download = `centres-${today}.csv`; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    } catch { setErr("Couldn't make the spreadsheet"); } finally { setDownloading(false); }
+  };
 
   const q = query.trim().toLowerCase();
   const visible = useMemo(() => (q ? tiles.filter((t) => `${t.name} ${t.region} ${t.city}`.toLowerCase().includes(q)) : tiles), [tiles, q]);
@@ -86,9 +101,10 @@ export function ProspectPipeline({ tiles: initial, today }: { tiles: PipelineTil
         draggable
         onDragStart={(e) => { e.dataTransfer.setData("text/plain", t.id); e.dataTransfer.effectAllowed = "move"; setDragId(t.id); }}
         onDragEnd={() => { setDragId(null); setOverCol(null); }}
-        className={`group cursor-grab rounded-lg border border-slate-200 bg-white px-2.5 py-2 active:cursor-grabbing ${dragId === t.id ? "opacity-40" : ""}`}
+        className={`group cursor-grab rounded-lg border bg-white px-2.5 py-2 active:cursor-grabbing ${picked.has(t.id) ? "border-teal ring-1 ring-teal/30" : "border-slate-200"} ${dragId === t.id ? "opacity-40" : ""}`}
       >
         <div className="flex items-start gap-2">
+          <input type="checkbox" checked={picked.has(t.id)} onChange={() => toggle(t.id)} onClick={(e) => e.stopPropagation()} aria-label={`Tick ${t.name}`} className="mt-1 h-4 w-4 shrink-0 cursor-pointer accent-teal" />
           <span className={`mt-1.5 inline-block h-2 w-2 shrink-0 rounded-full ${vibe.dot}`} title={vibe.label} />
           <div className="min-w-0 flex-1">
             <a href={`/admin/marketing/${t.id}`} target="_blank" rel="noreferrer" className="block truncate text-sm font-medium text-navy hover:text-teal hover:underline" title={`${t.name} — opens their page in a new tab`}>{t.name}</a>
@@ -141,6 +157,10 @@ export function ProspectPipeline({ tiles: initial, today }: { tiles: PipelineTil
         <span className="ml-auto flex items-center gap-3 text-[11px] text-slate-500">
           {(["green", "orange", "red"] as const).map((v) => <span key={v} className="inline-flex items-center gap-1"><span className={`inline-block h-2 w-2 rounded-full ${VIBE_META[v].dot}`} />{VIBE_META[v].label}</span>)}
         </span>
+        <span className="flex items-center gap-2">
+          <button type="button" onClick={download} disabled={picked.size === 0 || downloading} className="rounded-lg bg-teal px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-700 disabled:opacity-40" title="A spreadsheet of the ticked centres: every detail including email, and a follow-up email written for each">{downloading ? "Making the spreadsheet…" : `Download info${picked.size ? ` (${picked.size})` : ""}`}</button>
+          {picked.size ? <button type="button" onClick={() => setPicked(new Set())} className="text-xs font-medium text-slate-500 hover:text-navy">Clear ticks</button> : null}
+        </span>
         {pending ? <span className="text-xs text-slate-400">Saving…</span> : null}
         {err ? <span className="text-xs text-port">{err}</span> : null}
       </div>
@@ -178,7 +198,12 @@ export function ProspectPipeline({ tiles: initial, today }: { tiles: PipelineTil
             >
               <div className="mb-2 flex items-center justify-between px-0.5">
                 <h2 className="font-display text-sm font-bold text-navy">{PIPELINE_META[stage].label}</h2>
-                <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-slate-500">{list.length}</span>
+                <span className="flex items-center gap-2">
+                  {list.length && list.length <= 500 ? (() => { const all = list.every((t) => picked.has(t.id)); return (
+                    <button type="button" onClick={() => setPicked((s) => { const n = new Set(s); for (const t of list) { if (all) n.delete(t.id); else n.add(t.id); } return n; })} className="text-[11px] font-medium text-teal hover:underline">{all ? "Untick all" : "Tick all"}</button>
+                  ); })() : null}
+                  <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-slate-500">{list.length}</span>
+                </span>
               </div>
               <div className="space-y-1.5">
                 {list.length === 0 ? <p className="px-1 py-6 text-center text-xs text-slate-400">{q ? "No matches here." : "Nothing here."}</p> : list.slice(0, n).map(tile)}
