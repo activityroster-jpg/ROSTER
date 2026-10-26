@@ -35,6 +35,7 @@ export default async function ProspectPipelinePage() {
       letter: letterOrFlyerSent(statuses),
       bookletSentOn: stage === "booklet" ? sent.booklet ?? fallback : null,
       emailSentOn: stage === "email" ? sent.email ?? fallback : null,
+      websiteNeedsWork: Boolean(p.websiteNeedsWork),
     };
   });
   const today = new Date().toISOString().slice(0, 10);
