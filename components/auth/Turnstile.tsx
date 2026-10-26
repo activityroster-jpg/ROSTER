@@ -35,20 +35,21 @@ function loadScript(): Promise<void> {
  * a brief "verifying" flash, a visible challenge only for suspicious traffic.
  * `resetKey` changes force a fresh token (after a failed submit).
  */
-export function Turnstile({ onToken, resetKey = 0, className = "" }: { onToken: (token: string | null) => void; resetKey?: number; className?: string }) {
+export function Turnstile({ onToken, resetKey = 0, className = "", appearance = "interaction-only", onError }: { onToken: (token: string | null) => void; resetKey?: number; className?: string; /** "always" shows the box even when no tick is needed: use it where the check was asked for. */ appearance?: "interaction-only" | "always"; /** The widget could not load or run (some app web views). */ onError?: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
   const idRef = useRef<string | null>(null);
   useEffect(() => {
     let cancelled = false;
     loadScript().then(() => {
-      if (cancelled || !ref.current || !window.turnstile) return;
+      if (cancelled || !ref.current) return;
+      if (!window.turnstile) { onError?.(); return; }
       if (idRef.current) { window.turnstile.reset(idRef.current); return; }
       idRef.current = window.turnstile.render(ref.current, {
         sitekey: TURNSTILE_SITE_KEY,
         callback: (t) => onToken(t),
         "expired-callback": () => onToken(null),
-        "error-callback": () => onToken(null),
-        appearance: "interaction-only",
+        "error-callback": () => { onToken(null); onError?.(); },
+        appearance,
       });
     });
     return () => { cancelled = true; };
