@@ -22,6 +22,7 @@ export function adminSections(opts: { staging: boolean }): NavSection[] {
       { href: "/admin/requests", label: "Requests", hint: "feature requests and problem reports from centres" },
     ] },
     { id: "growth", label: "Growth", pages: [
+      { href: "/admin/traffic", label: "Traffic sources", hint: "where visitors to the site come from: search, AI, social, email, direct and referrals, with trial sign-ups" },
       { href: "/admin/marketing", label: "Prospects", hint: "the outreach list and lawful basis" },
       { href: "/admin/marketing/pipeline", label: "Pipeline", hint: "drag centres between the outreach columns" },
       { href: "/admin/marketing/linkedin", label: "LinkedIn", hint: "every centre's LinkedIn page, contacts and where contact stands" },

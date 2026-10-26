@@ -375,6 +375,53 @@ export const onboardingEmail = sqliteTable("onboarding_email", {
 ]);
 export type OnboardingEmail = typeof onboardingEmail.$inferSelect;
 
+// --- Traffic sources (Dev Center → Growth → Traffic sources) -----------------
+
+/**
+ * One row per page view on the public marketing site. Cookieless: no IP, no
+ * user agent, no visitor id. `isVisit` marks the first view of a visit (a
+ * visitor's first in 30 minutes), and only those carry the channel. The
+ * referrer is the domain alone. Kept 13 months, then deleted by the hourly job.
+ */
+export const pageView = sqliteTable("page_view", {
+  id: id(),
+  /** Local date in Europe/London, YYYY-MM-DD, for the daily chart. */
+  day: text("day").notNull(),
+  path: text("path").notNull(),
+  referrerDomain: text("referrer_domain"),
+  utmSource: text("utm_source"),
+  utmMedium: text("utm_medium"),
+  utmCampaign: text("utm_campaign"),
+  device: text("device", { enum: ["mobile", "tablet", "desktop"] }).notNull(),
+  isVisit: boolCol("is_visit").default(false),
+  /** lib/analytics/channels; set on the visit's first view only. */
+  channel: text("channel"),
+  createdAt: createdAt(),
+}, (t) => [
+  index("page_view_day_idx").on(t.day),
+  index("page_view_created_idx").on(t.createdAt),
+]);
+
+/**
+ * Who has been seen in the last 30 minutes, to tell a new visit from the next
+ * page of the same one. The key is a hash of IP + user agent with a salt that
+ * changes every day and is never stored, so it can't be reversed or linked
+ * across days. Rows expire after 30 minutes and the hourly job deletes them.
+ */
+export const visitorSeen = sqliteTable("visitor_seen", {
+  key: text("key").primaryKey(),
+  expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+}, (t) => [index("visitor_seen_expires_idx").on(t.expiresAt)]);
+
+/** A dated note on the traffic chart, e.g. "Booklet posted". */
+export const trafficMarker = sqliteTable("traffic_marker", {
+  id: id(),
+  day: text("day").notNull(),
+  label: text("label").notNull(),
+  createdAt: createdAt(),
+}, (t) => [index("traffic_marker_day_idx").on(t.day)]);
+export type TrafficMarker = typeof trafficMarker.$inferSelect;
+
 // --- Marketing prospects (platform-owner outreach CRM) ---------------------
 
 /** Outreach pipeline stage for a prospect centre/club. */

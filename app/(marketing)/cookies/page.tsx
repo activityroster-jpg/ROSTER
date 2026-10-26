@@ -11,7 +11,7 @@ export const metadata = { title: "Cookie Notice" };
 export default function CookiesPage() {
   return (
     <LegalPage title="Cookie Notice" updated="4 October 2026">
-      <P>ActivityRoster uses only the cookies and browser storage strictly necessary to run the service and keep it secure. There are no advertising, analytics or third-party tracking cookies, and we will ask before ever adding one.</P>
+      <P>ActivityRoster uses only the cookies and browser storage strictly necessary to run the service and keep it secure. There are no advertising, analytics or third-party tracking cookies, and we will ask before ever adding one. To see which websites send us visitors, the public pages count page views without any cookie or browser storage: we record the page, the site that linked to it, any campaign tags in the link and whether it was a phone, tablet or computer. No IP address is stored and nothing identifies you.</P>
 
       <H2>Cookies we set</H2>
       <P>All of these are first-party, marked HttpOnly and Secure, and signed where they carry a claim, so they cannot be read or forged by scripts.</P>
