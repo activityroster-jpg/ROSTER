@@ -16,6 +16,7 @@ import { createRepositories } from "@/lib/db/repositories";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/security/rate-limit";
 import { checkCronSecret } from "@/lib/security/cron-secret";
 import { recordTick } from "@/lib/ops/tick-watch";
+import { TrafficRepository } from "@/lib/db/repositories/traffic";
 
 export const dynamic = "force-dynamic";
 
@@ -55,9 +56,11 @@ async function tick(req: Request) {
   const pushPurged = await p.purgePushOutbox(new Date()).catch(() => 0);
   // Data retention: one sweep per centre per day, with the 14-day notice first.
   const rateLimitsPurged = await new ControlPlaneRepository(db).purgeRateLimits().catch(() => 0);
+  // Traffic sources: forget 30-minute visitor keys, and page views older than 13 months.
+  const trafficPurged = await new TrafficRepository(db).purge().catch(() => ({ visitors: 0, pageViews: 0 }));
   const retention = await sweepRetention(db, env).catch((e: Error) => ({ centres: 0, ran: 0, reminded: 0, platform: {}, error: e.message }));
   await recordTick();
-  return NextResponse.json({ ok: true, campaigns: running.length, research, sends, digests, leaving, trialSurvey, welcome, inviteReminders, queuedInvites, mail, push, pushPurged, retention, rateLimitsPurged });
+  return NextResponse.json({ ok: true, campaigns: running.length, research, sends, digests, leaving, trialSurvey, welcome, inviteReminders, queuedInvites, mail, push, pushPurged, retention, rateLimitsPurged, trafficPurged });
 }
 
 export async function POST(req: Request) { return tick(req); }

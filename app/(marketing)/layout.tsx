@@ -4,6 +4,7 @@ import { LANDINGS } from "@/lib/seo/landings";
 import { SiteHeader } from "@/components/marketing/SiteHeader";
 import { IncidentBanner } from "@/components/IncidentBanner";
 import { HelpAssistant } from "@/components/HelpAssistant";
+import { PageViewBeacon } from "@/components/marketing/PageViewBeacon";
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -72,6 +73,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
         </div>
       </footer>
       <HelpAssistant surface="site" />
+      <PageViewBeacon />
     </div>
   );
 }
