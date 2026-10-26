@@ -60,16 +60,8 @@ export function followUpEmail(c: FollowUpInput): { subject: string; body: string
   const Sent = sent.charAt(0).toUpperCase() + sent.slice(1);
   const at = (salt: number, list: readonly string[]) => list[pick(c.id, salt, list.length)]!;
 
-  const subject = at(0, [
-    `The rostering guide we sent ${c.name}`,
-    `Following up on the booklet for ${c.name}`,
-    `${c.name}: the guides behind the booklet`,
-    `A quick follow-up for ${c.name}`,
-    `Did the booklet reach ${c.name}?`,
-    `${c.name} and the ActivityRoster booklet`,
-    `More on rostering for ${c.name}`,
-    `A short note for the ${c.name} team`,
-  ]);
+  // One subject for every centre, as Conor wants it: "Bala Watersports / ActivityRoster".
+  const subject = `${c.name} / ActivityRoster`;
   const greeting = who
     ? at(10, [`Hi ${who},`, `Hello ${who},`, `Dear ${who},`, `Hi ${who},`])
     : at(10, [`Hello ${c.name} team,`, `Hi all at ${c.name},`, `Hello,`, `Hi there,`]);

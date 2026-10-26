@@ -8,7 +8,7 @@ describe("booklet follow-up email", () => {
   it("names the centre, links the Learning Centre once and offers an opt-out", () => {
     for (const c of centres) {
       const e = followUpEmail(c);
-      expect(e.subject).toContain(c.name);
+      expect(e.subject).toBe(`${c.name} / ActivityRoster`);
       expect(e.body).toContain(c.name);
       expect(e.body).not.toContain("Conor Bourke");
       expect(e.body.split(LEARN_URL)).toHaveLength(2);
