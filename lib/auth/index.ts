@@ -11,7 +11,11 @@ import { getDb, getEnv, type CloudflareEnv } from "@/lib/cf/bindings";
 import { sendEmail } from "@/lib/mail";
 import { notifySecurityChange, recordSecurityEvent } from "@/lib/security/events";
 import { authSecret } from "@/lib/security/secrets";
-import { createAuthMiddleware } from "better-auth/api";
+import { APIError, createAuthMiddleware } from "better-auth/api";
+import { isPwnedPassword, PWNED_MESSAGE } from "@/lib/security/pwned";
+
+/** Better Auth endpoints that set a password: checked against known breaches first. */
+const PASSWORD_PATHS = new Set(["/sign-up/email", "/change-password", "/reset-password", "/set-password"]);
 import { LV_COOKIE, LV_DEVICE_COOKIE, LV_IDLE_MAX_AGE_S, LV_PENDING_COOKIE, LV_PROVEN_MAX_AGE_S, lvCookieValue, lvDeviceValue, lvPendingValue } from "./login-verify";
 
 /**
@@ -95,6 +99,15 @@ export function createAuth(db: Database, env: CloudflareEnv) {
     // a second code (see lib/auth/login-verify.ts). Leave the proof bound to
     // the new session; the person still chooses "stay signed in?" and a PIN.
     hooks: {
+      // A password from a known breach is refused everywhere one is set,
+      // including the app's own "Create account", which calls this library
+      // directly rather than going through one of our routes.
+      before: createAuthMiddleware(async (ctx) => {
+        if (!PASSWORD_PATHS.has(ctx.path)) return;
+        const body = (ctx.body ?? {}) as { password?: unknown; newPassword?: unknown };
+        const pw = typeof body.newPassword === "string" ? body.newPassword : typeof body.password === "string" ? body.password : null;
+        if (pw && (await isPwnedPassword(pw))) throw new APIError("BAD_REQUEST", { message: PWNED_MESSAGE });
+      }),
       after: createAuthMiddleware(async (ctx) => {
         if (!EMAIL_PROOF_PATHS.has(ctx.path)) return;
         const created = ctx.context.newSession;
