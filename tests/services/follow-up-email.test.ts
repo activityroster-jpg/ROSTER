@@ -10,9 +10,11 @@ describe("booklet follow-up email", () => {
       const e = followUpEmail(c);
       expect(e.subject).toContain(c.name);
       expect(e.body).toContain(c.name);
+      expect(e.body).not.toContain("Conor Bourke");
       expect(e.body.split(LEARN_URL)).toHaveLength(2);
-      expect(e.body).toMatch(/won't email again|leave it there|last of it/);
-      expect(e.body).toMatch(c.contactName ? /^Hi Sam,/ : /^Hello Centre \d+ team,/);
+      expect(e.body).toMatch(/won't email again|leave it there|last of it|stop here/);
+      expect(e.body).toMatch(c.contactName ? /^(Hi|Hello|Dear) Sam,/ : /^(Hello Centre \d+ team|Hi all at Centre \d+|Hello|Hi there),/);
+      expect(e.body).toMatch(/\n(Best wishes|Many thanks|All the best|Kind regards|Thanks|Best),\nConor(\n\nP\.S\. .+)?$/);
     }
   });
 

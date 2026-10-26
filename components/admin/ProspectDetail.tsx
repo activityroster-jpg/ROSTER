@@ -1,5 +1,7 @@
 "use client";
 
+import { followUpEmail } from "@/lib/marketing-email/follow-up";
+
 import { askConfirm } from "@/lib/ui/ask-confirm";
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -7,7 +9,8 @@ import {
   PROSPECT_STATUS_META,
   VIBE_META,
   addressComplete,
-  draftProspectEmail,
+  outreachSentOn,
+  servicesOf,
   vibeOf,
   type PipelineStage,
 } from "@/lib/marketing";
@@ -138,8 +141,10 @@ export function ProspectDetail({ prospect: p, interactions }: { prospect: Prospe
 
   const vibe = VIBE_META[vibeOf(p.stage, Boolean(p.engagedAt)) ?? "none"];
   const complete = addressComplete(p);
-  const gmail = () => { const { subject, body } = draftProspectEmail(p, { signature: false }); return `https://mail.google.com/mail/?${new URLSearchParams({ view: "cm", fs: "1", to: p.email, su: subject, body })}`; };
-  const mailto = () => { const { subject, body } = draftProspectEmail(p); return `mailto:${encodeURIComponent(p.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`; };
+  // The booklet follow-up, written for this centre (lib/marketing-email/follow-up); signs off "Conor" and Gmail adds the logo signature.
+  const emailDraft = () => followUpEmail({ id: p.id, name: p.name, city: p.city, region: p.region, contactName: p.contactName, services: servicesOf(p.notes), activityType: p.activityType, bookletSentOn: outreachSentOn(interactions).booklet });
+  const gmail = () => { const { subject, body } = emailDraft(); return `https://mail.google.com/mail/?${new URLSearchParams({ view: "cm", fs: "1", to: p.email, su: subject, body })}`; };
+  const mailto = () => { const { subject, body } = emailDraft(); return `mailto:${encodeURIComponent(p.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`; };
   const touchpoints = p.statuses.filter((s) => s === "email_sent" || s === "called" || s === "purchased");
 
   const input = "w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none focus:border-teal";

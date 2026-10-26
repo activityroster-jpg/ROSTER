@@ -1,5 +1,7 @@
 "use client";
 
+import { followUpEmail } from "@/lib/marketing-email/follow-up";
+
 import { askConfirm } from "@/lib/ui/ask-confirm";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -8,7 +10,6 @@ import {
   PROSPECT_STATUS_META,
   VIBE_META,
   addressComplete,
-  draftProspectEmail,
   isNoAction,
   letterPrinted,
   stageRank,
@@ -61,7 +62,7 @@ const VIBE_RANK = { green: 3, orange: 2, none: 1, red: 0 } as const;
 const PAGE_SIZE = 200;
 
 const mailtoHref = (r: ProspectRow) => {
-  const { subject, body } = draftProspectEmail(r);
+  const { subject, body } = followUpEmail({ id: r.id, name: r.name, city: r.city, region: r.region, contactName: r.contactName, activityType: r.activityType });
   return `mailto:${encodeURIComponent(r.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 };
 /**
@@ -72,7 +73,7 @@ const mailtoHref = (r: ProspectRow) => {
  * signature comes from Gmail's own signature setting (see the prospect page).
  */
 const gmailHref = (r: ProspectRow) => {
-  const { subject, body } = draftProspectEmail(r, { signature: false });
+  const { subject, body } = followUpEmail({ id: r.id, name: r.name, city: r.city, region: r.region, contactName: r.contactName, activityType: r.activityType });
   const q = new URLSearchParams({ view: "cm", fs: "1", to: r.email, su: subject, body });
   return `https://mail.google.com/mail/?${q.toString()}`;
 };
