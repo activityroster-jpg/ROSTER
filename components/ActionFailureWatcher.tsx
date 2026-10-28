@@ -105,6 +105,10 @@ export function ActionFailureWatcher() {
     const handle = (reason: unknown) => {
       const message = reason instanceof Error ? reason.message : typeof reason === "string" ? reason : "";
       if (!message) return;
+      // A redirect or not-found thrown by a server action (the PIN gate sending
+      // someone to /pin, say) is navigation, not a failure: the router follows it.
+      const digest = String((reason as { digest?: unknown })?.digest ?? "");
+      if (/^NEXT_(REDIRECT|NOT_FOUND)/.test(digest) || /^NEXT_(REDIRECT|NOT_FOUND)$/.test(message)) return;
       if (isStaleActionError(message)) { setStale(true); return; }
       if (/unexpected response was received from the server|failed to fetch|load failed|aborted|signal timed out/i.test(message)) { setChallenged(true); }
       if (/aborted|signal timed out/i.test(message)) return; // the stall guard already reported it

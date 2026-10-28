@@ -50,6 +50,13 @@ export function BlogAdminList({ posts }: { posts: PostRow[] }) {
         else setMsg(`${done} cover images done, ${res.remaining ?? "more"} still to do. Press again for the next ${COVER_RUN_SIZE}.`);
       }
       if (stopRun.current) setMsg(`Stopped after ${done} cover image${done === 1 ? "" : "s"}.`);
+    } catch (err) {
+      // Outside a React transition a server action's redirect (the PIN gate after
+      // a while away) arrives here as an error: follow it rather than stop quietly.
+      const digest = String((err as { digest?: unknown })?.digest ?? "");
+      const to = digest.startsWith("NEXT_REDIRECT") ? digest.split(";")[2] : null;
+      if (to && to.startsWith("/")) { window.location.href = to; return; }
+      setMsg(`That didn't finish after ${done} cover image${done === 1 ? "" : "s"}: ${(err as Error)?.message ?? "unknown error"}. Reload and press again.`);
     } finally { setCoverRun(null); }
   };
 
