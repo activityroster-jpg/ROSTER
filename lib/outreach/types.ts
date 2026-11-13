@@ -42,7 +42,7 @@ export interface ResearchResult {
 export const DEFAULT_TARGET_ROLES = "Principal, Chief Instructor, Centre Manager, Commodore, Sailing Secretary, Owner";
 
 export const DEFAULT_PITCH =
-  "ActivityRoster is staff rostering built for RYA training centres and clubs. It rosters instructors across courses while checking RYA ratios, the right instructor type in every place and each instructor's certs; tracks DBS, first aid and safeguarding expiry; and gives instructors an app for availability, confirming shifts, clocking in and leave. Flat price per centre (£35 Small Club, £65 Standard), first month free, no card.";
+  "ActivityRoster is staff rostering built for RYA training centres and clubs. It rosters instructors across courses while checking RYA ratios, the right instructor type in every place and each instructor's certs; tracks DBS, first aid and safeguarding expiry; and gives instructors an app for availability, confirming shifts, clocking in and leave. Flat price per centre (£19 Small Club, £35 Standard), first month free, no card.";
 
 export const DEFAULT_STEPS: SequenceStep[] = [
   {

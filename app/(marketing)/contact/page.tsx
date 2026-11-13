@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Calendar, Mail, MapPin, Rocket } from "lucide-react";
 import { COMPANY } from "@/lib/config";
+import { QUOTED_SERVICES, SERVICES_SUBJECT } from "@/lib/marketing/services";
 
 export const metadata = {
   title: "Contact us",
@@ -19,7 +20,7 @@ export default function ContactPage() {
         <p className="text-sm font-semibold uppercase tracking-wide text-teal">Contact</p>
         <h1 className="mt-1 font-display text-3xl font-bold text-navy sm:text-4xl">Talk to us</h1>
         <p className="mx-auto mt-3 max-w-xl text-slate-600">
-          A walkthrough, a quick question, or straight to a free month — pick whichever suits.
+          A walkthrough, a quote for your website or bookings, a quick question, or straight to a free month — pick whichever suits.
         </p>
       </div>
 
@@ -47,6 +48,17 @@ export default function ContactPage() {
             <p className="mt-2 text-xs text-slate-500">30 minutes · online · free</p>
           </div>
         </div>
+      </div>
+
+      {/* Websites, bookings and custom builds: quoted per centre */}
+      <div id="services" className="mt-8 scroll-mt-24 rounded-card border border-amber/50 bg-amber/5 p-7 shadow-sm">
+        <p className="text-sm font-semibold uppercase tracking-wide text-amber">Websites, bookings &amp; custom builds</p>
+        <h2 className="mt-1 font-display text-2xl font-bold text-navy">Ask for a quote</h2>
+        <p className="mt-2 text-slate-600">Tell us what your centre needs and we&rsquo;ll come back with a price, usually within a working day. Book a call above, or email us with a line or two about your centre:</p>
+        <ul className="mt-4 grid gap-2 sm:grid-cols-3">
+          {QUOTED_SERVICES.map((x) => <li key={x.id} className="rounded-lg border border-amber/30 bg-white px-3 py-2 text-sm"><span className="font-semibold text-navy">{x.title}</span></li>)}
+        </ul>
+        <a href={`mailto:${GENERAL_EMAIL}?subject=${encodeURIComponent(SERVICES_SUBJECT)}`} className="mt-5 inline-block rounded-lg bg-navy px-6 py-3 font-semibold text-white hover:bg-navy-700">Email {GENERAL_EMAIL}</a>
       </div>
 
       {/* Other ways to reach us */}

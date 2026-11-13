@@ -41,7 +41,7 @@ export function LandingPage({ slug }: { slug: string }) {
     "@context": "https://schema.org",
     "@graph": [
       { "@type": "WebPage", "@id": `${site}/${l.slug}#page`, url: `${site}/${l.slug}`, name: l.title, description: l.description, isPartOf: { "@id": `${site}/#website` }, about: { "@id": `${site}/#software` } },
-      { "@type": "SoftwareApplication", "@id": `${site}/#software`, name: "ActivityRoster", url: site, applicationCategory: "BusinessApplication", operatingSystem: "Web, iOS, Android", audience: SCHEMA_AUDIENCE, offers: { "@type": "Offer", price: "35", priceCurrency: "GBP" } },
+      { "@type": "SoftwareApplication", "@id": `${site}/#software`, name: "ActivityRoster", url: site, applicationCategory: "BusinessApplication", operatingSystem: "Web, iOS, Android", audience: SCHEMA_AUDIENCE, offers: { "@type": "Offer", price: "19", priceCurrency: "GBP" } },
       { "@type": "BreadcrumbList", itemListElement: [
         { "@type": "ListItem", position: 1, name: "Home", item: `${site}/` },
         { "@type": "ListItem", position: 2, name: l.navLabel, item: `${site}/${l.slug}` },
@@ -70,7 +70,7 @@ export function LandingPage({ slug }: { slug: string }) {
                 <a href="#start" className="rounded-lg bg-teal px-6 py-3 text-center font-semibold text-white shadow-sm hover:bg-teal-700">Start my free month →</a>
                 <Link href="/demo" className="rounded-lg border border-slate-300 px-6 py-3 text-center font-semibold text-navy hover:bg-slate-50">Take the tour</Link>
               </div>
-              <p className="mt-3 text-sm text-slate-500">Free for a month · no card · from £35 a month after</p>
+              <p className="mt-3 text-sm text-slate-500">Free for a month · no card · from £19 a month after</p>
             </div>
             <figure>
               <ScreenShot screen={hero} eager className={hero.device === "phone" ? "mx-auto max-w-[260px]" : ""} />
@@ -181,7 +181,7 @@ export function LandingPage({ slug }: { slug: string }) {
             <h2 className="font-display text-3xl font-bold" style={{ textWrap: "balance" }}>Try it free for a month</h2>
             <p className="mt-3 text-white/80">Your centre is created in seconds with the RYA defaults in place, and a guided set-up does the rest.</p>
             <ul className="mt-5 space-y-2 text-white/85">
-              {["No card required, cancel any time", "£35 a month for up to 10 people, £65 for everyone", "Hosted in the EU, export your data whenever you like"].map((x) => (
+              {["No card required, cancel any time", "£19 a month for up to 10 people, £35 for everyone", "Hosted in the EU, export your data whenever you like"].map((x) => (
                 <li key={x} className="flex gap-2"><ShieldCheck className="mt-0.5 h-4 w-4 flex-none text-[#4fd1c5]" aria-hidden="true" />{x}</li>
               ))}
             </ul>

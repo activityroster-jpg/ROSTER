@@ -2,6 +2,7 @@ import type Stripe from "stripe";
 import type { CloudflareEnv } from "@/lib/cf/bindings";
 import type { OrgTier } from "@/lib/db/schema";
 import { createStripe } from "./stripe";
+import { TIERS } from "@/lib/tiers";
 import type { BillingInterval } from "./plans";
 
 /**
@@ -81,9 +82,25 @@ export function pickPrices(prices: PriceLike[]): Partial<Record<PriceKind, Price
   const out: Partial<Record<PriceKind, PriceLike>> = {};
   for (const p of prices) {
     const kind = classifyPrice(p);
-    if (kind && !out[kind]) out[kind] = p;
+    if (!kind) continue;
+    // A price at the advertised amount wins over any other, so an old price
+    // left active in Stripe is never picked over the new one.
+    const want = advertisedPence(kind);
+    const cur = out[kind];
+    if (!cur || (want != null && cur.unit_amount !== want && p.unit_amount === want)) out[kind] = p;
   }
   return out;
+}
+
+/** What the site advertises for a plan, in pence (lib/tiers); null for one-off kinds priced elsewhere. */
+export function advertisedPence(kind: PriceKind): number | null {
+  switch (kind) {
+    case "small_club_monthly": return TIERS.small_club.monthlyPrice * 100;
+    case "small_club_annual": return TIERS.small_club.annualPrice * 100;
+    case "standard_monthly": return TIERS.standard.monthlyPrice * 100;
+    case "standard_annual": return TIERS.standard.annualPrice * 100;
+    default: return null;
+  }
 }
 
 export const priceKindFor = (tier: OrgTier | null | undefined, interval: BillingInterval): PriceKind =>
@@ -162,5 +179,11 @@ export async function priceIdFor(env: CloudflareEnv, kind: PriceKind): Promise<s
   const all = await resolvePrices(env);
   const p = all[kind];
   if (!p) throw new Error(`No Stripe price found for "${LABEL[kind]}". Create it in Stripe (product name + interval are matched automatically) or set ${ENV_KEYS[kind][0]}.`);
+  // Never charge a different amount from the one advertised (after a price change, until Stripe is updated).
+  const want = advertisedPence(kind);
+  if (want != null && p.unitAmount != null && p.unitAmount !== want) {
+    console.error(`[prices] ${LABEL[kind]}: Stripe ${p.id} is ${p.unitAmount}p, the site advertises ${want}p`);
+    throw new Error("Payments for this plan are being updated right now. Please try again later today, or email hello@activityroster.com and we'll sort it.");
+  }
   return p.id;
 }

@@ -31,11 +31,11 @@ describe("effectivePricing", () => {
     expect(effectivePricing(org({ freeMonths: 2 }), base).freeMonths).toBe(2);
   });
   it("uses the tier price as the base when the centre has a tier", () => {
-    expect(effectivePricing({ ...org({}), tier: "small_club" }, base).monthly).toBe(35);
-    expect(effectivePricing({ ...org({}), tier: "standard" }, base).monthly).toBe(65);
+    expect(effectivePricing({ ...org({}), tier: "small_club" }, base).monthly).toBe(19);
+    expect(effectivePricing({ ...org({}), tier: "standard" }, base).monthly).toBe(35);
   });
   it("applies a discount to the tier base, and a custom price still wins", () => {
-    expect(effectivePricing({ ...org({ discountPercent: 20 }), tier: "standard" }, base).monthly).toBe(52);
+    expect(effectivePricing({ ...org({ discountPercent: 20 }), tier: "standard" }, base).monthly).toBe(28); // 20% off £35
     expect(effectivePricing({ ...org({ customMonthlyPrice: 40 }), tier: "standard" }, base).monthly).toBe(40);
   });
 });

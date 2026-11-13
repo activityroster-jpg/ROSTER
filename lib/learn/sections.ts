@@ -754,9 +754,10 @@ const ALL_SECTIONS: Section[] = [
       { kind: "p", text: "ActivityRoster is priced per centre, not per user — one flat price however many people you roster. Pick a plan and move between them whenever you like." },
       { kind: "sub", text: "The plans" },
       { kind: "bullets", items: [
-        "Small Club — £35/month. Designed for smaller centres: up to 10 people on your team.",
-        "Standard — £65/month. Unlimited instructors and volunteers.",
-        "Custom platform (recommended) — from £850, plus £350 if we work with your team on site, then £65/month. We change the platform to fit how your centre runs: features added, removed or adjusted to suit your workflow, your data brought across, and a hand-over.",
+        "Small Club — £19/month. Designed for smaller centres: up to 10 people on your team.",
+        "Standard — £35/month. Unlimited instructors and volunteers.",
+        "Websites, booking-system connections and custom builds — contact us for pricing. We build your centre's website, connect the booking system you already use (or set one up), and change the platform itself to fit how you run, so everything a sailing school or club needs comes from one place.",
+
       ] },
       { kind: "sub", text: "How the Small Club limit works" },
       { kind: "p", text: "On Small Club you can add up to 10 people in total. Everyone counts towards the 10 — paid instructors and volunteers alike. When you try to add the 11th person, we'll let you know you've reached the limit and prompt you to upgrade to Standard for unlimited team members." },
@@ -772,7 +773,7 @@ const ALL_SECTIONS: Section[] = [
     label: "Billing & invoices",
     blurb: "Manage your subscription and get VAT invoices.",
     blocks: [
-      { kind: "p", text: "Your centre starts with a free month — no card required. When you're ready, choose monthly or annual (annual works out at one month free on Small Club and two on Standard) and enter card details through secure checkout." },
+      { kind: "p", text: "Your centre starts with a free month — no card required. When you're ready, choose monthly or annual (annual is £195 a year on Small Club (saving £33) and £350 on Standard (two months free)) and enter card details through secure checkout." },
       { kind: "p", text: "If the trial ends before you choose a plan, nothing is deleted: the centre goes read-only for two weeks (everyone can still look, nobody can change anything), then locks until a plan is chosen. Choosing a plan brings everything straight back. Not ready to choose? Answer the trial-end survey and your centre gets another month free (see “Trial-end survey”)." },
       { kind: "bullets", items: [
         "VAT is handled automatically at checkout for business customers.",

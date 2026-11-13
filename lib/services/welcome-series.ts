@@ -114,7 +114,7 @@ export function welcomeEmail(step: OnboardingEmailStep, input: { org: Pick<Organ
         html: `
           <p>Hello,</p>
           <p>The free month for <strong>${name}</strong> ends on <strong>${when}</strong>. Nothing is deleted: for two weeks after that everything stays visible but read-only, then the office asks for a plan before it opens again.</p>
-          <p>Plans start at £35 a month for the whole centre, nothing per user, and you can cancel any time.</p>
+          <p>Plans start at £19 a month for the whole centre, nothing per user, and you can cancel any time.</p>
           ${btn(`${office}/billing`, "Choose a plan")}
           <p>Not sure yet? Reply to this email with what is missing or getting in the way; it goes to a person.</p>`,
       };

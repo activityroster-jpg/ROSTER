@@ -2,15 +2,16 @@ import Link from "next/link";
 import { Check } from "lucide-react";
 import { getDb } from "@/lib/cf/bindings";
 import { PlatformRepository } from "@/lib/db/repositories/platform";
-import { fmtMoney, comparisonRow, COMPETITOR_PRICING, ON_SITE_DAY_PRICE, PRICES_CHECKED_ON } from "@/lib/pricing";
+import { fmtMoney, comparisonRow, COMPETITOR_PRICING, PRICES_CHECKED_ON } from "@/lib/pricing";
 import { TIERS, TIER_ORDER } from "@/lib/tiers";
+import { QUOTED_SERVICES } from "@/lib/marketing/services";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Pricing",
   description:
-    "Simple flat pricing per centre — no per-user fees. Small Club £35/mo (up to 10) or Standard £65/mo unlimited, plus an optional custom build that shapes the platform to how your centre runs. Cheaper than per-user tools for volunteer-heavy RYA centres.",
+    "Simple flat pricing per centre — no per-user fees. Small Club £19/mo (up to 10) or Standard £35/mo unlimited. Websites, booking-system integrations and custom builds priced on request, so your centre runs. Cheaper than per-user tools for volunteer-heavy RYA centres.",
   alternates: { canonical: "/pricing" },
 };
 
@@ -36,8 +37,8 @@ const SETUP_INCLUDED = [
   "A hand-over so the office and instructors are confident from day one",
 ];
 
-// Travel to run the custom build on site with the centre's team (recommended).
-const ON_SITE_TRAVEL = ON_SITE_DAY_PRICE;
+/** The third card: the one-stop-shop work, priced per centre on request (lib/marketing/services). */
+const SERVICES_SHORT = QUOTED_SERVICES.map((x) => x.short);
 
 // Names of the per-user platforms we compare against (for the intro copy).
 const COMPETITOR_NAMES = COMPETITOR_PRICING.map((c) => c.name);
@@ -46,11 +47,11 @@ const COMPETITOR_NAMES_AND =
 
 export default async function PricingPage() {
   let currency = "GBP", freeFirstMonth = true;
-  let setupPrice = 850, setupEnabled = true;
+  let setupEnabled = true;
   try {
     const p = await new PlatformRepository(await getDb()).getPricing();
     currency = p.currency; freeFirstMonth = Boolean(p.freeFirstMonth);
-    setupPrice = p.setupPrice; setupEnabled = Boolean(p.setupEnabled);
+    setupEnabled = Boolean(p.setupEnabled);
   } catch {
     // fall back to defaults if pricing can't be read at render time
   }
@@ -90,7 +91,8 @@ export default async function PricingPage() {
           const t = TIERS[tid];
           const popular = tid === "standard";
           const annualSaving = Math.max(0, t.monthlyPrice * 12 - t.annualPrice);
-          const monthsFree = t.monthlyPrice > 0 ? Math.round(annualSaving / t.monthlyPrice) : 0;
+          // Whole months free only when it really is whole months; otherwise the exact saving.
+          const monthsFree = t.monthlyPrice > 0 && annualSaving % t.monthlyPrice === 0 ? annualSaving / t.monthlyPrice : 0;
           return (
             <div
               key={tid}
@@ -108,7 +110,7 @@ export default async function PricingPage() {
                   <span className="text-slate-500">/month</span>
                 </p>
                 <p className="mt-2 text-sm text-slate-500 md:min-h-[2.5rem]">
-                  or {fmtMoney(t.annualPrice, currency)} a year{monthsFree > 0 ? `, ${monthsFree} month${monthsFree === 1 ? "" : "s"} free` : ""}
+                  or {fmtMoney(t.annualPrice, currency)} a year{monthsFree > 0 ? `, ${monthsFree} month${monthsFree === 1 ? "" : "s"} free` : annualSaving > 0 ? `, save ${fmtMoney(annualSaving, currency)}` : ""}
                 </p>
                 <p className="mt-3 inline-flex self-start rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
                   {t.userCap ? `Up to ${t.userCap} people on your team` : "Unlimited instructors & volunteers"}
@@ -135,28 +137,21 @@ export default async function PricingPage() {
               Built around you
             </div>
             <div className="flex flex-1 flex-col p-7">
-              <h2 className="font-display text-xl font-bold text-navy">Custom platform</h2>
-              <p className="mt-1 text-sm text-slate-500 md:min-h-[2.5rem]">Features added, removed and changed to fit how your centre runs.</p>
-              <p className="mt-5 text-xs font-semibold uppercase tracking-wide text-slate-400">One-off setup, from</p>
-              <p className="mt-1 flex items-baseline gap-1">
-                <span className="font-display text-4xl font-bold leading-none text-navy">{fmtMoney(setupPrice, currency)}</span>
-                <span className="text-slate-500">setup</span>
-              </p>
-              <p className="mt-2 text-sm text-slate-500 md:min-h-[2.5rem]">
-                then {fmtMoney(standard.monthlyPrice, currency)}/month · optional {fmtMoney(ON_SITE_TRAVEL, currency)} on-site day
-              </p>
-              <p className="mt-3 inline-flex self-start rounded-full bg-amber/15 px-3 py-1 text-xs font-semibold text-amber">
-                Unlimited team · shaped to your workflow
-              </p>
-              <Link href="/terms#fair-use" className="mt-1.5 self-start text-xs text-slate-500 underline hover:text-navy">Fair use applies</Link>
+              <h2 className="font-display text-xl font-bold text-navy">Websites, bookings &amp; custom builds</h2>
+              <p className="mt-1 text-sm text-slate-500 md:min-h-[2.5rem]">Everything else your centre needs, built and connected by us.</p>
+              <p className="mt-5 text-xs font-semibold uppercase tracking-wide text-slate-400">Pricing</p>
+              <p className="mt-1 font-display text-3xl font-bold leading-none text-navy">Contact us</p>
+              <ul className="mt-3 space-y-1.5 text-sm text-slate-600">
+                {SERVICES_SHORT.map((x) => <li key={x} className="flex items-start gap-2"><Check className="mt-0.5 h-4 w-4 flex-none text-amber" />{x}</li>)}
+              </ul>
               <div className="mt-auto pt-6">
                 <Link
-                  href="/contact"
+                  href="/contact#services"
                   className="block rounded-lg border border-navy px-6 py-3 text-center font-semibold text-navy transition hover:bg-navy hover:text-white"
                 >
-                  Talk to us
+                  Talk to us about pricing
                 </Link>
-                <p className="mt-2 text-center text-xs text-slate-400">We reply within a working day</p>
+                <p className="mt-2 text-center text-xs text-slate-400">Quoted for your centre · we reply within a working day</p>
               </div>
             </div>
           </div>
@@ -277,17 +272,23 @@ export default async function PricingPage() {
       </div>
 
       {setupEnabled ? (
-        <div className="mt-10 overflow-hidden rounded-card border border-amber/60 bg-amber/5 shadow-sm">
+        <div id="services" className="mt-10 overflow-hidden rounded-card border border-amber/60 bg-amber/5 shadow-sm">
           <div className="p-7">
-            <p className="text-sm font-semibold uppercase tracking-wide text-amber">Custom platform</p>
-            <h2 className="mt-1 font-display text-2xl font-bold text-navy">What the custom build includes</h2>
+            <p className="text-sm font-semibold uppercase tracking-wide text-amber">One supplier for the whole centre</p>
+            <h2 className="mt-1 font-display text-2xl font-bold text-navy">Websites, booking systems and custom builds</h2>
             <p className="mt-2 max-w-2xl text-slate-600">
-              Every centre runs differently. We change the platform to fit yours, adding, removing and adjusting features so it optimises your workflow rather than a generic one:{" "}
-              <strong className="text-navy">from {fmtMoney(setupPrice, currency)} setup</strong>, then{" "}
-              {fmtMoney(standard.monthlyPrice, currency)}/month. Add an on-site day with your team for{" "}
-              {fmtMoney(ON_SITE_TRAVEL, currency)} if you would like us there in person.
+              The rostering platform is ready off the shelf. Beyond it, we build the rest of what a sailing school or club runs on, so you deal with
+              one team instead of four. Every centre is different, so this is <strong className="text-navy">priced for your centre: contact us for a quote</strong>.
             </p>
-            <ul className="mt-4 grid gap-2 sm:grid-cols-2">
+            <div className="mt-5 grid gap-4 sm:grid-cols-3">
+              {QUOTED_SERVICES.map((x) => (
+                <div key={x.id} className="rounded-lg border border-amber/40 bg-white p-4">
+                  <p className="font-semibold text-navy">{x.title}</p>
+                  <p className="mt-1 text-sm text-slate-600">{x.body}</p>
+                </div>
+              ))}
+            </div>
+            <ul className="mt-5 grid gap-2 sm:grid-cols-2">
               {SETUP_INCLUDED.map((f) => (
                 <li key={f} className="flex items-start gap-2 text-sm text-slate-700">
                   <Check className="mt-0.5 h-4 w-4 flex-none text-amber" />
@@ -295,8 +296,8 @@ export default async function PricingPage() {
                 </li>
               ))}
             </ul>
-            <Link href="/contact" className="mt-6 inline-block rounded-lg border border-navy px-6 py-3 text-center font-semibold text-navy transition hover:bg-navy hover:text-white">
-              Talk to us about a custom build
+            <Link href="/contact#services" className="mt-6 inline-block rounded-lg border border-navy px-6 py-3 text-center font-semibold text-navy transition hover:bg-navy hover:text-white">
+              Contact us for pricing
             </Link>
           </div>
         </div>

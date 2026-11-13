@@ -45,7 +45,7 @@ export default async function StartPage({ searchParams }: { searchParams: Promis
           <h1 className="font-display text-3xl font-bold text-navy md:text-4xl" style={{ textWrap: "balance" }}>Your centre, set up in a minute</h1>
           <p className="mt-3 text-slate-600">Your centre starts with the {type === "padi_centre" ? "PADI" : "RYA"} course types, instructor types, certificates and checks already in place. A short guided set-up in the office does the rest.</p>
           <ul className="mt-5 space-y-2 text-sm text-slate-700">
-            {["No card required, cancel any time", `From £35 a month afterwards, nothing per user`, "Hosted in the EU, export your data whenever you like", "Your team's instructor app for iPhone and Android"].map((x) => (
+            {["No card required, cancel any time", `From £19 a month afterwards, nothing per user`, "Hosted in the EU, export your data whenever you like", "Your team's instructor app for iPhone and Android"].map((x) => (
               <li key={x} className="flex items-start gap-2"><ShieldCheck className="mt-0.5 h-4 w-4 flex-none text-teal" aria-hidden />{x}</li>
             ))}
           </ul>

@@ -9,6 +9,7 @@ import { HomeExplainer } from "@/components/marketing/HomeExplainer";
 import { SCREENS } from "@/lib/screens";
 import { apexDomain, COMPANY } from "@/lib/config";
 import { SCHEMA_AUDIENCE } from "@/lib/seo/og";
+import { SERVICES } from "@/lib/marketing/services";
 
 export const metadata = {
   title: { absolute: "RYA Sailing School Software & Staff Rostering | ActivityRoster" },
@@ -63,8 +64,8 @@ export default function MarketingHome() {
         applicationCategory: "BusinessApplication",
         operatingSystem: "Web, iOS, Android",
         audience: SCHEMA_AUDIENCE,
-        offers: { "@type": "Offer", price: "35", priceCurrency: "GBP" },
-        description: "RYA sailing school software. Instructor types, who can teach each course, availability and course ratios checked as you schedule. Flat per-centre pricing from £35/month.",
+        offers: { "@type": "Offer", price: "19", priceCurrency: "GBP" },
+        description: "RYA sailing school software. Instructor types, who can teach each course, availability and course ratios checked as you schedule. Flat per-centre pricing from £19/month.",
       },
     ],
   };
@@ -92,13 +93,17 @@ export default function MarketingHome() {
               the course, availability, course ratios and Senior Instructor cover as you schedule.
             </p>
             <p className="mt-3 text-sm font-medium text-[#4fd1c5]">Built for the people who run the centre: Principals, Chief Instructors, centre managers and club officers.</p>
+            <p className="mt-2 max-w-xl text-sm text-white/80">
+              <span className="font-semibold text-white">One supplier for everything your centre runs on:</span> rostering today, plus your website, booking system and custom builds.{" "}
+              <a href="#one-stop" className="font-semibold text-white underline decoration-white/40 underline-offset-2 hover:decoration-white">See what we do →</a>
+            </p>
             <div className="mt-7 max-w-xl">
               <EmailStart source="hero" variant="hero" />
             </div>
             <p className="mt-3 text-sm text-white/70">
               <Link href="/demo" className="font-semibold text-white underline decoration-white/40 underline-offset-2 hover:decoration-white">Take the tour first</Link>
               {" "}· set up in an afternoon ·{" "}
-              <Link href="/pricing" className="font-semibold text-white underline decoration-white/40 underline-offset-2 hover:decoration-white">from £35/month</Link>
+              <Link href="/pricing" className="font-semibold text-white underline decoration-white/40 underline-offset-2 hover:decoration-white">from £19/month</Link>
             </p>
             <p className="mt-2 text-xs text-white/60">Instructor or staff member? You don&rsquo;t sign up here: <Link href="/instructors" className="underline decoration-white/40 underline-offset-2 hover:text-white">get the app and join your centre →</Link></p>
           </div>
@@ -126,6 +131,28 @@ export default function MarketingHome() {
               <p className="mt-0.5 text-xs text-slate-500">{s}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* One-stop shop: the platform off the shelf, everything else built for the centre */}
+      <section id="one-stop" className="border-b border-slate-200 bg-canvas">
+        <div className="mx-auto max-w-6xl px-4 py-12 md:py-16">
+          <p className="text-sm font-semibold uppercase tracking-wide text-teal">One-stop shop</p>
+          <h2 className="mt-1 font-display text-2xl font-semibold text-navy md:text-3xl" style={{ textWrap: "balance" }}>Everything an RYA sailing school or club needs, from one team</h2>
+          <p className="mt-2 max-w-2xl text-slate-600">Start with the rostering platform today. When you want more, we build your website, connect your bookings and shape the platform to how you run, so there&rsquo;s one supplier and one place to call.</p>
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {SERVICES.map((x) => {
+              const offShelf = x.id === "rostering";
+              return (
+                <div key={x.id} className={`flex flex-col rounded-card border bg-white p-5 ${offShelf ? "border-teal ring-1 ring-teal" : "border-slate-200"}`}>
+                  <p className={`self-start rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${offShelf ? "bg-teal/10 text-teal" : "bg-amber/15 text-amber"}`}>{offShelf ? "Ready today · from £19/month" : "Contact us for pricing"}</p>
+                  <h3 className="mt-3 font-display text-lg font-semibold text-navy">{x.title}</h3>
+                  <p className="mt-1 flex-1 text-sm text-slate-600">{x.body}</p>
+                  <Link href={offShelf ? "/start" : "/contact#services"} className="mt-4 text-sm font-semibold text-teal hover:underline">{offShelf ? "Start my free month →" : "Ask for a quote →"}</Link>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </section>
 
@@ -224,7 +251,7 @@ export default function MarketingHome() {
             <h2 className="font-display text-3xl font-bold" style={{ textWrap: "balance" }}>Try it free for a month</h2>
             <p className="mt-3 text-white/80">Your centre is created in seconds with the RYA defaults in place. A guided set-up does the rest, and we&apos;re happy to walk you through it.</p>
             <ul className="mt-5 space-y-2 text-white/85">
-              {["No card required, cancel any time", "From £35 a month afterwards, nothing per user", "Hosted in the EU, export your data whenever you like"].map((x) => (
+              {["No card required, cancel any time", "From £19 a month afterwards, nothing per user", "Hosted in the EU, export your data whenever you like"].map((x) => (
                 <li key={x} className="flex gap-2"><ShieldCheck className="mt-0.5 h-4 w-4 flex-none text-[#4fd1c5]" />{x}</li>
               ))}
             </ul>
@@ -244,12 +271,13 @@ export default function MarketingHome() {
               ["Is my club's data kept separate?", "Yes — isolation is enforced in code, with an automated test that proves no centre can see another's data."],
               ["Where is data stored?", "In the EU. Certificates are held privately and encrypted; DBS, PVG, AccessNI and Garda checks are recorded by status and reference only, so the certificate itself is never stored."],
               ["Which jurisdictions are supported?", "England, Wales, Scotland, Northern Ireland and Ireland — DBS, PVG, AccessNI or Garda vetting set up automatically."],
-              ["Can we tailor it to how we run?", "Yes. Grades, roles, checks, session times and course types are all yours to edit."],
+              ["Can we tailor it to how we run?", "Yes. Grades, roles, checks, session times and course types are all yours to edit. For more, we change the platform itself to fit your centre."],
+              ["Can you do our website and bookings too?", "Yes. We build centre websites, connect the booking system you use (or set one up) and do custom builds, so everything comes from one team. These are quoted per centre: contact us for pricing."],
               ["Do our instructors need to install anything?", "They get the instructor app on their phone for shifts, availability, open shifts, hours and documents. It also works in any phone browser, so nobody is left out."],
               ["We have under-18 assistants. Can they use it?", "Yes. Add their date of birth and they're marked as under 18, with their contact details kept private from colleagues. Each person's hours for the week show beside their name, so you can keep an eye on them."],
               ["Can we bring our existing schedule across?", "Yes. Import courses and staff from a spreadsheet or calendar, check what was read, then save. Most centres are set up in an afternoon."],
               ["Will the platform keep improving?", "Yes. ActivityRoster is a live platform, updated continuously with nothing to install. Centres request features from inside the platform and vote for each other's ideas, and we build around what centres vote for."],
-              ["What does it cost after the free month?", "£35 a month for up to 10 people or £65 a month for unlimited instructors and volunteers (fair use applies, see our terms). No per-user fees, and annual billing gives you months free."],
+              ["What does it cost after the free month?", "£19 a month for up to 10 people or £35 a month for unlimited instructors and volunteers (fair use applies, see our terms). No per-user fees, and paying annually saves more (£195 or £350 a year)."],
             ].map(([q, a]) => (
               <div key={q}>
                 <dt className="font-semibold text-navy">{q}</dt>
