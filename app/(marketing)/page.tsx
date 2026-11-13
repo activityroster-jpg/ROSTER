@@ -277,7 +277,7 @@ export default function MarketingHome() {
               ["We have under-18 assistants. Can they use it?", "Yes. Add their date of birth and they're marked as under 18, with their contact details kept private from colleagues. Each person's hours for the week show beside their name, so you can keep an eye on them."],
               ["Can we bring our existing schedule across?", "Yes. Import courses and staff from a spreadsheet or calendar, check what was read, then save. Most centres are set up in an afternoon."],
               ["Will the platform keep improving?", "Yes. ActivityRoster is a live platform, updated continuously with nothing to install. Centres request features from inside the platform and vote for each other's ideas, and we build around what centres vote for."],
-              ["What does it cost after the free month?", "£19 a month for up to 10 people or £35 a month for unlimited instructors and volunteers (fair use applies, see our terms). No per-user fees, and paying annually saves more (£195 or £350 a year)."],
+              ["What does it cost after the free month?", "£19 a month for up to 10 people or £35 a month for unlimited instructors and volunteers (fair use applies, see our terms). No per-user fees, and paying annually saves more (£190 or £350 a year, two months free)."],
             ].map(([q, a]) => (
               <div key={q}>
                 <dt className="font-semibold text-navy">{q}</dt>

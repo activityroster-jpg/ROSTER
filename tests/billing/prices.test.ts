@@ -51,7 +51,7 @@ describe("after a price change", () => {
 
   it("advertises the tier prices in pence, and nothing for one-off kinds", () => {
     expect(advertisedPence("small_club_monthly")).toBe(1900);
-    expect(advertisedPence("small_club_annual")).toBe(19500);
+    expect(advertisedPence("small_club_annual")).toBe(19000);
     expect(advertisedPence("standard_monthly")).toBe(3500);
     expect(advertisedPence("standard_annual")).toBe(35000);
     expect(advertisedPence("setup")).toBeNull();

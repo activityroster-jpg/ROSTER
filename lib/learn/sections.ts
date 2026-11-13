@@ -773,7 +773,7 @@ const ALL_SECTIONS: Section[] = [
     label: "Billing & invoices",
     blurb: "Manage your subscription and get VAT invoices.",
     blocks: [
-      { kind: "p", text: "Your centre starts with a free month — no card required. When you're ready, choose monthly or annual (annual is £195 a year on Small Club (saving £33) and £350 on Standard (two months free)) and enter card details through secure checkout." },
+      { kind: "p", text: "Your centre starts with a free month — no card required. When you're ready, choose monthly or annual (annual is £190 a year on Small Club and £350 on Standard, two months free on both) and enter card details through secure checkout." },
       { kind: "p", text: "If the trial ends before you choose a plan, nothing is deleted: the centre goes read-only for two weeks (everyone can still look, nobody can change anything), then locks until a plan is chosen. Choosing a plan brings everything straight back. Not ready to choose? Answer the trial-end survey and your centre gets another month free (see “Trial-end survey”)." },
       { kind: "bullets", items: [
         "VAT is handled automatically at checkout for business customers.",

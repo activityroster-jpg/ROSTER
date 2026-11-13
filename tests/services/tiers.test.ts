@@ -4,7 +4,7 @@ import { tierMeta, tierCap, isWithinTierCap, tierSlotsRemaining, SMALL_CLUB_CAP 
 describe("tiers", () => {
   it("exposes the two flat tiers", () => {
     expect(tierMeta("small_club").monthlyPrice).toBe(19);
-    expect(tierMeta("small_club").annualPrice).toBe(195);
+    expect(tierMeta("small_club").annualPrice).toBe(190);
     expect(tierMeta("standard").monthlyPrice).toBe(35);
     expect(tierMeta("standard").annualPrice).toBe(350);
   });
