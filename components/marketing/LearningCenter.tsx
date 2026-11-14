@@ -5,8 +5,6 @@ import { ScreenShot } from "./ScreenShot";
 import { GUIDE_SCREENS, SCREENS } from "@/lib/screens";
 import { PROVIDERS } from "@/lib/integrations/catalogue";
 import { GUIDE_STAGES, SECTIONS, type Block } from "@/lib/learn/sections";
-import { videosForSection } from "@/lib/learn/videos";
-import { GuideVideo } from "./GuideVideo";
 
 function BlockView({ b }: { b: Block }) {
   switch (b.kind) {
@@ -109,7 +107,7 @@ export function LearningCenter({ initialTopic }: { initialTopic?: string }) {
         <p className="text-sm font-semibold uppercase tracking-wide text-teal">Learning Centre</p>
         <h1 className="mt-1 font-display text-3xl font-bold text-navy sm:text-4xl">How to use ActivityRoster</h1>
         <p className="mx-auto mt-3 max-w-2xl text-slate-600">
-          Twelve short videos, each with a step-by-step guide, in the order you&apos;ll need them: set up your centre,
+          Step-by-step guides in the order you&apos;ll need them: set up your centre,
           add your team and courses, build and confirm the roster, then leave, pay and the instructor app.
         </p>
       </div>
@@ -126,7 +124,7 @@ export function LearningCenter({ initialTopic }: { initialTopic?: string }) {
                 <li key={s.id} className="flex-none lg:flex-auto">
                   {stage ? (
                     <p className={`hidden px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400 lg:block ${stageIndex > 0 ? "pt-4" : ""}`}>
-                      {stage.video ? <><span aria-hidden="true">▶ </span>{stage.video}. </> : null}{stage.label}
+                      {stageIndex + 1}. {stage.label}
                     </p>
                   ) : null}
                   <button
@@ -153,8 +151,6 @@ export function LearningCenter({ initialTopic }: { initialTopic?: string }) {
               <p className="mt-1 text-sm text-slate-500">{section.blurb}</p>
             </div>
           </div>
-          {/* The section's how-to video leads it, when there is one. */}
-          {videosForSection(section.id).map((v) => <div key={`${section.id}-${v.file}`} className="mt-6"><GuideVideo video={v} /></div>)}
           <GuideScreens sectionId={section.id} />
 
           <div className="mt-6 space-y-3">
