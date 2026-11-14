@@ -26,7 +26,11 @@ const nextConfig = {
     serverMinification: true,
   },
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      // The Dev Center's voice-over recorder is the one page that uses the microphone (later rule wins).
+      { source: "/admin/videos", headers: [{ key: "Permissions-Policy", value: "camera=(self), microphone=(self), geolocation=(self), payment=(self \"https://checkout.stripe.com\")" }] },
+    ];
   },
 };
 

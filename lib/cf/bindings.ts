@@ -53,6 +53,8 @@ export interface CloudflareEnv {
   RESEND_WEBHOOK_SECRET?: string;
   /** Claude API key for the outreach agent's research and email writing (optional; templates only without it). */
   ANTHROPIC_API_KEY?: string;
+  /** Fine-grained GitHub token (this repository, Actions: read and write): starts the "Apply voiceovers" run straight after a recording is saved. Optional; without it the nightly run applies it. */
+  GITHUB_ACTIONS_TOKEN?: string;
   /** Shared secret an external scheduler sends to /api/outreach/tick so follow-ups go out on time. */
   OUTREACH_CRON_SECRET?: string;
   // Shown in the legal footer of every email (optional — set for compliance).

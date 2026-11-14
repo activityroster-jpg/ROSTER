@@ -32,6 +32,7 @@ export function adminSections(opts: { staging: boolean }): NavSection[] {
       { href: "/admin/trial-feedback", label: "Trial feedback", hint: "trial-end survey answers and who is happy to be contacted" },
       { href: "/admin/help-questions", label: "Help questions", hint: "what centres ask the Help button, and what the guides miss" },
       { href: "/admin/blog", label: "Blog", hint: "articles, scheduling and cover photos" },
+      { href: "/admin/videos", label: "Video voice-overs", hint: "record your own voice over the how-to videos, reading prompts timed to each line" },
     ] },
     { id: "health", label: "Platform health", pages: [
       { href: "/admin/errors", label: "Errors", hint: "runtime errors and reports from centres" },

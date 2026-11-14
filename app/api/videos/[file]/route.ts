@@ -1,5 +1,6 @@
 import { getEnv } from "@/lib/cf/bindings";
 import { VIDEO_FILES } from "@/lib/learn/videos";
+import { voicedVideoKey } from "@/lib/videos/voiceover";
 
 export const dynamic = "force-dynamic";
 
@@ -14,15 +15,22 @@ const TYPES: Record<string, string> = { mp4: "video/mp4", png: "image/png", vtt:
 async function serve(req: Request, params: Promise<{ file: string }>, head: boolean): Promise<Response> {
   const { file } = await params;
   if (!VIDEO_FILES.has(file)) return new Response("Not found", { status: 404 });
-  const key = `public/videos/${file}`;
   const bucket = getEnv().DOCS;
+  // A video with Conor's voice on it (Dev Center → Video voice-overs) is served
+  // in place of the original; ?v=original is the one he records over.
+  let key = `public/videos/${file}`;
+  if (file.endsWith(".mp4") && new URL(req.url).searchParams.get("v") !== "original") {
+    const voiced = voicedVideoKey(file.slice(0, -4));
+    if (await bucket.head(voiced)) key = voiced;
+  }
   const meta = await bucket.head(key);
   if (!meta) return new Response("Not found", { status: 404, headers: { "Cache-Control": "public, max-age=300" } });
   const size = meta.size;
   const headers: Record<string, string> = {
     "Content-Type": TYPES[file.split(".").pop()!] ?? "application/octet-stream",
     "Accept-Ranges": "bytes",
-    "Cache-Control": "public, max-age=86400",
+    // An hour, so a newly voiced video reaches visitors the same day.
+    "Cache-Control": "public, max-age=3600",
     "X-Content-Type-Options": "nosniff",
     ETag: meta.httpEtag,
   };

@@ -25,3 +25,23 @@ the platform means re-running the workflow, not re-filming.
 Locally: start the app with the video seed (as the workflow does), then
 `DEV_LOG=<dev server log> npm run videos -- --only 6`. Needs ffmpeg
 (`pip install imageio-ffmpeg` works).
+
+## Your own voice (Dev Center → Growth → Video voice-overs)
+
+Record your voice over any video instead of the generated one:
+
+1. Pick the video, turn on the microphone (allow it when the browser asks), press **Record from the start**.
+2. The video plays silently; the line to say lights up word by word, timed to the original
+   narration, with the next line underneath. It stops by itself at the end. Tick "play the
+   original voice quietly" if you want a guide (wear headphones so the mic doesn't hear it).
+3. Listen back. If your voice sits a touch early or late, nudge it (Voice earlier / later), then
+   **Use this recording**.
+4. GitHub → Actions → **Apply voiceovers** puts it on the video with ffmpeg (the logo sting and
+   closing music stay; the old narration between the first and last line is replaced) and the
+   website plays your version within the hour. It starts straight away when the Worker has the
+   `GITHUB_ACTIONS_TOKEN` secret (a fine-grained GitHub token for this repository with
+   **Actions: Read and write**); without it, the nightly run at 03:35 does it, or press Run workflow.
+
+"Remove my recording" puts the original voice back. If a video is remade by **Make videos**
+after you recorded it, the page says "record again", because the screens may have moved.
+Recordings and voiced videos live in the private storage bucket, never in the repository.

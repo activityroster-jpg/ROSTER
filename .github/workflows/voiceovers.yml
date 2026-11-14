@@ -1,0 +1,53 @@
+name: Apply voiceovers
+
+# Puts the voice Conor records in the Dev Center (Growth → Video voice-overs)
+# onto the how-to videos, with ffmpeg (videos/apply-voiceovers.sh), and saves
+# the result next to the original in storage; the website then plays it.
+# Started by the Dev Center the moment a recording is saved (when the Worker
+# has GITHUB_ACTIONS_TOKEN), and every night as a fallback. Also runnable by
+# hand: Actions → Apply voiceovers → Run workflow.
+
+on:
+  workflow_dispatch:
+    inputs:
+      only:
+        description: "Video file names, comma separated, e.g. 01-setup-wizard (blank = every video with a new recording)"
+        required: false
+        default: ""
+      target:
+        description: "Which site's storage"
+        required: false
+        default: production
+        type: choice
+        options: [production, staging]
+  schedule:
+    - cron: "35 3 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: voiceovers-${{ inputs.target || 'production' }}
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      ONLY: ${{ inputs.only }}
+      BUCKET: ${{ (inputs.target || 'production') == 'staging' && 'activityroster-docs-staging' || 'activityroster-docs' }}
+      R2_JURISDICTION: ${{ (inputs.target || 'production') == 'staging' && 'eu' || '' }}
+      R2_WHERE: --remote
+      WRANGLER: npx --yes wrangler@4.152.0
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Install ffmpeg
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg > /dev/null
+      - name: Add the recorded voices
+        run: bash videos/apply-voiceovers.sh

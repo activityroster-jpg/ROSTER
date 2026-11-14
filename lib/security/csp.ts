@@ -78,6 +78,8 @@ export function noncePolicy(nonce: string): string {
     `script-src 'nonce-${nonce}' 'strict-dynamic' 'self' https://challenges.cloudflare.com${DEV_EVAL}`,
     // The offline-week service worker (public/sw.js); without this it would fall under script-src and be refused.
     "worker-src 'self'",
+    // The voice-over recorder plays a fresh recording, and the video it records over, from blob: URLs.
+    "media-src 'self' blob:",
     "connect-src 'self' https://api.stripe.com https://*.ingest.sentry.io https://*.ingest.de.sentry.io https://challenges.cloudflare.com",
     "form-action 'self' https://checkout.stripe.com https://billing.stripe.com",
     "frame-src https://js.stripe.com https://hooks.stripe.com https://challenges.cloudflare.com",
