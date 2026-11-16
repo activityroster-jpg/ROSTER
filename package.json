@@ -36,7 +36,7 @@
     "capacitor-native-biometric": "^4.2.2",
     "drizzle-orm": "^0.45.3",
     "lucide-react": "^0.469.0",
-    "next": "^16.4.1",
+    "next": "^16.4.6",
     "pdf-lib": "^1.17.1",
     "postal-mime": "3.0.1",
     "react": "^19.0.0",
